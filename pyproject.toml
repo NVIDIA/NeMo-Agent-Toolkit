@@ -75,7 +75,6 @@ phoenix = ["nvidia-nat-phoenix == {version}"]
 profiler = ["nvidia-nat-profiler == {version}"]
 rag = ["nvidia-nat-rag == {version}"]
 ragas = ["nvidia-nat-ragas == {version}"]
-ragaai = ["nvidia-nat-ragaai == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
 redis = ["nvidia-nat-redis == {version}"]
 s3 = ["nvidia-nat-s3 == {version}"]
@@ -260,7 +259,6 @@ nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
 nvidia-nat-profiler = { path = "packages/nvidia_nat_profiler", editable = true }
 nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
 nvidia-nat-ragas = { path = "packages/nvidia_nat_ragas", editable = true }
-nvidia-nat-ragaai = { path = "packages/nvidia_nat_ragaai", editable = true }
 nvidia-nat-mysql = { path = "packages/nvidia_nat_mysql", editable = true }
 nvidia-nat-redis = { path = "packages/nvidia_nat_redis", editable = true }
 nvidia-nat-s3 = { path = "packages/nvidia_nat_s3", editable = true }

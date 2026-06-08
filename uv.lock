@@ -1200,8 +1200,7 @@ dependencies = [
     { name = "pypika", marker = "extra == 'extra-10-nvidia-nat-crewai' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-crewai' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "pyyaml", marker = "extra == 'extra-10-nvidia-nat-crewai' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-crewai' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "rich", marker = "extra == 'extra-10-nvidia-nat-crewai' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-crewai' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai')" },
-    { name = "tenacity", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
-    { name = "tenacity", version = "9.1.4", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-crewai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-crewai' and extra != 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-crewai' and extra != 'extra-10-nvidia-nat-rag' and extra != 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "tenacity", marker = "extra == 'extra-10-nvidia-nat-crewai' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-crewai' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "tokenizers", marker = "extra == 'extra-10-nvidia-nat-crewai' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-crewai' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "tqdm", marker = "extra == 'extra-10-nvidia-nat-crewai' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-crewai' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "typer", marker = "extra == 'extra-10-nvidia-nat-crewai' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-crewai' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai')" },
@@ -1610,15 +1609,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ed/bc/68da7dd749b72884dc22e898562f335002d70306069d496376e5ff3b6153/cymem-2.0.13-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:9d441d0e45798ec1fd330373bf7ffa6b795f229275f64016b6a193e6e2a51522", size = 290353, upload-time = "2025-11-14T14:58:00.562Z" },
     { url = "https://files.pythonhosted.org/packages/50/23/dbf2ad6ecd19b99b3aab6203b1a06608bbd04a09c522d836b854f2f30f73/cymem-2.0.13-cp313-cp313t-win_amd64.whl", hash = "sha256:d1c950eebb9f0f15e3ef3591313482a5a611d16fc12d545e2018cd607f40f472", size = 44764, upload-time = "2025-11-14T14:58:01.793Z" },
     { url = "https://files.pythonhosted.org/packages/54/3f/35701c13e1fc7b0895198c8b20068c569a841e0daf8e0b14d1dc0816b28f/cymem-2.0.13-cp313-cp313t-win_arm64.whl", hash = "sha256:042e8611ef862c34a97b13241f5d0da86d58aca3cecc45c533496678e75c5a1f", size = 38964, upload-time = "2025-11-14T14:58:02.87Z" },
-]
-
-[[package]]
-name = "dacite"
-version = "1.9.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/55/a0/7ca79796e799a3e782045d29bf052b5cde7439a2bbb17f15ff44f7aacc63/dacite-1.9.2.tar.gz", hash = "sha256:6ccc3b299727c7aa17582f0021f6ae14d5de47c7227932c47fec4cdfefd26f09", size = 22420, upload-time = "2025-02-05T09:27:29.757Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/35/386550fd60316d1e37eccdda609b074113298f23cef5bddb2049823fe666/dacite-1.9.2-py3-none-any.whl", hash = "sha256:053f7c3f5128ca2e9aceb66892b1a3c8936d02c686e707bee96e19deef4bc4a0", size = 16600, upload-time = "2025-02-05T09:27:24.345Z" },
 ]
 
 [[package]]
@@ -2415,7 +2405,7 @@ dependencies = [
     { name = "sqlalchemy", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
     { name = "sqlalchemy-spanner", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
     { name = "starlette", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
-    { name = "tenacity", version = "9.1.4", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "tenacity", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
     { name = "typing-extensions", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
     { name = "tzlocal", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
     { name = "uvicorn", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
@@ -2875,18 +2865,17 @@ name = "google-genai"
 version = "1.64.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "aiohttp", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "anyio", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "distro", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "google-auth", extra = ["requests"], marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "httpx", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "pydantic", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "requests", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "sniffio", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "tenacity", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "tenacity", version = "9.1.4", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
-    { name = "typing-extensions", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "websockets", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
+    { name = "aiohttp", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "anyio", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "distro", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "google-auth", extra = ["requests"], marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "httpx", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "pydantic", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "requests", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "sniffio", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "tenacity", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "typing-extensions", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "websockets", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/bc/14/344b450d4387845fc5c8b7f168ffbe734b831b729ece3333fc0fe8556f04/google_genai-1.64.0.tar.gz", hash = "sha256:8db94ab031f745d08c45c69674d1892f7447c74ed21542abe599f7888e28b924", size = 496434, upload-time = "2026-02-19T02:06:13.95Z" }
 wheels = [
@@ -2931,12 +2920,6 @@ wheels = [
 grpc = [
     { name = "grpcio", marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
 ]
-
-[[package]]
-name = "gputil"
-version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ed/0e/5c61eedde9f6c87713e89d794f01e378cfd9565847d4576fa627d758c554/GPUtil-1.4.0.tar.gz", hash = "sha256:099e52c65e512cdfa8c8763fca67f5a5c2afb63469602d5dcb4d296b3661efb9", size = 5545, upload-time = "2018-12-18T09:12:13.63Z" }
 
 [[package]]
 name = "gql"
@@ -3044,23 +3027,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ad/06/eccbd311c9e2b3ca45dbc063b93134c57a1ccc7607c5e545264ad092c4a9/griffelib-2.0.0.tar.gz", hash = "sha256:e504d637a089f5cab9b5daf18f7645970509bf4f53eda8d79ed71cce8bd97934", size = 166312, upload-time = "2026-03-23T21:06:55.954Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/51/c936033e16d12b627ea334aaaaf42229c37620d0f15593456ab69ab48161/griffelib-2.0.0-py3-none-any.whl", hash = "sha256:01284878c966508b6d6f1dbff9b6fa607bc062d8261c5c7253cb285b06422a7f", size = 142004, upload-time = "2026-02-09T19:09:40.561Z" },
-]
-
-[[package]]
-name = "groq"
-version = "1.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "distro" },
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "sniffio" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3f/12/f4099a141677fcd2ed79dcc1fcec431e60c52e0e90c9c5d935f0ffaf8c0e/groq-1.0.0.tar.gz", hash = "sha256:66cb7bb729e6eb644daac7ce8efe945e99e4eb33657f733ee6f13059ef0c25a9", size = 146068, upload-time = "2025-12-17T23:34:23.115Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4a/88/3175759d2ef30406ea721f4d837bfa1ba4339fde3b81ba8c5640a96ed231/groq-1.0.0-py3-none-any.whl", hash = "sha256:6e22bf92ffad988f01d2d4df7729add66b8fd5dbfb2154b5bbf3af245b72c731", size = 138292, upload-time = "2025-12-17T23:34:21.957Z" },
 ]
 
 [[package]]
@@ -3229,8 +3195,7 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "pyyaml" },
     { name = "requests" },
-    { name = "tenacity", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "tenacity", version = "9.1.4", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "tenacity" },
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
@@ -3501,8 +3466,7 @@ dependencies = [
     { name = "pydantic-core" },
     { name = "requests" },
     { name = "rich" },
-    { name = "tenacity", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "tenacity", version = "9.1.4", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "tenacity" },
     { name = "typer" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/dc/a4/832cfb15420360e26d2d85bd9d5fe1e4b839d52587574d389bc31284bf6f/instructor-1.15.1.tar.gz", hash = "sha256:c72406469d9025b742e83cf0c13e914b317db2089d08d889944e74fcd659ef94", size = 69948370, upload-time = "2026-04-03T01:51:30.107Z" }
@@ -3544,18 +3508,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ca/8d/b68b728e2d06b9e0051019640a40a9eb7a88fcd82c2e1b5ce70bef5ff044/ipykernel-7.2.0.tar.gz", hash = "sha256:18ed160b6dee2cbb16e5f3575858bc19d8f1fe6046a9a680c708494ce31d909e", size = 176046, upload-time = "2026-02-06T16:43:27.403Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/82/b9/e73d5d9f405cba7706c539aa8b311b49d4c2f3d698d9c12f815231169c71/ipykernel-7.2.0-py3-none-any.whl", hash = "sha256:3bbd4420d2b3cc105cbdf3756bfc04500b1e52f090a90716851f3916c62e1661", size = 118788, upload-time = "2026-02-06T16:43:25.149Z" },
-]
-
-[[package]]
-name = "ipynbname"
-version = "2025.8.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "ipykernel" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/e9/e791d0ec7125a41c5625dc348ee28c2e335bd79ff8b31e9971333f129337/ipynbname-2025.8.0.0.tar.gz", hash = "sha256:dcc8367c64c4a9f0baa6acea3e509fd6696bf5d81c9abceb386e2ad6efcac935", size = 4374, upload-time = "2025-08-17T16:43:28.581Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1b/93/aece384e71b25385bd6a176f09865ee52faa7bda8221acafff8753f3f30a/ipynbname-2025.8.0.0-py3-none-any.whl", hash = "sha256:66f6249ff26d99b0057db2aac5ced4ca8a2ccaad067b9a66d17cfc1725207966", size = 4534, upload-time = "2025-08-17T16:43:27.219Z" },
 ]
 
 [[package]]
@@ -4066,8 +4018,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
     { name = "sqlalchemy" },
-    { name = "tenacity", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "tenacity", version = "9.1.4", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "tenacity" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/53/97/a03585d42b9bdb6fbd935282d6e3348b10322a24e6ce12d0c99eb461d9af/langchain_community-0.4.1.tar.gz", hash = "sha256:f3b211832728ee89f169ddce8579b80a085222ddb4f4ed445a46e977d17b1e85", size = 33241144, upload-time = "2025-10-27T15:20:32.504Z" }
 wheels = [
@@ -4085,8 +4036,7 @@ dependencies = [
     { name = "packaging" },
     { name = "pydantic" },
     { name = "pyyaml" },
-    { name = "tenacity", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "tenacity", version = "9.1.4", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "tenacity" },
     { name = "typing-extensions" },
     { name = "uuid-utils" },
 ]
@@ -4476,11 +4426,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "requests" },
-    { name = "setuptools", version = "81.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "setuptools", version = "82.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "setuptools" },
     { name = "sqlalchemy", extra = ["asyncio"] },
-    { name = "tenacity", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "tenacity", version = "9.1.4", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "tenacity" },
     { name = "tiktoken" },
     { name = "tinytag" },
     { name = "tqdm" },
@@ -4826,15 +4774,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9e/38/bd5b78a920a64d708fe6bc8e0a2c075e1389d53bef8413725c63ba041535/mako-1.3.10.tar.gz", hash = "sha256:99579a6f39583fa7e5630a28c3c1f440e4e97a414b80372649c0ce338da2ea28", size = 392474, upload-time = "2025-04-10T12:44:31.16Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/87/fb/99f81ac72ae23375f22b7afdb7642aba97c00a713c217124420147681a2f/mako-1.3.10-py3-none-any.whl", hash = "sha256:baef24a52fc4fc514a0887ac600f9f1cff3d82c61d4d700a1fa84d597b88db59", size = 78509, upload-time = "2025-04-10T12:50:53.297Z" },
-]
-
-[[package]]
-name = "markdown"
-version = "3.10.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2b/f4/69fa6ed85ae003c2378ffa8f6d2e3234662abd02c10d216c0ba96081a238/markdown-3.10.2.tar.gz", hash = "sha256:994d51325d25ad8aa7ce4ebaec003febcce822c3f8c911e3b17c52f7f589f950", size = 368805, upload-time = "2026-02-09T14:57:26.942Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/1f/77fa3081e4f66ca3576c896ae5d31c3002ac6607f9747d2e3aa49227e464/markdown-3.10.2-py3-none-any.whl", hash = "sha256:e91464b71ae3ee7afd3017d9f358ef0baf158fd9a298db92f1d4761133824c36", size = 108180, upload-time = "2026-02-09T14:57:25.787Z" },
 ]
 
 [[package]]
@@ -6175,7 +6114,7 @@ dependencies = [
     { name = "langsmith" },
     { name = "nat-simple-calculator" },
     { name = "nvidia-nat", extra = ["langchain", "opentelemetry", "phoenix", "test", "weave"] },
-    { name = "nvidia-nat", extra = ["ragaai"], marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
+    { name = "nvidia-nat", marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
 ]
 
 [package.metadata]
@@ -6205,7 +6144,7 @@ name = "nat-simple-web-query"
 source = { editable = "examples/getting_started/simple_web_query" }
 dependencies = [
     { name = "nvidia-nat", extra = ["langchain", "opentelemetry", "phoenix", "test", "weave"] },
-    { name = "nvidia-nat", extra = ["ragaai"], marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
+    { name = "nvidia-nat", marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
     { name = "usearch" },
 ]
 
@@ -6702,9 +6641,6 @@ profiler = [
 rag = [
     { name = "nvidia-nat-rag" },
 ]
-ragaai = [
-    { name = "nvidia-nat-ragaai" },
-]
 ragas = [
     { name = "nvidia-nat-ragas" },
 ]
@@ -6746,8 +6682,7 @@ dev = [
     { name = "pre-commit" },
     { name = "python-docx" },
     { name = "ruff" },
-    { name = "setuptools", version = "81.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "setuptools", version = "82.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "setuptools" },
     { name = "setuptools-scm" },
     { name = "sphinx" },
     { name = "sphinx-autoapi" },
@@ -6865,7 +6800,6 @@ requires-dist = [
     { name = "nvidia-nat-profiler", marker = "extra == 'most'", editable = "packages/nvidia_nat_profiler" },
     { name = "nvidia-nat-profiler", marker = "extra == 'profiler'", editable = "packages/nvidia_nat_profiler" },
     { name = "nvidia-nat-rag", marker = "extra == 'rag'", editable = "packages/nvidia_nat_rag" },
-    { name = "nvidia-nat-ragaai", marker = "extra == 'ragaai'", editable = "packages/nvidia_nat_ragaai" },
     { name = "nvidia-nat-ragas", marker = "extra == 'most'", editable = "packages/nvidia_nat_ragas" },
     { name = "nvidia-nat-ragas", marker = "extra == 'ragas'", editable = "packages/nvidia_nat_ragas" },
     { name = "nvidia-nat-redis", marker = "extra == 'most'", editable = "packages/nvidia_nat_redis" },
@@ -6889,7 +6823,7 @@ requires-dist = [
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/nvidia_nat_zep_cloud" },
     { name = "text-file-ingest", marker = "extra == 'examples'", editable = "examples/documentation_guides/workflows/text_file_ingest" },
 ]
-provides-extras = ["a2a", "a365", "adk", "agno", "app", "autogen", "atif", "config-optimizer", "core", "crewai", "data-flywheel", "eval", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "memmachine", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragas", "ragaai", "mysql", "redis", "s3", "security", "defense", "guardrails", "semantic-kernel", "strands", "test", "weave", "zep-cloud", "async-endpoints", "gunicorn", "most", "examples"]
+provides-extras = ["a2a", "a365", "adk", "agno", "app", "autogen", "atif", "config-optimizer", "core", "crewai", "data-flywheel", "eval", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "memmachine", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragas", "mysql", "redis", "s3", "security", "defense", "guardrails", "semantic-kernel", "strands", "test", "weave", "zep-cloud", "async-endpoints", "gunicorn", "most", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -7541,28 +7475,6 @@ requires-dist = [
 provides-extras = ["test"]
 
 [[package]]
-name = "nvidia-nat-ragaai"
-source = { editable = "packages/nvidia_nat_ragaai" }
-dependencies = [
-    { name = "nvidia-nat-core" },
-    { name = "nvidia-nat-opentelemetry" },
-    { name = "pyopenssl" },
-    { name = "ragaai-catalyst" },
-    { name = "setuptools", version = "81.0.0", source = { registry = "https://pypi.org/simple" } },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
-    { name = "nvidia-nat-opentelemetry", editable = "packages/nvidia_nat_opentelemetry" },
-    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
-    { name = "pyopenssl", specifier = ">=26.0.0,<27.0.0" },
-    { name = "ragaai-catalyst", specifier = "~=2.2" },
-    { name = "setuptools", specifier = ">=64,<82" },
-]
-provides-extras = ["test"]
-
-[[package]]
 name = "nvidia-nat-ragas"
 source = { editable = "packages/nvidia_nat_ragas" }
 dependencies = [
@@ -7993,115 +7905,6 @@ wheels = [
 ]
 
 [[package]]
-name = "openinference-instrumentation-anthropic"
-version = "0.1.20"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/62/40a4ae94a7a3e46a50f2d277b9e0d7de7ded77256c104bc1c23501852228/openinference_instrumentation_anthropic-0.1.20.tar.gz", hash = "sha256:d5339dffb100ad32bb7de9948386574e73af5ffdbcab4a4ebfa3d55c22256096", size = 14265, upload-time = "2025-10-10T03:48:53.491Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/97/5987b3e0491eb850a090cd5c82abc049fd5805ca0d43469a712ec352edbd/openinference_instrumentation_anthropic-0.1.20-py3-none-any.whl", hash = "sha256:f6dba468d7ae13296bbe221cd6968f98bc4760f62c45080e2de434ca6adc0a54", size = 17391, upload-time = "2025-10-10T03:48:51.137Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-bedrock"
-version = "0.1.32"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "dacite" },
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/28/bf/8901768ae7bb52219faf030126325ede6a00b2fc2b3897bdf41cdae88416/openinference_instrumentation_bedrock-0.1.32.tar.gz", hash = "sha256:273520591b034464022615ab810408175df5986da538df1dd1752500d7acc6d1", size = 199316, upload-time = "2025-12-10T14:04:54.472Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/71/47/183740c4eb33e393358e98d5a943b01a4513b0d3d38e0591b2e90e47c9db/openinference_instrumentation_bedrock-0.1.32-py3-none-any.whl", hash = "sha256:634ebe1fb144d897b261b196ec6d01d5ea491df0527c7b915c0840d03f684400", size = 57100, upload-time = "2025-12-10T14:04:53.018Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-crewai"
-version = "0.1.19"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/00/55/48bf406e648729c6937b04890893ff61600230e88cd81d9678aa68a355ce/openinference_instrumentation_crewai-0.1.19.tar.gz", hash = "sha256:681639dbd8ce95e1ca3d7da35d800c3ae49e56c26751608ff81329c9636a0a6a", size = 12818, upload-time = "2026-02-18T07:31:49.769Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/5f/e5ca590f95aa1ec52db77cd1768699132037b301c57f27bedd3c31eaf9da/openinference_instrumentation_crewai-0.1.19-py3-none-any.whl", hash = "sha256:bb8993d8cec8900a195180d78aff24ae8b86b2cb97b9a0eef0ab9ac52c5f3f4b", size = 14390, upload-time = "2026-02-18T07:31:48.391Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-google-adk"
-version = "0.1.9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5c/66/9ded61520b67d56c1f3202a7b28c4c72b831b92a5ece73705f49f6eb73ee/openinference_instrumentation_google_adk-0.1.9.tar.gz", hash = "sha256:9338c8bd3f0873f3ec0f77f8a696dd198094ea7942b7217ac91674ba030b25b5", size = 12294, upload-time = "2026-02-05T17:47:03.752Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/aa/4284d1f5ecf1431e5907198f41b70bb257f19d76e51e39852e141d1f8750/openinference_instrumentation_google_adk-0.1.9-py3-none-any.whl", hash = "sha256:341032df76f93c603cc0574912015e94341a3ccc82dc5598802b7529bcac0420", size = 14040, upload-time = "2026-02-05T17:47:00.28Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-groq"
-version = "0.1.12"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/0a/50fd4223782c762638e855a0dc882b88c064bff4d31c5718398519e28526/openinference_instrumentation_groq-0.1.12.tar.gz", hash = "sha256:9294eb92b785c6e19d18e151f09c6a048b15387b79a49f9fe32f6b61b90be6f9", size = 11826, upload-time = "2025-10-10T03:49:10.231Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/51/596b27372c71d936bb43bfedd89dcbe278f8ccb8e5f1e4dc22cafe067009/openinference_instrumentation_groq-0.1.12-py3-none-any.whl", hash = "sha256:7141ea4d3b4137475c0ba6166c9c4442970c19efc7a8a24befd951ff23fde51d", size = 15724, upload-time = "2025-10-10T03:49:05.063Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-haystack"
-version = "0.1.29"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/09/68d593f54cf376de56c5bb3f2b50986f06debfa70229fc9d704359f20a8f/openinference_instrumentation_haystack-0.1.29.tar.gz", hash = "sha256:36ae7648422c02cd6a02a9342ba34ca6e16ac014e22162513e2116af99423132", size = 15555, upload-time = "2025-12-04T19:58:44.539Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/dd/aa/41c21fa9affa233f6e1d307bfbbacd421b8feeaba6991af4b074f04f5b3a/openinference_instrumentation_haystack-0.1.29-py3-none-any.whl", hash = "sha256:96dfa0f467564d3ab0b69fd8c322afb9d74babeb0362cefd4ecb0505c7758471", size = 17304, upload-time = "2025-12-04T19:58:36.454Z" },
-]
-
-[[package]]
 name = "openinference-instrumentation-langchain"
 version = "0.1.29"
 source = { registry = "https://pypi.org/simple" }
@@ -8116,130 +7919,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/10/d2/185e4dd18431f35faba90482f511328d283e71ed12737e050664f7b5efeb/openinference_instrumentation_langchain-0.1.29.tar.gz", hash = "sha256:f6c10079c91f810cff39ff24c278e41d16df0c3706b230e1859f46cad20f8e0b", size = 45868, upload-time = "2024-10-31T14:29:21.803Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/eb/ba/b0855a5f9bb565e462d85ecfad63d108c4c4bc209a34850623273f7dbcef/openinference_instrumentation_langchain-0.1.29-py3-none-any.whl", hash = "sha256:9faaedb62f90ca8099b48c0b9ded97fe109a646b756f4bf7c98479b500a8446d", size = 17043, upload-time = "2024-10-31T14:29:20.811Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-litellm"
-version = "0.1.29"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-sdk" },
-    { name = "setuptools", version = "81.0.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d6/36/ca32f80bdcd341af2cd037f175a1bd664dcd732b180137eaae576293f512/openinference_instrumentation_litellm-0.1.29.tar.gz", hash = "sha256:a8f0c0db05c60feca680f2417fede88479e1eb3d26b22693b53c851bf7bdef7d", size = 74146, upload-time = "2026-01-08T20:57:06.917Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/98/02/ac08e08d417e772f2b10cc1ff04dbb7f5bada2d5aa96034b2217bd633b51/openinference_instrumentation_litellm-0.1.29-py3-none-any.whl", hash = "sha256:4ad3b77fc5a44a2db26c16cdc45e9b2b5095a41339cd2fe53cc146dfb028622a", size = 16834, upload-time = "2026-01-08T20:57:05.299Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-llama-index"
-version = "4.3.9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1a/f6/a6ab3edbeb855f1bee89807ff8a780ef4044830e0854314411860cda2f14/openinference_instrumentation_llama_index-4.3.9.tar.gz", hash = "sha256:76bc65c46905cdb8100db937b481db52c45533269456b46c7867f715fa687b42", size = 61058, upload-time = "2025-11-18T07:22:02.642Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/43/97/754b2103d2ad50a40f2e286588e28177c307469630eae96738b6294f0d66/openinference_instrumentation_llama_index-4.3.9-py3-none-any.whl", hash = "sha256:b2dfcc2f590759d52749da9a7afa1bdde99c5957df00eea459424bb41b854d97", size = 29089, upload-time = "2025-11-18T07:22:00.999Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-mistralai"
-version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/02/cf/a4fb8b61735ce3278f5ee3a50b9283227e4309235cdeed0a2a98ecef8f27/openinference_instrumentation_mistralai-1.4.0.tar.gz", hash = "sha256:23ca3889a64d09811c93523b353a1b33e602f2fd47cab32d1ad69838773d8405", size = 21626, upload-time = "2026-02-05T00:26:32.797Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c3/87/24aaa9fea50a96aa4f9d6aece0680f9bd858162d29504bf7913d3255ae66/openinference_instrumentation_mistralai-1.4.0-py3-none-any.whl", hash = "sha256:98ad65897b4b15291685b430ed840654d5eca888fec020a885599cac9641f24e", size = 20461, upload-time = "2026-02-05T00:26:31.942Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-openai"
-version = "0.1.41"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/66/06/77b2fe7171336f71313936daf1b644a9968da85ff0b473a03ca05cc3d5c1/openinference_instrumentation_openai-0.1.41.tar.gz", hash = "sha256:ef4db680986a613b1639720f9beaa315c9e388c20bc985dbbbdf0f4df007c6e9", size = 22848, upload-time = "2025-12-04T19:58:35.349Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/db/48f1f540d335f98fa67891e9c25ad56020be7e7b2c0d4fd5014875fe5ddf/openinference_instrumentation_openai-0.1.41-py3-none-any.whl", hash = "sha256:6fad453446835e51333b660882eacababbf1052689ca53cba444a7d97fa2e910", size = 30273, upload-time = "2025-12-04T19:58:34.17Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-openai-agents"
-version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f4/40/ac0a3ad5040d2582156f6c0fa2b8f6233af79af295dab154d642d42aed69/openinference_instrumentation_openai_agents-1.4.0.tar.gz", hash = "sha256:2fd50d03f6d999b9793566a1f2787bf9e2cd3774fa8bf32542250dfc61e32d62", size = 12746, upload-time = "2025-12-04T19:58:36.319Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c6/e5/299103b68f5427a7d11acd0f4804c5b3f3e9508a511f8f8078a43ad7e6bd/openinference_instrumentation_openai_agents-1.4.0-py3-none-any.whl", hash = "sha256:539361d0f3bdebdb1e898250fbba8e6173f2bce9d7ba007cf7934f10850f474b", size = 14411, upload-time = "2025-12-04T19:58:34.224Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-smolagents"
-version = "0.1.22"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2e/15/ba74123ca6e312043fcdea4e730ed1428402270031cbd17fdd504390461f/openinference_instrumentation_smolagents-0.1.22.tar.gz", hash = "sha256:fdc3823169c2b2baca058a95cc8dd590d786fa05f5535d53b880c96bff72b443", size = 13424, upload-time = "2026-02-05T00:26:38.185Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7c/34/1811d2982f236c988fdf56b57080ece9a769694b57b3babddaed588c3381/openinference_instrumentation_smolagents-0.1.22-py3-none-any.whl", hash = "sha256:05e3a42ac04b5ed2c6d1c88189121333efa1a45b1bd0d39975f4d4f744b9eb6f", size = 15082, upload-time = "2026-02-05T00:26:34.428Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-vertexai"
-version = "0.1.12"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ad/98/d2b1e542e63dfa57977345e5351cb1fbabcbbb66719e288d54ec21ae629e/openinference_instrumentation_vertexai-0.1.12.tar.gz", hash = "sha256:957e82050783ce448ef0e6d65f18092182a660c1b82d868dc3934db950197c51", size = 21244, upload-time = "2026-02-05T00:26:34.939Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/27/b246a68fcc29de556ab25b831cddeae4d8edde89d066790f1f81384d708b/openinference_instrumentation_vertexai-0.1.12-py3-none-any.whl", hash = "sha256:eeb0591e752af2e47824eee02ee2dc5c22f93fbc9e62c51c6854e3334cb1287a", size = 17249, upload-time = "2026-02-05T00:26:33.365Z" },
 ]
 
 [[package]]
@@ -9317,15 +8996,6 @@ wheels = [
 ]
 
 [[package]]
-name = "py-cpuinfo"
-version = "9.0.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/37/a8/d832f7293ebb21690860d2e01d8115e5ff6f2ae8bbdc953f0eb0fa4bd2c7/py-cpuinfo-9.0.0.tar.gz", hash = "sha256:3cdbbf3fac90dc6f118bfd64384f309edeadd902d7c8fb17f02ffa1fc3f49690", size = 104716, upload-time = "2022-10-25T20:38:06.303Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/a9/023730ba63db1e494a271cb018dcd361bd2c917ba7004c3e49d5daf795a2/py_cpuinfo-9.0.0-py3-none-any.whl", hash = "sha256:859625bc251f64e21f077d099d4162689c762b5d6a4c3c97553d56241c9674d5", size = 22335, upload-time = "2022-10-25T20:38:27.636Z" },
-]
-
-[[package]]
 name = "py-key-value-aio"
 version = "0.4.4"
 source = { registry = "https://pypi.org/simple" }
@@ -9806,8 +9476,7 @@ dependencies = [
     { name = "protobuf", version = "5.29.6", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-autogen' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
     { name = "protobuf", version = "6.33.5", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-rag' or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-most') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "python-dotenv" },
-    { name = "setuptools", version = "81.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "setuptools", version = "82.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "setuptools" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/94/0c/92adff800a04cd3e9b3f17c06fa972c8d590846b1e0bac0ccf39e054b596/pymilvus-2.6.9.tar.gz", hash = "sha256:c53a3d84ff15814e251be13edda70a98a1c8a6090d7597a908387cbb94a9504a", size = 1493560, upload-time = "2026-02-10T11:01:27.415Z" }
 wheels = [
@@ -10204,57 +9873,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/20/fb/c9c4cecf6e7fdff2dbaeee0de40e93fe495379eb5fe2775b184ea45315da/qdrant_client-1.17.0.tar.gz", hash = "sha256:47eb033edb9be33a4babb4d87b0d8d5eaf03d52112dca0218db7f2030bf41ba9", size = 344839, upload-time = "2026-02-19T16:03:17.069Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/15/dfadbc9d8c9872e8ac45fa96f5099bb2855f23426bfea1bbcdc85e64ef6e/qdrant_client-1.17.0-py3-none-any.whl", hash = "sha256:f5b452c68c42b3580d3d266446fb00d3c6e3aae89c916e16585b3c704e108438", size = 390381, upload-time = "2026-02-19T16:03:15.486Z" },
-]
-
-[[package]]
-name = "ragaai-catalyst"
-version = "2.2.7"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "google-genai" },
-    { name = "gputil" },
-    { name = "groq" },
-    { name = "ipynbname" },
-    { name = "langchain" },
-    { name = "langchain-core" },
-    { name = "litellm" },
-    { name = "llama-index" },
-    { name = "markdown" },
-    { name = "openai" },
-    { name = "openinference-instrumentation" },
-    { name = "openinference-instrumentation-anthropic" },
-    { name = "openinference-instrumentation-bedrock" },
-    { name = "openinference-instrumentation-crewai" },
-    { name = "openinference-instrumentation-google-adk" },
-    { name = "openinference-instrumentation-groq" },
-    { name = "openinference-instrumentation-haystack" },
-    { name = "openinference-instrumentation-langchain" },
-    { name = "openinference-instrumentation-litellm" },
-    { name = "openinference-instrumentation-llama-index" },
-    { name = "openinference-instrumentation-mistralai" },
-    { name = "openinference-instrumentation-openai" },
-    { name = "openinference-instrumentation-openai-agents" },
-    { name = "openinference-instrumentation-smolagents" },
-    { name = "openinference-instrumentation-vertexai" },
-    { name = "opentelemetry-exporter-otlp" },
-    { name = "opentelemetry-proto" },
-    { name = "opentelemetry-sdk" },
-    { name = "pandas" },
-    { name = "psutil" },
-    { name = "py-cpuinfo" },
-    { name = "pyopenssl" },
-    { name = "pypdf" },
-    { name = "requests" },
-    { name = "rich" },
-    { name = "tenacity", version = "8.3.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "tiktoken" },
-    { name = "tomli" },
-    { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/e3/d370e3ecabcaf60f7ea8e30a5793990c4dc3782d7196ff3bf6e3dc722d6f/ragaai_catalyst-2.2.7.tar.gz", hash = "sha256:de7e024a111b2e4247767308a0efc1599b874f98792e503cadfda66146d9a027", size = 40901603, upload-time = "2025-11-26T09:38:48.16Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/2f/ecce53efba5696591b615476904ab0bd847d154a0a878c061eb8e461b0a9/ragaai_catalyst-2.2.7-py3-none-any.whl", hash = "sha256:bc9b42504ea2b9d88a48c07a0164fc367b52a6e6c828712137a6682013d12a74", size = 436462, upload-time = "2025-11-26T09:37:36.372Z" },
 ]
 
 [[package]]
@@ -10926,33 +10544,8 @@ wheels = [
 
 [[package]]
 name = "setuptools"
-version = "81.0.0"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.13' and sys_platform == 'linux'",
-    "python_full_version >= '3.13' and sys_platform != 'linux'",
-    "python_full_version == '3.12.*' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and sys_platform != 'linux'",
-    "python_full_version < '3.12' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and sys_platform != 'linux'",
-]
-sdist = { url = "https://files.pythonhosted.org/packages/0d/1c/73e719955c59b8e424d015ab450f51c0af856ae46ea2da83eba51cc88de1/setuptools-81.0.0.tar.gz", hash = "sha256:487b53915f52501f0a79ccfd0c02c165ffe06631443a886740b91af4b7a5845a", size = 1198299, upload-time = "2026-02-06T21:10:39.601Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/e3/c164c88b2e5ce7b24d667b9bd83589cf4f3520d97cad01534cd3c4f55fdb/setuptools-81.0.0-py3-none-any.whl", hash = "sha256:fdd925d5c5d9f62e4b74b30d6dd7828ce236fd6ed998a08d81de62ce5a6310d6", size = 1062021, upload-time = "2026-02-06T21:10:37.175Z" },
-]
-
-[[package]]
-name = "setuptools"
 version = "82.0.0"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.13' and sys_platform == 'linux'",
-    "python_full_version >= '3.13' and sys_platform != 'linux'",
-    "python_full_version == '3.12.*' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and sys_platform != 'linux'",
-    "python_full_version < '3.12' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and sys_platform != 'linux'",
-]
 sdist = { url = "https://files.pythonhosted.org/packages/82/f3/748f4d6f65d1756b9ae577f329c951cda23fb900e4de9f70900ced962085/setuptools-82.0.0.tar.gz", hash = "sha256:22e0a2d69474c6ae4feb01951cb69d515ed23728cf96d05513d36e42b62b37cb", size = 1144893, upload-time = "2026-02-08T15:08:40.206Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e1/c6/76dc613121b793286a3f91621d7b75a2b493e0390ddca50f11993eadf192/setuptools-82.0.0-py3-none-any.whl", hash = "sha256:70b18734b607bd1da571d097d236cfcfacaf01de45717d59e6e04b96877532e0", size = 1003468, upload-time = "2026-02-08T15:08:38.723Z" },
@@ -10964,8 +10557,7 @@ version = "9.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "packaging" },
-    { name = "setuptools", version = "81.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "setuptools", version = "82.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "setuptools" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7b/b1/19587742aad604f1988a8a362e660e8c3ac03adccdb71c96d86526e5eb62/setuptools_scm-9.2.2.tar.gz", hash = "sha256:1c674ab4665686a0887d7e24c03ab25f24201c213e82ea689d2f3e169ef7ef57", size = 203385, upload-time = "2025-10-19T22:08:05.608Z" }
 wheels = [
@@ -11161,8 +10753,7 @@ dependencies = [
     { name = "preshed" },
     { name = "pydantic" },
     { name = "requests" },
-    { name = "setuptools", version = "81.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "setuptools", version = "82.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "setuptools" },
     { name = "spacy-legacy" },
     { name = "spacy-loggers" },
     { name = "srsly" },
@@ -11556,7 +11147,7 @@ dependencies = [
     { name = "slack-bolt", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "strands-agents", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "sympy", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
-    { name = "tenacity", version = "9.1.4", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
+    { name = "tenacity", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "typing-extensions", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "tzdata", marker = "(sys_platform == 'win32' and extra == 'extra-10-nvidia-nat-most') or (sys_platform == 'win32' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'win32' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'win32' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'win32' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform == 'win32' and extra != 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform == 'win32' and extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra != 'extra-10-nvidia-nat-rag' and extra != 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra != 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-rag')" },
     { name = "watchdog", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
@@ -11607,33 +11198,8 @@ wheels = [
 
 [[package]]
 name = "tenacity"
-version = "8.3.0"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.13' and sys_platform == 'linux'",
-    "python_full_version >= '3.13' and sys_platform != 'linux'",
-    "python_full_version == '3.12.*' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and sys_platform != 'linux'",
-    "python_full_version < '3.12' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and sys_platform != 'linux'",
-]
-sdist = { url = "https://files.pythonhosted.org/packages/32/6c/57df6196ce52c464cf8556e8f697fec5d3469bb8cd319c1685c0a090e0b4/tenacity-8.3.0.tar.gz", hash = "sha256:953d4e6ad24357bceffbc9707bc74349aca9d245f68eb65419cf0c249a1949a2", size = 43608, upload-time = "2024-05-07T08:48:17.099Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/61/a1/6bb0cbebefb23641f068bb58a2bc56da9beb2b1c550242e3c540b37698f3/tenacity-8.3.0-py3-none-any.whl", hash = "sha256:3649f6443dbc0d9b01b9d8020a9c4ec7a1ff5f6f3c6c8a036ef371f573fe9185", size = 25934, upload-time = "2024-05-07T08:48:14.696Z" },
-]
-
-[[package]]
-name = "tenacity"
 version = "9.1.4"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.13' and sys_platform == 'linux'",
-    "python_full_version >= '3.13' and sys_platform != 'linux'",
-    "python_full_version == '3.12.*' and sys_platform == 'linux'",
-    "python_full_version == '3.12.*' and sys_platform != 'linux'",
-    "python_full_version < '3.12' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and sys_platform != 'linux'",
-]
 sdist = { url = "https://files.pythonhosted.org/packages/47/c6/ee486fd809e357697ee8a44d3d69222b344920433d3b6666ccd9b374630c/tenacity-9.1.4.tar.gz", hash = "sha256:adb31d4c263f2bd041081ab33b498309a57c77f9acf2db65aadf0898179cf93a", size = 49413, upload-time = "2026-02-07T10:45:33.841Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl", hash = "sha256:6095a360c919085f28c6527de529e76a06ad89b23659fa881ae0649b867a9d55", size = 28926, upload-time = "2026-02-07T10:45:32.24Z" },
@@ -11669,8 +11235,7 @@ dependencies = [
     { name = "packaging" },
     { name = "preshed" },
     { name = "pydantic" },
-    { name = "setuptools", version = "81.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "setuptools", version = "82.0.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "setuptools" },
     { name = "srsly" },
     { name = "wasabi" },
 ]
@@ -12436,8 +12001,7 @@ dependencies = [
     { name = "polyfile-weave" },
     { name = "pydantic" },
     { name = "sentry-sdk" },
-    { name = "tenacity", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "tenacity", version = "9.1.4", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "tenacity" },
     { name = "tzdata", marker = "sys_platform == 'win32' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
     { name = "wandb" },
 ]

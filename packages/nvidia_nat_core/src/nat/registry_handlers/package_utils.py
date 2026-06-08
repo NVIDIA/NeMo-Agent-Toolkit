@@ -94,7 +94,7 @@ def resolve_extras_to_packages(package_name: str, extras: list[str]) -> set[str]
     Returns:
         set[str]: Set of additional package names that the extras resolve to
         (e.g., {'nvidia-nat-langchain', 'nvidia-nat-opentelemetry', 'nvidia-nat-phoenix',
-        'nvidia-nat-weave', 'nvidia-nat-ragaai'})
+        'nvidia-nat-weave'})
     """
     resolved_packages = set()
 
