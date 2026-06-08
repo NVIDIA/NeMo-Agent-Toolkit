@@ -98,10 +98,11 @@ First, run the workflow against a Dynamo endpoint to collect profiler traces and
 
 In a new terminal and directory, or on another machine, install Dynamo from source by following the [Dynamo installation guide](./INSTALL_LIBRARY.md).
 
-Set `DYNAMO_SOURCE_DIR` to the Dynamo source checkout you created in the installation guide, then download the `NVIDIA-Nemotron-3-Nano-30B-A3B-BF16` model from Hugging Face.
+Set `DYNAMO_SOURCE_DIR` to the Dynamo source checkout you created in the installation guide and `NAT_REPO_DIR` to the NeMo Agent Toolkit repository root, then download the `NVIDIA-Nemotron-3-Nano-30B-A3B-BF16` model from Hugging Face.
 
 ```bash
 export DYNAMO_SOURCE_DIR="${HOME}/dynamo"  # adjust if you cloned Dynamo elsewhere
+export NAT_REPO_DIR="/path/to/NeMo-Agent-Toolkit"  # adjust to your NeMo Agent Toolkit checkout
 cd "$DYNAMO_SOURCE_DIR"
 export HF_TOKEN=hf_...
 huggingface-cli download nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16
@@ -127,10 +128,10 @@ docker compose -f docker-observability.yml up -d --remove-orphans
 
 #### C. Run the Dynamo stack
 
-From the NeMo Agent Toolkit repository root, copy `dynamo_stack.sh` into the Dynamo source checkout. Then run it in the Dynamo virtual environment.
+Copy `dynamo_stack.sh` into the Dynamo source checkout. Then run it in the Dynamo virtual environment.
 
 ```bash
-cp examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/scripts/dynamo_stack.sh "$DYNAMO_SOURCE_DIR/"
+cp "$NAT_REPO_DIR/examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/scripts/dynamo_stack.sh" "$DYNAMO_SOURCE_DIR/"
 cd "$DYNAMO_SOURCE_DIR"
 bash dynamo_stack.sh
 ```
@@ -224,12 +225,12 @@ ROUTING RECOMMENDATIONS
 
 ## Step 3: Restart Dynamo Backend
 
-Kill your previously running dynamo deployment by pressing `ctrl+c` in the terminal where you ran `dynamo_stack.sh`. Then copy `dynamo_stack_sensitivity.sh` from the NeMo Agent Toolkit repository root into the Dynamo source checkout, and run it.
+Kill your previously running dynamo deployment by pressing `ctrl+c` in the terminal where you ran `dynamo_stack.sh`. Then copy `dynamo_stack_sensitivity.sh` into the Dynamo source checkout, and run it.
 
 This ensures you have a fresh deployment ready to receive routing hints in Step 4.
 
 ```bash
-cp examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/scripts/dynamo_stack_sensitivity.sh "$DYNAMO_SOURCE_DIR/"
+cp "$NAT_REPO_DIR/examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/scripts/dynamo_stack_sensitivity.sh" "$DYNAMO_SOURCE_DIR/"
 cd "$DYNAMO_SOURCE_DIR"
 bash dynamo_stack_sensitivity.sh
 ```
