@@ -68,6 +68,7 @@ def jwks_from_private(rsa_private_pem: str) -> dict[str, Any]:
 ISSUER = "https://issuer.test"
 JWKS_URI = f"{ISSUER}/.well-known/jwks.json"
 DISCOVERY_URL = f"{ISSUER}/.well-known/openid-configuration"
+INTROSPECTION_ENDPOINT = f"{ISSUER}/introspect"
 AUDIENCE = "api://resource"
 SCOPES = ["read", "write"]
 
@@ -132,7 +133,7 @@ class _MockAsyncHTTPClient:
         jwks = kwargs.pop("_jwks_payload", None)
 
         if url == DISCOVERY_URL:
-            return _MockHTTPResponse({"jwks_uri": JWKS_URI})
+            return _MockHTTPResponse({"jwks_uri": JWKS_URI, "introspection_endpoint": INTROSPECTION_ENDPOINT})
         if url == JWKS_URI:
             return _MockHTTPResponse(jwks)
         return _MockHTTPResponse({"error": "not found"}, status=404)
@@ -143,6 +144,7 @@ class _MockAsyncOAuth2Client:
     call_count = 0
     response: dict[str, Any] | _MockHTTPResponse = {}
     last_kwargs: dict[str, Any] = {}
+    last_endpoint: str | None = None
 
     def __init__(self, *args, **kwargs):
         _MockAsyncOAuth2Client.last_kwargs = kwargs
@@ -155,6 +157,7 @@ class _MockAsyncOAuth2Client:
 
     async def introspect_token(self, endpoint: str, token: str, token_type_hint: str = "access_token"):
         _MockAsyncOAuth2Client.call_count += 1
+        _MockAsyncOAuth2Client.last_endpoint = endpoint
         return _MockAsyncOAuth2Client.response
 
 
@@ -184,6 +187,7 @@ def patch_httpx_and_oauth(monkeypatch, jwks_from_private):
     _MockAsyncOAuth2Client.call_count = 0
     _MockAsyncOAuth2Client.response = {}
     _MockAsyncOAuth2Client.last_kwargs = {}
+    _MockAsyncOAuth2Client.last_endpoint = None
     yield
 
 
@@ -218,7 +222,7 @@ def validator_opaque():
         issuer=ISSUER,
         audience=AUDIENCE,
         scopes=SCOPES,
-        introspection_endpoint=f"{ISSUER}/introspect",
+        introspection_endpoint=INTROSPECTION_ENDPOINT,
         client_id="client-abc",
         client_secret="secret-xyz",
         timeout=3.0,
@@ -233,7 +237,7 @@ def validator_both():
         audience=AUDIENCE,
         scopes=SCOPES,
         jwks_uri=JWKS_URI,
-        introspection_endpoint=f"{ISSUER}/introspect",
+        introspection_endpoint=INTROSPECTION_ENDPOINT,
         client_id="client-abc",
         client_secret="secret-xyz",
         timeout=3.0,
@@ -332,7 +336,7 @@ async def test_opaque_passes_client_auth_method():
         issuer=ISSUER,
         audience=AUDIENCE,
         scopes=SCOPES,
-        introspection_endpoint=f"{ISSUER}/introspect",
+        introspection_endpoint=INTROSPECTION_ENDPOINT,
         client_id="client-abc",
         client_secret="secret-xyz",
         client_auth_method="client_secret_post",
@@ -353,6 +357,33 @@ async def test_opaque_passes_client_auth_method():
 
     assert res.active is True
     assert _MockAsyncOAuth2Client.last_kwargs["token_endpoint_auth_method"] == "client_secret_post"
+
+
+async def test_opaque_uses_introspection_endpoint_from_discovery():
+    validator = BearerTokenValidator(
+        issuer=ISSUER,
+        audience=AUDIENCE,
+        scopes=SCOPES,
+        discovery_url=DISCOVERY_URL,
+        client_id="client-abc",
+        client_secret="secret-xyz",
+        timeout=3.0,
+        leeway=30,
+    )
+    now = int(time.time())
+    _MockAsyncOAuth2Client.response = {
+        "active": True,
+        "client_id": "client-abc",
+        "exp": now + 600,
+        "aud": [AUDIENCE],
+        "iss": ISSUER,
+        "scope": "read write",
+    }
+
+    res = await validator.verify("opaque-from-discovery")
+
+    assert res.active is True
+    assert _MockAsyncOAuth2Client.last_endpoint == INTROSPECTION_ENDPOINT
 
 
 async def test_opaque_missing_scope_rejected(validator_opaque):

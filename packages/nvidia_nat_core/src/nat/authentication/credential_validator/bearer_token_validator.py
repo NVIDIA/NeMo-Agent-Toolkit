@@ -25,10 +25,12 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client
 from authlib.jose import JsonWebKey
 from authlib.jose import KeySet
 from authlib.jose import jwt
+from authlib.jose.errors import JoseError
 
 from nat.data_models.authentication import TokenValidationResult
 
 logger = logging.getLogger(__name__)
+_TOKEN_VALIDATION_ERRORS = (ValueError, TypeError, KeyError, httpx.HTTPError, JoseError)
 
 
 class BearerTokenValidator:
@@ -130,16 +132,22 @@ class BearerTokenValidator:
         if not token:
             return TokenValidationResult(client_id="", token_type="bearer", active=False)
 
-        can_introspect = bool(self.introspection_endpoint and self.client_id and self.client_secret)
+        introspection_endpoint = None
+        if self.client_id and self.client_secret:
+            try:
+                introspection_endpoint = await self._resolve_introspection_endpoint()
+            except _TOKEN_VALIDATION_ERRORS as error:
+                logger.warning("Failed to resolve token introspection endpoint: %s", error)
+        can_introspect = bool(introspection_endpoint)
         if token.count(".") == 2:
             try:
                 return await self._verify_jwt_token(token)
-            except Exception as jwt_error:
+            except _TOKEN_VALIDATION_ERRORS as jwt_error:
                 if can_introspect:
                     logger.warning("JWT token validation failed; falling back to token introspection: %s", jwt_error)
                     try:
-                        return await self._verify_opaque_token(token)
-                    except Exception as introspection_error:
+                        return await self._verify_opaque_token(token, introspection_endpoint=introspection_endpoint)
+                    except _TOKEN_VALIDATION_ERRORS as introspection_error:
                         logger.warning("Bearer token validation failed after introspection fallback: %s",
                                        introspection_error)
                 else:
@@ -148,8 +156,8 @@ class BearerTokenValidator:
 
         try:
             if can_introspect:
-                return await self._verify_opaque_token(token)
-        except Exception as error:
+                return await self._verify_opaque_token(token, introspection_endpoint=introspection_endpoint)
+        except _TOKEN_VALIDATION_ERRORS as error:
             logger.warning("Opaque token validation failed: %s", error)
             return TokenValidationResult(client_id="", token_type="bearer", active=False)
 
@@ -229,11 +237,12 @@ class BearerTokenValidator:
             active=True,
         )
 
-    async def _verify_opaque_token(self, token: str) -> TokenValidationResult:
+    async def _verify_opaque_token(self, token: str, *, introspection_endpoint: str) -> TokenValidationResult:
         """Verify opaque token via RFC 7662 introspection.
 
         Args:
             token: Opaque token to verify
+            introspection_endpoint: OAuth 2.0 introspection URL
 
         Returns:
             TokenValidationResult
@@ -265,7 +274,7 @@ class BearerTokenValidator:
 
             async with AsyncOAuth2Client(**oauth_client_kwargs) as oauth_client:
                 introspection_response = self._coerce_introspection_response(await oauth_client.introspect_token(
-                    self.introspection_endpoint,
+                    introspection_endpoint,
                     token,
                     token_type_hint="access_token",
                 ))
@@ -329,6 +338,20 @@ class BearerTokenValidator:
 
         except (ValueError, TypeError, KeyError, httpx.HTTPError) as e:
             raise ValueError(f"Introspection failed: {e}") from e
+
+    async def _resolve_introspection_endpoint(self) -> str | None:
+        """Resolve the token introspection endpoint from config or discovery metadata."""
+        if self.introspection_endpoint:
+            return self.introspection_endpoint
+
+        if self.discovery_url:
+            config = await self._get_oidc_configuration(self.discovery_url)
+            endpoint = config.get("introspection_endpoint")
+            if isinstance(endpoint, str) and endpoint:
+                self._require_https(endpoint, "introspection_endpoint")
+                return endpoint
+
+        return None
 
     async def _resolve_jwks_uri(self) -> str:
         """Resolve JWKS URI using configuration priority: jwks_uri → discovery → issuer.

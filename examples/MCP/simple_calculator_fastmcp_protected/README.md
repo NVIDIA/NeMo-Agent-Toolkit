@@ -207,6 +207,12 @@ nat fastmcp server run --config_file examples/MCP/simple_calculator_fastmcp_prot
 
 ### Step 6: Run the MCP Calculator Client
 
+The client workflow also starts the `mcp_time` function group with `python -m mcp_server_time`. If you installed this example package, the dependency is included automatically. To verify it is available before running the workflow:
+
+```bash
+uv run --project examples/MCP/simple_calculator_fastmcp_protected --locked python -m mcp_server_time --help
+```
+
 Set the client ID and client secret from Step 3 in the environment variables:
 ```bash
 # Terminal 2
