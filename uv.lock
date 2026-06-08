@@ -6039,6 +6039,7 @@ requires-dist = [
 name = "nat-simple-calculator-fastmcp-protected"
 source = { editable = "examples/MCP/simple_calculator_fastmcp_protected" }
 dependencies = [
+    { name = "mcp-server-time" },
     { name = "nat-simple-calculator" },
     { name = "nvidia-nat", extra = ["langchain", "mcp", "test"] },
     { name = "nvidia-nat-fastmcp" },
@@ -6046,6 +6047,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "mcp-server-time", specifier = "~=2025.8" },
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "nvidia-nat", extras = ["langchain", "mcp", "test"], editable = "." },
     { name = "nvidia-nat-fastmcp", editable = "packages/nvidia_nat_fastmcp" },

@@ -141,10 +141,11 @@ class _MockAsyncHTTPClient:
 class _MockAsyncOAuth2Client:
 
     call_count = 0
-    response: dict[str, Any] = {}
+    response: dict[str, Any] | _MockHTTPResponse = {}
+    last_kwargs: dict[str, Any] = {}
 
     def __init__(self, *args, **kwargs):
-        pass
+        _MockAsyncOAuth2Client.last_kwargs = kwargs
 
     async def __aenter__(self):
         return self
@@ -182,6 +183,7 @@ def patch_httpx_and_oauth(monkeypatch, jwks_from_private):
 
     _MockAsyncOAuth2Client.call_count = 0
     _MockAsyncOAuth2Client.response = {}
+    _MockAsyncOAuth2Client.last_kwargs = {}
     yield
 
 
@@ -305,6 +307,54 @@ async def test_opaque_happy_path(validator_opaque):
     assert set(res.scopes or []) == set(SCOPES)
 
 
+async def test_opaque_accepts_response_object(validator_opaque):
+    now = int(time.time())
+    _MockAsyncOAuth2Client.response = _MockHTTPResponse({
+        "active": True,
+        "client_id": "client-abc",
+        "username": "alice",
+        "token_type": "access_token",
+        "exp": now + 600,
+        "aud": [AUDIENCE],
+        "iss": ISSUER,
+        "scope": "read write",
+    })
+
+    res = await validator_opaque.verify("opaque-response-object")
+
+    assert res.active is True
+    assert res.audience == [AUDIENCE]
+    assert set(res.scopes or []) == set(SCOPES)
+
+
+async def test_opaque_passes_client_auth_method():
+    validator = BearerTokenValidator(
+        issuer=ISSUER,
+        audience=AUDIENCE,
+        scopes=SCOPES,
+        introspection_endpoint=f"{ISSUER}/introspect",
+        client_id="client-abc",
+        client_secret="secret-xyz",
+        client_auth_method="client_secret_post",
+        timeout=3.0,
+        leeway=30,
+    )
+    now = int(time.time())
+    _MockAsyncOAuth2Client.response = {
+        "active": True,
+        "client_id": "client-abc",
+        "exp": now + 600,
+        "aud": [AUDIENCE],
+        "iss": ISSUER,
+        "scope": "read write",
+    }
+
+    res = await validator.verify("opaque-secret-token")
+
+    assert res.active is True
+    assert _MockAsyncOAuth2Client.last_kwargs["token_endpoint_auth_method"] == "client_secret_post"
+
+
 async def test_opaque_missing_scope_rejected(validator_opaque):
     now = int(time.time())
     _MockAsyncOAuth2Client.response = {
@@ -343,6 +393,24 @@ async def test_routing_uses_jwt_when_three_segments(validator_both, rsa_private_
     jwt_token = _make_jwt(rsa_private_pem, exp_offset_secs=300, scopes=SCOPES)
     res = await validator_both.verify(jwt_token)
     assert res.active is True  # verified via JWKS/JWT path
+
+
+async def test_jwt_like_token_falls_back_to_introspection_when_configured(validator_both):
+    now = int(time.time())
+    _MockAsyncOAuth2Client.response = {
+        "active": True,
+        "client_id": "client-abc",
+        "token_type": "access_token",
+        "exp": now + 600,
+        "aud": [AUDIENCE],
+        "iss": ISSUER,
+        "scope": "read write",
+    }
+
+    res = await validator_both.verify("opaque.with.dots")
+
+    assert res.active is True
+    assert _MockAsyncOAuth2Client.call_count == 1
 
 
 async def test_routing_uses_opaque_when_non_jwt(validator_both):
