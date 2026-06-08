@@ -18,8 +18,28 @@ from pathlib import Path
 import pytest
 
 
+class MockBuilder:
+
+    async def get_llm(self, llm_name, wrapper_type):
+        return None
+
+    async def get_tools(self, tool_names, wrapper_type):
+        return []
+
+
+async def test_workflow_initializes_with_agno_v2_constructor_args():
+    from nat.builder.function_info import FunctionInfo
+    from nat_agno_personal_finance.agno_personal_finance_function import AgnoPersonalFinanceFunctionConfig
+    from nat_agno_personal_finance.agno_personal_finance_function import agno_personal_finance_function
+
+    config = AgnoPersonalFinanceFunctionConfig(llm_name="mock_llm", tools=[])
+
+    async with agno_personal_finance_function(config, MockBuilder()) as fn_info:
+        assert isinstance(fn_info, FunctionInfo)
+
+
 @pytest.mark.integration
-@pytest.mark.usefixtures("serp_api_key", "openai_api_key")
+@pytest.mark.usefixtures("serp_api_key", "nvidia_api_key")
 async def test_full_workflow():
     from nat.test.utils import locate_example_config
     from nat.test.utils import run_workflow
