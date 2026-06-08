@@ -142,18 +142,22 @@ jobs:
           name: "test-results-${{ matrix.arch }}-py${{ matrix.python-version }}"
           path: "${{ github.workspace }}/tmp/reports/*.xml"
           if-no-files-found: error
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
-        # Upload test results even if the tests fail
-        if: ${{ always() }}
-        with:
-          directory: "${{ github.workspace }}/tmp/reports"
-          env_vars: CI_ARCH,CI_PYTHON_VERSION
-          fail_ci_if_error: true
-          flags: unittests
-          name: nat-code-cov-${{ matrix.arch }}-py${{ matrix.python-version }}
-          token: ${{ secrets.CODECOV_TOKEN }}
-          verbose: true
+
+      # For now disable codecode to work-around https://github.com/codecov/codecov-action/issues/1956
+      # Will re-enable once we have some spare cycles to investigate the issue
+      #
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
+      #   # Upload test results even if the tests fail
+      #   if: ${{ always() }}
+      #   with:
+      #     directory: "${{ github.workspace }}/tmp/reports"
+      #     env_vars: CI_ARCH,CI_PYTHON_VERSION
+      #     fail_ci_if_error: true
+      #     flags: unittests
+      #     name: nat-code-cov-${{ matrix.arch }}-py${{ matrix.python-version }}
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     verbose: true
 
   documentation:
     name: Documentation
