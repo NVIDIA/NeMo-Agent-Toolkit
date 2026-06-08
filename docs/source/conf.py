@@ -496,7 +496,7 @@ redirects = {
     'workflows/observe/index':
         '/run-workflows/observe/observe.html',
     'workflows/observe/observe-workflow-with-catalyst':
-        '/run-workflows/observe/observe.html?provider=Catalyst#provider-integration-guides',
+        '/run-workflows/observe/observe.html',
     'workflows/observe/observe-workflow-with-data-flywheel':
         '/run-workflows/observe/observe.html?provider=Data-Flywheel#provider-integration-guides',
     'workflows/observe/observe-workflow-with-dynatrace':

@@ -78,7 +78,6 @@ Examples of existing telemetry exporters include:
 - **OpenTelemetry Collector**: Exports traces to OpenTelemetry-compatible services
 - **Patronus**: Exports traces to Patronus via OTLP
 - **Galileo**: Exports traces to Galileo via OTLP
-- **RagaAI Catalyst**: Exports traces to RagaAI Catalyst
 - **DBNL**: Exports traces to DBNL via OTLP
 
 ## Quick Start: Your First Telemetry Exporter
@@ -254,7 +253,7 @@ Specialized for OpenTelemetry-compatible services with many pre-built options:
 - **Use case**: OTLP-compatible backends, standard observability tools
 - **Base class**: `OtelSpanExporter`
 - **Data flow**: `IntermediateStep` → `Span` → [Processing Pipeline] → `OtelSpan` → Export
-- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Arize AX, Phoenix, RagaAI, Weave, DBNL
+- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Arize AX, Phoenix, Weave, DBNL
 
 #### Advanced Custom Exporters
 
@@ -288,7 +287,6 @@ Before creating a custom exporter, check if your observability service is alread
 | **Patronus** | `patronus` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
 | **Galileo** | `galileo` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
 | **Phoenix** | `phoenix` | `pip install "nvidia-nat[phoenix]"` | endpoint |
-| **RagaAI/Catalyst** | `catalyst` | `pip install "nvidia-nat[ragaai]"` | API key + project |
 | **Weave** | `weave` | `pip install "nvidia-nat[weave]"` | project name |
 
 ### Simple Configuration Example
