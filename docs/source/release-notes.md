@@ -23,6 +23,10 @@ This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 
 * Migrated Tavily web search support from the LangChain-only `tavily_internet_search` tool in `nvidia-nat[langchain]` to the provider-managed, framework-agnostic [`nemo-agent-toolkit-tavily`](https://github.com/tavily-ai/NeMo-Agent-Toolkit-tavily) plugin. Workflows should install the Tavily package, configure Tavily under `function_groups` with `_type: tavily`, and reference exposed tools by names such as `internet_search__search`.
 
+### Breaking Changes
+
+* The `tavily_internet_search` function in `nvidia-nat[langchain]` has been removed as a working Tavily search implementation. Existing workflow configs that use `_type: tavily_internet_search` must install `nemo-agent-toolkit-tavily` and migrate to the Tavily function group. See the [migration guide](./resources/migration-guide.md#tavily-internet-search-package-migration-breaking) for details.
+
 Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.8/CHANGELOG.md) for the complete list of changes.
 
 ## Release v1.7.0

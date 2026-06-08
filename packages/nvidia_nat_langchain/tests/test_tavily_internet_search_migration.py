@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
-# isort:skip_file
+import pytest
 
-# Import any providers which need to be automatically registered here
+from nat.plugins.langchain.tools.tavily_internet_search import TavilyInternetSearchToolConfig
+from nat.test import ToolTestRunner
 
-from . import code_generation_tool
-from . import exa_internet_search
-from . import tavily_internet_search
-from . import wikipedia_search
+
+async def test_tavily_internet_search_stub_points_to_external_package():
+    runner = ToolTestRunner()
+
+    with pytest.raises(RuntimeError, match="nemo-agent-toolkit-tavily"):
+        await runner.test_tool(config_type=TavilyInternetSearchToolConfig, input_data="weather in sf")
