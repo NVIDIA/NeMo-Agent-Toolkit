@@ -104,6 +104,8 @@ TOOL_CALL_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
 
 
 class AgentDecision(Enum):
+    """Routing decisions returned by a LangChain agent step."""
+
     TOOL = "tool"
     END = "finished"
 

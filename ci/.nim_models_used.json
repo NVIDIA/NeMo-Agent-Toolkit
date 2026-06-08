@@ -11,7 +11,7 @@
     },
     {
       "model": "meta/llama-3.3-70b-instruct",
-      "num_configs": 26
+      "num_configs": 27
     },
     {
       "model": "nvidia/nemotron-3-super-120b-a12b",
@@ -35,6 +35,10 @@
     },
     {
       "model": "nvidia/llama-3.1-nemotron-safety-guard-8b-v3",
+      "num_configs": 1
+    },
+    {
+      "model": "nvidia/llama-3.1-nemoguard-8b-content-safety",
       "num_configs": 1
     },
     {

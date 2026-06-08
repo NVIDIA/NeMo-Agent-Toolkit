@@ -75,11 +75,12 @@ phoenix = ["nvidia-nat-phoenix == {version}"]
 profiler = ["nvidia-nat-profiler == {version}"]
 rag = ["nvidia-nat-rag == {version}"]
 ragas = ["nvidia-nat-ragas == {version}"]
-ragaai = ["nvidia-nat-ragaai == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
 redis = ["nvidia-nat-redis == {version}"]
 s3 = ["nvidia-nat-s3 == {version}"]
 security = ["nvidia-nat-security == {version}"]
+defense = ["nvidia-nat-security[defense] == {version}"]
+guardrails = ["nvidia-nat-security[guardrails] == {version}"]
 semantic-kernel = ["nvidia-nat-semantic-kernel == {version}"]
 strands = ["nvidia-nat-strands == {version}"]
 test = ["nvidia-nat-test == {version}"]
@@ -89,7 +90,6 @@ zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
 # define any dependency extras in core so we can easily propagate to most
 async_endpoints = [ "nvidia-nat-core[async_endpoints] == {version}" ]
 gunicorn = [ "nvidia-nat-core[gunicorn] == {version}" ]
-pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
 
 most = [
   "nvidia-nat-a2a == {version}",
@@ -100,7 +100,8 @@ most = [
   "nvidia-nat-autogen == {version}",
   "nvidia-nat-atif == {version}",
   "nvidia-nat-config-optimizer == {version}",
-  "nvidia-nat-core[async_endpoints,gunicorn,pii-defense] == {version}",
+  "nvidia-nat-core[async_endpoints,gunicorn] == {version}",
+  "nvidia-nat-security[defense,guardrails] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
   "nvidia-nat-eval[full] == {version}",
@@ -221,10 +222,6 @@ conflicts = [
     [{ extra = "adk" }, { extra = "openpipe-art" }],
     [{ extra = "crewai" }, { extra = "openpipe-art" }],
     [{ extra = "most" }, { extra = "openpipe-art" }],
-    # (strands|adk)<>ragaai have incompatible tenacity versions
-    [{ extra = "adk" }, { extra = "ragaai" }],
-    [{ extra = "strands" }, { extra = "ragaai" }],
-    [{ extra = "most" }, { extra = "ragaai" }],
     # rag<>autogen have incompatible protobuf versions
     [{ extra = "rag" }, { extra = "autogen" }],
     [{ extra = "rag" }, { extra = "most" }],
@@ -258,7 +255,6 @@ nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
 nvidia-nat-profiler = { path = "packages/nvidia_nat_profiler", editable = true }
 nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
 nvidia-nat-ragas = { path = "packages/nvidia_nat_ragas", editable = true }
-nvidia-nat-ragaai = { path = "packages/nvidia_nat_ragaai", editable = true }
 nvidia-nat-mysql = { path = "packages/nvidia_nat_mysql", editable = true }
 nvidia-nat-redis = { path = "packages/nvidia_nat_redis", editable = true }
 nvidia-nat-s3 = { path = "packages/nvidia_nat_s3", editable = true }

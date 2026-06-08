@@ -122,11 +122,14 @@ Refer to the [Retrievers](./retrievers.md) documentation for more information.
 
 ### Environment Variable Interpolation
 
-NeMo Agent Toolkit supports environment variable interpolation in YAML configuration files using the format `${VAR:-default_value}`. This allows you to:
+NeMo Agent Toolkit supports environment variable interpolation in YAML configuration files using **braced** references: `${VAR}` and `${VAR:-default_value}`.
+
+This allows you to:
 
 1. Reference environment variables in your configuration
 2. Provide default values if the environment variable is not set
 3. Use empty strings as default values if needed
+4. Keep literal `$` characters in string values when they are not part of a `${...}` reference
 
 To illustrate this concept, an example from the `llms` section of the configuration file is provided below.
 
@@ -140,11 +143,13 @@ llms:
     temperature: 0.0
 ```
 
-The environment variable interpolation process follow the rules enumerated below.
+The environment variable interpolation process follows the rules below.
 
 - `${VAR}` - Uses the value of environment variable `VAR`, or empty string if not set
 - `${VAR:-default}` - Uses the value of environment variable `VAR`, or `default` if not set
 - `${VAR:-}` - Uses the value of environment variable `VAR`, or empty string if not set
+
+Bare `$VAR` (without braces) is not supported. Use `${VAR}` instead.
 
 ### Configuration Inheritance
 

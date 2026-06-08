@@ -36,6 +36,8 @@ logger = logging.getLogger(__name__)
 
 
 class RunnerState(Enum):
+    """Lifecycle states for a workflow runner."""
+
     UNINITIALIZED = 0
     INITIALIZED = 1
     RUNNING = 2
