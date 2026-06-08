@@ -78,7 +78,6 @@ Examples of existing telemetry exporters include:
 - **OpenTelemetry Collector**: Exports traces to OpenTelemetry-compatible services
 - **Patronus**: Exports traces to Patronus via OTLP
 - **Galileo**: Exports traces to Galileo via OTLP
-- **RagaAI Catalyst**: Exports traces to RagaAI Catalyst
 - **DBNL**: Exports traces to DBNL via OTLP
 
 ## Quick Start: Your First Telemetry Exporter
@@ -288,7 +287,6 @@ Before creating a custom exporter, check if your observability service is alread
 | **Patronus** | `patronus` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
 | **Galileo** | `galileo` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
 | **Phoenix** | `phoenix` | `pip install "nvidia-nat[phoenix]"` | endpoint |
-| **RagaAI/Catalyst** | `catalyst` | `pip install "nvidia-nat[ragaai]"` | API key + project |
 | **Weave** | `weave` | `pip install "nvidia-nat[weave]"` | project name |
 
 ### Simple Configuration Example

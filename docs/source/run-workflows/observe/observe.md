@@ -76,7 +76,6 @@ The following table lists each exporter with its supported features and configur
 | Provider | Integration Documentation | Supported Features |
 | -------- | ------------------------- | ------------------ |
 | [Arize AX](https://arize.com/docs/ax/) | [Observing with Arize AX](?provider=Arize-AX#provider-integration-guides){.external} | Logging, Tracing |
-| [Catalyst](https://docs.raga.ai/ragaai-catalyst) | [Observing with Catalyst](?provider=Catalyst#provider-integration-guides){.external} | Logging, Tracing |
 | [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel) | [Observing with Data Flywheel](?provider=Data-Flywheel#provider-integration-guides){.external} | Logging, Tracing |
 | [DBNL](https://distributional.com/) | [Observing with DBNL](?provider=DBNL#provider-integration-guides){.external} | Logging, Tracing |
 | [Dynatrace](https://dynatrace.com/) | [Observing with Dynatrace](?provider=Dynatrace#provider-integration-guides){.external} | Logging, Tracing |
@@ -205,13 +204,6 @@ For complete information about developing and integrating custom telemetry expor
 
   :::
 
-  :::{tab-item} Catalyst
-  :sync: Catalyst
-
-    :::{include} ./observe-workflow-with-catalyst.md
-
-  :::
-
   :::{tab-item} Data Flywheel
   :sync: Data-Flywheel
 
@@ -256,14 +248,14 @@ For complete information about developing and integrating custom telemetry expor
 
   :::{tab-item} Phoenix
   :sync: Phoenix
-   
+
     :::{include} ./observe-workflow-with-phoenix.md
 
   :::
 
   :::{tab-item} W&B Weave
   :sync: Wandb-Weave
-  
+
     :::{include} ./observe-workflow-with-weave.md
 
   :::
