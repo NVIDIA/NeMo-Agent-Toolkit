@@ -153,9 +153,9 @@ class MessageValidator:
         try:
             if (isinstance(data_model, ResponsePayloadOutput)):
                 payload = data_model.payload
-                # Unwrap the auto-derived ``OutputArgsSchema`` value so non-streaming generate
-                # responses render the answer (``42``) not a ``{"value": "42"}`` blob.
-                if isinstance(payload, BaseModel) and "value" in type(payload).model_fields:
+                # Unwrap only a payload whose whole serialized shape is ``{"value": ...}`` (the auto-derived
+                # ``OutputArgsSchema``); anything richer passes through as JSON so its fields aren't flattened.
+                if isinstance(payload, BaseModel) and set(payload.model_dump()) == {"value"}:
                     return SystemResponseContent(text=str(payload.value))
                 if hasattr(payload, "model_dump_json"):
                     return SystemResponseContent(text=payload.model_dump_json())

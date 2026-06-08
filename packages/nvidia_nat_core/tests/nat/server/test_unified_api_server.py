@@ -30,6 +30,7 @@ import yaml
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import ValidationError
 
 from nat.builder.context import Context
@@ -926,6 +927,31 @@ async def test_response_payload_output_websocket_unwraps_value():
     content = await MessageValidator().convert_data_to_message_content(
         ResponsePayloadOutput(payload=OutputArgsSchema(value="42")))
     assert isinstance(content, SystemResponseContent) and content.text == "42"
+
+
+async def test_generate_preserves_structured_payload_across_transports():
+    """Generate preserves richer structured payloads consistently across both transports.
+
+    A ``{value, ...extras}`` payload keeps its extras -- declared fields or ``extra="allow"`` runtime
+    fields -- rather than collapsing to the bare ``value``: HTTP streaming emits a JSON object and
+    WebSocket non-streaming carries the same JSON in ``content.text``.
+    """
+
+    class Declared(BaseModel):
+        value: str
+        tokens: int
+
+    class Loose(BaseModel):
+        model_config = ConfigDict(extra="allow")
+        value: str
+
+    expected = {"value": "21", "tokens": 42}
+    for payload in (Declared(value="21", tokens=42), Loose(value="21", tokens=42)):
+        wrapped = ResponsePayloadOutput(payload=payload)
+        sse = wrapped.get_stream_data()  # HTTP streaming
+        assert json.loads(sse[len("data: "):-2]) == expected
+        content = await MessageValidator().convert_data_to_message_content(wrapped)  # WebSocket non-streaming
+        assert isinstance(content, SystemResponseContent) and json.loads(content.text) == expected
 
 
 @pytest.mark.parametrize(
