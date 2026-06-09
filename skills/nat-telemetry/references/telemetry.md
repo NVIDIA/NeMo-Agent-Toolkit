@@ -106,18 +106,6 @@ general:
 
 Uses `nvidia-nat[opentelemetry]`. Requires `GALILEO_API_KEY`. Default endpoint: `https://app.galileo.ai/api/galileo/otel/traces` — override via `endpoint:` if self-hosting. Create the Logging project + Log Stream in the Galileo UI before starting the workflow.
 
-### DBNL
-
-```yaml
-general:
-  telemetry:
-    tracing:
-      dbnl:
-        _type: dbnl
-```
-
-Uses `nvidia-nat[opentelemetry]`. Requires self-hosted DBNL deployment plus three env vars: `DBNL_API_URL`, `DBNL_API_TOKEN`, `DBNL_PROJECT_ID`. Create a Trace Ingestion project in DBNL and generate the API token first.
-
 ### NVIDIA Data Flywheel
 
 ```yaml
