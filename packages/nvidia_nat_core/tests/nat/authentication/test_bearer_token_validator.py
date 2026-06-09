@@ -119,6 +119,8 @@ class _MockHTTPResponse:
 
 class _MockAsyncHTTPClient:
 
+    discovery_response: Any = {"jwks_uri": JWKS_URI, "introspection_endpoint": INTROSPECTION_ENDPOINT}
+
     def __init__(self, *args, **kwargs):
         self._closed = False
 
@@ -133,7 +135,7 @@ class _MockAsyncHTTPClient:
         jwks = kwargs.pop("_jwks_payload", None)
 
         if url == DISCOVERY_URL:
-            return _MockHTTPResponse({"jwks_uri": JWKS_URI, "introspection_endpoint": INTROSPECTION_ENDPOINT})
+            return _MockHTTPResponse(_MockAsyncHTTPClient.discovery_response)
         if url == JWKS_URI:
             return _MockHTTPResponse(jwks)
         return _MockHTTPResponse({"error": "not found"}, status=404)
@@ -188,6 +190,7 @@ def patch_httpx_and_oauth(monkeypatch, jwks_from_private):
     _MockAsyncOAuth2Client.response = {}
     _MockAsyncOAuth2Client.last_kwargs = {}
     _MockAsyncOAuth2Client.last_endpoint = None
+    _MockAsyncHTTPClient.discovery_response = {"jwks_uri": JWKS_URI, "introspection_endpoint": INTROSPECTION_ENDPOINT}
     yield
 
 
@@ -386,6 +389,25 @@ async def test_opaque_uses_introspection_endpoint_from_discovery():
     assert _MockAsyncOAuth2Client.last_endpoint == INTROSPECTION_ENDPOINT
 
 
+async def test_opaque_with_non_mapping_discovery_metadata_returns_inactive():
+    validator = BearerTokenValidator(
+        issuer=ISSUER,
+        audience=AUDIENCE,
+        scopes=SCOPES,
+        discovery_url=DISCOVERY_URL,
+        client_id="client-abc",
+        client_secret="secret-xyz",
+        timeout=3.0,
+        leeway=30,
+    )
+    _MockAsyncHTTPClient.discovery_response = ["not", "a", "mapping"]
+
+    res = await validator.verify("opaque-from-invalid-discovery")
+
+    assert res.active is False
+    assert _MockAsyncOAuth2Client.call_count == 0
+
+
 async def test_opaque_missing_scope_rejected(validator_opaque):
     now = int(time.time())
     _MockAsyncOAuth2Client.response = {
@@ -424,6 +446,19 @@ async def test_routing_uses_jwt_when_three_segments(validator_both, rsa_private_
     jwt_token = _make_jwt(rsa_private_pem, exp_offset_secs=300, scopes=SCOPES)
     res = await validator_both.verify(jwt_token)
     assert res.active is True  # verified via JWKS/JWT path
+
+
+async def test_routing_valid_jwt_does_not_resolve_introspection(validator_both, rsa_private_pem, monkeypatch):
+
+    async def fail_if_called():
+        raise AssertionError("introspection endpoint resolution should be lazy for valid JWTs")
+
+    monkeypatch.setattr(validator_both, "_resolve_introspection_endpoint_for_validation", fail_if_called)
+
+    jwt_token = _make_jwt(rsa_private_pem, exp_offset_secs=300, scopes=SCOPES)
+    res = await validator_both.verify(jwt_token)
+
+    assert res.active is True
 
 
 async def test_jwt_like_token_falls_back_to_introspection_when_configured(validator_both):

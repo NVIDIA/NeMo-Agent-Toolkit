@@ -132,18 +132,12 @@ class BearerTokenValidator:
         if not token:
             return TokenValidationResult(client_id="", token_type="bearer", active=False)
 
-        introspection_endpoint = None
-        if self.client_id and self.client_secret:
-            try:
-                introspection_endpoint = await self._resolve_introspection_endpoint()
-            except _TOKEN_VALIDATION_ERRORS as error:
-                logger.warning("Failed to resolve token introspection endpoint: %s", error)
-        can_introspect = bool(introspection_endpoint)
         if token.count(".") == 2:
             try:
                 return await self._verify_jwt_token(token)
             except _TOKEN_VALIDATION_ERRORS as jwt_error:
-                if can_introspect:
+                introspection_endpoint = await self._resolve_introspection_endpoint_for_validation()
+                if introspection_endpoint:
                     logger.warning("JWT token validation failed; falling back to token introspection: %s", jwt_error)
                     try:
                         return await self._verify_opaque_token(token, introspection_endpoint=introspection_endpoint)
@@ -154,8 +148,9 @@ class BearerTokenValidator:
                     logger.warning("JWT token validation failed: %s", jwt_error)
                 return TokenValidationResult(client_id="", token_type="bearer", active=False)
 
+        introspection_endpoint = await self._resolve_introspection_endpoint_for_validation()
         try:
-            if can_introspect:
+            if introspection_endpoint:
                 return await self._verify_opaque_token(token, introspection_endpoint=introspection_endpoint)
         except _TOKEN_VALIDATION_ERRORS as error:
             logger.warning("Opaque token validation failed: %s", error)
@@ -339,6 +334,17 @@ class BearerTokenValidator:
         except (ValueError, TypeError, KeyError, httpx.HTTPError) as e:
             raise ValueError(f"Introspection failed: {e}") from e
 
+    async def _resolve_introspection_endpoint_for_validation(self) -> str | None:
+        """Resolve the introspection endpoint when credentials make introspection viable."""
+        if not (self.client_id and self.client_secret):
+            return None
+
+        try:
+            return await self._resolve_introspection_endpoint()
+        except _TOKEN_VALIDATION_ERRORS as error:
+            logger.warning("Failed to resolve token introspection endpoint: %s", error)
+            return None
+
     async def _resolve_introspection_endpoint(self) -> str | None:
         """Resolve the token introspection endpoint from config or discovery metadata."""
         if self.introspection_endpoint:
@@ -346,6 +352,8 @@ class BearerTokenValidator:
 
         if self.discovery_url:
             config = await self._get_oidc_configuration(self.discovery_url)
+            if not isinstance(config, Mapping):
+                return None
             endpoint = config.get("introspection_endpoint")
             if isinstance(endpoint, str) and endpoint:
                 self._require_https(endpoint, "introspection_endpoint")
