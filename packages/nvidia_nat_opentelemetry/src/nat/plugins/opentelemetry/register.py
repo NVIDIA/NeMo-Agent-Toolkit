@@ -21,7 +21,6 @@ from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
-from nat.data_models.common import OptionalSecretStr
 from nat.data_models.common import SerializableSecretStr
 from nat.data_models.common import get_secret_value
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
