@@ -32,7 +32,6 @@ from _utils.dask_utils import wait_job
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
-from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Message
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
@@ -137,7 +136,7 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
             payload = ChatRequest(messages=[Message(content=x, role="user") for x in values]).model_dump()
             async with aconnect_sse(client, "POST", f"{workflow_path}/stream", json=payload) as event_source:
                 async for sse in event_source.aiter_sse():
-                    response.append(ChatResponseChunk.model_validate(sse.json()).choices[0].delta.content or "")
+                    response.append(sse.json()["value"])
 
                 assert event_source.response.status_code == 200
                 assert response == values

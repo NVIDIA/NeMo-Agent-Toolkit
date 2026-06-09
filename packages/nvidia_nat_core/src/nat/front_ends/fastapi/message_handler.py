@@ -292,10 +292,16 @@ class WebSocketMessageHandler:
                    self._worker.get_conversation_handler(_conversation_id) is self:
                     self._worker.remove_conversation_handler(_conversation_id)
 
+            # Only the *_STREAM schemas stream; others aggregate a single result. Streaming a
+            # non-streaming schema converts chunks to the single output schema and raises.
+            streaming = self._workflow_schema_type in (WorkflowSchemaType.CHAT_STREAM,
+                                                       WorkflowSchemaType.GENERATE_STREAM)
+
             self._running_workflow_task = asyncio.create_task(
                 self._run_workflow(payload=message_content,
                                    user_message_id=self._message_parent_id,
                                    conversation_id=self._conversation_id,
+                                   streaming=streaming,
                                    result_type=self._schema_output_mapping[self._workflow_schema_type],
                                    output_type=self._schema_output_mapping[self._workflow_schema_type]))
             self._running_workflow_task.add_done_callback(_done_callback)
@@ -447,6 +453,7 @@ class WebSocketMessageHandler:
                             payload: typing.Any,
                             user_message_id: str | None = None,
                             conversation_id: str | None = None,
+                            streaming: bool = True,
                             result_type: type | None = None,
                             output_type: type | None = None) -> None:
 
@@ -462,7 +469,7 @@ class WebSocketMessageHandler:
                 self._session_manager._context.metadata._request.payload = self._user_message_payload
                 async for value in generate_streaming_response(payload,
                                                                session=session,
-                                                               streaming=True,
+                                                               streaming=streaming,
                                                                step_adaptor=self._step_adaptor,
                                                                result_type=result_type,
                                                                output_type=output_type):

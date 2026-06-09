@@ -194,7 +194,8 @@ async def add_generate_route(
                                                        session_manager=session_manager,
                                                        streaming=True,
                                                        result_type=response_type,
-                                                       output_type=response_type)
+                                                       output_type=response_type,
+                                                       wrap_output_in_payload=True)
             else:
                 route_handler = post_streaming_endpoint(worker=worker,
                                                         session_manager=session_manager,
@@ -202,7 +203,8 @@ async def add_generate_route(
                                                         enable_interactive=enable_interactive,
                                                         streaming=True,
                                                         result_type=response_type,
-                                                        output_type=response_type)
+                                                        output_type=response_type,
+                                                        wrap_output_in_payload=True)
             app.add_api_route(
                 path=endpoint_path,
                 endpoint=route_handler,
