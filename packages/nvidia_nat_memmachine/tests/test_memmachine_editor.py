@@ -240,24 +240,24 @@ async def test_search_success(memmachine_editor_with_client: MemMachineEditor,
     # Mock search results with the new nested structure
     # MemMachine SDK returns SearchResult with content containing nested episodic_memory
     mock_search_result = Mock()
-    mock_search_result.content = MockSearchResultContent(
-        episodic_memory={
-            "long_term_memory": {
-                "episodes": [{
-                    "content": "I like pizza", "metadata": {
-                        "key1": "value1", "tags": "food"
-                    }
-                }]
-            },
-            "short_term_memory": {
-                "episodes": []
-            }
+    mock_search_result.content = MockSearchResultContent(episodic_memory={
+        "long_term_memory": {
+            "episodes": [{
+                "content": "I like pizza", "metadata": {
+                    "key1": "value1", "tags": "food"
+                }
+            }]
         },
-        semantic_memory=[{
-            "feature": "User prefers Italian food", "metadata": {
-                "key2": "value2"
-            }
-        }])
+        "short_term_memory": {
+            "episodes": []
+        }
+    },
+                                                         semantic_memory=[{
+                                                             "feature": "User prefers Italian food",
+                                                             "metadata": {
+                                                                 "key2": "value2"
+                                                             }
+                                                         }])
     mock_memory_instance.search.return_value = mock_search_result
 
     result = await memmachine_editor_with_client.search(query="What do I like to eat?",
