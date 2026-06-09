@@ -76,7 +76,7 @@ profiler = ["nvidia-nat-profiler == {version}"]
 rag = ["nvidia-nat-rag == {version}"]
 ragas = ["nvidia-nat-ragas == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
-redis = ["nvidia-nat-redis == {version}"]
+redis = ["nemo-agent-toolkit-redis"]
 s3 = ["nvidia-nat-s3 == {version}"]
 security = ["nvidia-nat-security == {version}"]
 defense = ["nvidia-nat-security[defense] == {version}"]
@@ -117,7 +117,7 @@ most = [
   "nvidia-nat-phoenix == {version}",
   "nvidia-nat-profiler == {version}",
   "nvidia-nat-ragas == {version}",
-  "nvidia-nat-redis == {version}",
+  "nemo-agent-toolkit-redis",
   "nvidia-nat-s3 == {version}",
   "nvidia-nat-security == {version}",
   "nvidia-nat-semantic-kernel == {version}",
@@ -257,6 +257,7 @@ nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
 nvidia-nat-ragas = { path = "packages/nvidia_nat_ragas", editable = true }
 nvidia-nat-mysql = { path = "packages/nvidia_nat_mysql", editable = true }
 nvidia-nat-redis = { path = "packages/nvidia_nat_redis", editable = true }
+nemo-agent-toolkit-redis = { path = "../nemo-agent-toolkit-redis-fork", editable = true }
 nvidia-nat-s3 = { path = "packages/nvidia_nat_s3", editable = true }
 nvidia-nat-security = { path = "packages/nvidia_nat_security", editable = true }
 nvidia-nat-semantic-kernel = { path = "packages/nvidia_nat_semantic_kernel", editable = true }
