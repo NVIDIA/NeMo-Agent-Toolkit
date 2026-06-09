@@ -15,13 +15,15 @@
 # limitations under the License.
 
 # Nemotron 3 Nano on 2 GPUs with Dynamo frontend, HiCache, and PIN.
-# Edit the config below, then: ./dynamo-stack.sh
+# Edit the config below, then: bash dynamo_stack.sh
 # Ctrl+C to stop. Logs in /tmp/dynamo-stack/
 #
-# Prerequisites (run once, stays up):
-#   cd dynamo/deploy
+# Prerequisites (from the Dynamo source checkout; run once, stays up):
+#   export DYNAMO_SOURCE_DIR="${HOME}/dynamo"
+#   cd "$DYNAMO_SOURCE_DIR/dev"
 #   docker compose -f docker-compose.yml up -d --remove-orphans
 #   docker compose -f docker-observability.yml up -d --remove-orphans
+#   cd "$DYNAMO_SOURCE_DIR"
 set -euo pipefail
 
 # ── Config ───────────────────────────────────────────────────────────────────

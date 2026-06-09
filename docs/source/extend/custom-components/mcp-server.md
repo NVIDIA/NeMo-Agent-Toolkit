@@ -114,14 +114,15 @@ llms:
     _type: nim
     model_name: meta/llama-3.3-70b-instruct
 
-functions:
+function_groups:
   search:
-    _type: tavily_internet_search
+    _type: tavily
+    include: [search]
 
 workflow:
   _type: react_agent
   llm_name: nim_llm
-  tool_names: [search]
+  tool_names: [search__search]
 ```
 
 ## Step 3: Run and Test Your Server
