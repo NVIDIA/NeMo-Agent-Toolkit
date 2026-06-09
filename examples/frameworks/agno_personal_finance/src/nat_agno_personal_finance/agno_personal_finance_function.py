@@ -80,7 +80,7 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
             "Remember: the quality of the results is important.",
         ],
         tools=tools,
-        add_datetime_to_instructions=True,
+        add_datetime_to_context=True,
     )
 
     # Create planner agent
@@ -103,9 +103,9 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
             "Never make up facts or plagiarize. Always provide proper attribution.",
             "Do not use any search functions directly; use only the information provided to create your plan.",
         ],
-        add_datetime_to_instructions=True,
-        add_history_to_messages=True,
-        num_history_responses=3,
+        add_datetime_to_context=True,
+        add_history_to_context=True,
+        num_history_runs=3,
     )
 
     # Create a function that uses the researcher and planner to generate a personalized financial plan
