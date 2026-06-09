@@ -16,9 +16,17 @@
 from unittest.mock import Mock
 
 import pytest
+from pydantic import BaseModel
 
 from nat.memory.models import MemoryItem
 from nat.plugins.memmachine.memmachine_editor import MemMachineEditor
+
+
+class MockSearchResultContent(BaseModel):
+    """Test stand-in for MemMachine SDK search result content."""
+
+    episodic_memory: dict
+    semantic_memory: list
 
 
 @pytest.fixture(name="mock_memory_instance")
@@ -232,8 +240,8 @@ async def test_search_success(memmachine_editor_with_client: MemMachineEditor,
     # Mock search results with the new nested structure
     # MemMachine SDK returns SearchResult with content containing nested episodic_memory
     mock_search_result = Mock()
-    mock_search_result.content = {
-        "episodic_memory": {
+    mock_search_result.content = MockSearchResultContent(
+        episodic_memory={
             "long_term_memory": {
                 "episodes": [{
                     "content": "I like pizza", "metadata": {
@@ -245,12 +253,11 @@ async def test_search_success(memmachine_editor_with_client: MemMachineEditor,
                 "episodes": []
             }
         },
-        "semantic_memory": [{
+        semantic_memory=[{
             "feature": "User prefers Italian food", "metadata": {
                 "key2": "value2"
             }
-        }]
-    }
+        }])
     mock_memory_instance.search.return_value = mock_search_result
 
     result = await memmachine_editor_with_client.search(query="What do I like to eat?",
@@ -273,8 +280,8 @@ async def test_search_with_string_tags(memmachine_editor_with_client: MemMachine
     """Test searching when tags come back as comma-separated string from SDK."""
     # Mock search results with the new nested structure
     mock_search_result = Mock()
-    mock_search_result.content = {
-        "episodic_memory": {
+    mock_search_result.content = MockSearchResultContent(
+        episodic_memory={
             "long_term_memory": {
                 "episodes": [{
                     "content": "I like pizza and pasta",
@@ -287,8 +294,7 @@ async def test_search_with_string_tags(memmachine_editor_with_client: MemMachine
                 "episodes": []
             }
         },
-        "semantic_memory": []
-    }
+        semantic_memory=[])
     mock_memory_instance.search.return_value = mock_search_result
 
     result = await memmachine_editor_with_client.search(query="What do I like?", top_k=5, user_id="user123")
