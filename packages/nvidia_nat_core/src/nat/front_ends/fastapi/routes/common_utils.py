@@ -132,19 +132,22 @@ def get_streaming_endpoint(*,
                            session_manager: SessionManager,
                            streaming: bool,
                            result_type: type | None,
-                           output_type: type | None):
+                           output_type: type | None,
+                           wrap_output_in_payload: bool = False):
     """Build a streaming GET handler."""
     auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
 
     async def get_stream(request: Request):
         async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
             return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                     content=generate_streaming_response_as_str(None,
-                                                                                session=session,
-                                                                                streaming=streaming,
-                                                                                step_adaptor=worker.get_step_adaptor(),
-                                                                                result_type=result_type,
-                                                                                output_type=output_type))
+                                     content=generate_streaming_response_as_str(
+                                         None,
+                                         session=session,
+                                         streaming=streaming,
+                                         step_adaptor=worker.get_step_adaptor(),
+                                         result_type=result_type,
+                                         output_type=output_type,
+                                         wrap_output_in_payload=wrap_output_in_payload))
 
     return get_stream
 
@@ -229,7 +232,8 @@ def post_streaming_endpoint(*,
                             enable_interactive: bool,
                             streaming: bool,
                             result_type: type | None,
-                            output_type: type | None):
+                            output_type: type | None,
+                            wrap_output_in_payload: bool = False):
     """Build a streaming POST handler."""
 
     async def post_stream_interactive(request: Request, payload: Any = Body()):
@@ -243,6 +247,7 @@ def post_streaming_endpoint(*,
                 step_adaptor=worker.get_step_adaptor(),
                 result_type=result_type,
                 output_type=output_type,
+                wrap_output_in_payload=wrap_output_in_payload,
             ),
         )
 
@@ -250,11 +255,13 @@ def post_streaming_endpoint(*,
         auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
         async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
             return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                     content=generate_streaming_response_as_str(payload,
-                                                                                session=session,
-                                                                                streaming=streaming,
-                                                                                step_adaptor=worker.get_step_adaptor(),
-                                                                                result_type=result_type,
-                                                                                output_type=output_type))
+                                     content=generate_streaming_response_as_str(
+                                         payload,
+                                         session=session,
+                                         streaming=streaming,
+                                         step_adaptor=worker.get_step_adaptor(),
+                                         result_type=result_type,
+                                         output_type=output_type,
+                                         wrap_output_in_payload=wrap_output_in_payload))
 
     return _with_annotation(post_stream_interactive if enable_interactive else post_stream, "payload", request_type)
