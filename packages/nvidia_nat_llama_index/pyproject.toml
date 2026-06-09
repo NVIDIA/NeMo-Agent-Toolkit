@@ -70,7 +70,7 @@ dependencies = [
   "nltk>=3.9.4,<4.0.0",
   # Transitive dep
   # Remove once llama-index-core updates banks
-  "banks>=2.4.2"
+  "banks>=2.4.2,<3.0.0"
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
