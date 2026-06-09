@@ -13,29 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function_groups:
-  internet_search:
-    _type: tavily
-    include: [search]
+import pytest
 
-functions:
-  current_datetime:
-    _type: current_datetime
+from nat.plugins.langchain.tools.tavily_internet_search import TavilyInternetSearchToolConfig
+from nat.test import ToolTestRunner
 
-llms:
-  nim_llm:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
-    temperature: 0.0
 
-embedders:
-  nv-embedqa-e5-v5:
-    _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+async def test_tavily_internet_search_stub_points_to_external_package():
+    runner = ToolTestRunner()
 
-workflow:
-  _type: react_agent
-  tool_names: [internet_search__search, current_datetime]
-  llm_name: nim_llm
-  verbose: true
-  parse_agent_response_max_retries: 3
+    with pytest.raises(RuntimeError, match="nemo-agent-toolkit-tavily"):
+        await runner.test_tool(config_type=TavilyInternetSearchToolConfig, input_data="weather in sf")
