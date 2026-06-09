@@ -142,15 +142,17 @@ def test_cache_html_invalid_input_logs_payload_not_builtin_input(caplog: pytest.
 
 
 @pytest.mark.asyncio
-async def test_scrape_empty_body_returns_failure_and_follows_redirects(
+async def test_scrape_empty_body_returns_failure_and_follows_same_origin_redirects(
         monkeypatch: pytest.MonkeyPatch, ingest_modules: tuple[ModuleType, ModuleType]) -> None:
     web_utils, _ = ingest_modules
     request_calls: list[tuple[str, bool]] = []
 
     class DummyResponse:
 
-        def __init__(self, text: str):
+        def __init__(self, text: str, status_code: int = 200, headers: dict[str, str] | None = None):
             self.text = text
+            self.status_code = status_code
+            self.headers = headers or {}
 
     class DummyAsyncClient:
 
@@ -162,26 +164,71 @@ async def test_scrape_empty_body_returns_failure_and_follows_redirects(
 
         async def get(self, url: str, headers=None, follow_redirects: bool = False):
             request_calls.append((url, follow_redirects))
-            body = "" if url.endswith("/empty") else "<html>ok</html>"
-            return DummyResponse(body)
+            if url.endswith("/redirect"):
+                return DummyResponse("", status_code=301, headers={"location": "/redirected"})
+            if url.endswith("/empty"):
+                return DummyResponse("")
+            return DummyResponse("<html>ok</html>")
 
     monkeypatch.setattr(web_utils.httpx, "AsyncClient", DummyAsyncClient)
 
     responses, failures = await web_utils.scrape([
+        "https://example.com/redirect",
         "https://example.com/ok",
         "https://example.com/empty",
     ])
 
-    assert {response["url"] for response in responses} == {"https://example.com/ok"}
+    response_urls = {response["url"] for response in responses}
+
+    assert response_urls == {
+        "https://example.com/redirect",
+        "https://example.com/ok",
+    }
     assert {failure["url"] for failure in failures} == {"https://example.com/empty"}
     assert set(request_calls) == {
-        ("https://example.com/ok", True),
-        ("https://example.com/empty", True),
+        ("https://example.com/redirect", False),
+        ("https://example.com/redirected", False),
+        ("https://example.com/ok", False),
+        ("https://example.com/empty", False),
     }
 
 
 @pytest.mark.asyncio
-async def test_main_scrapes_uncached_urls_and_skips_invalid_cache_results(
+async def test_scrape_blocks_cross_origin_redirects(monkeypatch: pytest.MonkeyPatch,
+                                                    ingest_modules: tuple[ModuleType, ModuleType]) -> None:
+    web_utils, _ = ingest_modules
+    request_urls: list[str] = []
+
+    class DummyResponse:
+
+        text = ""
+        status_code = 302
+        headers = {"location": "http://127.0.0.1/latest/meta-data"}
+
+    class DummyAsyncClient:
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def get(self, url: str, headers=None, follow_redirects: bool = False):
+            request_urls.append(url)
+            return DummyResponse()
+
+    monkeypatch.setattr(web_utils.httpx, "AsyncClient", DummyAsyncClient)
+
+    responses, failures = await web_utils.scrape("https://example.com/redirect-to-localhost")
+
+    assert responses == []
+    assert failures[0]["url"] == "https://example.com/redirect-to-localhost"
+    assert "not same-origin" in (failures[0]["exception"] or "")
+    assert request_urls == ["https://example.com/redirect-to-localhost"]
+
+
+@pytest.mark.asyncio
+async def test_main_scrapes_uncached_urls_and_skips_scrape_failures(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch, ingest_modules: tuple[ModuleType, ModuleType]) -> None:
     web_utils, ingest = ingest_modules
     loaded_paths: list[str | None] = []
@@ -200,15 +247,11 @@ async def test_main_scrapes_uncached_urls_and_skips_invalid_cache_results(
 
     async def fake_scrape(urls: list[str]):
         scraped_urls.append(list(urls))
-        failed_page = {"url": failed_url, "content": None}
         fresh_page = {"url": uncached_url, "content": "<html>fresh</html>"}
         failed_scrape = {"url": failed_url, "exception": "timeout"}
-        return [failed_page, fresh_page], [failed_scrape]
+        return [fresh_page], [failed_scrape]
 
     def fake_cache_html(input_dict: dict, base_path: str = "."):
-        if input_dict["content"] is None:
-            return input_dict, None
-
         Path(fresh_dir).mkdir(parents=True, exist_ok=True)
         Path(fresh_file).write_text(input_dict["content"], encoding="utf-8")
         return input_dict, fresh_file

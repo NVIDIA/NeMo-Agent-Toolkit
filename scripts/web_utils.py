@@ -17,20 +17,63 @@ import asyncio
 import logging
 import os
 from collections.abc import Awaitable
+from urllib.parse import urljoin
+from urllib.parse import urlparse
 
 import httpx
 
 logger = logging.getLogger(__name__)
 ScrapeResult = dict[str, str | None]
+_REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
+_MAX_REDIRECTS = 5
 
 
 async def _wrap_request(f: Awaitable[httpx.Response], url: str) -> ScrapeResult:
     try:
         resp = {"url": url, "content": (await f).text}
     except Exception as e:
-        logger.exception("Error in _wrap_request for %s: %s", url, e, exc_info=True)
+        logger.exception("Error in _wrap_request for %s: %s", url, e)
         resp = {"url": url, "content": None, "exception": f"{e}"}
     return resp
+
+
+def _url_origin(url: str) -> tuple[str, str | None, int | None]:
+    parsed_url = urlparse(url)
+    hostname = parsed_url.hostname.lower() if parsed_url.hostname else None
+    port = parsed_url.port
+    if port is None:
+        if parsed_url.scheme == "https":
+            port = 443
+        elif parsed_url.scheme == "http":
+            port = 80
+
+    return parsed_url.scheme.lower(), hostname, port
+
+
+async def _get_with_same_origin_redirects(client: httpx.AsyncClient,
+                                          url: str,
+                                          headers: dict[str, str],
+                                          *,
+                                          max_redirects: int = _MAX_REDIRECTS) -> httpx.Response:
+    current_url = url
+    original_origin = _url_origin(url)
+
+    for _ in range(max_redirects + 1):
+        response = await client.get(current_url, headers=headers, follow_redirects=False)
+        if response.status_code not in _REDIRECT_STATUS_CODES:
+            return response
+
+        redirect_location = response.headers.get("location")
+        if not redirect_location:
+            raise ValueError(f"Redirect response for {current_url} did not include a Location header")
+
+        redirect_url = urljoin(current_url, redirect_location)
+        if _url_origin(redirect_url) != original_origin:
+            raise ValueError(f"Redirect target {redirect_url} is not same-origin with {url}")
+
+        current_url = redirect_url
+
+    raise ValueError(f"Exceeded {max_redirects} redirects while scraping {url}")
 
 
 async def scrape(urls: list[str] | str,
@@ -51,11 +94,7 @@ async def scrape(urls: list[str] | str,
     responses = []
     failures = []
     async with httpx.AsyncClient() as client:
-        tasks = [_wrap_request(client.get(
-            url,
-            headers=headers,
-            follow_redirects=True,
-        ), url) for url in urls]
+        tasks = [_wrap_request(_get_with_same_origin_redirects(client, url, headers), url) for url in urls]
         for response_future in asyncio.as_completed(tasks):
             response = await response_future
             if response.get("content"):
@@ -95,7 +134,7 @@ def cache_html(input_dict: ScrapeResult, base_path: str = ".") -> tuple[ScrapeRe
     Save HTML data to disk.
 
     Args:
-     input_dict (dict): Dictionary of HTML content containnig the url and content
+     input_dict (dict): Dictionary of HTML content containing the url and content
      base_path (str): Base path under which all directories and files will be created
 
     Returns
