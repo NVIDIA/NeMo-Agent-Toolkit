@@ -41,7 +41,7 @@ async def main(*,
                clean_cache: bool = True,
                drop_collection: bool = False,
                embedding_model: str = "nvidia/nv-embedqa-e5-v5",
-               base_path: str = "./.tmp/data"):
+               base_path: str = "./.tmp/data") -> list[str]:
 
     if drop_collection:
         client = MilvusClient(uri=milvus_uri)
@@ -77,19 +77,20 @@ async def main(*,
     else:
         logger.info("Collection '%s' does not exist, will be created when documents are added", collection_name)
 
-    filenames = [
-        get_file_path_from_url(url, base_path)[0] for url in urls
-        if os.path.exists(get_file_path_from_url(url, base_path)[0])
-    ]
-    urls_to_scrape = [url for url in urls if get_file_path_from_url(url, base_path)[0] not in filenames]
+    url_file_pairs = [(url, get_file_path_from_url(url, base_path)[0]) for url in urls]
+    filenames = [file_path for _, file_path in url_file_pairs if os.path.exists(file_path)]
+    urls_to_scrape = [url for url, file_path in url_file_pairs if file_path not in filenames]
     if filenames:
         logger.info("Loading %s from cache", filenames)
     if len(urls_to_scrape) > 0:
         logger.info("Scraping: %s", urls_to_scrape)
-        html_data, err = await scrape(urls)
-        if err:
-            logger.info("Failed to scrape %s", {[f['url'] for f in err]})
-        filenames.extend([cache_html(data, base_path)[1] for data in html_data if html_data])
+        scraped_pages, failures = await scrape(urls_to_scrape)
+        if failures:
+            logger.warning("Failed to scrape %s", [failed["url"] for failed in failures])
+        for page in scraped_pages:
+            _, file_path = cache_html(page, base_path)
+            if file_path is not None:
+                filenames.append(file_path)
 
     doc_ids = []
     for filename in filenames:
