@@ -153,7 +153,7 @@ def cache_html(input_dict: ScrapeResult, base_path: str = ".") -> tuple[ScrapeRe
         with open(file_path, 'w', encoding="utf-8") as f:
             f.write(data)
     except Exception:
-        logger.error("Unable to save data for %s", url, exc_info=True)
+        logger.error("Unable to save data for %s", url)
         raise
     return input_dict, file_path
 

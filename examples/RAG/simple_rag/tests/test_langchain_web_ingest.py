@@ -201,9 +201,10 @@ async def test_scrape_blocks_cross_origin_redirects(monkeypatch: pytest.MonkeyPa
 
     class DummyResponse:
 
-        text = ""
-        status_code = 302
-        headers = {"location": "http://127.0.0.1/latest/meta-data"}
+        def __init__(self):
+            self.text = ""
+            self.status_code = 302
+            self.headers = {"location": "http://127.0.0.1/latest/meta-data"}
 
     class DummyAsyncClient:
 
