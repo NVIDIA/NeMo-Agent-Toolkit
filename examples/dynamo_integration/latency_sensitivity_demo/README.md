@@ -133,6 +133,7 @@ Copy `dynamo_stack.sh` into the Dynamo source checkout. Then run it in the Dynam
 ```bash
 cp "$NAT_REPO_DIR/examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/scripts/dynamo_stack.sh" "$DYNAMO_SOURCE_DIR/"
 cd "$DYNAMO_SOURCE_DIR"
+source .venv/bin/activate
 bash dynamo_stack.sh
 ```
 
@@ -232,6 +233,7 @@ This ensures you have a fresh deployment ready to receive routing hints in Step 
 ```bash
 cp "$NAT_REPO_DIR/examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/scripts/dynamo_stack_sensitivity.sh" "$DYNAMO_SOURCE_DIR/"
 cd "$DYNAMO_SOURCE_DIR"
+source .venv/bin/activate
 bash dynamo_stack_sensitivity.sh
 ```
 
