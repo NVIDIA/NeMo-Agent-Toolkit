@@ -50,6 +50,7 @@ Each agent example contains its own installation and usage instructions. Navigat
 - **Mixture of Agents**: See [mixture_of_agents/README.md](mixture_of_agents/README.md) for multi-agent orchestration
 - **ReWOO Agent**: See [rewoo/README.md](rewoo/README.md) for planning-based agent workflow
 - **Auto Memory Wrapper Agent**: See [auto_memory_wrapper/README.md](auto_memory_wrapper/README.md) for the automatic memory wrapper agent workflow
+- **Tavily Search Agent**: See [tavily_search/README.md](tavily_search/README.md) for a ReAct agent that uses the Tavily function group for web search
 
 ## Learn More
 
