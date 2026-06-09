@@ -18,6 +18,8 @@ import logging
 import os
 import re
 
+from pydantic import Field
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
@@ -119,8 +121,8 @@ def process_input_text(input_text):
 
 
 class ExtractPORToolConfig(FunctionBaseConfig, name="extract_por_tool"):
-    root_path: str
-    llm: LLMRef
+    root_path: str = Field(..., min_length=1, description="Directory containing POR input files and extraction output")
+    llm: LLMRef = Field(..., description="LLM used to extract epics, tasks, bugs, and features from the POR")
 
 
 @register_function(config_type=ExtractPORToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -142,6 +144,14 @@ async def extract_from_por_tool(config: ExtractPORToolConfig, builder: Builder):
     chain = prompt | llm | StrOutputParser()
 
     async def _arun(input_text: str) -> str:
+
+        # Remove any stale extraction output so a failed run can't pollute the next tool calls
+        stale_file: str = os.path.join(config.root_path, "epics_tasks.json")
+        if os.path.isfile(stale_file):
+            try:
+                os.remove(stale_file)
+            except OSError as e:
+                logger.warning("Could not remove stale file %s: %s", stale_file, e)
 
         input_file = os.path.join(config.root_path, input_text)
         if os.path.isfile(input_file):
@@ -180,7 +190,7 @@ async def extract_from_por_tool(config: ExtractPORToolConfig, builder: Builder):
 
 
 class ShowTicketsToolConfig(FunctionBaseConfig, name="show_jira_tickets"):
-    root_path: str
+    root_path: str = Field(..., min_length=1, description="Directory containing the epics_tasks.json extraction output")
 
 
 @register_function(config_type=ShowTicketsToolConfig)
@@ -188,7 +198,7 @@ async def show_tickets_tool(config: ShowTicketsToolConfig, builder: Builder):
     """
     Return a string listing the epics from the last extraction.
     """
-    filename = config.root_path + "epics_tasks.json"
+    filename = os.path.join(config.root_path, "epics_tasks.json")
 
     async def _arun(input_text: str) -> str:
         # input_text = process_input_text(input_text)
@@ -196,6 +206,8 @@ async def show_tickets_tool(config: ShowTicketsToolConfig, builder: Builder):
             with open(filename, encoding='utf-8') as json_file:
                 data = json.load(json_file)
                 logger.debug("Data successfully loaded from %s", filename)
+        except FileNotFoundError:
+            return "No extraction data found. Please run extract_por_tool first."
         except Exception as e:
             logger.error("An error occurred while loading the file: %s", e)
             raise
