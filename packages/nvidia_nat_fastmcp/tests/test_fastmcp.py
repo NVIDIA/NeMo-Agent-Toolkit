@@ -15,11 +15,11 @@
 """Tests for FastMCP CLI and server wiring."""
 
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from fastmcp import FastMCP
 from fastmcp.server.auth import RemoteAuthProvider
-from fastmcp.server.auth.providers.introspection import IntrospectionTokenVerifier
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import SecretStr
@@ -28,6 +28,7 @@ from watchfiles import Change
 
 from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 from nat.builder.function_base import FunctionBase
+from nat.data_models.authentication import TokenValidationResult
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.plugins.fastmcp.cli.commands import fastmcp_command  # pylint: disable=import-error,no-name-in-module
@@ -35,6 +36,7 @@ from nat.plugins.fastmcp.cli.utils import _filter_change_set
 from nat.plugins.fastmcp.cli.utils import iter_file_changes
 from nat.plugins.fastmcp.server.front_end_config import FastMCPFrontEndConfig
 from nat.plugins.fastmcp.server.front_end_plugin_worker import FastMCPFrontEndPluginWorker
+from nat.plugins.fastmcp.server.token_verifier import NATFastMCPTokenVerifier
 
 
 class _MockTestSchema(BaseModel):
@@ -175,10 +177,55 @@ async def test_fastmcp_auth_introspection_exposes_metadata():
     mcp = await worker.create_mcp_server()
 
     assert isinstance(mcp.auth, RemoteAuthProvider)
-    assert isinstance(mcp.auth.token_verifier, IntrospectionTokenVerifier)
+    assert isinstance(mcp.auth.token_verifier, NATFastMCPTokenVerifier)
 
     routes = mcp.auth.get_well_known_routes(mcp_path="/mcp")
     assert any(route.path.startswith("/.well-known/oauth-protected-resource") for route in routes)
+
+
+async def test_fastmcp_nat_token_verifier_adapts_active_result(monkeypatch: pytest.MonkeyPatch):
+    server_auth = OAuth2ResourceServerConfig(
+        issuer_url="http://localhost:8080/realms/master",
+        introspection_endpoint="http://localhost:8080/realms/master/protocol/openid-connect/token/introspect",
+        client_id="test-client",
+        client_secret=SecretStr("secret"),
+        scopes=["calculator_mcp_execute"],
+    )
+    verifier = NATFastMCPTokenVerifier(server_auth, base_url="http://localhost:9902")
+    verify = AsyncMock(return_value=TokenValidationResult(
+        client_id="client-abc",
+        scopes=["calculator_mcp_execute"],
+        expires_at=1234567890,
+        audience=["test-client"],
+        subject="user-123",
+        issuer="http://localhost:8080/realms/master",
+        token_type="at+jwt",
+        active=True,
+    ))
+    monkeypatch.setattr(verifier._bearer_token_validator, "verify", verify)
+
+    access_token = await verifier.verify_token("token-value")
+
+    assert access_token is not None
+    assert access_token.client_id == "client-abc"
+    assert access_token.scopes == ["calculator_mcp_execute"]
+    assert access_token.expires_at == 1234567890
+    assert access_token.claims["aud"] == ["test-client"]
+
+
+async def test_fastmcp_nat_token_verifier_rejects_inactive_result(monkeypatch: pytest.MonkeyPatch):
+    server_auth = OAuth2ResourceServerConfig(
+        issuer_url="http://localhost:8080/realms/master",
+        introspection_endpoint="http://localhost:8080/realms/master/protocol/openid-connect/token/introspect",
+        client_id="test-client",
+        client_secret=SecretStr("secret"),
+        scopes=["calculator_mcp_execute"],
+    )
+    verifier = NATFastMCPTokenVerifier(server_auth, base_url="http://localhost:9902")
+    verify = AsyncMock(return_value=TokenValidationResult(client_id="", token_type="bearer", active=False))
+    monkeypatch.setattr(verifier._bearer_token_validator, "verify", verify)
+
+    assert await verifier.verify_token("token-value") is None
 
 
 def test_fastmcp_debug_route_lists_tools():
