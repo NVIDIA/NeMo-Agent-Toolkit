@@ -148,7 +148,10 @@ async def extract_from_por_tool(config: ExtractPORToolConfig, builder: Builder):
         # Remove any stale extraction output so a failed run can't pollute the next tool calls
         stale_file: str = os.path.join(config.root_path, "epics_tasks.json")
         if os.path.isfile(stale_file):
-            os.remove(stale_file)
+            try:
+                os.remove(stale_file)
+            except OSError as e:
+                logger.warning("Could not remove stale file %s: %s", stale_file, e)
 
         input_file = os.path.join(config.root_path, input_text)
         if os.path.isfile(input_file):
@@ -195,7 +198,7 @@ async def show_tickets_tool(config: ShowTicketsToolConfig, builder: Builder):
     """
     Return a string listing the epics from the last extraction.
     """
-    filename = config.root_path + "epics_tasks.json"
+    filename = os.path.join(config.root_path, "epics_tasks.json")
 
     async def _arun(input_text: str) -> str:
         # input_text = process_input_text(input_text)

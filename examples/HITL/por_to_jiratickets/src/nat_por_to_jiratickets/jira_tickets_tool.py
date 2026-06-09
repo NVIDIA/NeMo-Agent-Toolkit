@@ -20,7 +20,6 @@ import os
 import re
 
 import httpx
-import requests
 from pydantic import Field
 from pydantic import model_validator
 
@@ -254,14 +253,18 @@ def process_input_text(input_text):
     return input_text
 
 
-def _validate_jira_credentials() -> str | None:
+def _validate_jira_credentials(require_userid: bool = True) -> str | None:
     """Return an error message if required Jira environment variables are missing, else None.
+
+    Args:
+        require_userid: When True, also checks for JIRA_USERID (needed for Basic auth).
+            Set to False for Bearer-auth-only paths that only need JIRA_TOKEN.
 
     Returns:
         A human-readable error string listing missing env vars, or None if all present.
     """
     missing: list[str] = []
-    if not os.getenv("JIRA_USERID"):
+    if require_userid and not os.getenv("JIRA_USERID"):
         missing.append("JIRA_USERID")
     if not os.getenv("JIRA_TOKEN"):
         missing.append("JIRA_TOKEN")
@@ -380,11 +383,12 @@ async def get_jira_tickets_tool(config: GetJiraToolConfig, builder: Builder):
     }
 
     async def _arun(input_text: str) -> str:
-        cred_error: str | None = _validate_jira_credentials()
+        cred_error: str | None = _validate_jira_credentials(require_userid=False)
         if cred_error:
             return cred_error
 
-        response = requests.get(api_endpoint, headers=headers, params=query_params, timeout=30)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(api_endpoint, headers=headers, params=query_params, timeout=30)
 
         if response.status_code != 200:
             return f"Failed to fetch Jira tickets: HTTP {response.status_code} — {response.text[:200]}"
