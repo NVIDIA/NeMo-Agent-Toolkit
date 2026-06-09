@@ -259,6 +259,8 @@ class MemMachineEditor(MemoryEditor):
         # Each contains an 'episodes' list with the actual memory episodes
         # semantic_memory is a list of semantic features
         episodic_memory_dict = getattr(results_content, "episodic_memory", {})
+        if not isinstance(episodic_memory_dict, dict):
+            episodic_memory_dict = episodic_memory_dict.dict()
         semantic_results = getattr(results_content, "semantic_memory", [])
 
         # Extract episodes from the nested structure
