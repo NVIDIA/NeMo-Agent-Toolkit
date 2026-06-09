@@ -156,7 +156,7 @@ You can register the client manually or use the dynamic client registration feat
 
 ### Step 4: Register Resource Server for Introspection
 
-The FastMCP server runtime uses OAuth2 token introspection for this example. Register a resource server client so the MCP server can authenticate to Keycloak when introspecting tokens.
+The FastMCP server runtime validates OAuth2 bearer tokens for this example. Register a resource server client so the MCP server can authenticate to Keycloak when introspecting opaque tokens, and so JWT access tokens can be audience-bound to the same resource server.
 
 1. In Keycloak Admin Console, go to **Clients**
 2. Click **Create client**
@@ -178,6 +178,23 @@ The FastMCP server runtime uses OAuth2 token introspection for this example. Reg
    - Copy the **Client secret**
    - Note the **Client ID**: `nat-mcp-resource-server`
 
+6. **Add the resource server audience to calculator tokens:**
+   - Go back to **Client scopes** (left sidebar)
+   - Open the `calculator_mcp_execute` scope
+   - Go to the **Mappers** tab
+   - Click **Configure a new mapper**
+   - Select **Audience**
+   - Configure the mapper:
+     - **Name**: `mcp-resource-server-audience`
+     - **Included Client Audience**: `nat-mcp-resource-server`
+     - **Included Custom Audience**: Leave blank
+     - **Add to ID token**: `Off`
+     - **Add to access token**: `On`
+     - **Add to token introspection**: `On` (if available in your Keycloak version)
+   - Click **Save**
+
+   The server config expects `nat-mcp-resource-server` in the access token's `aud` claim. Without this mapper, browser consent can succeed but the protected FastMCP server still rejects MCP initialization.
+
 ### Step 5: Start the Protected FastMCP Server
 
 ```bash
@@ -189,6 +206,12 @@ nat fastmcp server run --config_file examples/MCP/simple_calculator_fastmcp_prot
 ```
 
 ### Step 6: Run the MCP Calculator Client
+
+The client workflow also starts the `mcp_time` function group with `python -m mcp_server_time`. If you installed this example package, the dependency is included automatically. To verify it is available before running the workflow:
+
+```bash
+uv run --project examples/MCP/simple_calculator_fastmcp_protected --locked python -m mcp_server_time --help
+```
 
 Set the client ID and client secret from Step 3 in the environment variables:
 ```bash
@@ -240,7 +263,9 @@ general:
     host: localhost
     server_auth:
       issuer_url: http://localhost:8080/realms/master
+      discovery_url: http://localhost:8080/realms/master/.well-known/openid-configuration
       introspection_endpoint: http://localhost:8080/realms/master/protocol/openid-connect/token/introspect
+      audience: nat-mcp-resource-server
       client_id: ${NAT_CALCULATOR_RESOURCE_CLIENT_ID:-"nat-mcp-resource-server"}
       client_secret: ${NAT_CALCULATOR_RESOURCE_CLIENT_SECRET}
       scopes: [calculator_mcp_execute]
@@ -272,6 +297,14 @@ workflow:
   _type: per_user_react_agent
   tool_names: [mcp_calculator_protected]
 ```
+
+## Troubleshooting
+
+If the server logs `JWT audience ['master-realm', 'account'] does not contain required audience 'nat-mcp-resource-server'`, the access token does not include the resource server audience. Re-check the `calculator_mcp_execute` client-scope mapper from Step 4.6:
+
+- **Included Client Audience** must be `nat-mcp-resource-server`
+- **Add to access token** must be `On`
+- The `calculator_mcp_execute` scope must be assigned to the `nat-mcp-client` client and requested by the client workflow
 
 ## Related Examples
 - `examples/MCP/simple_calculator_fastmcp/`: FastMCP calculator example without authentication

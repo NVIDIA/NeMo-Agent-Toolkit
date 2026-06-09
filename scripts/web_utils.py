@@ -16,22 +16,68 @@
 import asyncio
 import logging
 import os
+from collections.abc import Awaitable
+from urllib.parse import urljoin
+from urllib.parse import urlparse
 
 import httpx
 
 logger = logging.getLogger(__name__)
+ScrapeResult = dict[str, str | None]
+_REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
+_MAX_REDIRECTS = 5
 
 
-async def _wrap_request(f, url):
+async def _wrap_request(f: Awaitable[httpx.Response], url: str) -> ScrapeResult:
     try:
         resp = {"url": url, "content": (await f).text}
     except Exception as e:
-        logger.exception("Error in _wrap_request for %s: %s", url, e, exc_info=True)
+        logger.exception("Error in _wrap_request for %s: %s", url, e)
         resp = {"url": url, "content": None, "exception": f"{e}"}
     return resp
 
 
-async def scrape(urls: list | str, headers: dict = None):
+def _url_origin(url: str) -> tuple[str, str | None, int | None]:
+    parsed_url = urlparse(url)
+    hostname = parsed_url.hostname.lower() if parsed_url.hostname else None
+    port = parsed_url.port
+    if port is None:
+        if parsed_url.scheme == "https":
+            port = 443
+        elif parsed_url.scheme == "http":
+            port = 80
+
+    return parsed_url.scheme.lower(), hostname, port
+
+
+async def _get_with_same_origin_redirects(client: httpx.AsyncClient,
+                                          url: str,
+                                          headers: dict[str, str],
+                                          *,
+                                          max_redirects: int = _MAX_REDIRECTS) -> httpx.Response:
+    current_url = url
+    original_origin = _url_origin(url)
+
+    for _ in range(max_redirects + 1):
+        response = await client.get(current_url, headers=headers, follow_redirects=False)
+        if response.status_code not in _REDIRECT_STATUS_CODES:
+            return response
+
+        redirect_location = response.headers.get("location")
+        if not redirect_location:
+            raise ValueError(f"Redirect response for {current_url} did not include a Location header")
+
+        redirect_url = urljoin(current_url, redirect_location)
+        if _url_origin(redirect_url) != original_origin:
+            raise ValueError(f"Redirect target {redirect_url} is not same-origin with {url}")
+
+        current_url = redirect_url
+
+    raise ValueError(f"Exceeded {max_redirects} redirects while scraping {url}")
+
+
+async def scrape(urls: list[str] | str,
+                 headers: dict[str, str] | None = None) -> tuple[list[ScrapeResult], list[ScrapeResult]]:
     """
     Retrieve the page content for a given list of urls.
 
@@ -48,13 +94,10 @@ async def scrape(urls: list | str, headers: dict = None):
     responses = []
     failures = []
     async with httpx.AsyncClient() as client:
-        tasks = [_wrap_request(client.get(
-            url,
-            headers=headers,
-        ), url) for url in urls]
+        tasks = [_wrap_request(_get_with_same_origin_redirects(client, url, headers), url) for url in urls]
         for response_future in asyncio.as_completed(tasks):
             response = await response_future
-            if response:
+            if response.get("content"):
                 responses.append(response)
             else:
                 failures.append(response)
@@ -62,7 +105,7 @@ async def scrape(urls: list | str, headers: dict = None):
     return responses, failures
 
 
-def get_file_path_from_url(url: str, base_path: str) -> str:
+def get_file_path_from_url(url: str, base_path: str) -> tuple[str, str]:
     """
     Generate a filepath based on the url, using the domain as the parent directory.
 
@@ -86,12 +129,12 @@ def get_file_path_from_url(url: str, base_path: str) -> str:
     return file_path, directory
 
 
-def cache_html(input_dict: dict, base_path="."):
+def cache_html(input_dict: ScrapeResult, base_path: str = ".") -> tuple[ScrapeResult, str | None]:
     """
     Save HTML data to disk.
 
     Args:
-     input_dict (dict): Dictionary of HTML content containnig the url and content
+     input_dict (dict): Dictionary of HTML content containing the url and content
      base_path (str): Base path under which all directories and files will be created
 
     Returns
@@ -101,7 +144,7 @@ def cache_html(input_dict: dict, base_path="."):
     url = input_dict.get("url")
     data = input_dict.get("content")
     if not url or not data:
-        logger.exception("Invalid input for saving to cache for: %s", input)
+        logger.error("Invalid input for saving to cache for: %s", input_dict)
         return input_dict, None
     file_path, directory = get_file_path_from_url(url, base_path)
 
@@ -109,13 +152,13 @@ def cache_html(input_dict: dict, base_path="."):
     try:
         with open(file_path, 'w', encoding="utf-8") as f:
             f.write(data)
-    except Exception as e:
-        logger.exception("Unable to save data for %s", url, exc_info=True)
-        raise e
+    except Exception:
+        logger.error("Unable to save data for %s", url)
+        raise
     return input_dict, file_path
 
 
-def _get_short_url(url: str):
+def _get_short_url(url: str) -> tuple[str, str]:
     path = url.rsplit("://", maxsplit=1)[-1].split("www.")[-1]
     path_components = path.split("/")
     domain = path_components[0]
