@@ -1780,6 +1780,21 @@ wheels = [
 ]
 
 [[package]]
+name = "mcp-server-time"
+version = "2025.9.25"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mcp" },
+    { name = "pydantic" },
+    { name = "tzdata" },
+    { name = "tzlocal" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/30/e2/08fa9615be0c91b86d0e972638169ae0769f217950c2ea4c5f3df1a144ff/mcp_server_time-2025.9.25.tar.gz", hash = "sha256:41427e33cafba09ef0e0f197a9dc33f2bc7238947fa319e0ec7d6500e2f97421", size = 30188, upload-time = "2025-09-25T21:25:57.066Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/81/9004bc19be15d6d5aae50f18500d865d21b0634064e78deffd8178e6a494/mcp_server_time-2025.9.25-py3-none-any.whl", hash = "sha256:5cc559709887db33bf77546c2efb0a9352c13870cc2bfaeffab1a6bd6390419b", size = 6567, upload-time = "2025-09-25T21:25:55.292Z" },
+]
+
+[[package]]
 name = "mdurl"
 version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1901,6 +1916,7 @@ requires-dist = [{ name = "nvidia-nat", extras = ["langchain", "test"], editable
 name = "nat-simple-calculator-fastmcp-protected"
 source = { editable = "." }
 dependencies = [
+    { name = "mcp-server-time" },
     { name = "nat-simple-calculator" },
     { name = "nvidia-nat", extra = ["langchain", "mcp", "test"] },
     { name = "nvidia-nat-fastmcp" },
@@ -1908,6 +1924,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "mcp-server-time", specifier = "~=2025.8" },
     { name = "nat-simple-calculator", editable = "../../getting_started/simple_calculator" },
     { name = "nvidia-nat", extras = ["langchain", "mcp", "test"], editable = "../../../" },
     { name = "nvidia-nat-fastmcp", editable = "../../../packages/nvidia_nat_fastmcp" },
