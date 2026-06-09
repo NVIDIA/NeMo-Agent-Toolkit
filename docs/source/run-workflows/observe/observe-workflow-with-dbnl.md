@@ -24,7 +24,7 @@ This guide provides a step-by-step process to enable observability in a NeMo Age
 
 ## Step 1: Install DBNL
 
-Visit [https://docs.dbnl.com/get-started/quickstart](https://docs.dbnl.com/get-started/quickstart) to install DBNL.
+Visit [distributional.com](https://distributional.com) to install DBNL.
 
 ## Step 2: Create a Project
 
@@ -93,4 +93,4 @@ Analyze the traces in DBNL. To analyze traces in DBNL:
 1. Navigate to your DBNL deployment (e.g. http://localhost:8080/)
 2. Go to Projects > `nat-calculator`
 
-For additional help, see the [DBNL docs](https://docs.dbnl.com/).
+For additional help, see the [DBNL docs](https://distributional.com).

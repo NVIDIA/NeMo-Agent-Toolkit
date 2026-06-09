@@ -276,7 +276,7 @@ Transmit traces to Galileo for workflow observability.
 
 1. Install DBNL:
 
-    Visit [https://docs.dbnl.com/get-started/quickstart](https://docs.dbnl.com/get-started/quickstart) to install DBNL.
+    Visit [distributional.com](https://distributional.com) to install DBNL.
 
 2. Create a trace ingestion project:
 
