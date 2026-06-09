@@ -298,21 +298,13 @@ class FastMCPFrontEndPluginWorker(FastMCPFrontEndPluginWorkerBase):
         server_auth = self.front_end_config.server_auth
         if server_auth:
             from fastmcp.server.auth import RemoteAuthProvider
-            from fastmcp.server.auth.providers.introspection import IntrospectionTokenVerifier
+            from nat.plugins.fastmcp.server.token_verifier import NATFastMCPTokenVerifier
 
-            verifier_kwargs = {
-                "introspection_url": server_auth.introspection_endpoint,
-                "client_id": server_auth.client_id,
-                "client_secret": (server_auth.client_secret.get_secret_value() if server_auth.client_secret else None),
-                "required_scopes": server_auth.scopes,
-            }
-            if server_auth.client_auth_method:
-                verifier_kwargs["client_auth_method"] = server_auth.client_auth_method
-            verifier = IntrospectionTokenVerifier(**verifier_kwargs)
             host = self.front_end_config.host
             if host in {"0.0.0.0", "::"}:
                 host = "localhost"
             base_url = f"http://{host}:{self.front_end_config.port}"
+            verifier = NATFastMCPTokenVerifier(server_auth, base_url=base_url)
             auth_provider = RemoteAuthProvider(
                 token_verifier=verifier,
                 authorization_servers=[server_auth.issuer_url],
