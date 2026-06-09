@@ -30,6 +30,7 @@ import yaml
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import ValidationError
 
 from nat.builder.context import Context
@@ -365,6 +366,37 @@ async def test_generate_stream_endpoint(client: httpx.AsyncClient, config: Confi
     input_message = {"message": f"{config.app.input}"}
     response = await client.post(f"{config.endpoint.generate_stream}", json=input_message)
     assert response.status_code == 200
+
+
+@pytest.mark.integration
+async def test_generate_stream_wraps_value_envelope_for_chunk_workflow(restore_environ):
+    """Generate streaming emits ``{"value": ...}`` (not the OpenAI ``choices``/``[DONE]`` shape)
+    even when the workflow streams ``ChatResponseChunk``, while chat keeps the OpenAI shape.
+    """
+    from nat.data_models.config import Config as AppConfig
+    from nat.test.functions import StreamingEchoFunctionConfig
+
+    os.environ["NAT_CONFIG_FILE"] = __file__.replace("test_unified_api_server.py", "server_config.yml")
+
+    app_config = AppConfig(workflow=StreamingEchoFunctionConfig(use_openai_api=True))
+    fastapi_app = FastApiFrontEndPluginWorker(app_config).build_app()
+    body = {"messages": [{"role": "user", "content": "hello world"}]}
+
+    async with LifespanManager(fastapi_app) as manager:
+        client = httpx.AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://localhost:8000")
+        async with client:
+            generate_response = await client.post("/generate/stream", json=body)
+            chat_response = await client.post("/chat/stream", json=body)
+
+    assert generate_response.status_code == 200
+    assert '"choices"' not in generate_response.text and "[DONE]" not in generate_response.text
+    data_match = re.search(r'\bdata:\s*([^\n]*)\n', generate_response.text)
+    assert data_match is not None and json.loads(data_match.group(1)) == {"value": "hello world"}
+
+    assert chat_response.status_code == 200
+    assert "[DONE]" in chat_response.text
+    chat_match = re.search(r'\bdata:\s*([^\n]*)\n', chat_response.text)
+    assert ChatResponseChunk(**json.loads(chat_match.group(1))).choices[0].delta.content == "hello world"
 
 
 async def test_generate_stream_endpoint_yields_error_when_workflow_raises(client: httpx.AsyncClient, config: Config):
@@ -884,6 +916,79 @@ def test_response_payload_output_basemodel_with_value_and_extras_preserves_extra
     sse = ResponsePayloadOutput(payload=Rich(value="21", tokens=42)).get_stream_data()
     decoded = json.loads(sse[len("data: "):-2])
     assert decoded == {"value": "21", "tokens": 42}
+
+
+async def test_response_payload_output_websocket_unwraps_value():
+    """Non-streaming generate renders the answer (``42``) over WebSocket, not a ``{"value": "42"}`` blob."""
+
+    class OutputArgsSchema(BaseModel):
+        value: str
+
+    content = await MessageValidator().convert_data_to_message_content(
+        ResponsePayloadOutput(payload=OutputArgsSchema(value="42")))
+    assert isinstance(content, SystemResponseContent) and content.text == "42"
+
+
+async def test_generate_preserves_structured_payload_across_transports():
+    """Generate preserves richer structured payloads consistently across both transports.
+
+    A ``{value, ...extras}`` payload keeps its extras -- declared fields or ``extra="allow"`` runtime
+    fields -- rather than collapsing to the bare ``value``: HTTP streaming emits a JSON object and
+    WebSocket non-streaming carries the same JSON in ``content.text``.
+    """
+
+    class Declared(BaseModel):
+        value: str
+        tokens: int
+
+    class Loose(BaseModel):
+        model_config = ConfigDict(extra="allow")
+        value: str
+
+    expected = {"value": "21", "tokens": 42}
+    for payload in (Declared(value="21", tokens=42), Loose(value="21", tokens=42)):
+        wrapped = ResponsePayloadOutput(payload=payload)
+        sse = wrapped.get_stream_data()  # HTTP streaming
+        assert json.loads(sse[len("data: "):-2]) == expected
+        content = await MessageValidator().convert_data_to_message_content(wrapped)  # WebSocket non-streaming
+        assert isinstance(content, SystemResponseContent) and json.loads(content.text) == expected
+
+
+@pytest.mark.parametrize(
+    "schema_type, expected_streaming",
+    [
+        pytest.param("generate", False, id="generate-non-streaming"),
+        pytest.param("chat", False, id="chat-non-streaming"),
+        pytest.param("generate_stream", True, id="generate-streaming"),
+        pytest.param("chat_stream", True, id="chat-streaming"),
+    ],
+)
+async def test_process_workflow_request_streaming_matches_schema_type(schema_type, expected_streaming):
+    """The WebSocket handler streams only for the ``*_stream`` schemas (non-streaming aggregates a single result)."""
+    mock_socket = AsyncMock()
+    mock_session_manager = MagicMock()
+    mock_step_adaptor = MagicMock()
+    mock_worker = MagicMock()
+    mock_worker.get_conversation_handler.return_value = None
+
+    handler = WebSocketMessageHandler(
+        socket=mock_socket,
+        session_manager=mock_session_manager,
+        step_adaptor=mock_step_adaptor,
+        worker=mock_worker,
+    )
+
+    run_mock = AsyncMock()
+    handler._run_workflow = run_mock
+
+    msg = WebSocketUserMessage.model_validate({**user_message, "type": "user_message", "schema_type": schema_type})
+    await handler.process_workflow_request(msg)
+
+    if handler._running_workflow_task is not None:
+        await handler._running_workflow_task
+
+    run_mock.assert_called_once()
+    assert run_mock.call_args.kwargs["streaming"] is expected_streaming
 
 
 async def test_nat_intermediate_step_to_websocket_message():
