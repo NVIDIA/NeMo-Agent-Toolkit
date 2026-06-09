@@ -26,9 +26,6 @@
         },
         {
             "pattern": "^https://docs\\.docker\\.com"
-        },
-        {
-            "pattern": "^https://docs\\.dbnl\\.com"
         }
     ]
 }
