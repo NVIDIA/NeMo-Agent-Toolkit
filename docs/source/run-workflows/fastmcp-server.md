@@ -221,7 +221,9 @@ nat run --config_file examples/MCP/simple_calculator_fastmcp/configs/config-mcp-
 
 ## Authentication
 
-MCP servers started with the FastMCP server runtime can validate bearer tokens using OAuth2 token introspection. Configure `server_auth` in your front end config with the introspection endpoint and client credentials.
+MCP servers started with the FastMCP server runtime can validate OAuth2 bearer tokens using JWKS or discovery for JWT access tokens and token introspection for opaque access tokens. Configure `server_auth` in your front-end config with the issuer, required scopes, and the validation endpoints required by your authorization server.
+
+When using Keycloak, configure the token audience so the resource-server client is present in the access token `aud` claim. The protected FastMCP example sets `audience: nat-mcp-resource-server`; the matching Keycloak client scope must add `nat-mcp-resource-server` to access tokens.
 
 See the protected example for a full setup:
 

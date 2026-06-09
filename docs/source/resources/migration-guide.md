@@ -29,6 +29,36 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ### v1.8.0
 
+#### Tavily Internet Search Package Migration (Breaking)
+
+Tavily web search support moved from the LangChain-backed `tavily_internet_search` function in `nvidia-nat[langchain]` to the provider-managed `nemo-agent-toolkit-tavily` package.
+
+This is a breaking change for workflows that configure:
+
+```yaml
+functions:
+  internet_search:
+    _type: tavily_internet_search
+```
+
+Those workflows no longer get Tavily search by installing only `nvidia-nat[langchain]`. Install the Tavily package and migrate the configuration to a function group:
+
+```bash
+pip install nemo-agent-toolkit-tavily
+```
+
+```yaml
+function_groups:
+  internet_search:
+    _type: tavily
+    include: [search]
+
+workflow:
+  tool_names: [internet_search__search]
+```
+
+The old `_type: tavily_internet_search` remains registered as a migration stub in `nvidia-nat-langchain`, but it raises an error with these migration instructions instead of performing a search. The old implementation depended on `langchain-tavily`; the new package uses the public NeMo Agent Toolkit plugin API and is not limited to LangChain workflows.
+
 #### Workflow YAML environment variable interpolation
 
 Bare `$VAR` (without braces) is not supported. Use `${VAR}` instead.
