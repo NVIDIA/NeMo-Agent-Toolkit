@@ -53,13 +53,13 @@ llms:
     model_name: meta/llama-3.3-70b-instruct
     temperature: 0.0
     seed: 33
-    max_tokens: 2000
+    max_tokens: 4096
   agent_llm:
     _type: nim
     model_name: meta/llama-3.3-70b-instruct
     temperature: 0.0
     seed: 33
-    max_tokens: 2000
+    max_tokens: 4096
 
 workflow:
   _type: react_agent
