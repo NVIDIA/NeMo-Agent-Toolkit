@@ -82,7 +82,8 @@ async def prompt_for_input_cli(question: InteractionPrompt) -> HumanResponse:
             ready, _, _ = select.select([sys.stdin], [], [], 1)
             if ready:
                 user_response: str = sys.stdin.readline().strip()
-                return HumanResponseText(text=user_response)
+                if user_response:
+                    return HumanResponseText(text=user_response)
             remaining -= 1
             # Save cursor position, update countdown line, restore cursor position
             sys.stdout.write(f"\033[s\033[A\r[{remaining}s remaining]\033[K\033[u")
