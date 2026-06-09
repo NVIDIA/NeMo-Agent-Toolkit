@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,87 +12,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import asyncio
-
-from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
-from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
-from nat.data_models.common import SerializableSecretStr
-from nat.data_models.common import get_secret_value
 from nat.data_models.function import FunctionBaseConfig
 
+_MIGRATION_MESSAGE = (
+    "`tavily_internet_search` was removed from `nvidia-nat[langchain]` in NeMo Agent Toolkit 1.8. "
+    "Install `nemo-agent-toolkit-tavily` and migrate the workflow config to a Tavily function group, for example:\n\n"
+    "function_groups:\n"
+    "  internet_search:\n"
+    "    _type: tavily\n"
+    "    include: [search]\n\n"
+    "workflow:\n"
+    "  tool_names: [internet_search__search]\n")
 
-# Internet Search tool
+
 class TavilyInternetSearchToolConfig(FunctionBaseConfig, name="tavily_internet_search"):
-    """
-    LangChain-backed tool that retrieves relevant contexts from Tavily web search for the given question.
-    Requires a TAVILY_API_KEY.
-    """
-    max_results: int = 3
-    api_key: SerializableSecretStr = Field(default_factory=lambda: SerializableSecretStr(""),
-                                           description="The API key for the Tavily service.")
-    max_retries: int = Field(default=3, description="Maximum number of retries for the search request")
-    search_depth: str = Field(
-        default="basic",
-        description="Depth for relevance vs latency tradeoff - 'basic', 'advanced', 'fast', or 'ultra-fast'")
+    """Migration stub for the removed LangChain-backed Tavily search tool."""
 
 
 @register_function(config_type=TavilyInternetSearchToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, builder: Builder):
-    import os
-
-    from langchain_tavily import TavilySearch
-
-    if not os.environ.get("TAVILY_API_KEY"):
-        if tool_config.api_key:
-            os.environ["TAVILY_API_KEY"] = get_secret_value(tool_config.api_key)
-    # This tavily tool requires an API Key and it must be set as an environment variable (TAVILY_API_KEY)
-    # Refer to create_customize_workflow.md for instructions of getting the API key
-
-    async def _tavily_internet_search(question: str) -> str:
-        """This tool retrieves relevant contexts from web search (using Tavily) for the given question.
-
-        Args:
-            question (str): The question to be answered. Will be truncated to 400 characters if longer.
-
-        Returns:
-            str: The web search results.
-        """
-        # Tavily API requires queries under 400 characters
-        if len(question) > 400:
-            question = question[:397] + "..."
-
-        # Search the web and get the requested amount of results
-        tavily_search = TavilySearch(max_results=tool_config.max_results, search_depth=tool_config.search_depth)
-
-        for attempt in range(tool_config.max_retries):
-            try:
-                search_docs = await tavily_search.ainvoke({"query": question})
-                # langchain_tavily may return a string error message instead of a dict
-                # (e.g. when ToolException is raised for zero-result queries), or a dict
-                # without a "results" key (e.g. {"detail": {"error": "Unauthorized"}} on
-                # auth failures). Guard against both to avoid crashing the workflow item.
-                if not isinstance(search_docs, dict) or "results" not in search_docs:
-                    return f"No web search results found for: {question}"
-                if not search_docs["results"]:
-                    return f"No web search results found for: {question}"
-                # Format
-                web_search_results = "\n\n---\n\n".join([
-                    f'<Document href="{doc["url"]}"/>\n{doc["content"]}\n</Document>' for doc in search_docs["results"]
-                ])
-                return web_search_results
-            except Exception:
-                # Return a graceful message instead of raising, so the agent can
-                # continue reasoning without web search rather than failing entirely.
-                if attempt == tool_config.max_retries - 1:
-                    return f"Web search failed after {tool_config.max_retries} attempts for: {question}"
-                await asyncio.sleep(2**attempt)
-
-    # Create a NAT function backed by the LangChain Tavily tool.
-    yield FunctionInfo.from_fn(
-        _tavily_internet_search,
-        description=_tavily_internet_search.__doc__,
-    )
+    raise RuntimeError(_MIGRATION_MESSAGE)
+    yield

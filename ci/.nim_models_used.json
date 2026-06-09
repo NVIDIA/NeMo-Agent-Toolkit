@@ -7,7 +7,7 @@
     },
     {
       "model": "nvidia/nemotron-3-nano-30b-a3b",
-      "num_configs": 42
+      "num_configs": 43
     },
     {
       "model": "meta/llama-3.3-70b-instruct",
