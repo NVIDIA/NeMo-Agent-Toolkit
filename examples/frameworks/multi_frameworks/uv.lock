@@ -2749,7 +2749,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "banks", specifier = ">=2.4.2" },
+    { name = "banks", specifier = ">=2.4.2,<3.0.0" },
     { name = "llama-index", specifier = ">=0.14.12,<1.0.0" },
     { name = "llama-index-core", specifier = ">=0.14.12,<1.0.0" },
     { name = "llama-index-embeddings-azure-openai", specifier = ">=0.4.1,<1.0.0" },
