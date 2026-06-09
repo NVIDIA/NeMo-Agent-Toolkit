@@ -6138,13 +6138,14 @@ dependencies = [
     { name = "lxml" },
     { name = "nemo-agent-toolkit-tavily" },
     { name = "nvidia-nat", extra = ["langchain", "mem0ai", "test"] },
+    { name = "nvidia-nat", extra = ["rag"], marker = "extra == 'extra-10-nvidia-nat-rag' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "lxml", specifier = "~=5.4" },
     { name = "nemo-agent-toolkit-tavily", specifier = ">=0.1.0" },
-    { name = "nvidia-nat", extras = ["langchain", "mem0ai", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain", "mem0ai", "rag", "test"], editable = "." },
 ]
 
 [[package]]
