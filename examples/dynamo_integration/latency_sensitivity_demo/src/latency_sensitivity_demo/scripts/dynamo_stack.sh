@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Nemotron 3 Nano on 2 GPUs with Dynamo frontend, HiCache, and PIN.
+# Nemotron 3 Nano on 2 GPUs with a Dynamo frontend and SGLang worker.
 # Edit the config below, then: bash dynamo_stack.sh
 # Ctrl+C to stop. Logs in /tmp/dynamo-stack/
 #
@@ -28,17 +28,25 @@ set -euo pipefail
 
 # ── Config ───────────────────────────────────────────────────────────────────
 MODEL="nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
-PAGE_SIZE=64
-HICACHE_RATIO=1.0
-HICACHE_POLICY=write_through
 CONTEXT_LENGTH=262144
 MEM_FRACTION=0.7
+HTTP_PORT="${HTTP_PORT:-8099}"
+TP_SIZE="${TP_SIZE:-2}"
+CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1}"
+STARTUP_TIMEOUT_SECONDS="${STARTUP_TIMEOUT_SECONDS:-1800}"
+
+# This demo runs a local two-GPU stack. Avoid loading host-specific NCCL network
+# plugins unless the user explicitly opts into them for their environment.
+NCCL_NET_PLUGIN="${NCCL_NET_PLUGIN:-none}"
+NCCL_IB_DISABLE="${NCCL_IB_DISABLE:-1}"
+NCCL_DEBUG="${NCCL_DEBUG:-WARN}"
 
 LOG_DIR="/tmp/dynamo-stack"
 
 # ── Cleanup ──────────────────────────────────────────────────────────────────
 PIDS=()
 
+# shellcheck disable=SC2329 # Invoked by EXIT/INT/TERM traps.
 cleanup() {
     echo ""
     echo "Shutting down..."
@@ -54,35 +62,130 @@ trap cleanup EXIT INT TERM
 
 mkdir -p "$LOG_DIR"
 
+require_positive_integer() {
+    local name="$1"
+    local value="$2"
+
+    if ! [[ "$value" =~ ^[0-9]+$ ]] || ((10#$value < 1)); then
+        echo "$name must be a positive integer. Current value: $value"
+        exit 1
+    fi
+}
+
+validate_config() {
+    require_positive_integer "TP_SIZE" "$TP_SIZE"
+    require_positive_integer "HTTP_PORT" "$HTTP_PORT"
+    require_positive_integer "STARTUP_TIMEOUT_SECONDS" "$STARTUP_TIMEOUT_SECONDS"
+
+    local visible_devices="${CUDA_VISIBLE_DEVICES//[[:space:]]/}"
+    if [[ -z "$visible_devices" ]]; then
+        echo "CUDA_VISIBLE_DEVICES must list at least $TP_SIZE device(s)."
+        exit 1
+    fi
+    if [[ "$visible_devices" == ,* || "$visible_devices" == *, || "$visible_devices" == *,,* ]]; then
+        echo "CUDA_VISIBLE_DEVICES contains an empty device entry: $visible_devices"
+        exit 1
+    fi
+    CUDA_VISIBLE_DEVICES="$visible_devices"
+
+    local devices
+    IFS=',' read -r -a devices <<<"$visible_devices"
+    if ((${#devices[@]} < TP_SIZE)); then
+        echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES exposes ${#devices[@]} device(s), but TP_SIZE=$TP_SIZE requires at least $TP_SIZE."
+        exit 1
+    fi
+}
+
+wait_for_model() {
+    local frontend_pid="$1"
+    local worker_pid="$2"
+    local endpoint="http://localhost:${HTTP_PORT}/v1/models"
+    local deadline=$((SECONDS + STARTUP_TIMEOUT_SECONDS))
+    local response
+
+    echo "Waiting up to ${STARTUP_TIMEOUT_SECONDS}s for $MODEL to register at $endpoint..."
+    while true; do
+        if response=$(curl -sf "$endpoint" 2>/dev/null) && grep -F "\"$MODEL\"" <<<"$response" >/dev/null; then
+            echo "Model registered. Dynamo endpoint is ready."
+            return 0
+        fi
+
+        if ! kill -0 "$frontend_pid" 2>/dev/null; then
+            echo "Dynamo frontend exited before model registration. See $LOGFILE."
+            exit 1
+        fi
+
+        if ! kill -0 "$worker_pid" 2>/dev/null; then
+            echo "Dynamo worker exited before model registration. See $LOGFILE."
+            exit 1
+        fi
+
+        if ((SECONDS >= deadline)); then
+            echo "Timed out waiting for model registration at $endpoint."
+            echo "Last /v1/models response:"
+            curl -s "$endpoint" || true
+            echo ""
+            echo "See $LOGFILE."
+            exit 1
+        fi
+
+        sleep 5
+    done
+}
+
+monitor_processes() {
+    while true; do
+        for pid in "${PIDS[@]}"; do
+            if ! kill -0 "$pid" 2>/dev/null; then
+                echo "A Dynamo process exited. See $LOGFILE."
+                exit 1
+            fi
+        done
+
+        sleep 5
+    done
+}
+
 # ── Preflight ────────────────────────────────────────────────────────────────
+validate_config
 curl -sf http://localhost:2379/health >/dev/null 2>&1 || { echo "etcd not running. See header comment."; exit 1; }
 curl -sf http://localhost:8222/healthz >/dev/null 2>&1 || { echo "NATS not running. See header comment."; exit 1; }
 
 LOGFILE="$LOG_DIR/all.log"
-> "$LOGFILE"
+: > "$LOGFILE"
+
+echo "Launching Dynamo stack with CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES, TP_SIZE=$TP_SIZE"
+echo "NCCL startup defaults: NCCL_NET_PLUGIN=$NCCL_NET_PLUGIN, NCCL_IB_DISABLE=$NCCL_IB_DISABLE"
 
 # ── Frontend ─────────────────────────────────────────────────────────────────
 OTEL_SERVICE_NAME=dynamo-frontend \
 python3 -m dynamo.frontend \
-    --http-port 8099 \
-    2>&1 | tee -a "$LOGFILE" &
-PIDS+=($!)
+    --http-port "$HTTP_PORT" \
+    > >(tee -a "$LOGFILE") 2>&1 &
+FRONTEND_PID=$!
+PIDS+=("$FRONTEND_PID")
 
 # ── Workers ──────────────────────────────────────────────────────────────────
-CUDA_VISIBLE_DEVICES=0,1 \
+CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES" \
 OTEL_SERVICE_NAME=dynamo-worker-0 \
 DYN_SYSTEM_PORT=8081 \
+NCCL_NET_PLUGIN="$NCCL_NET_PLUGIN" \
+NCCL_IB_DISABLE="$NCCL_IB_DISABLE" \
+NCCL_DEBUG="$NCCL_DEBUG" \
 python3 -m dynamo.sglang \
     --model-path "$MODEL" \
     --served-model-name "$MODEL" \
-    --tp 2 \
+    --tp "$TP_SIZE" \
     --mem-fraction-static $MEM_FRACTION \
     --context-length $CONTEXT_LENGTH \
     --trust-remote-code \
     --enable-metrics \
     --kv-events-config '{"publisher":"zmq","topic":"kv-events","endpoint":"tcp://*:20080"}' \
-    2>&1 | tee -a "$LOGFILE" &
-PIDS+=($!)
+    > >(tee -a "$LOGFILE") 2>&1 &
+WORKER_PID=$!
+PIDS+=("$WORKER_PID")
+
+wait_for_model "$FRONTEND_PID" "$WORKER_PID"
 
 echo "Ctrl+C to stop. Log: $LOGFILE"
-wait
+monitor_processes

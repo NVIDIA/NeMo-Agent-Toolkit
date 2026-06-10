@@ -137,20 +137,34 @@ source .venv/bin/activate
 bash dynamo_stack.sh
 ```
 
+The stack script defaults to a local two-GPU setup with `CUDA_VISIBLE_DEVICES=0,1` and `TP_SIZE=2`.
+It also uses single-node NCCL startup defaults (`NCCL_NET_PLUGIN=none`, `NCCL_IB_DISABLE=1`) so local
+validation does not load host-specific network plugins or use RDMA/InfiniBand by default. Override these
+values before running the script if your machine requires a different GPU list, tensor-parallel size, or
+RDMA/InfiniBand configuration.
+The script waits for the model to appear in `/v1/models` and exits with a pointer to
+`/tmp/dynamo-stack/all.log` if the worker dies or startup times out.
+
 #### D. Verify
 
-From this terminal, verify you can reach the Dynamo endpoint assuming your port for inference is 8099 and available
-on localhost:
+From another terminal, verify the Dynamo endpoint has registered the served model:
+
+```bash
+curl -s http://localhost:8099/v1/models | python3 -m json.tool
+```
+
+Then send a test request:
 
 ```bash
 curl http://localhost:8099/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "YOUR_MODEL_NAME",
+    "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
     "messages": [{"role": "user", "content": "Hello!"}],
     "max_tokens": 64
   }'
 ```
+
 ### Step 1b: Run the Profiler to Build the Prediction Trie
 
 ```bash
@@ -236,6 +250,9 @@ cd "$DYNAMO_SOURCE_DIR"
 source .venv/bin/activate
 bash dynamo_stack_sensitivity.sh
 ```
+
+The sensitivity stack uses the same overrideable GPU, tensor-parallel, and NCCL startup defaults as the
+baseline stack.
 
 Verify the endpoint is responding:
 

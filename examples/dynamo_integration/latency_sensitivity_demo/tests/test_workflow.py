@@ -14,11 +14,15 @@
 # limitations under the License.
 """Tests for the latency sensitivity demo workflow."""
 
+import os
+import subprocess
 from pathlib import Path
 
 import yaml
 
 CONFIGS_DIR = Path(__file__).parent.parent / "src" / "latency_sensitivity_demo" / "configs"
+SCRIPTS_DIR = Path(__file__).parent.parent / "src" / "latency_sensitivity_demo" / "scripts"
+STACK_SCRIPT_PATHS = [SCRIPTS_DIR / "dynamo_stack.sh", SCRIPTS_DIR / "dynamo_stack_sensitivity.sh"]
 
 
 class TestConfigFiles:
@@ -98,6 +102,42 @@ class TestDataset:
         for entry in data:
             assert "id" in entry
             assert "question" in entry
+
+
+class TestDynamoStackScripts:
+    """Verify the checked-in Dynamo launch helpers stay safe for local validation."""
+
+    def test_stack_scripts_have_valid_bash_syntax(self):
+        for script_path in STACK_SCRIPT_PATHS:
+            subprocess.run(["bash", "-n", str(script_path)], check=True)
+
+    def test_stack_scripts_have_overrideable_single_node_nccl_defaults(self):
+        for script_path in STACK_SCRIPT_PATHS:
+            script = script_path.read_text()
+            assert 'CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1}"' in script
+            assert 'TP_SIZE="${TP_SIZE:-2}"' in script
+            assert 'NCCL_NET_PLUGIN="${NCCL_NET_PLUGIN:-none}"' in script
+            assert 'NCCL_IB_DISABLE="${NCCL_IB_DISABLE:-1}"' in script
+            assert 'NCCL_DEBUG="${NCCL_DEBUG:-WARN}"' in script
+            assert '--tp "$TP_SIZE"' in script
+
+    def test_stack_scripts_fail_fast_when_tp_exceeds_visible_gpu_count(self):
+        env = os.environ.copy()
+        env["CUDA_VISIBLE_DEVICES"] = "0"
+        env["TP_SIZE"] = "2"
+
+        for script_path in STACK_SCRIPT_PATHS:
+            result = subprocess.run(["bash", str(script_path)], check=False, env=env, capture_output=True, text=True)
+            assert result.returncode == 1
+            assert "requires at least 2" in result.stdout
+
+    def test_stack_scripts_wait_for_model_registration(self):
+        for script_path in STACK_SCRIPT_PATHS:
+            script = script_path.read_text()
+            assert "validate_config" in script
+            assert "wait_for_model \"$FRONTEND_PID\" \"$WORKER_PID\"" in script
+            assert "monitor_processes" in script
+            assert "/v1/models" in script
 
 
 class TestWorkflowRegistration:
