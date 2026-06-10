@@ -188,6 +188,8 @@ numpydoc_class_members_toctree = False
 # mysql.com  reports a 403 when requested by linkcheck
 # api.service.com is a placeholder for a service example
 # Ignore example.com/mcp as it is inaccessible when building the docs
+# docs.dbnl.com is inaccessible and https://www.distributional.com/ says "Something new is coming", putting this on
+# hold for now
 linkcheck_ignore = [
     r'http://localhost:\d+',
     r'https://localhost:\d+',

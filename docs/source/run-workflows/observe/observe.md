@@ -73,7 +73,6 @@ The following table lists each exporter with its supported features and configur
 | -------- | ------------------------- | ------------------ |
 | [Arize AX](https://arize.com/docs/ax/) | [Observing with Arize AX](?provider=Arize-AX#provider-integration-guides){.external} | Logging, Tracing |
 | [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel) | [Observing with Data Flywheel](?provider=Data-Flywheel#provider-integration-guides){.external} | Logging, Tracing |
-| [DBNL](https://distributional.com/) | [Observing with DBNL](?provider=DBNL#provider-integration-guides){.external} | Logging, Tracing |
 | [Dynatrace](https://dynatrace.com/) | [Observing with Dynatrace](?provider=Dynatrace#provider-integration-guides){.external} | Logging, Tracing |
 | [Galileo](https://galileo.ai/) | [Observing with Galileo](?provider=Galileo#provider-integration-guides){.external} | Logging, Tracing |
 | [Langfuse](https://langfuse.com/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
@@ -204,13 +203,6 @@ For complete information about developing and integrating custom telemetry expor
   :sync: Data-Flywheel
 
     :::{include} ./observe-workflow-with-data-flywheel.md
-
-  :::
-
-  :::{tab-item} DBNL
-  :sync: DBNL
-
-    :::{include} ./observe-workflow-with-dbnl.md
 
   :::
 
