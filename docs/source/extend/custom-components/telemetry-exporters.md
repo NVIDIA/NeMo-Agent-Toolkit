@@ -78,7 +78,6 @@ Examples of existing telemetry exporters include:
 - **OpenTelemetry Collector**: Exports traces to OpenTelemetry-compatible services
 - **Patronus**: Exports traces to Patronus via OTLP
 - **Galileo**: Exports traces to Galileo via OTLP
-- **DBNL**: Exports traces to DBNL via OTLP
 
 ## Quick Start: Your First Telemetry Exporter
 
@@ -253,7 +252,7 @@ Specialized for OpenTelemetry-compatible services with many pre-built options:
 - **Use case**: OTLP-compatible backends, standard observability tools
 - **Base class**: `OtelSpanExporter`
 - **Data flow**: `IntermediateStep` → `Span` → [Processing Pipeline] → `OtelSpan` → Export
-- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Arize AX, Phoenix, Weave, DBNL
+- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Arize AX, Phoenix, Weave
 
 #### Advanced Custom Exporters
 
@@ -279,7 +278,6 @@ Before creating a custom exporter, check if your observability service is alread
 | Service | Type | Installation | Configuration |
 |---------|------|-------------|---------------|
 | **Arize AX** | `arize_ax` | `pip install "nvidia-nat[opentelemetry]"` | Arize space ID, API key, project name, optional US or EU endpoint and HTTP or gRPC |
-| **DBNL** | `dbnl` | `pip install "nvidia-nat[opentelemetry]"` | API URL + API token + project id |
 | **File** | `file` | `pip install nvidia-nat` | local file or directory |
 | **Langfuse** | `langfuse` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API keys |
 | **LangSmith** | `langsmith` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API key |
