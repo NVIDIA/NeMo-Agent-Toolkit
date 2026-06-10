@@ -29,6 +29,26 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ### v1.8.0
 
+#### Redis Package Migration (Breaking)
+
+Redis memory and object store support moved from the in-tree `nvidia-nat-redis` implementation to the Redis-managed `nemo-agent-toolkit-redis` package.
+
+Workflows that use Redis no longer get the implementation from the NeMo Agent Toolkit source tree. Install the Redis plugin package directly:
+
+```bash
+pip install nemo-agent-toolkit-redis
+```
+
+Alternatively, install the NeMo Agent Toolkit Redis extra:
+
+```bash
+pip install "nvidia-nat[redis]"
+```
+
+The workflow configuration names remain unchanged for Redis memory and object store usage. Existing configurations that use `_type: redis`, `redis_memory`, `redis_agent_memory_backend`, or `redis_agent_memory_auto_memory` should continue to work once the Redis plugin package is installed.
+
+The historical `nvidia-nat-redis` distribution remains as a compatibility package for users who still install that name, but it depends on `nemo-agent-toolkit-redis` and no longer ships the Redis implementation itself. New projects should install `nemo-agent-toolkit-redis` directly.
+
 #### Tavily Internet Search Package Migration (Breaking)
 
 Tavily web search support moved from the LangChain-backed `tavily_internet_search` function in `nvidia-nat[langchain]` to the provider-managed `nemo-agent-toolkit-tavily` package.
