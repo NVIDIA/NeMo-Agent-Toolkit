@@ -203,8 +203,7 @@ linkcheck_ignore = [
     r'http://custom-server',
     r'^\?provider=',
     r'https://agent\.example\.com',
-    r'https://github\.com/NVIDIA/NeMo-Agent-Toolkit/(issues|pull)/',
-    r'https://docs\.dbnl\.com'
+    r'https://github\.com/NVIDIA/NeMo-Agent-Toolkit/(issues|pull)/'
 ]
 
 templates_path = ['_templates']
