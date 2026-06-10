@@ -22,7 +22,7 @@ This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 ### Summary
 
 * Migrated Tavily web search support from the LangChain-only `tavily_internet_search` tool in `nvidia-nat[langchain]` to the provider-managed, framework-agnostic [`nemo-agent-toolkit-tavily`](https://github.com/tavily-ai/NeMo-Agent-Toolkit-tavily) plugin. Workflows should install the Tavily package, configure Tavily under `function_groups` with `_type: tavily`, and reference exposed tools by names such as `internet_search__search`.
-* Added new public plugin API documentation for externally managed NeMo Agent Toolkit plugin packages. Thank you to the maintainers of [`NeMo-Agent-Toolkit-Tavily`](https://github.com/tavily-ai/NeMo-Agent-Toolkit-tavily) and [`NeMo-Agent-Toolkit-ATR`](https://github.com/Agent-Threat-Rule/NeMo-Agent-Toolkit-atr) for building on the new public API surface. These third-party repositories are managed outside the NeMo Agent Toolkit repository and may release, change, or run CI on schedules independent of NeMo Agent Toolkit release cycles.
+* Added new public plugin API documentation for externally managed NeMo Agent Toolkit plugin packages. Thank you to the maintainers of [`NeMo-Agent-Toolkit-Redis`](https://github.com/redis-developer/nemo-agent-toolkit-redis), [`NeMo-Agent-Toolkit-Tavily`](https://github.com/tavily-ai/NeMo-Agent-Toolkit-tavily), and [`NeMo-Agent-Toolkit-ATR`](https://github.com/Agent-Threat-Rule/NeMo-Agent-Toolkit-atr) for building on the new public API surface. These third-party repositories are managed outside the NeMo Agent Toolkit repository and may release, change, or run CI on schedules independent of NeMo Agent Toolkit release cycles.
 
 ### Breaking Changes
 
