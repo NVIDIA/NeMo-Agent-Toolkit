@@ -111,7 +111,7 @@ class TestDynamoStackScripts:
         for script_path in STACK_SCRIPT_PATHS:
             subprocess.run(["bash", "-n", str(script_path)], check=True)
 
-    def test_stack_scripts_have_overrideable_single_node_nccl_defaults(self):
+    def test_stack_scripts_have_configurable_single_node_nccl_defaults(self):
         for script_path in STACK_SCRIPT_PATHS:
             script = script_path.read_text()
             assert 'CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0,1}"' in script

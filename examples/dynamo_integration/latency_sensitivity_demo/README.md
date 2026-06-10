@@ -251,8 +251,9 @@ source .venv/bin/activate
 bash dynamo_stack_sensitivity.sh
 ```
 
-The sensitivity stack uses the same overrideable GPU, tensor-parallel, and NCCL startup defaults as the
-baseline stack.
+The sensitivity stack uses the same GPU, tensor-parallel, and NCCL startup defaults as the baseline
+stack. Set the same environment variables before running the script if your environment requires
+different values.
 
 Verify the endpoint is responding:
 
