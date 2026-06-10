@@ -146,7 +146,7 @@ Before getting started, it's possible to run this simple workflow and many other
 
 ## 📚 Additional Resources
 
-* 📖 [Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest): Explore the full documentation for NeMo Agent Toolkit.
+* 📖 [Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest/): Explore the full documentation for NeMo Agent Toolkit.
 * 🧭 [Get Started Guide](./docs/source/get-started/installation.md): Set up your environment and start building with NeMo Agent Toolkit.
 * 🤝 [Contributing](./docs/source/resources/contributing/index.md): Learn how to contribute to NeMo Agent Toolkit and set up your development environment.
 * 🧪 [Examples](./examples/README.md): Explore examples of NeMo Agent Toolkit workflows located in the [`examples`](./examples) directory of the source repository.
