@@ -57,9 +57,8 @@ class HITLMiddleware(DynamicFunctionMiddleware):
             context: Invocation context containing the function arguments.
 
         Returns:
-            ``None`` to proceed with the current arguments unchanged.
-            ``InvocationContext`` with ``modified_args`` or ``modified_kwargs`` updated
-            to run the function with different inputs.
+            ``None`` to proceed unchanged, an ``InvocationContext`` with updated
+            ``modified_args`` or ``modified_kwargs`` to alter inputs, or an
             ``InvocationContext`` with ``action`` set to ``InvocationAction.SKIP``
             to bypass the function call entirely.
         """
@@ -74,14 +73,12 @@ class HITLMiddleware(DynamicFunctionMiddleware):
 
         Args:
             response: The human prompt response collected after the function returns.
-            context: Invocation context with ``output`` populated by the function result.
-                For streaming calls this method is invoked once per chunk, with ``output``
-                set to the individual chunk value.
+            context: Invocation context with ``output`` set to the function result.
+                For streaming calls, ``output`` is the individual chunk value.
 
         Returns:
-            ``None`` to return the output as-is.
-            ``InvocationContext`` with ``output`` updated to replace the function's
-            return value.
+            ``None`` to return the output as-is, or an ``InvocationContext`` with
+            ``output`` updated to replace the function's return value.
         """
 
     async def pre_invoke(self, context: InvocationContext) -> InvocationContext | None:
