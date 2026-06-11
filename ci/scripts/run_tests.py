@@ -116,6 +116,16 @@ def make_env(project_dir: Path) -> dict[str, str]:
     return env
 
 
+def remove_env(project_dir: Path) -> None:
+    cmd = ["rm", "-rf", str(project_dir / ".venv")]
+    sh(cmd)
+
+
+def remove_project_envs(projects: list[Path]) -> None:
+    for project in projects:
+        remove_env(project)
+
+
 def run_one(
     project_dir: Path,
     *,
@@ -204,8 +214,8 @@ def run_one(
             logger.info(f"{display_project_dir} (tested)")
         return 0
     finally:
-        cmd = ["rm", "-rf", str(project_dir / ".venv")]
-        sh(cmd, env=env)
+        if not enable_coverage:
+            remove_env(project_dir)
 
 
 def main(junit_xml: str | None,
@@ -296,14 +306,15 @@ def main(junit_xml: str | None,
         finally:
             ex = None
             _restore_handler()
-            for p in projects:
-                sh(["rm", "-rf", str(p / ".venv")])
+            if cov_xml is None:
+                remove_project_envs(projects)
 
     if cov_xml is not None:
         sh(["uv", "tool", "install", "coverage[toml]"])
         sh(["coverage", "combine", "--keep", str(COV_DIR)])
         sh(["coverage", "xml", "-o", str(cov_xml)])
         sh(["coverage", "report"])
+        remove_project_envs(projects)
 
     if junit_xml is not None:
         sh(["uv", "tool", "install", "junitparser"])
