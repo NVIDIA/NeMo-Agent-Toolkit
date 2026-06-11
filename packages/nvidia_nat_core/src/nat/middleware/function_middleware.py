@@ -37,6 +37,7 @@ from typing import Any
 from nat.middleware.middleware import CallNext
 from nat.middleware.middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationAction
 from nat.middleware.middleware import InvocationContext
 from nat.middleware.middleware import Middleware
 
@@ -184,6 +185,9 @@ class FunctionMiddleware(Middleware):
         if result is not None:
             ctx = result
 
+        if ctx.action == InvocationAction.SKIP:
+            return None
+
         # Execute function with (potentially modified) args/kwargs
         ctx.output = await call_next(*ctx.modified_args, **ctx.modified_kwargs)
 
@@ -236,6 +240,9 @@ class FunctionMiddleware(Middleware):
         result = await self.pre_invoke(ctx)
         if result is not None:
             ctx = result
+
+        if ctx.action == InvocationAction.SKIP:
+            return
 
         # Stream with per-chunk post-invoke
         async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs):

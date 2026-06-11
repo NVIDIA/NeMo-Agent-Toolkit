@@ -1,0 +1,171 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Human-in-the-Loop (HITL) middleware for the NeMo Agent Toolkit."""
+
+from __future__ import annotations
+
+from abc import abstractmethod
+from typing import Any
+
+from nat.builder.builder import Builder
+from nat.builder.context import Context
+from nat.data_models.interactive import InteractionResponse
+from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
+from nat.middleware.hitl.hitl_middleware_config import HITLMiddlewareConfig
+from nat.middleware.middleware import CallNext
+from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationAction
+from nat.middleware.middleware import InvocationContext
+
+
+class HITLMiddleware(DynamicFunctionMiddleware):
+    """Human-in-the-Loop middleware.
+
+    Intercepts function calls to present human prompts before and/or after execution.
+    Subclasses must implement ``_on_pre_invoke_response`` and ``_on_post_invoke_response``
+    to control what happens with the prompt response at each phase.
+    """
+
+    def __init__(self, config: HITLMiddlewareConfig, builder: Builder) -> None:
+        """Initialize the HITL middleware.
+
+        Args:
+            config: HITL middleware configuration.
+            builder: Workflow builder used for function discovery.
+        """
+        super().__init__(config=config, builder=builder)
+        self._hitl_config: HITLMiddlewareConfig = config
+
+    @abstractmethod
+    async def _on_pre_invoke_response(
+        self,
+        response: InteractionResponse,
+        context: InvocationContext,
+    ) -> InvocationContext | None:
+        """Handle the pre-invoke prompt response and return an invocation decision.
+
+        Args:
+            response: The human prompt response collected before the function is called.
+            context: Invocation context containing the function arguments.
+
+        Returns:
+            ``None`` to proceed with the current arguments unchanged.
+            ``InvocationContext`` with ``modified_args`` or ``modified_kwargs`` updated
+            to run the function with different inputs.
+            ``InvocationContext`` with ``action`` set to ``InvocationAction.SKIP``
+            to bypass the function call entirely.
+        """
+
+    @abstractmethod
+    async def _on_post_invoke_response(
+        self,
+        response: InteractionResponse,
+        context: InvocationContext,
+    ) -> InvocationContext | None:
+        """Handle the post-invoke prompt response and return an invocation decision.
+
+        Args:
+            response: The human prompt response collected after the function returns.
+            context: Invocation context with ``output`` populated by the function result.
+                For streaming calls this method is invoked once per chunk, with ``output``
+                set to the individual chunk value.
+
+        Returns:
+            ``None`` to return the output as-is.
+            ``InvocationContext`` with ``output`` updated to replace the function's
+            return value.
+        """
+
+    async def pre_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Present a human prompt before the function is called.
+
+        A no-op when ``pre_invoke_prompt`` is not configured.
+
+        Args:
+            context: Invocation context (output is None at this phase).
+
+        Returns:
+            The result of ``_on_pre_invoke_response``.
+        """
+        if not self._hitl_config.pre_invoke_prompt:
+            return None
+
+        response: InteractionResponse = await Context.get().user_interaction_manager.prompt_user_input(
+            self._hitl_config.pre_invoke_prompt)
+        return await self._on_pre_invoke_response(response, context)
+
+    async def post_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Present a human prompt after the function returns.
+
+        A no-op when ``post_invoke_prompt`` is not configured.
+
+        Args:
+            context: Invocation context with the function output populated.
+
+        Returns:
+            The result of ``_on_post_invoke_response``.
+        """
+        if not self._hitl_config.post_invoke_prompt:
+            return None
+
+        response: InteractionResponse = await Context.get().user_interaction_manager.prompt_user_input(
+            self._hitl_config.post_invoke_prompt)
+        return await self._on_post_invoke_response(response, context)
+
+    async def function_middleware_invoke(
+        self,
+        *args: Any,
+        call_next: CallNext,
+        context: FunctionMiddlewareContext,
+        **kwargs: Any,
+    ) -> Any:
+        """Orchestrate pre-invoke HITL, optional function call, and post-invoke HITL.
+
+        Args:
+            args: Positional arguments for the wrapped function.
+            call_next: Callable that invokes the next middleware or target function.
+            context: Static metadata about the function being wrapped.
+            kwargs: Keyword arguments for the wrapped function.
+
+        Returns:
+            The (potentially transformed) function output, or ``None`` if skipped.
+        """
+        ctx = InvocationContext(
+            function_context=context,
+            original_args=args,
+            original_kwargs=dict(kwargs),
+            modified_args=args,
+            modified_kwargs=dict(kwargs),
+            output=None,
+        )
+
+        pre_result = await self.pre_invoke(ctx)
+
+        if pre_result is not None:
+            ctx = pre_result
+
+        if ctx.action == InvocationAction.SKIP:
+            return None
+
+        ctx.output = await call_next(*ctx.modified_args, **ctx.modified_kwargs)
+
+        post_result = await self.post_invoke(ctx)
+        if post_result is not None:
+            ctx = post_result
+
+        return ctx.output
+
+
+__all__ = ["HITLMiddleware"]
