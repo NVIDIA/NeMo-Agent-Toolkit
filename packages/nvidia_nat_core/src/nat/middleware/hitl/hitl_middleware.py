@@ -17,16 +17,12 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any
 
 from nat.builder.builder import Builder
 from nat.builder.context import Context
 from nat.data_models.interactive import InteractionResponse
 from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
 from nat.middleware.hitl.hitl_middleware_config import HITLMiddlewareConfig
-from nat.middleware.middleware import CallNext
-from nat.middleware.middleware import FunctionMiddlewareContext
-from nat.middleware.middleware import InvocationAction
 from nat.middleware.middleware import InvocationContext
 
 
@@ -123,49 +119,6 @@ class HITLMiddleware(DynamicFunctionMiddleware):
         response: InteractionResponse = await Context.get().user_interaction_manager.prompt_user_input(
             self._hitl_config.post_invoke_prompt)
         return await self._on_post_invoke_response(response, context)
-
-    async def function_middleware_invoke(
-        self,
-        *args: Any,
-        call_next: CallNext,
-        context: FunctionMiddlewareContext,
-        **kwargs: Any,
-    ) -> Any:
-        """Orchestrate pre-invoke HITL, optional function call, and post-invoke HITL.
-
-        Args:
-            args: Positional arguments for the wrapped function.
-            call_next: Callable that invokes the next middleware or target function.
-            context: Static metadata about the function being wrapped.
-            kwargs: Keyword arguments for the wrapped function.
-
-        Returns:
-            The (potentially transformed) function output, or ``None`` if skipped.
-        """
-        ctx = InvocationContext(
-            function_context=context,
-            original_args=args,
-            original_kwargs=dict(kwargs),
-            modified_args=args,
-            modified_kwargs=dict(kwargs),
-            output=None,
-        )
-
-        pre_result = await self.pre_invoke(ctx)
-
-        if pre_result is not None:
-            ctx = pre_result
-
-        if ctx.action == InvocationAction.SKIP:
-            return None
-
-        ctx.output = await call_next(*ctx.modified_args, **ctx.modified_kwargs)
-
-        post_result = await self.post_invoke(ctx)
-        if post_result is not None:
-            ctx = post_result
-
-        return ctx.output
 
 
 __all__ = ["HITLMiddleware"]
