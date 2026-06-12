@@ -14,10 +14,14 @@
 # limitations under the License.
 """Human-in-the-Loop (HITL) middleware package."""
 
+from nat.data_models.interactive import HumanPrompt
+from nat.data_models.interactive import InteractionResponse
 from nat.middleware.hitl.hitl_middleware import HITLMiddleware
 from nat.middleware.hitl.hitl_middleware_config import HITLMiddlewareConfig
 
 __all__ = [
     "HITLMiddleware",
     "HITLMiddlewareConfig",
+    "HumanPrompt",
+    "InteractionResponse",
 ]

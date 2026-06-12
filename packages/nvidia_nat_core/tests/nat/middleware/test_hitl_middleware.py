@@ -241,7 +241,7 @@ async def test_function_middleware_stream_when_proceed_yields_all_chunks(functio
 
 
 async def test_function_middleware_stream_post_invoke_clears_output_yields_nothing(function_context):
-    """When post-invoke clears context.output, no chunks are yielded."""
+    """When post-invoke sets context.output to None, that chunk is suppressed and not yielded."""
     middleware: _StubHITLMiddleware = _make_middleware(post=_TEXT_PROMPT)
 
     async def clear_output(_resp, ctx):
@@ -260,7 +260,7 @@ async def test_function_middleware_stream_post_invoke_clears_output_yields_nothi
                                                                            context=function_context)
         ]
 
-    assert chunks == [None, None]
+    assert chunks == []
 
 
 async def test_function_middleware_stream_post_invoke_called_per_chunk(function_context):

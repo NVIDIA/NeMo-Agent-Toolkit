@@ -22,7 +22,7 @@ from nat.data_models.interactive import HumanPrompt
 from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
 
 
-class HITLMiddlewareConfig(DynamicMiddlewareConfig, name="hitl"):
+class HITLMiddlewareConfig(DynamicMiddlewareConfig):
     """Configuration for Human-in-the-Loop (HITL) middleware.
 
     Inherits component and function targeting from DynamicMiddlewareConfig.

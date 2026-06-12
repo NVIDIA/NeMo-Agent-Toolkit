@@ -419,7 +419,7 @@ Both abstract methods receive the `InteractionResponse` from the user and the cu
 
 #### Configuration
 
-`HITLMiddlewareConfig` is the base configuration class. It already declares `name="hitl"`, which maps to `_type: hitl` in YAML. Subclass it with a different `name` only if you need a distinct `_type` value. It provides two prompt fields and inherits all function-targeting fields from `DynamicMiddlewareConfig`.
+`HITLMiddlewareConfig` is the base configuration class. It has no YAML `_type` of its own — because `HITLMiddleware` is abstract, concrete subclasses must declare their own `name` to be runnable. It provides two prompt fields and inherits all function-targeting fields from `DynamicMiddlewareConfig`.
 
 - **`pre_invoke_prompt`**: Any `HumanPrompt` to display before the function is called. Omit or set to `null` to disable pre-invoke interaction.
 - **`post_invoke_prompt`**: Any `HumanPrompt` to display after the function returns. Omit or set to `null` to disable post-invoke interaction.
@@ -452,9 +452,11 @@ middleware:
 Subclass `HITLMiddleware` to implement the decision logic. Subclass `HITLMiddlewareConfig` with a new `name` only when you need a distinct `_type`:
 
 ```python
-from nat.data_models.interactive import InteractionResponse
-from nat.middleware.hitl import HITLMiddleware, HITLMiddlewareConfig
-from nat.middleware.middleware import InvocationAction, InvocationContext
+from nat.plugin_api import HITLMiddleware
+from nat.plugin_api import HITLMiddlewareConfig
+from nat.plugin_api import InteractionResponse
+from nat.plugin_api import InvocationAction
+from nat.plugin_api import InvocationContext
 
 
 class MyHITLConfig(HITLMiddlewareConfig, name="my_hitl"):

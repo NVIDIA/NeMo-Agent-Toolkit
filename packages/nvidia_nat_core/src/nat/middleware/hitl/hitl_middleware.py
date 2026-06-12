@@ -77,7 +77,8 @@ class HITLMiddleware(DynamicFunctionMiddleware):
 
         Returns:
             ``None`` to return the output as-is, or an ``InvocationContext`` with
-            ``output`` updated to replace the function's return value.
+            ``output`` updated to replace the function's return value. For streaming
+            calls, set ``output`` to ``None`` to suppress the chunk entirely.
         """
 
     async def pre_invoke(self, context: InvocationContext) -> InvocationContext | None:
