@@ -404,6 +404,98 @@ Timeout middleware extends `DynamicFunctionMiddleware`, enabling interception of
 - **Streaming**: Enforces the time limit across the entire stream duration, not per-chunk
 - **Error handling**: Raises `TimeoutError` with the configured `timeout_message`
 
+### HITL Middleware
+
+The HITL (Human-in-the-Loop) middleware (`HITLMiddleware`) is an abstract base class for intercept patterns that require a human decision before or after a function call. It integrates directly with the `UserInteractionManager` to display any configured `HumanPrompt` at two points in the function lifecycle: before the call (`pre_invoke`) and after it returns (`post_invoke`). Each phase delegates the handling of the human response to two abstract methods that subclasses must implement, leaving the decision logic entirely to the implementer.
+
+`HITLMiddleware` is abstract and cannot be used directly. To use it, create a concrete subclass, pair it with a config class that declares a `name`, and register it with `@register_middleware`. The declared name becomes the `_type` value used in workflow YAML.
+
+#### Abstract interface
+
+Both abstract methods receive the `InteractionResponse` from the user and the current `InvocationContext`. They return `InvocationContext | None`:
+
+- **`_on_pre_invoke_response(response, context)`**: Called after the pre-invoke prompt is answered. Return `None` to proceed with the call unchanged. To skip the call entirely, set `context.action = InvocationAction.SKIP` and return `context`. To modify arguments, update `context.modified_args` and return `context`.
+- **`_on_post_invoke_response(response, context)`**: Called after the post-invoke prompt is answered. Return `None` to accept the output as-is. To replace or clear the output, update `context.output` and return `context`.
+
+#### Configuration
+
+`HITLMiddlewareConfig` is the base configuration class. It has no YAML `_type` of its own — because `HITLMiddleware` is abstract, concrete subclasses must declare their own `name` to be runnable. It provides two prompt fields and inherits all function-targeting fields from `DynamicMiddlewareConfig`.
+
+- **`pre_invoke_prompt`**: Any `HumanPrompt` to display before the function is called. Omit or set to `null` to disable pre-invoke interaction.
+- **`post_invoke_prompt`**: Any `HumanPrompt` to display after the function returns. Omit or set to `null` to disable post-invoke interaction.
+- **`register_workflow_functions`**, **`register_llms`**, and explicit component lists control which functions are intercepted (inherited from `DynamicMiddlewareConfig`).
+
+A workflow using a custom HITL middleware looks like this (using `name="my_hitl"` as the declared type):
+
+```yaml
+middleware:
+  my_tools_hitl:
+    _type: my_hitl
+    pre_invoke_prompt:
+      input_type: text
+      text: "Approve this call?"
+    post_invoke_prompt:
+      input_type: binary_choice
+      text: "Accept this result?"
+      options:
+        - id: continue
+          label: Accept
+          value: continue
+        - id: cancel
+          label: Reject
+          value: cancel
+    register_workflow_functions: true
+```
+
+#### Implementing a custom HITL middleware
+
+Subclass `HITLMiddleware` to implement the decision logic. Subclass `HITLMiddlewareConfig` with a new `name` only when you need a distinct `_type`:
+
+```python
+from nat.plugin_api import HITLMiddleware
+from nat.plugin_api import HITLMiddlewareConfig
+from nat.plugin_api import InteractionResponse
+from nat.plugin_api import InvocationAction
+from nat.plugin_api import InvocationContext
+
+
+class MyHITLConfig(HITLMiddlewareConfig, name="my_hitl"):
+    pass
+
+
+class MyHITLMiddleware(HITLMiddleware):
+
+    async def _on_pre_invoke_response(
+        self, response: InteractionResponse, context: InvocationContext
+    ) -> InvocationContext | None:
+        # Return None to proceed, or set context.action = InvocationAction.SKIP to bypass.
+        ...
+
+    async def _on_post_invoke_response(
+        self, response: InteractionResponse, context: InvocationContext
+    ) -> InvocationContext | None:
+        # Return None to keep the output, or update context.output to replace it.
+        ...
+```
+
+#### Registering
+
+Register the concrete subclass with `@register_middleware`, binding it to the config class. The `name` declared on the config class becomes the `_type` value in YAML:
+
+```python
+from nat.plugin_api import Builder, register_middleware
+
+
+@register_middleware(config_type=MyHITLConfig)
+async def my_hitl_middleware(config: MyHITLConfig, builder: Builder):
+    yield MyHITLMiddleware(config=config, builder=builder)
+```
+
+#### Behavior
+
+- **Single invocations**: `pre_invoke` runs once before the function is called; `post_invoke` runs once after it returns.
+- **Streaming**: `pre_invoke` runs once before the stream starts. `post_invoke` is called once per yielded chunk, with `context.output` set to the individual chunk value. If `pre_invoke` sets `InvocationAction.SKIP`, streaming stops immediately and no chunks are yielded.
+
 ### Guardrails Middleware
 
 The Guardrails middleware (`_type: guardrails`) hosts [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) as a policy engine at function input and output boundaries. It is provided by the `nvidia-nat-security` plugin; install it with `nvidia-nat-security[guardrails]`. Input rails run on `pre_invoke` (function arguments) and output rails run on `post_invoke` (function output). The middleware operates on strings only.
