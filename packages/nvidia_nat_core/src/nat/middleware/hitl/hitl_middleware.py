@@ -73,8 +73,7 @@ class HITLMiddleware(DynamicFunctionMiddleware):
 
         Args:
             response: The human prompt response collected after the function returns.
-            context: Invocation context with ``output`` set to the function result.
-                For streaming calls, ``output`` is the individual chunk value.
+            context: Invocation context with ``output`` set to the function result for a single call or chunk.
 
         Returns:
             ``None`` to return the output as-is, or an ``InvocationContext`` with
