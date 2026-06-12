@@ -543,6 +543,16 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                     osl_raw = int(prediction.output_tokens.p90)
                     iat_raw = int(prediction.interarrival_ms.mean)
 
+                    # int() truncation can yield 0 (e.g. remaining_calls.mean < 1 on the
+                    # final call); fall back to the Pydantic-validated static config values
+                    # so a degenerate prediction does not fail the request downstream.
+                    if total_requests < 1:
+                        total_requests = self._total_requests
+                    if osl_raw < 1:
+                        osl_raw = self._osl
+                    if iat_raw < 1:
+                        iat_raw = self._iat
+
                     # Auto-assign latency sensitivity from profiler data
                     # Only if prediction has it AND no manual @latency_sensitive decorator is active
                     if prediction.latency_sensitivity is not None:
