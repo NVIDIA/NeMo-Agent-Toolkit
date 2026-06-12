@@ -81,6 +81,23 @@ class _FinalTestMiddleware(FunctionMiddleware):
         return None
 
 
+class _NonFinalTestMiddleware(FunctionMiddleware):
+    """Minimal non-final middleware that does not override function_middleware_invoke."""
+
+    def __init__(self) -> None:
+        super().__init__(is_final=False)
+
+    @property
+    def enabled(self) -> bool:
+        return True
+
+    async def pre_invoke(self, context):
+        return None
+
+    async def post_invoke(self, context):
+        return None
+
+
 @pytest.fixture(scope="module", autouse=True)
 def register_test_middleware():
     """Register test middleware."""
@@ -458,7 +475,7 @@ class TestMiddlewareErrorHandling:
         assert chunks == []
 
     async def test_non_final_middleware_base_impl_calls_next(self):
-        """Non-final middleware base implementation calls call_next normally."""
+        """Base FunctionMiddleware.function_middleware_invoke calls call_next when is_final=False."""
         from unittest.mock import MagicMock
 
         from nat.middleware.middleware import FunctionMiddlewareContext
@@ -474,7 +491,7 @@ class TestMiddlewareErrorHandling:
             single_output_schema=None,
             stream_output_schema=None,
         )
-        mw = _TestMiddleware(test_param="t", call_order=[])
+        mw = _NonFinalTestMiddleware()
         result = await mw.function_middleware_invoke("input", call_next=call_next, context=ctx)
 
         assert result == "result"
