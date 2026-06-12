@@ -37,6 +37,7 @@ from typing import Any
 from nat.middleware.middleware import CallNext
 from nat.middleware.middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationAction
 from nat.middleware.middleware import InvocationContext
 from nat.middleware.middleware import Middleware
 
@@ -184,6 +185,9 @@ class FunctionMiddleware(Middleware):
         if result is not None:
             ctx = result
 
+        if ctx.action == InvocationAction.SKIP:
+            return None
+
         # Execute function with (potentially modified) args/kwargs
         ctx.output = await call_next(*ctx.modified_args, **ctx.modified_kwargs)
 
@@ -206,6 +210,9 @@ class FunctionMiddleware(Middleware):
         Pre-invoke runs once before streaming starts.
         Post-invoke runs per-chunk as they stream through.
 
+        ``None`` is the suppression sentinel: if ``post_invoke`` sets ``context.output``
+        to ``None``, that chunk is dropped and not forwarded to the caller.
+
         Override for custom streaming behavior (e.g., buffering,
         aggregation, chunk filtering).
 
@@ -219,7 +226,8 @@ class FunctionMiddleware(Middleware):
             kwargs: Keyword arguments for the function.
 
         Yields:
-            Stream chunks (potentially transformed by post_invoke).
+            Stream chunks (potentially transformed by post_invoke). Chunks suppressed by
+            setting ``context.output = None`` in ``post_invoke`` are not yielded.
         """
         # Build invocation context with frozen originals + mutable current
         # output starts as None (pre-invoke phase)
@@ -237,6 +245,9 @@ class FunctionMiddleware(Middleware):
         if result is not None:
             ctx = result
 
+        if ctx.action == InvocationAction.SKIP:
+            return
+
         # Stream with per-chunk post-invoke
         async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs):
             # Set output for this chunk
@@ -247,7 +258,9 @@ class FunctionMiddleware(Middleware):
             if result is not None:
                 ctx = result
 
-            yield ctx.output
+            # None output is the suppression sentinel: post_invoke cleared it to suppress this chunk.
+            if ctx.output is not None:
+                yield ctx.output
 
 
 class FunctionMiddlewareChain:

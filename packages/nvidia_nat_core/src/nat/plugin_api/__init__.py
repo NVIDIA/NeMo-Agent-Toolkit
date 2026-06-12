@@ -79,6 +79,8 @@ from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
+from nat.data_models.interactive import HumanPrompt
+from nat.data_models.interactive import InteractionResponse
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.middleware import FunctionMiddlewareBaseConfig
@@ -96,7 +98,10 @@ from nat.memory.models import MemoryItem
 from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
 from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
 from nat.middleware.function_middleware import FunctionMiddleware
+from nat.middleware.hitl.hitl_middleware import HITLMiddleware
+from nat.middleware.hitl.hitl_middleware_config import HITLMiddlewareConfig
 from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationAction
 from nat.middleware.middleware import InvocationContext
 from nat.object_store.interfaces import ObjectStore
 from nat.object_store.models import ObjectStoreItem
@@ -130,6 +135,11 @@ __all__ = [
     "FunctionMiddleware",
     "FunctionMiddlewareBaseConfig",
     "FunctionMiddlewareContext",
+    "HITLMiddleware",
+    "HITLMiddlewareConfig",
+    "HumanPrompt",
+    "InteractionResponse",
+    "InvocationAction",
     "InvocationContext",
     "KeyAlreadyExistsError",
     "LLMBaseConfig",

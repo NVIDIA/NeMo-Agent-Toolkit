@@ -28,6 +28,7 @@ from abc import abstractmethod
 from collections.abc import AsyncIterator
 from collections.abc import Awaitable
 from collections.abc import Callable
+from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel
@@ -69,6 +70,20 @@ class FunctionMiddlewareContext:
     """Schema describing streaming outputs or :class:`types.NoneType` when absent."""
 
 
+class InvocationAction(Enum):
+    """Declarative intent attached to an ``InvocationContext``.
+
+    Rather than returning a special sentinel value from ``pre_invoke``, middleware
+    expresses its intent by setting ``InvocationContext.action``.  The framework
+    reads this field after each hook and adjusts execution accordingly, keeping
+    hook return types simple and the intent explicit alongside the data it
+    describes.
+    """
+
+    SKIP = "skip"
+    """Do not invoke the callable.  The invocation returns ``None``."""
+
+
 class InvocationContext(BaseModel):
     """Unified context for pre-invoke and post-invoke phases.
 
@@ -94,6 +109,10 @@ class InvocationContext(BaseModel):
     modified_args: tuple[Any, ...] = Field(description="Modified args after middleware processing.")
     modified_kwargs: dict[str, Any] = Field(description="Modified kwargs after middleware processing.")
     output: Any = Field(default=None, description="Function output. None pre-invoke, result post-invoke.")
+    action: InvocationAction | None = Field(
+        default=None,
+        description="Control signal set during pre_invoke to modify execution. None means proceed normally.",
+    )
 
 
 class Middleware(ABC):
@@ -293,6 +312,7 @@ __all__ = [
     "CallNext",
     "CallNextStream",
     "FunctionMiddlewareContext",
+    "InvocationAction",
     "InvocationContext",
     "Middleware",
 ]
