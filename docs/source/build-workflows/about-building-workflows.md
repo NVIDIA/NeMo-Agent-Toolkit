@@ -105,7 +105,7 @@ The following are [agents](../components/agents/index.md) offered by NeMo Agent 
 - [ReAct Agent](../components/agents/react-agent/index.md) — **Best for**: performing ReAct (Reasoning and Acting) reasoning between tool calls.
 - [Reasoning Agent](../components/agents/reasoning-agent/index.md) — **Best for**: reasoning ahead of time through planning rather than between steps (requires an LLM that supports reasoning).
 - [ReWOO Agent](../components/agents/rewoo-agent/index.md) — **Best for**: decoupling reasoning from observations to improve tool usage and token efficiency for reasoning tasks.
-- [Responses API and Agent](../components/agents/responses-api-and-agent/index.md) — **Best for**: tool use with OpenAI's Responses API, including built-in tools, MCP remote tools, and toolkit tools.
+- [Responses API and Agent](../components/agents/responses-api-and-agent/index.md) — **Best for**: tool use with OpenAI's Responses API, including built-in tools, MCP remote tools, and NeMo Agent Toolkit tools.
 - [Tool Calling Agent](../components/agents/tool-calling-agent/index.md) — **Best for**: directly invoking external tools based on structured function definitions (requires an LLM with tool-calling support).
 
 ## Decision Factors
