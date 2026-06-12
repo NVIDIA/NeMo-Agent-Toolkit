@@ -39,7 +39,7 @@ Middleware components are first-class components in NeMo Agent Toolkit, configur
 
 **Middleware Chain**: A sequence of middleware that execute in order, forming an "onion" structure where control flows in through preprocessing, down to the function, and back out through postprocessing.
 
-**Final Middleware**: A special middleware marked with `is_final=True` that can terminate the chain. Only one final middleware is allowed per function, and it must be the last in the chain.
+**Final Middleware**: A middleware marked with `is_final=True` that acts as the terminal point in the chain. Only one final middleware is allowed per function and it must be the last — placing it in any other position, or listing more than one, raises a `ValueError` at build time. At runtime, the base implementation does not call `call_next`, so the subclass is fully responsible for invoking the target function (and deciding whether to invoke it at all).
 
 ## Component-Based Architecture
 
@@ -450,6 +450,16 @@ Configured field paths are validated at function registration (the earliest poin
 #### One middleware per function
 
 NeMo Guardrails sequences its own rails internally (all input rails, then all output rails, within a single `LLMRails` instance). Attach a **single** `guardrails` middleware to a given function and list every rail it needs inside that instance. Do **not** chain multiple `guardrails` middleware onto the same function: the outer instance would re-evaluate the inner instance's already-blocked refusal string, wasting rail calls and obscuring which rail blocked.
+
+Guardrails Middleware is best applied directly to a function as its policy boundary, rather than chained together with other middleware on that function. To reflect this, `GuardrailsMiddleware` can be marked as a *final* middleware so it is the last in a function's chain and no other middleware runs after it:
+
+```python
+class GuardrailsMiddleware(DynamicFunctionMiddleware):
+    def __init__(self, config: GuardrailsMiddlewareConfig, builder: Builder) -> None:
+        ...
+        super().__init__(config, builder, is_final=True)
+```
+
 
 #### Streaming output rails
 

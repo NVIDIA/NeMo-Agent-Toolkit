@@ -14,6 +14,8 @@
 # limitations under the License.
 """Tests for function middleware component architecture."""
 
+from typing import Any
+
 import pytest
 from pydantic import Field
 
@@ -60,6 +62,23 @@ class _TestMiddleware(FunctionMiddleware):
         result = await call_next(value, *args[1:], **kwargs)
         self.call_order.append(f"{self.test_param}_post")
         return result
+
+
+class _FinalTestMiddleware(FunctionMiddleware):
+    """Test middleware that declares itself final."""
+
+    def __init__(self) -> None:
+        super().__init__(is_final=True)
+
+    @property
+    def enabled(self) -> bool:
+        return True
+
+    async def pre_invoke(self, context):
+        return None
+
+    async def post_invoke(self, context):
+        return None
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -363,6 +382,102 @@ class TestMiddlewareErrorHandling:
         async with WorkflowBuilder() as builder:
             with pytest.raises(ValueError, match="Middleware `nonexistent_middleware` not found"):
                 await builder.add_function("test_func", config.functions["test_func"])
+
+    def test_validate_middleware_final_not_last_raises_error(self):
+        """validate_middleware raises ValueError when a final middleware is not the last in the chain."""
+        from nat.middleware.function_middleware import validate_middleware
+
+        non_final = _TestMiddleware(test_param="after", call_order=[])
+        final = _FinalTestMiddleware()
+
+        with pytest.raises(ValueError, match="is marked as final but is not the last"):
+            validate_middleware([final, non_final])
+
+    def test_validate_middleware_multiple_final_raises_error(self):
+        """validate_middleware raises ValueError when more than one final middleware is listed."""
+        from nat.middleware.function_middleware import validate_middleware
+
+        final1 = _FinalTestMiddleware()
+        final2 = _FinalTestMiddleware()
+
+        with pytest.raises(ValueError, match="found multiple"):
+            validate_middleware([final1, final2])
+
+    async def test_final_middleware_base_impl_does_not_call_next(self):
+        """Final middleware base implementation does not call call_next."""
+        from unittest.mock import MagicMock
+
+        from nat.middleware.middleware import FunctionMiddlewareContext
+
+        called: list[bool] = []
+
+        async def call_next(*args, **kwargs):
+            called.append(True)
+            return "should_not_reach"
+
+        ctx = FunctionMiddlewareContext(
+            name="test",
+            config=MagicMock(),
+            description=None,
+            input_schema=None,
+            single_output_schema=None,
+            stream_output_schema=None,
+        )
+        mw = _FinalTestMiddleware()
+        result = await mw.function_middleware_invoke("input", call_next=call_next, context=ctx)
+
+        assert called == [], "call_next must not be called by the base final middleware implementation"
+        assert result is None
+
+    async def test_final_middleware_base_impl_stream_yields_nothing(self):
+        """Final middleware base implementation yields nothing and does not call call_next."""
+        from unittest.mock import MagicMock
+
+        from nat.middleware.middleware import FunctionMiddlewareContext
+
+        called: list[bool] = []
+
+        async def call_next(*args, **kwargs):
+            called.append(True)
+            yield "should_not_reach"
+
+        ctx = FunctionMiddlewareContext(
+            name="test",
+            config=MagicMock(),
+            description=None,
+            input_schema=None,
+            single_output_schema=None,
+            stream_output_schema=None,
+        )
+        mw = _FinalTestMiddleware()
+        chunks: list[Any] = [
+            chunk async for chunk in mw.function_middleware_stream("input", call_next=call_next, context=ctx)
+        ]
+
+        assert called == [], "call_next must not be called by the base final middleware stream implementation"
+        assert chunks == []
+
+    async def test_non_final_middleware_base_impl_calls_next(self):
+        """Non-final middleware base implementation calls call_next normally."""
+        from unittest.mock import MagicMock
+
+        from nat.middleware.middleware import FunctionMiddlewareContext
+
+        async def call_next(*args, **kwargs):
+            return "result"
+
+        ctx = FunctionMiddlewareContext(
+            name="test",
+            config=MagicMock(),
+            description=None,
+            input_schema=None,
+            single_output_schema=None,
+            stream_output_schema=None,
+        )
+        mw = _TestMiddleware(test_param="t", call_order=[])
+        result = await mw.function_middleware_invoke("input", call_next=call_next, context=ctx)
+
+        assert result == "result"
 
 
 class TestFunctionGroupMiddlewares:

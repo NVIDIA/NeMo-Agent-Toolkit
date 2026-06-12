@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Minimal is_final demo: guardrails last (is_final=True), logging first.
+# Putting function_guardrails before request_logging raises a ValueError at build time.
+# Run: nat run --config_file config-guardrails-is-final.yml --input "unused"
+# Requires: uv pip install -e ./packages/nvidia_nat_security[guardrails]
+
+middleware:
+  request_logging:
+    _type: logging_middleware
+    log_level: INFO
+  function_guardrails:
+    _type: guardrails
+    guardrails:
+      colang_version: "1.0"
+      models: []
+      rails:
+        input:
+          flows: []
+        output:
+          flows: []
+
+workflow:
+  _type: current_datetime
+  middleware:
+    - request_logging
+    - function_guardrails
