@@ -39,7 +39,7 @@ Middleware components are first-class components in NeMo Agent Toolkit, configur
 
 **Middleware Chain**: A sequence of middleware that execute in order, forming an "onion" structure where control flows in through preprocessing, down to the function, and back out through postprocessing.
 
-**Final Middleware**: A middleware marked with `is_final=True` that acts as the terminal point in the chain. Only one final middleware is allowed per function and it must be the last — placing it in any other position, or listing more than one, raises a `ValueError` at build time. At runtime, the base implementation does not call `call_next`, so the subclass is fully responsible for invoking the target function (and deciding whether to invoke it at all).
+**Final Middleware**: A middleware marked with `is_final=True` that acts as the terminal point in the chain. Only one final middleware is allowed per function and it must be the last — placing it in any other position, or listing more than one, raises a `ValueError` at build time. At runtime, the base implementation does not call `call_next` unless the subclass overrides the invoke method to call it explicitly.
 
 ## Component-Based Architecture
 
