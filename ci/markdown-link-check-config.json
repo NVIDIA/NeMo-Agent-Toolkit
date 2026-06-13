@@ -26,6 +26,12 @@
         },
         {
             "pattern": "^https://docs\\.docker\\.com"
+        },
+        {
+            "pattern": "^https://www\\.sphinx-doc\\.org"
+        },
+        {
+            "pattern": "^https://docs\\.nvidia\\.com/dynamo"
         }
     ]
 }
