@@ -420,6 +420,24 @@ class TestMiddlewareErrorHandling:
         with pytest.raises(ValueError, match="found multiple"):
             validate_middleware([final1, final2])
 
+    def test_configure_middleware_final_not_last_raises_error(self):
+        """configure_middleware raises ValueError when a final middleware is not last (build-path regression)."""
+        from nat.builder.function import FunctionGroup
+        from nat.data_models.function import FunctionGroupBaseConfig
+
+        non_final = _NonFinalTestMiddleware()
+        final = _FinalTestMiddleware()
+
+        group = FunctionGroup(config=FunctionGroupBaseConfig())
+
+        async def fn(value: int) -> int:
+            return value
+
+        group.add_function("fn", fn)
+
+        with pytest.raises(ValueError, match="is marked as final but is not the last"):
+            group.configure_middleware([final, non_final])
+
     async def test_final_middleware_base_impl_does_not_call_next(self):
         """Final middleware base implementation does not call call_next."""
         from unittest.mock import MagicMock

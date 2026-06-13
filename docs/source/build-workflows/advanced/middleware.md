@@ -451,10 +451,10 @@ Configured field paths are validated at function registration (the earliest poin
 
 NeMo Guardrails sequences its own rails internally (all input rails, then all output rails, within a single `LLMRails` instance). Attach a **single** `guardrails` middleware to a given function and list every rail it needs inside that instance. Do **not** chain multiple `guardrails` middleware onto the same function: the outer instance would re-evaluate the inner instance's already-blocked refusal string, wasting rail calls and obscuring which rail blocked.
 
-`GuardrailsMiddleware` can be marked as a *final* middleware so that when it runs, `call_next` invokes the intercepted function directly — not another middleware. The following shows how to mark it as final:
+A custom subclass of `GuardrailsMiddleware` can be marked as *final* so that when it runs, `call_next` invokes the intercepted function directly — not another middleware:
 
 ```python
-class GuardrailsMiddleware(DynamicFunctionMiddleware):
+class ConcreteGuardrailsMiddleware(GuardrailsMiddleware):
     def __init__(self, config: GuardrailsMiddlewareConfig, builder: Builder) -> None:
         ...
         super().__init__(config, builder, is_final=True)
