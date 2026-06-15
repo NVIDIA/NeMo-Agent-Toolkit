@@ -206,7 +206,7 @@ class TestParseStreamOutput:
 
 
 class TestBuildRunnableConfig:
-    """Tests for LanggraphWrapperFunction._build_runnable_config: NAT conversation_id -> LangGraph thread_id."""
+    """Tests for LanggraphWrapperFunction._build_runnable_config: conversation_id -> LangGraph thread_id."""
 
     def test_conversation_id_maps_to_thread_id(self):
         """When a conversation_id is in context, it is passed as the LangGraph thread_id."""

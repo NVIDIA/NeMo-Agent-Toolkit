@@ -108,11 +108,12 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, LanggraphWrapperO
     def _build_runnable_config() -> RunnableConfig | None:
         """Build a ``RunnableConfig`` carrying the LangGraph ``thread_id``.
 
-        NAT's ``conversation_id`` (set per chat conversation) maps to LangGraph's
-        ``thread_id``, which checkpointer-backed graphs require for conversation
-        continuity. Without it, invoking a graph compiled with a checkpointer
-        raises a ``ValueError``. Returns ``None`` when no conversation is in
-        context, preserving the prior behavior for stateless graphs.
+        The ``conversation_id`` from the request context (set per chat
+        conversation) maps to LangGraph's ``thread_id``, which checkpointer-backed
+        graphs require for conversation continuity. Without it, invoking a graph
+        compiled with a checkpointer raises a ``ValueError``. Returns ``None``
+        when no conversation is in context, preserving the prior behavior for
+        stateless graphs.
         """
         conversation_id = Context.get().conversation_id
         if conversation_id is None:
