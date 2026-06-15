@@ -118,7 +118,7 @@ From the Dynamo source checkout, deploy the baseline Dynamo deployment by follow
 #### A. Start infrastructure containers
 
 ```bash
-cd "$DYNAMO_SOURCE_DIR/dev"
+cd "$DYNAMO_SOURCE_DIR/deploy"
 docker compose -f docker-compose.yml up -d --remove-orphans
 ```
 
@@ -127,7 +127,7 @@ This starts **etcd** (port 2379) and **NATS** (port 4222/8222).
 #### B. (Optional) Start observability stack
 
 ```bash
-cd "$DYNAMO_SOURCE_DIR/dev"
+cd "$DYNAMO_SOURCE_DIR/deploy"
 docker compose -f docker-observability.yml up -d --remove-orphans
 ```
 
