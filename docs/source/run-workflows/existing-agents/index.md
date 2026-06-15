@@ -36,6 +36,7 @@ While this new approach simplifies integration, wrapping agents is still the pre
 NeMo Agent Toolkit currently provides automatic wrappers for the following frameworks:
 
 - [LangGraph](langgraph.md): Integrate existing LangGraph agents and workflows
+- [OpenShell](openshell.md): Run NeMo Agent Toolkit workloads inside an OpenShell sandbox with explicit auth and egress boundaries
 
 ## Benefits of Using Automatic Wrappers
 
@@ -84,4 +85,5 @@ Each framework guide provides complete examples and step-by-step instructions fo
 :titlesonly:
 
 LangGraph <./langgraph.md>
+OpenShell <./openshell.md>
 ```
