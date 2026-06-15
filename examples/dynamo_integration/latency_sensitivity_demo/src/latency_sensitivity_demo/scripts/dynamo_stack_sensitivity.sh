@@ -151,6 +151,44 @@ validate_config
 curl -sf http://localhost:2379/health >/dev/null 2>&1 || { echo "etcd not running. See header comment."; exit 1; }
 curl -sf http://localhost:8222/healthz >/dev/null 2>&1 || { echo "NATS not running. See header comment."; exit 1; }
 
+# ── Priority scheduling flags (SGLang version-dependent) ───────────────────────
+# dynamo.sglang passes these through to SGLang's argparse, so an unsupported flag
+# makes the worker exit during argument parsing before the model registers on
+# /v1/models. The supported set varies with the SGLang version bundled in the
+# installed Dynamo, so probe ServerArgs and include only what is available.
+PRIORITY_ARGS=()
+SGLANG_PRIORITY_PROBE="$(python3 - <<'PY' 2>/dev/null || true
+try:
+    from sglang.srt.server_args import ServerArgs
+    fields = getattr(ServerArgs, "__dataclass_fields__", {})
+    print("PROBE_OK")
+    for name in ("enable_priority_scheduling", "schedule_low_priority_values_first"):
+        if name in fields:
+            print(name)
+except Exception:
+    pass
+PY
+)"
+if ! grep -q PROBE_OK <<<"$SGLANG_PRIORITY_PROBE"; then
+    echo "WARNING: could not probe SGLang ServerArgs; starting worker without priority"
+    echo "         scheduling flags. The priority-routing benefit this demo measures"
+    echo "         will not be exercised."
+elif grep -q enable_priority_scheduling <<<"$SGLANG_PRIORITY_PROBE"; then
+    PRIORITY_ARGS+=(--enable-priority-scheduling)
+    if grep -q schedule_low_priority_values_first <<<"$SGLANG_PRIORITY_PROBE"; then
+        PRIORITY_ARGS+=(--schedule-low-priority-values-first)
+    else
+        echo "WARNING: installed SGLang lacks --schedule-low-priority-values-first."
+        echo "         Priority scheduling is enabled, but lower-priority-value-first"
+        echo "         ordering (HIGH calls jump the queue) is unavailable. Upgrade"
+        echo "         Dynamo/SGLang for full priority-routing fidelity."
+    fi
+else
+    echo "WARNING: installed SGLang does not support --enable-priority-scheduling;"
+    echo "         starting worker without priority scheduling. The priority-routing"
+    echo "         benefit this demo measures will not be exercised."
+fi
+
 LOGFILE="$LOG_DIR/all.log"
 : > "$LOGFILE"
 
@@ -180,8 +218,7 @@ python3 -m dynamo.sglang \
     --context-length $CONTEXT_LENGTH \
     --trust-remote-code \
     --enable-metrics \
-    --schedule-low-priority-values-first \
-    --enable-priority-scheduling \
+    ${PRIORITY_ARGS[@]+"${PRIORITY_ARGS[@]}"} \
     --kv-events-config '{"publisher":"zmq","topic":"kv-events","endpoint":"tcp://*:20080"}' \
     > >(tee -a "$LOGFILE") 2>&1 &
 WORKER_PID=$!
