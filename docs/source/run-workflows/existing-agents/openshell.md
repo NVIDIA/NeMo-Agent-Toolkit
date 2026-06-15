@@ -21,12 +21,12 @@ OpenShell is a good fit when you want to run a NeMo Agent Toolkit workload as a 
 
 Use this pattern when you want to:
 
-- run a NAT agent as a managed service instead of a one-shot CLI workflow
+- run a NeMo Agent Toolkit agent as a managed service instead of a one-shot CLI workflow
 - expose a frontend such as Teams, webhooks, or another callback-driven channel
 - give the agent outbound access to tools, MCP servers, or external APIs without giving it unrestricted egress
 - keep long-lived identity material outside the workload when the target system supports brokered or runtime token exchange
 
-This guide focuses on the NAT side of the integration. OpenShell is the runtime boundary. NAT still owns the workflow, tool configuration, and frontend behavior.
+This guide focuses on the NeMo Agent Toolkit side of the integration. OpenShell is the runtime boundary. The toolkit still owns the workflow, tool configuration, and frontend behavior.
 
 ## Architecture Split
 
@@ -34,11 +34,11 @@ In this deployment model, the responsibilities are split across three layers:
 
 | Layer | Responsibility |
 |---|---|
-| NAT workload | Agent workflow, tool definitions, frontend integrations, tracing, and business logic |
+| NeMo Agent Toolkit workload | Agent workflow, tool definitions, frontend integrations, tracing, and business logic |
 | OpenShell runtime | Sandboxed execution, outbound policy enforcement, provider-backed credential delivery, and service exposure |
 | Cloud and identity systems | Tenant-specific identity, callback registration, ingress, and cloud resources |
 
-The important boundary is that OpenShell should own runtime controls and credential delivery. The NAT image should own only the agent behavior and the agent-side configuration it needs to consume those credentials safely.
+The important boundary is that OpenShell should own runtime controls and credential delivery. The image should own only the agent behavior and the toolkit-side configuration it needs to consume those credentials safely.
 
 ## Package the Agent
 
@@ -46,10 +46,10 @@ Package the agent as a container image with a deterministic entrypoint. Treat th
 
 A typical image shape is:
 
-- install the NAT project and dependencies
+- install the NeMo Agent Toolkit project and dependencies
 - include the workflow YAML and supporting assets
 - expose the frontend port if the agent listens for inbound traffic
-- start NAT with an explicit config file
+- start the toolkit with an explicit config file
 
 For example:
 
@@ -77,12 +77,12 @@ The safest model is to separate:
 
 There are two broad auth patterns.
 
-## How OpenShell Providers Map to NAT Auth Providers
+## How OpenShell Providers Map to NeMo Agent Toolkit Auth Providers
 
 The most important integration boundary is the handoff between:
 
 - the **OpenShell provider system**
-- the **NAT auth provider or auth configuration**
+- the **NeMo Agent Toolkit auth provider or auth configuration**
 
 These are not the same thing.
 
@@ -92,7 +92,7 @@ OpenShell providers own the runtime-side identity contract. They decide:
 - whether the runtime receives a raw credential or a brokered token contract
 - what audiences, resources, or upstream systems the sandbox is allowed to access
 
-NAT auth providers are the application-side consumers of that contract. They decide:
+NeMo Agent Toolkit auth providers are the application-side consumers of that contract. They decide:
 
 - how the workflow asks for credentials
 - how bearer tokens are attached to outbound requests
@@ -101,21 +101,21 @@ NAT auth providers are the application-side consumers of that contract. They dec
 The clean mental model is:
 
 - OpenShell providers **produce** an auth contract for the sandbox
-- NAT auth providers **consume** that contract inside the workflow
+- NeMo Agent Toolkit auth providers **consume** that contract inside the workflow
 
 Typical mappings look like this:
 
-| OpenShell runtime contract | NAT-side auth shape |
+| OpenShell runtime contract | Toolkit-side auth shape |
 |---|---|
-| static env credential | `api_key` or another env-driven NAT auth provider |
-| brokered token URL | `openshell_bearer_token` or another callback-driven NAT auth provider |
-| workload-specific callback contract | a custom NAT auth adapter |
+| static env credential | `api_key` or another env-driven toolkit auth provider |
+| brokered token URL | `openshell_bearer_token` or another callback-driven toolkit auth provider |
+| workload-specific callback contract | a custom toolkit auth adapter |
 
 For example, in the Microsoft A365 lane:
 
 - OpenShell owns the `microsoft-agent-s2s` provider
 - the runtime injects `A365_TOKEN_PROVIDER_URL`
-- NAT consumes that contract through an auth block such as:
+- the toolkit consumes that contract through an auth block such as:
 
 ```yaml
 authentication:
@@ -125,23 +125,23 @@ authentication:
     audience: "<audience>"
 ```
 
-That keeps the long-lived Microsoft identity material out of the NAT workload while still letting the workflow obtain a short-lived token when it needs one.
+That keeps the long-lived Microsoft identity material out of the toolkit workload while still letting the workflow obtain a short-lived token when it needs one.
 
 ### When the Existing Contract Is Enough
 
 You usually do **not** need new platform work if:
 
 - OpenShell can already expose the credential as env or a token URL
-- NAT already has an auth provider that can consume that shape
+- the toolkit already has an auth provider that can consume that shape
 - the downstream system only needs a standard bearer token or static credential
 
 In that case, the work is mainly:
 
 - provider configuration
 - policy for the downstream API
-- workflow wiring inside NAT
+- workflow wiring inside the toolkit
 
-### When You May Need to Extend OpenShell or NAT
+### When You May Need to Extend OpenShell or the Toolkit
 
 You may need additional work when the downstream system expects a more specialized runtime exchange than plain env injection or a simple bearer-token callback.
 
@@ -155,11 +155,11 @@ Examples include:
 In those cases, the right move is usually:
 
 - extend **OpenShell** when you need a stronger provider/runtime security boundary
-- extend **NAT** when you need a new auth adapter that can consume the runtime contract safely
+- extend **NeMo Agent Toolkit** when you need a new auth adapter that can consume the runtime contract safely
 
 Treat this as a design boundary, not a hack.
 
-If the secure path cannot be expressed with existing OpenShell provider contracts and NAT auth providers, add a first-class integration instead of pushing secrets down into the workflow just to make the demo work.
+If the secure path cannot be expressed with existing OpenShell provider contracts and toolkit auth providers, add a first-class integration instead of pushing secrets down into the workflow just to make the demo work.
 
 ### Static credentials
 
@@ -187,11 +187,11 @@ In this model:
 - the workload asks for a token at runtime
 - OpenShell validates the request and returns a short-lived token
 
-This is the cleaner model for cloud APIs and non-human worker identities because the long-lived secret does not have to live inside the NAT container.
+This is the cleaner model for cloud APIs and non-human worker identities because the long-lived secret does not have to live inside the toolkit container.
 
-### What NAT needs from the runtime
+### What the Toolkit Needs from the Runtime
 
-For brokered auth to work well, the NAT workload or adapter layer needs an auth seam such as:
+For brokered auth to work well, the toolkit workload or adapter layer needs an auth seam such as:
 
 - a token URL
 - a token callback
@@ -201,7 +201,7 @@ If the agent only supports static bearer tokens or hard-coded credential exchang
 
 ## Allow External Tool Calls
 
-OpenShell sandboxes do not assume unrestricted egress. If your NAT workflow calls external tools or APIs, you must explicitly allow that traffic.
+OpenShell sandboxes do not assume unrestricted egress. If your toolkit workflow calls external tools or APIs, you must explicitly allow that traffic.
 
 This is especially important for:
 
@@ -230,7 +230,7 @@ When planning tool access, treat each external integration as its own contract:
 
 ## MCP and Tooling
 
-If the NAT workflow uses MCP or another remote tool host:
+If the NeMo Agent Toolkit workflow uses MCP or another remote tool host:
 
 - the MCP endpoint must be reachable from inside the OpenShell sandbox
 - the sandbox policy must allow that outbound route
@@ -244,14 +244,14 @@ Start with a simple non-A365 workflow before you move to Teams, Entra, or callba
 
 This example shows:
 
-- a NAT workflow with one outbound HTTP tool
+- a toolkit workflow with one outbound HTTP tool
 - a container image that runs the workflow
 - an OpenShell policy that allows only the required API
 - exact `openshell` commands to create the sandbox and test it
 
 The point of this example is not the tool itself. The point is the contract between:
 
-- the NAT workflow
+- the toolkit workflow
 - the container image
 - the OpenShell policy
 - the OpenShell sandbox runtime
@@ -311,7 +311,7 @@ ENTRYPOINT ["nat"]
 CMD ["run", "--config_file", "/app/weather-workflow.yml", "--input", "What is the weather right now?"]
 ```
 
-This is enough for a local smoke. For a long-lived service workload, switch the command to a service-oriented NAT entrypoint such as `nat serve` or a channel-specific `nat start ...` command.
+This is enough for a local smoke. For a long-lived service workload, switch the command to a service-oriented toolkit entrypoint such as `nat serve` or a channel-specific `nat start ...` command.
 
 ### Example OpenShell policy
 
@@ -351,7 +351,7 @@ network_policies:
       - path: /usr/local/bin/nat
 ```
 
-This policy does one important thing: it allows the NAT workload to reach only `api.weatherapi.com:443` through the expected binaries.
+This policy does one important thing: it allows the toolkit workload to reach only `api.weatherapi.com:443` through the expected binaries.
 
 If the workflow needs more tools later, add them intentionally instead of broadening egress all at once.
 
@@ -403,7 +403,7 @@ openshell policy set <sandbox-name> --policy current-policy.yaml --wait
 
 This minimal lane proves the most important parts of the deployment model:
 
-- the NAT image boots correctly inside OpenShell
+- the toolkit image boots correctly inside OpenShell
 - the workflow can read its config
 - the workflow can consume a runtime-provided credential
 - outbound tool access is controlled by explicit policy
@@ -434,14 +434,14 @@ authentication:
 In that shape:
 
 - OpenShell owns the long-lived identity material
-- the NAT workflow only asks for short-lived tokens at runtime
+- the toolkit workflow only asks for short-lived tokens at runtime
 - the overall workflow shape stays the same
 
-That is the preferred model when the target API and the NAT auth seam both support it.
+That is the preferred model when the target API and the toolkit auth seam both support it.
 
 ## Deployment Lanes
 
-There are two common lanes for running NAT agents in OpenShell.
+There are two common lanes for running NeMo Agent Toolkit agents in OpenShell.
 
 ### Local or container lane
 
@@ -454,7 +454,7 @@ Use this when you want to iterate quickly on:
 
 The usual flow is:
 
-1. build the NAT image
+1. build the toolkit image
 2. run OpenShell locally
 3. create a sandbox from the image
 4. attach the required providers or credentials
@@ -481,7 +481,7 @@ In this lane:
 
 - OpenShell hosts the workload as a sandboxed pod or workload
 - cluster-specific ingress and service wiring expose the agent when needed
-- tenant-specific identity setup happens outside the generic NAT image
+- tenant-specific identity setup happens outside the generic toolkit image
 
 For callback-driven agents, this layer often includes:
 
@@ -490,18 +490,18 @@ For callback-driven agents, this layer often includes:
 - cloud identity resources
 - DNS or public hostnames
 
-These are deployment concerns, not part of the core NAT workflow.
+These are deployment concerns, not part of the core toolkit workflow.
 
 ## Microsoft A365 Example
 
-One validated example of this pattern is a NAT A365 worker hosted inside OpenShell on AKS.
+One validated example of this pattern is a NeMo Agent Toolkit A365 worker hosted inside OpenShell on AKS.
 
 In that shape:
 
-- the NAT worker listens for a frontend channel such as Teams or another Microsoft-triggered event
-- the NAT workflow runs inside an OpenShell sandbox
+- the toolkit worker listens for a frontend channel such as Teams or another Microsoft-triggered event
+- the toolkit workflow runs inside an OpenShell sandbox
 - Microsoft or Entra identity is configured in the deployment and provider layers
-- the NAT runtime consumes an OpenShell-managed auth contract rather than minting every token itself
+- the toolkit runtime consumes an OpenShell-managed auth contract rather than minting every token itself
 - additional AKS ingress or service plumbing exposes `/api/messages` and related callback paths
 
 The Microsoft-specific pieces are optional. The broader OpenShell hosting model applies to non-Microsoft agents too.
@@ -510,7 +510,7 @@ The Microsoft-specific pieces are optional. The broader OpenShell hosting model 
 
 When documenting or implementing this pattern, keep these boundaries clear:
 
-- **NAT owns**
+- **NeMo Agent Toolkit owns**
   - workflow YAML
   - tool definitions
   - frontend behavior
@@ -533,7 +533,7 @@ Keeping those boundaries clean makes it easier to move the same agent between lo
 
 ## Recommended Deployment Workflow
 
-If you are bringing a NAT workload into OpenShell for the first time, use this order:
+If you are bringing a NeMo Agent Toolkit workload into OpenShell for the first time, use this order:
 
 1. Package the workload as a container with a stable command.
 2. Make the workflow run locally without cloud-specific glue.
