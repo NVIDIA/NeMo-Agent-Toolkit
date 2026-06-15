@@ -25,14 +25,6 @@ GIT_TAG=$(get_git_tag)
 IS_TAGGED=$(is_current_commit_release_tagged)
 echo "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
-# change this to ready to publish. this should be done programmatically once
-# the release process is finalized.
-if [[ "${CI_CRON_NIGHTLY}" == "1" || ${IS_TAGGED} == "1" || "${CI_COMMIT_BRANCH}" == "main" ]]; then
-    RELEASE_STATUS=ready
-else
-    RELEASE_STATUS=preview
-fi
-
 # Define variables
 NAT_ARCH="any"
 NAT_OS="any"
@@ -111,7 +103,7 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
                 CI=true jf rt u --fail-no-op --url="${NAT_ARTIFACTORY_URL}" \
                     --user="${URM_USER}" --password="${URM_API_KEY}" \
                     --flat=false "${WHEEL_FILE}" "${ARTIFACTORY_PATH}" \
-                    --target-props "arch=${NAT_ARCH};os=${NAT_OS};branch=${GIT_TAG};component_name=${ARTIFACTORY_COMPONENT_FIXED_NAME};version=${GIT_TAG};release_approver=${RELEASE_APPROVER};release_status=${RELEASE_STATUS}"
+                    --target-props "arch=${NAT_ARCH};os=${NAT_OS};branch=${GIT_TAG};component_name=${ARTIFACTORY_COMPONENT_FIXED_NAME};version=${GIT_TAG};release_approver=${RELEASE_APPROVER};"
             done
         done
     done
@@ -126,4 +118,14 @@ if [[ "${LIST_ARTIFACTORY_CONTENTS}" == "true" ]]; then
     CI=true jf rt s --url="${NAT_ARTIFACTORY_URL}" \
         --user="${URM_USER}" --password="${URM_API_KEY}" \
         "${NAT_ARTIFACTORY_NAME}/*/${GIT_TAG}/" --recursive
+fi
+
+# Perform a publish
+if [[ "${CI_CRON_NIGHTLY}" == "1" || ${IS_TAGGED} == "1" || "${CI_COMMIT_BRANCH}" == "main" ]]; then
+    echo "Performing publish to KitMaker for ${GIT_TAG}"
+    curl -H "Authorization: Bearer ${KITMAKER_API_TOKEN}" \
+        -H "Content-Type: application/json" \
+        -X POST \
+        -d "{\"component\": \"${ARTIFACTORY_COMPONENT_FIXED_NAME}\", \"version\": \"${GIT_TAG}\", \"git_tag\": \"${GIT_TAG}\"}" \
+        "${KITMAKER_URL}/api/v0/projects/{project_id}/releases"
 fi
