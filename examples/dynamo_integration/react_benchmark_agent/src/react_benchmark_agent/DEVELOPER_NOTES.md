@@ -17,6 +17,11 @@ limitations under the License.
 
 # React Benchmark Agent - Developer Notes
 
+> [!WARNING]
+> **Experimental.** This Dynamo integration is experimental and is not covered by the toolkit's API-stability guarantees. Configs, scripts, and hint protocols may change between releases.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.3.0.** Earlier releases reject `--schedule-low-priority-values-first` at the `dynamo.sglang` layer and use different request-priority semantics. (These behaviors hold from Dynamo >= 1.1.0; end-to-end tested here against the NGC `sglang-runtime:1.1.1` image.)
+
 > [!NOTE]
 > This document details the source code implementation of the React Benchmark Agent, explaining how configuration files map to underlying components, evaluators, and workflows.
 >

@@ -17,6 +17,11 @@ limitations under the License.
 
 # Latency Sensitivity Demo
 
+> [!WARNING]
+> **Experimental.** This Dynamo integration example is experimental and is not covered by the toolkit's API-stability guarantees. Configs, scripts, and hint protocols may change between releases.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.3.0.** Earlier releases reject `--schedule-low-priority-values-first` at the `dynamo.sglang` layer and use different request-priority semantics. (These behaviors hold from Dynamo >= 1.1.0; end-to-end tested here against the NGC `sglang-runtime:1.1.1` image.)
+
 This example demonstrates **automatic latency sensitivity inference** end-to-end: profiling a multi-step LLM workflow, computing per-node sensitivity scores, and using those scores as Dynamo routing hints at runtime for improved performance.
 
 Agentic workflows are not flat sequences of identical LLM calls. Some calls gate everything downstream (the first classifier), some run in parallel with slack to spare, and some are the last thing before the user sees a response. Treating them all the same leaves performance on the table. This demo shows how the NeMo Agent Toolkit profiler can automatically detect which calls matter most and feed that information to Dynamo so it can route requests accordingly.
@@ -279,7 +284,7 @@ The Dynamo LLM client reads the prediction trie and, for each LLM call, injects 
 | `osl` | `int` | Predicted output sequence length (tokens) — informs decode cost estimation |
 | `iat` | `int` | Predicted inter-arrival time (ms) — informs request pacing and worker stickiness |
 | `latency_sensitivity` | `float` | The auto-computed sensitivity score (1–5 from the prediction trie) |
-| `priority` | `int` | Integer complement of sensitivity (`max_sensitivity - latency_sensitivity`). Lower value = higher priority. |
+| `priority` | `int` | Engine scheduler priority, equal to `latency_sensitivity`. Dynamo normalizes priority so **higher value = higher priority** on both vLLM (negated internally) and SGLang (`--enable-priority-scheduling`). |
 
 The client also injects `nvext.cache_control` with a TTL computed as `total_requests * iat` (the estimated conversation duration), so KV cache entries auto-expire after the workflow is expected to complete.
 
@@ -296,7 +301,7 @@ The client also injects `nvext.cache_control` with a TTL computed as `total_requ
       "osl": 2,
       "iat": 4,
       "latency_sensitivity": 5.0,
-      "priority": 995
+      "priority": 5
     },
     "cache_control": {
       "type": "ephemeral",

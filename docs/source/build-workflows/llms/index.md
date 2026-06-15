@@ -269,6 +269,10 @@ llms:
 
 Dynamo is an inference engine agnostic LLM provider designed to optimize KV cache reuse of LLMs served on NVIDIA hardware. See the [ai-dynamo repository](https://github.com/ai-dynamo/dynamo) for instructions on how to use Dynamo.
 
+```{note}
+The Dynamo provider requires **Dynamo >= 1.3.0**. Earlier releases reject `--schedule-low-priority-values-first` at the `dynamo.sglang` layer and use different request-priority semantics. (These behaviors hold from Dynamo >= 1.1.0; the integration examples were tested end-to-end against the NGC `sglang-runtime:1.1.1` image.)
+```
+
 The Dynamo LLM provider is defined by the {py:class}`~nat.llm.dynamo_llm.DynamoModelConfig` class. The provider mirrors the implementation of the OpenAI provider, with additional prefix hints for Dynamo inference optimizations.
 
 * `model_name` - The name of the model to use

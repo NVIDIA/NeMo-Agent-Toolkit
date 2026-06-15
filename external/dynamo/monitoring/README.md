@@ -1,5 +1,10 @@
 # Dynamo Monitoring Stack
 
+> [!WARNING]
+> **Experimental.** This Dynamo monitoring stack is experimental and is not covered by the toolkit's API-stability guarantees. Scripts, container tags, and configurations may change between releases.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.3.0.** Earlier releases reject `--schedule-low-priority-values-first` at the `dynamo.sglang` layer and use different request-priority semantics. (These behaviors hold from Dynamo >= 1.1.0; end-to-end tested here against the NGC `sglang-runtime:1.1.1` image.)
+
 This directory contains a Prometheus + Grafana monitoring setup for the Dynamo LLM inference stack with Thompson Sampling router. Metrics are collected at **2-second resolution** directly from the ai-dynamo Prometheus API for per-request granularity.
 
 ## Supported Backends

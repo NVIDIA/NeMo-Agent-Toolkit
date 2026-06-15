@@ -17,6 +17,11 @@ limitations under the License.
 
 # Dynamo Backend Setup Guide
 
+> [!WARNING]
+> **Experimental.** This Dynamo backend integration is experimental and is not covered by the toolkit's API-stability guarantees. Scripts, container tags, and configurations may change between releases.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.3.0.** Earlier releases reject `--schedule-low-priority-values-first` at the `dynamo.sglang` layer and use different request-priority semantics. (These behaviors hold from Dynamo >= 1.1.0; end-to-end tested here against the NGC `sglang-runtime:1.1.1` image.)
+
 > [!NOTE]
 > ⚠️ **EXPERIMENTAL**: This integration between NVIDIA NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice. We kindly ask that GitHub Issues are opened as bugs are issued quickly as features are subject to change.
 

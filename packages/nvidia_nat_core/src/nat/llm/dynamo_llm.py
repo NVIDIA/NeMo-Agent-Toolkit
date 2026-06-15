@@ -103,6 +103,19 @@ _IAT_CATEGORY_TO_INT: dict[str, int] = {"LOW": 50, "MEDIUM": 250, "HIGH": 750}
 # Mid-range default on the [0, max_sensitivity] scale.
 _DEFAULT_LATENCY_SENSITIVITY: int = 2
 
+# Minimum Dynamo release required by this client's nvext.agent_hints protocol.
+# The priority semantics this client relies on hold from Dynamo >= 1.1.0:
+#   * Dynamo normalizes request priority so HIGHER values are higher priority
+#     (it negates for vLLM and passes through to SGLang under
+#     --enable-priority-scheduling), so this client injects priority == latency_sensitivity.
+#   * dynamo.sglang rejects --schedule-low-priority-values-first
+#     (components/src/dynamo/sglang/args.py), which earlier demo scripts passed.
+# 1.3.0 is the documented support floor for the integration examples; the behavior
+# above was tested end-to-end against the NGC sglang-runtime:1.1.1 image. This is a
+# documented compatibility marker, not a runtime gate: the client is a pure HTTP
+# client and does not import or introspect the Dynamo server.
+DYNAMO_MIN_VERSION: str = "1.3.0"
+
 
 class CachePinType(StrEnum):
     """Cache pinning strategy for KV cache entries.
@@ -376,9 +389,9 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
         default=1000,
         ge=1,
         validation_alias=AliasChoices("nvext_max_sensitivity", "max_sensitivity"),
-        description="Maximum latency sensitivity value used to compute request priority. "
-        "Priority is the integer complement: priority = max_sensitivity - latency_sensitivity. "
-        "Lower priority values indicate higher priority requests.",
+        description="Upper bound for latency_sensitivity, used to validate the sensitivity "
+        "range. Dynamo treats higher priority values as higher priority, so the injected "
+        "priority equals latency_sensitivity directly (more sensitive = higher priority).",
     )
 
     # =========================================================================
@@ -591,7 +604,8 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         #   Standard Dynamo AgentHints fields (dynamo/lib/llm/src/protocols/openai/nvext.rs):
         #     latency_sensitivity  — queue ordering in Dynamo's built-in router
         #     osl                  — output token hint for resource estimation (u32 integer)
-        #     priority             — engine scheduler priority (vLLM: lower=higher; SGLang: configurable)
+        #     priority             — engine scheduler priority (Dynamo API: higher value = higher
+        #                            priority; equals latency_sensitivity)
         #   Custom processor.py fields:
         #     prefix_id            — KV cache prefix identity for worker stickiness
         #     total_requests       — expected session length for reuse_budget computation
@@ -629,8 +643,15 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                                          f"Increase max_sensitivity or lower latency_sensitivity.")
 
                     # priority is fully derived from validated inputs — no separate check needed.
-                    # (lower number = higher priority for vLLM; SGLang is configurable)
-                    priority = self._max_sensitivity - latency_sensitivity
+                    # Dynamo's API contract is "higher value = higher priority" on BOTH
+                    # backends: it negates the value for vLLM's lower-is-higher scheduler
+                    # (components/src/dynamo/vllm/handlers.py) and passes it through to
+                    # SGLang, which serves higher values first under --enable-priority-scheduling
+                    # (components/src/dynamo/sglang/request_handlers/handler_base.py). The
+                    # inverse ordering flag --schedule-low-priority-values-first is forbidden
+                    # by dynamo.sglang, so priority must track latency_sensitivity directly
+                    # (more sensitive = higher priority) — NOT the max_sensitivity complement.
+                    priority = latency_sensitivity
 
                     if "nvext" not in body:
                         body["nvext"] = {}

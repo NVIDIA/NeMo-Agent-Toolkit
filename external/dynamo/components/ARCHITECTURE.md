@@ -17,6 +17,11 @@ limitations under the License.
 
 # Optimized Thompson Sampling Router Architecture
 
+> [!WARNING]
+> **Experimental.** This Dynamo integration is experimental and is not covered by the toolkit's API-stability guarantees. Configs, scripts, and hint protocols may change between releases.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.3.0.** Earlier releases reject `--schedule-low-priority-values-first` at the `dynamo.sglang` layer and use different request-priority semantics. (These behaviors hold from Dynamo >= 1.1.0; end-to-end tested here against the NGC `sglang-runtime:1.1.1` image.)
+
 ## Overview
 
 This architecture uses the **default Dynamo frontend** with custom **Processor** and **Router** components to implement Thompson Sampling-based intelligent worker selection with KV cache locality awareness.

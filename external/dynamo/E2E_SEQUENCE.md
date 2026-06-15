@@ -17,6 +17,11 @@ limitations under the License.
 
 # End-to-End Sequence Diagram: NeMo Agent Toolkit → Dynamo Integration
 
+> [!WARNING]
+> **Experimental.** This Dynamo integration is experimental and is not covered by the toolkit's API-stability guarantees. Configs, scripts, and hint protocols may change between releases.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.3.0.** Earlier releases reject `--schedule-low-priority-values-first` at the `dynamo.sglang` layer and use different request-priority semantics. (These behaviors hold from Dynamo >= 1.1.0; end-to-end tested here against the NGC `sglang-runtime:1.1.1` image.)
+
 This document captures the information flow from NeMo Agent Toolkit chat requests through `dynamo_llm.py` to the custom components launched by `start_dynamo_optimized_thompson_hints_vllm.sh`.
 
 ## Architecture Overview

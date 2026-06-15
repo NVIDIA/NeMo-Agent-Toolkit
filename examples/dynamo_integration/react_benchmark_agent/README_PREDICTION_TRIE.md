@@ -17,6 +17,11 @@ limitations under the License.
 
 # Prediction Trie Optimization for Dynamo
 
+> [!WARNING]
+> **Experimental.** This Dynamo integration is experimental and is not covered by the toolkit's API-stability guarantees. Configs, scripts, and hint protocols may change between releases.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.3.0.** Earlier releases reject `--schedule-low-priority-values-first` at the `dynamo.sglang` layer and use different request-priority semantics. (These behaviors hold from Dynamo >= 1.1.0; end-to-end tested here against the NGC `sglang-runtime:1.1.1` image.)
+
 Use profiled execution data to inject accurate per-call prediction headers instead of static guesses.
 
 ## Overview
