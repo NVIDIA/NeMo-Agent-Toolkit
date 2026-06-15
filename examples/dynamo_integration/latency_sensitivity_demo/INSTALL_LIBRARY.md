@@ -57,8 +57,10 @@ Tested on Ubuntu 22.04 and 24.04 (x86_64).
 
 ## Step 0 — Clone the repository
 
+Pin to a tested release tag — `v1.2.1` is the latest release validated for this demo (see the requirement note above).
+
 ```bash
-git clone https://github.com/ai-dynamo/dynamo.git
+git clone --branch v1.2.1 https://github.com/ai-dynamo/dynamo.git
 cd dynamo
 ```
 
@@ -273,8 +275,8 @@ source "$HOME/.cargo/env"
 # uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Clone and enter repo
-git clone https://github.com/ai-dynamo/dynamo.git
+# Clone and enter repo (pin to a tested release tag)
+git clone --branch v1.2.1 https://github.com/ai-dynamo/dynamo.git
 cd dynamo
 
 # Virtual environment
