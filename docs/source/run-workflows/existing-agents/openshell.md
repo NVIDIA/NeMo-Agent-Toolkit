@@ -17,7 +17,7 @@ limitations under the License.
 
 # Run NeMo Agent Toolkit Agents in OpenShell
 
-OpenShell is a good fit when you want to run a NeMo Agent Toolkit workload as a sandboxed, long-lived service with tighter runtime controls around network access, filesystem access, and credential delivery.
+OpenShell is a good fit when you want to run a NeMo Agent Toolkit workload as an isolated, long-lived service with tighter runtime controls around network access, filesystem access, and credential delivery.
 
 Use this pattern when you want to:
 
@@ -35,7 +35,7 @@ In this deployment model, the responsibilities are split across three layers:
 | Layer | Responsibility |
 |---|---|
 | NeMo Agent Toolkit workload | Agent workflow, tool definitions, frontend integrations, tracing, and business logic |
-| OpenShell runtime | Sandboxed execution, outbound policy enforcement, provider-backed credential delivery, and service exposure |
+| OpenShell runtime | Isolated execution, outbound policy enforcement, provider-backed credential delivery, and service exposure |
 | Cloud and identity systems | Tenant-specific identity, callback registration, ingress, and cloud resources |
 
 The important boundary is that OpenShell should own runtime controls and credential delivery. The image should own only the agent behavior and the toolkit-side configuration it needs to consume those credentials safely.
@@ -107,7 +107,7 @@ Typical mappings look like this:
 
 | OpenShell runtime contract | Toolkit-side auth shape |
 |---|---|
-| static env credential | `api_key` or another env-driven toolkit auth provider |
+| static environment-variable credential | `api_key` or another environment-driven toolkit auth provider |
 | brokered token URL | `openshell_bearer_token` or another callback-driven toolkit auth provider |
 | workload-specific callback contract | a custom toolkit auth adapter |
 
@@ -131,7 +131,7 @@ That keeps the long-lived Microsoft identity material out of the toolkit workloa
 
 You usually do **not** need new platform work if:
 
-- OpenShell can already expose the credential as env or a token URL
+- OpenShell can already expose the credential as an environment variable or a token URL
 - the toolkit already has an auth provider that can consume that shape
 - the downstream system only needs a standard bearer token or static credential
 
@@ -143,7 +143,7 @@ In that case, the work is mainly:
 
 ### When You May Need to Extend OpenShell or the Toolkit
 
-You may need additional work when the downstream system expects a more specialized runtime exchange than plain env injection or a simple bearer-token callback.
+You may need additional work when the downstream system expects a more specialized runtime exchange than plain environment-variable injection or a simple bearer-token callback.
 
 Examples include:
 
@@ -154,7 +154,7 @@ Examples include:
 
 In those cases, the right move is usually:
 
-- extend **OpenShell** when you need a stronger provider/runtime security boundary
+- extend **OpenShell** when you need a stronger provider and runtime security boundary
 - extend **NeMo Agent Toolkit** when you need a new auth adapter that can consume the runtime contract safely
 
 Treat this as a design boundary, not a hack.
@@ -168,7 +168,7 @@ Use this when the agent or tool expects:
 - an API key
 - a bot token
 - a client secret
-- another stable credential presented directly in env or config
+- another stable credential presented directly in an environment variable or config
 
 This is the simplest path, but it means the workload is holding the credential value directly.
 
@@ -216,7 +216,7 @@ There are two separate pieces to configure:
 1. **Policy**
    - which destinations the sandbox can reach
    - which binaries or processes can make those calls
-   - whether the traffic is plain L4 or inspected REST/WebSocket traffic
+   - whether the traffic is plain L4 or inspected REST or WebSocket traffic
 
 2. **Auth**
    - how the tool or client gets its credentials
@@ -359,7 +359,7 @@ If the workflow needs more tools later, add them intentionally instead of broade
 
 Create a provider or credential source first.
 
-For a static env-style credential:
+For a static environment-variable credential:
 
 ```shell
 export WEATHER_API_KEY=<your-key>
@@ -376,7 +376,7 @@ Create the sandbox from the image and attach the provider:
 openshell sandbox create \
   --from my-registry.example.com/nat-weather:latest \
   --provider weather-api \
-  --policy ./weather-policy.yaml
+  --policy /path/to/weather-policy.yaml
 ```
 
 Inspect the sandbox:
@@ -479,7 +479,7 @@ Use this when the agent needs:
 
 In this lane:
 
-- OpenShell hosts the workload as a sandboxed pod or workload
+- OpenShell hosts the workload as an isolated pod or workload
 - cluster-specific ingress and service wiring expose the agent when needed
 - tenant-specific identity setup happens outside the generic toolkit image
 
