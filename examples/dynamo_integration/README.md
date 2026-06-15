@@ -17,8 +17,6 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit and Dynamo Integration
 
 > [!WARNING]
-> **Experimental.** These Dynamo integration examples are experimental and are not covered by the toolkit's API-stability guarantees. Configs, scripts, and hint protocols may change between releases.
->
 > **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.1.0**, where `dynamo.sglang` rejects `--schedule-low-priority-values-first` and normalizes request priority so higher values are higher priority. Earlier releases use different priority semantics. (End-to-end tested against the NGC `sglang-runtime` 1.1.1 and 1.2.1 images; no stable 1.3.0 is published yet.)
 
 **Complexity:** 🛑 Advanced
