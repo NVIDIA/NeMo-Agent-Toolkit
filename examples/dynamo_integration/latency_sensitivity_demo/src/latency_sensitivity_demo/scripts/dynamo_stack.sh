@@ -20,7 +20,7 @@
 #
 # Prerequisites (from the Dynamo source checkout; run once, stays up):
 #   export DYNAMO_SOURCE_DIR="${HOME}/dynamo"
-#   cd "$DYNAMO_SOURCE_DIR/dev"
+#   cd "$DYNAMO_SOURCE_DIR/deploy"
 #   docker compose -f docker-compose.yml up -d --remove-orphans
 #   docker compose -f docker-observability.yml up -d --remove-orphans
 #   cd "$DYNAMO_SOURCE_DIR"

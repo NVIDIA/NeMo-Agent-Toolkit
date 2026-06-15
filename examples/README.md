@@ -53,7 +53,7 @@ The examples in the NeMo-Agent-Toolkit-Examples repository are community contrib
   - [Evaluation and Profiling](#evaluation-and-profiling)
   - [Finetuning](#finetuning)
 - **[Platform Integrations](#platform-integrations)**
-  - [Dynamo Integration](#dynamo-integration)
+  - [Dynamo Integration (experimental)](#dynamo-integration-experimental)
   - [Retrieval Augmented Generation (RAG)](#retrieval-augmented-generation-rag)
   - [NeMo Agent Toolkit Safety and Security](#nemo-agent-toolkit-safety-and-security)
 - [Documentation Guide Files](#documentation-guide-files)
@@ -185,7 +185,9 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 
 ## Platform Integrations
 
-### Dynamo Integration
+### Dynamo Integration (experimental)
+> The Dynamo integration examples are experimental and require [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.1.0. For details, see the README in each example directory.
+- **[`latency_sensitivity_demo`](dynamo_integration/latency_sensitivity_demo/README.md)**: Infers per-request latency sensitivity from agent profiles and applies Dynamo runtime hints for cache control, load-aware routing, and priority-aware serving. **[🛑 Advanced]**
 - **[`react_benchmark_agent`](dynamo_integration/react_benchmark_agent/README.md)**: Walks through the complete process of running decision-only evaluations using the `react_benchmark_agent`: downloading data, configuring evaluations, running experiments, and analyzing results. **[🛑 Advanced]**
 - **[`react_benchmark_agent - src - react_benchmark_agent`](dynamo_integration/react_benchmark_agent/src/react_benchmark_agent/DEVELOPER_NOTES.md)**: Developer notes that map React Benchmark Agent configuration files to the underlying components, evaluators, and workflows. **[🛑 Advanced]**
 
