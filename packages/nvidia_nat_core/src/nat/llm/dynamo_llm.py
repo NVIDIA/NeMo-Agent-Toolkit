@@ -110,11 +110,11 @@ _DEFAULT_LATENCY_SENSITIVITY: int = 2
 #     --enable-priority-scheduling), so this client injects priority == latency_sensitivity.
 #   * dynamo.sglang rejects --schedule-low-priority-values-first
 #     (components/src/dynamo/sglang/args.py), which earlier demo scripts passed.
-# 1.3.0 is the documented support floor for the integration examples; the behavior
-# above was tested end-to-end against the NGC sglang-runtime:1.1.1 image. This is a
-# documented compatibility marker, not a runtime gate: the client is a pure HTTP
-# client and does not import or introspect the Dynamo server.
-DYNAMO_MIN_VERSION: str = "1.3.0"
+# Tested end-to-end against the NGC sglang-runtime 1.1.1 and 1.2.1 images (no stable
+# 1.3.0 is published yet). This is a documented compatibility marker, not a runtime
+# gate: the client is a pure HTTP client and does not import or introspect the Dynamo
+# server.
+DYNAMO_MIN_VERSION: str = "1.1.0"
 
 
 class CachePinType(StrEnum):

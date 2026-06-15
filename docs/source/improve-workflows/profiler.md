@@ -229,7 +229,7 @@ This will, based on the above configuration, produce the following files in the 
 ## Prediction Trie and Dynamo Routing Hints
 
 ```{note}
-The Dynamo integration is experimental and requires **Dynamo >= 1.3.0**. See [NVIDIA Dynamo (experimental)](../build-workflows/llms/index.md#nvidia-dynamo-experimental).
+The Dynamo integration is experimental and requires **Dynamo >= 1.1.0**. See [NVIDIA Dynamo (experimental)](../build-workflows/llms/index.md#nvidia-dynamo-experimental).
 ```
 
 The prediction trie is a hierarchical data structure built from profiling traces that captures per-LLM-call-position statistics for your workflow. When deployed with a `Dynamo` LLM backend, these statistics are injected as routing hints to optimize `KV` cache management and request scheduling.
