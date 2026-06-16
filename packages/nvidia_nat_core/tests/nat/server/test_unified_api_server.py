@@ -1186,6 +1186,15 @@ async def test_invalid_openai_chat_request_fields():
         ChatRequest(messages=[{"role": "user", "content": "Hello"}], stream="not_a_boolean")
 
     with pytest.raises(ValidationError):
+        ChatRequest(messages=[{"role": "user", "content": None}])
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages=[{"role": "assistant", "content": None}])
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages=[{"role": "tool", "tool_call_id": "call_123", "content": None}])
+
+    with pytest.raises(ValidationError):
         ChatRequest(messages="not_a_list")
 
     with pytest.raises(ValidationError):

@@ -26,6 +26,9 @@
         },
         {
             "pattern": "^https://docs\\.docker\\.com"
+        },
+        {
+            "pattern": "^https://www\\.sphinx-doc\\.org/en/master/?$"
         }
     ]
 }
