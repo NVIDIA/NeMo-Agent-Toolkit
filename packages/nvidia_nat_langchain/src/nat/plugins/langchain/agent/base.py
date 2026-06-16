@@ -45,6 +45,31 @@ def _extract_reasoning_content(message: BaseMessage) -> str:
     return reasoning if isinstance(reasoning, str) else str(reasoning)
 
 
+def _extract_message_text(content: Any) -> str:
+    """Flatten LangChain message content to plain text.
+
+    Chat models return ``content`` either as a string or, for providers such as
+    Anthropic (including via AWS Bedrock ``ChatBedrockConverse``), as a list of
+    typed content blocks (for example ``{"type": "text", "text": "..."}``). The
+    agents consume message content as text, so this concatenates the text of any
+    text blocks and ignores non-text blocks such as tool-use or reasoning. A
+    plain string is returned unchanged and any other type yields an empty string.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and block.get("type", "text") == "text":
+                text = block.get("text")
+                if isinstance(text, str):
+                    parts.append(text)
+        return "".join(parts)
+    return ""
+
+
 def _format_agent_thoughts_for_log(message: BaseMessage) -> str:
     """Return concise text for detailed agent thought logs."""
     content = message.content
