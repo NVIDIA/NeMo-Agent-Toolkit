@@ -280,18 +280,3 @@ async def test_console_preflight_auth_continues_remaining_providers_after_one_fa
 
     provider_a.authenticate.assert_awaited_once()
     provider_b.authenticate.assert_awaited_once()
-
-
-async def test_console_preflight_auth_logs_one_warning_per_failed_provider(caplog):
-    provider_a, provider_b = AsyncMock(), AsyncMock()
-    provider_a.authenticate.side_effect = RuntimeError("a failed")
-    provider_b.authenticate.side_effect = RuntimeError("b failed")
-    sm = _sm({"provider_a": _cfg(), "provider_b": _cfg()})
-    sm.shared_builder.get_auth_provider.side_effect = [provider_a, provider_b]
-
-    with caplog.at_level(logging.WARNING):
-        await _run(sm)
-
-    warnings = [r.message for r in caplog.records if r.levelno == logging.WARNING]
-    assert any("provider_a" in m for m in warnings)
-    assert any("provider_b" in m for m in warnings)

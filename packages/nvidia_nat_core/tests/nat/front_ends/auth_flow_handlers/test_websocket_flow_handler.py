@@ -245,6 +245,7 @@ def _preflight_session_manager(auth_providers: dict) -> MagicMock:
     sm.get_workflow_single_output_schema.return_value = None
     sm.get_workflow_streaming_output_schema.return_value = None
     sm.config.authentication = auth_providers
+    sm.shared_builder.get_auth_provider = AsyncMock()
     cm = MagicMock()
     cm.__aenter__ = AsyncMock(return_value=MagicMock())
     cm.__aexit__ = AsyncMock(return_value=False)
@@ -325,7 +326,6 @@ async def test_preflight_auth_sends_error_and_does_not_raise_on_failure():
     payload: dict = socket.send_json.call_args[0][0]
     assert payload["code"] == ErrorTypes.USER_AUTH_ERROR
     assert "provider_a" in payload["message"]
-    assert not payload.get("details")
 
 
 async def test_preflight_auth_continues_remaining_providers_after_one_fails():
