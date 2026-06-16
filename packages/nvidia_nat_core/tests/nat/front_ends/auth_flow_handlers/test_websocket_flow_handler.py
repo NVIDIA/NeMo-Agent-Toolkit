@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import socket
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
@@ -23,10 +25,12 @@ from httpx import ASGITransport
 from mock_oauth2_server import MockOAuth2Server
 
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.data_models.api_server import ErrorTypes
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.config import Config
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 from nat.test.functions import EchoFunctionConfig
 
 
@@ -223,3 +227,141 @@ async def test_websocket_oauth2_flow_error_handling(monkeypatch, mock_server, tm
     # Verify timeout RuntimeError is raised (demonstrates partial error handling)
     error_message = str(exc_info.value)
     assert "Authentication flow timed out" in error_message
+
+
+# ---------------------------------------------------------------------------
+# WebSocketMessageHandler – preflight authentication
+# ---------------------------------------------------------------------------
+
+
+def _preflight_provider_cfg(preflight_auth: bool = True) -> MagicMock:
+    cfg = MagicMock()
+    cfg.preflight_auth = preflight_auth
+    return cfg
+
+
+def _preflight_session_manager(auth_providers: dict) -> MagicMock:
+    sm = MagicMock()
+    sm.get_workflow_single_output_schema.return_value = None
+    sm.get_workflow_streaming_output_schema.return_value = None
+    sm.config.authentication = auth_providers
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=MagicMock())
+    cm.__aexit__ = AsyncMock(return_value=False)
+    sm.session.return_value = cm
+    return sm
+
+
+def _preflight_handler(session_manager: MagicMock) -> tuple:
+    socket = AsyncMock()
+    handler = WebSocketMessageHandler(
+        socket=socket,
+        session_manager=session_manager,
+        step_adaptor=MagicMock(),
+        worker=MagicMock(),
+    )
+    return handler, socket
+
+
+async def test_preflight_auth_authenticates_single_provider():
+    provider = AsyncMock()
+    sm = _preflight_session_manager({"provider_a": _preflight_provider_cfg()})
+    sm.shared_builder.get_auth_provider.return_value = provider
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    sm.shared_builder.get_auth_provider.assert_awaited_once_with("provider_a")
+    provider.authenticate.assert_awaited_once()
+    socket.send_json.assert_not_called()
+
+
+async def test_preflight_auth_authenticates_all_preflight_providers():
+    provider_a, provider_b = AsyncMock(), AsyncMock()
+    sm = _preflight_session_manager({
+        "provider_a": _preflight_provider_cfg(),
+        "provider_b": _preflight_provider_cfg(),
+    })
+    sm.shared_builder.get_auth_provider.side_effect = [provider_a, provider_b]
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    assert sm.shared_builder.get_auth_provider.await_count == 2
+    provider_a.authenticate.assert_awaited_once()
+    provider_b.authenticate.assert_awaited_once()
+    socket.send_json.assert_not_called()
+
+
+async def test_preflight_auth_skips_non_preflight_providers():
+    provider_a = AsyncMock()
+    sm = _preflight_session_manager({
+        "provider_a": _preflight_provider_cfg(),
+        "provider_b": _preflight_provider_cfg(preflight_auth=False),
+    })
+    sm.shared_builder.get_auth_provider.return_value = provider_a
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    sm.shared_builder.get_auth_provider.assert_awaited_once_with("provider_a")
+    socket.send_json.assert_not_called()
+
+
+async def test_preflight_auth_sends_error_and_does_not_raise_on_failure():
+    provider = AsyncMock()
+    provider.authenticate.side_effect = RuntimeError("OAuth server unreachable")
+    sm = _preflight_session_manager({"provider_a": _preflight_provider_cfg()})
+    sm.shared_builder.get_auth_provider.return_value = provider
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    socket.send_json.assert_awaited_once()
+    payload: dict = socket.send_json.call_args[0][0]
+    assert payload["code"] == ErrorTypes.USER_AUTH_ERROR
+    assert "provider_a" in payload["message"]
+    assert not payload.get("details")
+
+
+async def test_preflight_auth_continues_remaining_providers_after_one_fails():
+    provider_a, provider_b = AsyncMock(), AsyncMock()
+    provider_a.authenticate.side_effect = RuntimeError("a failed")
+    sm = _preflight_session_manager({
+        "provider_a": _preflight_provider_cfg(),
+        "provider_b": _preflight_provider_cfg(),
+    })
+    sm.shared_builder.get_auth_provider.side_effect = [provider_a, provider_b]
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    provider_a.authenticate.assert_awaited_once()
+    provider_b.authenticate.assert_awaited_once()
+    socket.send_json.assert_awaited_once()
+    assert "provider_a" in socket.send_json.call_args[0][0]["message"]
+
+
+async def test_preflight_auth_sends_one_error_per_failed_provider():
+    provider_a, provider_b = AsyncMock(), AsyncMock()
+    provider_a.authenticate.side_effect = RuntimeError("a failed")
+    provider_b.authenticate.side_effect = RuntimeError("b failed")
+    sm = _preflight_session_manager({
+        "provider_a": _preflight_provider_cfg(),
+        "provider_b": _preflight_provider_cfg(),
+    })
+    sm.shared_builder.get_auth_provider.side_effect = [provider_a, provider_b]
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    assert socket.send_json.await_count == 2
+    messages = {c[0][0]["message"] for c in socket.send_json.call_args_list}
+    assert any("provider_a" in m for m in messages)
+    assert any("provider_b" in m for m in messages)

@@ -175,10 +175,35 @@ class WebSocketMessageHandler:
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         pass
 
+    async def _run_preflight_auth(self) -> None:
+        """Authenticate all providers with ``preflight_auth=True`` at WebSocket connect time."""
+        if self._flow_handler is None or not any(cfg.preflight_auth
+                                                 for cfg in self._session_manager.config.authentication.values()):
+            return
+        async with self._session_manager.session(
+                http_connection=self._socket,
+                user_authentication_callback=self._flow_handler.authenticate,
+        ):
+            for name, cfg in self._session_manager.config.authentication.items():
+                if cfg.preflight_auth:
+                    logger.debug("Preflight auth: authenticating provider '%s'", name)
+                    provider = await self._session_manager.shared_builder.get_auth_provider(name)
+                    try:
+                        await provider.authenticate()
+                    except Exception as e:
+                        logger.warning("Preflight auth failed for provider '%s': %s", name, e)
+                        await self._socket.send_json(
+                            Error(
+                                code=ErrorTypes.USER_AUTH_ERROR,
+                                message=f"Preflight authentication failed for provider '{name}'",
+                            ).model_dump())
+
     async def run(self) -> None:
         """
         Processes received messages from websocket and routes them appropriately.
         """
+        await self._run_preflight_auth()
+
         while True:
 
             try:

@@ -36,6 +36,10 @@ class AuthProviderBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     # Default, forbid extra fields to prevent unexpected behavior or miss typed options
     model_config = ConfigDict(extra="forbid")
 
+    preflight_auth: bool = Field(default=False,
+                                 description="When True, authentication is triggered at session start rather than "
+                                 "on first use by a tool. Preserves existing on-demand behavior when False.")
+
 
 AuthProviderBaseConfigT = typing.TypeVar("AuthProviderBaseConfigT", bound=AuthProviderBaseConfig)
 
