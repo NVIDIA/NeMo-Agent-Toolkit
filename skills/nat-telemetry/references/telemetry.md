@@ -92,20 +92,6 @@ general:
 
 Requires `nvidia-nat[phoenix]` and a running Phoenix server (Docker: `arizephoenix/phoenix:13.22`).
 
-### Catalyst (RagaAI)
-
-```yaml
-general:
-  telemetry:
-    tracing:
-      catalyst:
-        _type: catalyst
-        project: my-project
-        dataset: my-dataset
-```
-
-Requires `nvidia-nat[ragaai]` and three env vars: `CATALYST_ACCESS_KEY`, `CATALYST_SECRET_KEY`, `CATALYST_ENDPOINT`. The `[ragaai]` extra **conflicts with `[strands]` and `[adk]`** — see the conflicts matrix in `SKILL.md`.
-
 ### Galileo
 
 ```yaml
@@ -119,18 +105,6 @@ general:
 ```
 
 Uses `nvidia-nat[opentelemetry]`. Requires `GALILEO_API_KEY`. Default endpoint: `https://app.galileo.ai/api/galileo/otel/traces` — override via `endpoint:` if self-hosting. Create the Logging project + Log Stream in the Galileo UI before starting the workflow.
-
-### DBNL
-
-```yaml
-general:
-  telemetry:
-    tracing:
-      dbnl:
-        _type: dbnl
-```
-
-Uses `nvidia-nat[opentelemetry]`. Requires self-hosted DBNL deployment plus three env vars: `DBNL_API_URL`, `DBNL_API_TOKEN`, `DBNL_PROJECT_ID`. Create a Trace Ingestion project in DBNL and generate the API token first.
 
 ### NVIDIA Data Flywheel
 

@@ -34,6 +34,7 @@ Brev
 clangd
 CMake
 Colab
+Colang
 [Cc]omposability
 [Cc]omposable
 concurrencies
@@ -67,6 +68,7 @@ DB(s?)
 Dynatrace
 [Ee]mbedder(s?)
 [Ee]ngineerable
+Entra
 etcd
 [Ee]val
 [Ee]xfiltration

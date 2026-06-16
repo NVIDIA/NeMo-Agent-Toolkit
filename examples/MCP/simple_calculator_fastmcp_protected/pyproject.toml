@@ -37,6 +37,7 @@ dependencies = [
   "nvidia-nat[langchain,mcp,test] == {version}",
   "nvidia-nat-fastmcp == {version}",
   "nat_simple_calculator",
+  "mcp-server-time~=2025.8",
 ]
 
 [tool.uv.sources]

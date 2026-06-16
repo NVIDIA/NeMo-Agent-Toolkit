@@ -35,6 +35,7 @@ from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.middleware.function_middleware import FunctionMiddlewareChain
+from nat.middleware.function_middleware import validate_middleware
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import Middleware
 from nat.utils.type_utils import DecomposedType
@@ -132,7 +133,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
     def configure_middleware(self, middleware: Sequence[Middleware] | None = None) -> None:
         """Attach an ordered list of middleware to this function instance."""
 
-        middleware_tuple: tuple[Middleware, ...] = tuple(middleware or ())
+        middleware_tuple: tuple[Middleware, ...] = validate_middleware(middleware)
 
         self._configured_middleware = middleware_tuple
 

@@ -243,37 +243,6 @@ async def test_galileo_full_workflow(config_dir: Path,
 
 
 @pytest.mark.integration
-@pytest.mark.usefixtures("catalyst_keys", "aiq_compatibility_span_prefix")
-async def test_catalyst_full_workflow(config_dir: Path,
-                                      catalyst_project_name,
-                                      catalyst_dataset_name,
-                                      question: str,
-                                      expected_answer: str):
-    config_file = config_dir / "config-catalyst.yml"
-    config = load_config(config_file)
-    config.general.telemetry.tracing["catalyst"].project = catalyst_project_name
-    config.general.telemetry.tracing["catalyst"].dataset = catalyst_dataset_name
-
-    await run_workflow(config=config, question=question, expected_answer=expected_answer)
-
-    from ragaai_catalyst import Dataset
-    ds = Dataset(catalyst_project_name)
-
-    dataset_found = False
-
-    # Allow some time for the traces to be uploaded
-    await asyncio.sleep(5)
-    deadline = time.time() + 10
-    while not dataset_found and time.time() < deadline:
-        datasets = ds.list_datasets()
-        dataset_found = datasets is not None and catalyst_dataset_name in datasets
-        if not dataset_found:
-            await asyncio.sleep(0.5)
-
-    assert dataset_found
-
-
-@pytest.mark.integration
 async def test_nested_span_parent_child_lineage(tmp_path: Path, config_dir: Path):
     """
     Test that nested tool calls correctly track parent-child span lineage.

@@ -152,11 +152,14 @@ class MessageValidator:
 
         try:
             if (isinstance(data_model, ResponsePayloadOutput)):
-                if hasattr(data_model.payload, 'model_dump_json'):
-                    text_content: str = data_model.payload.model_dump_json()
-                else:
-                    text_content: str = str(data_model.payload)
-                return SystemResponseContent(text=text_content)
+                payload = data_model.payload
+                # Unwrap only a payload whose whole serialized shape is ``{"value": ...}`` (the auto-derived
+                # ``OutputArgsSchema``); anything richer passes through as JSON so its fields aren't flattened.
+                if isinstance(payload, BaseModel) and set(payload.model_dump()) == {"value"}:
+                    return SystemResponseContent(text=str(payload.value))
+                if hasattr(payload, "model_dump_json"):
+                    return SystemResponseContent(text=payload.model_dump_json())
+                return SystemResponseContent(text=str(payload))
 
             elif isinstance(data_model, ChatResponse):
                 return SystemResponseContent(text=data_model.choices[0].message.content)

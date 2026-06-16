@@ -35,8 +35,8 @@ from nat.cli.type_registry import GlobalTypeRegistry
 from nat.data_models.common import TypedBaseModel
 from nat.data_models.evaluate_config import EvalGeneralConfig
 from nat.data_models.llm import LLMBaseConfig
-from nat.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 from nat.plugins.security.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
+from nat.plugins.security.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 
 logger = logging.getLogger(__name__)
 

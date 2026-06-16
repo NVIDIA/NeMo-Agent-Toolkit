@@ -109,26 +109,29 @@ Workflow Result:
 ```
 
 ## Alternate Method Using a Web Search Tool
-Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. NeMo Agent Toolkit provides two web search tools: `tavily_internet_search` which utilizes the [Tavily Search API](https://tavily.com/), and `exa_internet_search` which utilizes the [Exa Search API](https://exa.ai/).
+Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. The `nemo-agent-toolkit-tavily` package provides framework-agnostic tools for the [Tavily Search API](https://tavily.com/). The `nvidia-nat[langchain]` package also provides the LangChain-backed `exa_internet_search` tool, which uses the [Exa Search API](https://exa.ai/).
 
 ### Using Tavily Search
 
-The `tavily_internet_search` tool is part of the `nvidia-nat[langchain]` package, to install the package run:
+The Tavily tools are provided by the external `nemo-agent-toolkit-tavily` package. To install the package run:
 ```bash
 # local package install from source
-uv pip install -e ".[langchain]"
+uv pip install -e ".[langchain]" nemo-agent-toolkit-tavily
 ```
 
-Prior to using the `tavily_internet_search` tool, create an account at [`tavily.com`](https://tavily.com/) and obtain an API key. Once obtained, set the `TAVILY_API_KEY` environment variable to the API key:
+Prior to using Tavily search, create an account at [`tavily.com`](https://tavily.com/) and obtain an API key. Once obtained, set the `TAVILY_API_KEY` environment variable to the API key:
 ```bash
 export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 ```
 
-We will now update the `functions` section of the configuration file replacing the two `webpage_query` tools with a single `tavily_internet_search` tool entry:
+We will now update the configuration file, replacing the two `webpage_query` tools with a Tavily function group that exposes the `search` tool:
 ```yaml
-functions:
+function_groups:
   internet_search:
-    _type: tavily_internet_search
+    _type: tavily
+    include: [search]
+
+functions:
   current_datetime:
     _type: current_datetime
 ```
@@ -137,7 +140,7 @@ Next, update the `workflow.tool_names` section to include the new tool:
 ```yaml
 workflow:
   _type: react_agent
-  tool_names: [internet_search, current_datetime]
+  tool_names: [internet_search__search, current_datetime]
 ```
 
 The resulting configuration file is located at `examples/documentation_guides/workflows/custom_workflow/search_config.yml` in the NeMo Agent Toolkit repository.
@@ -156,7 +159,7 @@ Workflow Result:
 
 ### Using Exa Search
 
-The `exa_internet_search` tool is also part of the `nvidia-nat[langchain]` package. If you haven't already installed it:
+The `exa_internet_search` tool is also part of the `nvidia-nat[langchain]` package and wraps the LangChain Exa integration. If you haven't already installed it:
 ```bash
 # local package install from source
 uv pip install -e ".[langchain]"
@@ -167,7 +170,7 @@ Prior to using the `exa_internet_search` tool, create an account at [`exa.ai`](h
 export EXA_API_KEY=<YOUR_EXA_API_KEY>
 ```
 
-You can use the `exa_internet_search` tool in the same way as `tavily_internet_search` by updating the `functions` section of the configuration file:
+You can use the `exa_internet_search` tool by updating the `functions` section of the configuration file:
 ```yaml
 functions:
   internet_search:

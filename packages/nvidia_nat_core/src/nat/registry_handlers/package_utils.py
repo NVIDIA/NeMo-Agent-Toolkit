@@ -94,7 +94,7 @@ def resolve_extras_to_packages(package_name: str, extras: list[str]) -> set[str]
     Returns:
         set[str]: Set of additional package names that the extras resolve to
         (e.g., {'nvidia-nat-langchain', 'nvidia-nat-opentelemetry', 'nvidia-nat-phoenix',
-        'nvidia-nat-weave', 'nvidia-nat-ragaai'})
+        'nvidia-nat-weave'})
     """
     resolved_packages = set()
 
@@ -148,7 +148,7 @@ def extract_dependencies_with_extras_resolved(pyproject_path: str) -> set[str]:
         set[str]: Set of all dependency names including those resolved from extras
 
     Example:
-        For a dependency like "nat[langchain,opentelemetry,phoenix,ragaai,weave]~=1.2", this will return:
+        For a dependency like "nvidia-nat[langchain,opentelemetry,phoenix,weave]~=1.2", this will return:
         {'nvidia-nat', 'nvidia-nat-langchain', 'nvidia-nat-opentelemetry', 'nvidia-nat-phoenix', ...}
 
     Raises:

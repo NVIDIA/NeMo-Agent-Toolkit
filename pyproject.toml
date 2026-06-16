@@ -51,6 +51,7 @@ dependencies = [
 # Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install "nvidia-nat[langchain]"`
 # Keep sorted!!!
 a2a = ["nvidia-nat-a2a == {version}"]
+a365 = ["nvidia-nat-a365 == {version}"]
 adk = ["nvidia-nat-adk == {version}"]
 agno = ["nvidia-nat-agno == {version}"]
 app = ["nvidia-nat-app == {version}"]
@@ -74,11 +75,12 @@ phoenix = ["nvidia-nat-phoenix == {version}"]
 profiler = ["nvidia-nat-profiler == {version}"]
 rag = ["nvidia-nat-rag == {version}"]
 ragas = ["nvidia-nat-ragas == {version}"]
-ragaai = ["nvidia-nat-ragaai == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
 redis = ["nvidia-nat-redis == {version}"]
 s3 = ["nvidia-nat-s3 == {version}"]
 security = ["nvidia-nat-security == {version}"]
+defense = ["nvidia-nat-security[defense] == {version}"]
+guardrails = ["nvidia-nat-security[guardrails] == {version}"]
 semantic-kernel = ["nvidia-nat-semantic-kernel == {version}"]
 strands = ["nvidia-nat-strands == {version}"]
 test = ["nvidia-nat-test == {version}"]
@@ -88,17 +90,18 @@ zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
 # define any dependency extras in core so we can easily propagate to most
 async_endpoints = [ "nvidia-nat-core[async_endpoints] == {version}" ]
 gunicorn = [ "nvidia-nat-core[gunicorn] == {version}" ]
-pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
 
 most = [
   "nvidia-nat-a2a == {version}",
+  "nvidia-nat-a365 == {version}",
   "nvidia-nat-adk == {version}",
   "nvidia-nat-agno == {version}",
   "nvidia-nat-app == {version}",
   "nvidia-nat-autogen == {version}",
   "nvidia-nat-atif == {version}",
   "nvidia-nat-config-optimizer == {version}",
-  "nvidia-nat-core[async_endpoints,gunicorn,pii-defense] == {version}",
+  "nvidia-nat-core[async_endpoints,gunicorn] == {version}",
+  "nvidia-nat-security[defense,guardrails] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
   "nvidia-nat-eval[full] == {version}",
@@ -131,17 +134,21 @@ examples = [
   "nat_alert_triage_agent",
   "nat_autogen_demo",
   "nat_automated_description_generation",
+  "nat_claude_code_agent_adapter",
+  "nat_codex_agent_adapter",
+  "nat_cursor_agent_adapter",
   "nat_dpo_tic_tac_toe",
   "nat_documentation_guides",
   "nat_email_phishing_analyzer",
   "nat_haystack_deep_research_agent",
+  "nat_hermes_agent_adapter",
   "nat_hybrid_control_flow",
-  "nat_kaggle_mcp",
   "nat_latency_sensitivity_demo",
   "nat_math_assistant_a2a",
   "nat_math_assistant_a2a_protected",
   "nat_multi_frameworks",
   "nat_notebooks",
+  "nat_openclaw_agent_adapter",
   "nat_parallel_executor",
   "nat_per_user_workflow",
   "nat_plot_charts",
@@ -215,10 +222,6 @@ conflicts = [
     [{ extra = "adk" }, { extra = "openpipe-art" }],
     [{ extra = "crewai" }, { extra = "openpipe-art" }],
     [{ extra = "most" }, { extra = "openpipe-art" }],
-    # (strands|adk)<>ragaai have incompatible tenacity versions
-    [{ extra = "adk" }, { extra = "ragaai" }],
-    [{ extra = "strands" }, { extra = "ragaai" }],
-    [{ extra = "most" }, { extra = "ragaai" }],
     # rag<>autogen have incompatible protobuf versions
     [{ extra = "rag" }, { extra = "autogen" }],
     [{ extra = "rag" }, { extra = "most" }],
@@ -228,6 +231,7 @@ managed = true
 [tool.uv.sources]
 # Packages
 nvidia-nat-a2a = { path = "packages/nvidia_nat_a2a", editable = true }
+nvidia-nat-a365 = { path = "packages/nvidia_nat_a365", editable = true }
 nvidia-nat-adk = { path = "packages/nvidia_nat_adk", editable = true }
 nvidia-nat-agno = { path = "packages/nvidia_nat_agno", editable = true }
 nvidia-nat-app = { path = "packages/nvidia_nat_app", editable = true }
@@ -251,7 +255,6 @@ nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
 nvidia-nat-profiler = { path = "packages/nvidia_nat_profiler", editable = true }
 nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
 nvidia-nat-ragas = { path = "packages/nvidia_nat_ragas", editable = true }
-nvidia-nat-ragaai = { path = "packages/nvidia_nat_ragaai", editable = true }
 nvidia-nat-mysql = { path = "packages/nvidia_nat_mysql", editable = true }
 nvidia-nat-redis = { path = "packages/nvidia_nat_redis", editable = true }
 nvidia-nat-s3 = { path = "packages/nvidia_nat_s3", editable = true }
@@ -269,17 +272,21 @@ nat_agents_examples = { path = "examples/agents", editable = true }
 nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
 nat_autogen_demo = { path = "examples/frameworks/nat_autogen_demo", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
+nat_claude_code_agent_adapter = { path = "examples/experimental/claude_code_agent_adapter", editable = true }
+nat_codex_agent_adapter = { path = "examples/experimental/codex_agent_adapter", editable = true }
+nat_cursor_agent_adapter = { path = "examples/experimental/cursor_agent_adapter", editable = true }
 nat_dpo_tic_tac_toe = { path = "examples/finetuning/dpo_tic_tac_toe", editable = true }
 nat_documentation_guides = { path = "examples/documentation_guides", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
 nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
+nat_hermes_agent_adapter = { path = "examples/experimental/hermes_agent_adapter", editable = true }
 nat_hybrid_control_flow = { path = "examples/control_flow/hybrid_control_flow", editable = true }
-nat_kaggle_mcp = { path = "examples/MCP/kaggle_mcp", editable = true }
 nat_latency_sensitivity_demo = { path = "examples/dynamo_integration/latency_sensitivity_demo", editable = true }
 nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
 nat_math_assistant_a2a_protected = { path = "examples/A2A/math_assistant_a2a_protected", editable = true }
 nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }
 nat_notebooks = { path = "examples/notebooks", editable = true }
+nat_openclaw_agent_adapter = { path = "examples/experimental/openclaw_agent_adapter", editable = true }
 nat_parallel_executor = { path = "examples/control_flow/parallel_executor", editable = true }
 nat_per_user_workflow = { path = "examples/front_ends/per_user_workflow", editable = true }
 nat_plot_charts = { path = "examples/custom_functions/plot_charts", editable = true }

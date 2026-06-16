@@ -76,7 +76,7 @@ dependencies = [
   "pkginfo~=1.12",
   "platformdirs~=4.3",
   "pydantic~=2.11",
-  "pyjwt~=2.11",
+  "pyjwt~=2.13",
   # Pinning to 2.6.9 to work-around https://github.com/langchain-ai/langchain-milvus/issues/130
   "pymilvus==2.6.9",
   "python-dotenv>=1.1.1,<2.0.0",
@@ -104,13 +104,9 @@ async_endpoints = [
 gunicorn = [
   "gunicorn~=23.0",
 ]
-pii-defense = [
-  "presidio-analyzer",
-  "presidio-anonymizer"
-]
 test = [
   "aioboto3>=11.0.0",
-  "nvidia-nat-eval == {version}",
+  "nvidia-nat-eval[full] == {version}",
   "nvidia-nat-test == {version}",
 ]
 

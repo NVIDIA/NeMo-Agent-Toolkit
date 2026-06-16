@@ -35,6 +35,7 @@ The examples in the NeMo-Agent-Toolkit-Examples repository are community contrib
 - **[NeMo Agent Toolkit Components](#nemo-agent-toolkit-components)**
   - [Agents](#agents)
   - [Advanced Agents](#advanced-agents)
+  - [Experimental](#experimental)
   - [Configuration](#configuration)
   - [Control Flow](#control-flow)
   - [Custom Functions](#custom-functions)
@@ -52,7 +53,7 @@ The examples in the NeMo-Agent-Toolkit-Examples repository are community contrib
   - [Evaluation and Profiling](#evaluation-and-profiling)
   - [Finetuning](#finetuning)
 - **[Platform Integrations](#platform-integrations)**
-  - [Dynamo Integration](#dynamo-integration)
+  - [Dynamo Integration (experimental)](#dynamo-integration-experimental)
   - [Retrieval Augmented Generation (RAG)](#retrieval-augmented-generation-rag)
   - [NeMo Agent Toolkit Safety and Security](#nemo-agent-toolkit-safety-and-security)
 - [Documentation Guide Files](#documentation-guide-files)
@@ -103,6 +104,13 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`AIQ Blueprint`](advanced_agents/aiq_blueprint/README.md)**: Blueprint documentation for the official NVIDIA AIQ Blueprint for building an AI agent designed for enterprise research use cases. **[🛑 Advanced]**
 - **[`alert_triage_agent`](advanced_agents/alert_triage_agent/README.md)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization **[🟨 Intermediate]**
 - **[`vulnerability_analysis_blueprint`](advanced_agents/vulnerability_analysis_blueprint/README.md)**: Blueprint documentation for vulnerability analysis agents **[🛑 Advanced]**
+
+### Experimental
+- **[`claude_code_agent_adapter`](experimental/claude_code_agent_adapter/README.md)**: Experimental primitive agent workflow backed by the Claude Code CLI with a conservative local smoke-test config. **[🛑 Advanced]**
+- **[`codex_agent_adapter`](experimental/codex_agent_adapter/README.md)**: Experimental primitive agent workflow backed by the Codex CLI in read-only mode. **[🛑 Advanced]**
+- **[`cursor_agent_adapter`](experimental/cursor_agent_adapter/README.md)**: Experimental primitive agent workflow backed by Cursor Agent CLI in plan mode. **[🛑 Advanced]**
+- **[`openclaw_agent_adapter`](experimental/openclaw_agent_adapter/README.md)**: Experimental primitive agent workflow backed by OpenClaw CLI one-shot runs. **[🛑 Advanced]**
+- **[`hermes_agent_adapter`](experimental/hermes_agent_adapter/README.md)**: Experimental primitive agent workflow backed by Hermes Agent CLI single-query mode, with optional NeMo Relay and Phoenix telemetry. **[🛑 Advanced]**
 
 ### Configuration
 - **[`config_inheritance`](config_inheritance/README.md)**: Use YAML configuration inheritance in the NeMo Agent Toolkit to reduce duplication across similar configuration files **[🟢 Beginner]**
@@ -156,7 +164,6 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`simple_calculator_fastmcp_protected`](MCP/simple_calculator_fastmcp_protected/README.md)**: FastMCP frontend variant of `simple_calculator_mcp_protected` that publishes an MCP server using the FastMCP server. Demonstrates the use of per-user workflows to securely access the protected MCP server **[🟨 Intermediate]**
 - **[`simple_auth_mcp`](MCP/simple_auth_mcp/README.md)**: Demonstrates a NVIDIA NeMo Agent Toolkit workflow connecting to a third-party MCP server that requires authentication using OAuth2 flows **[🟨 Intermediate]**
 - **[`service_account_auth_mcp`](MCP/service_account_auth_mcp/README.md)**: Demonstrates how to use the NVIDIA NeMo Agent Toolkit with third-party MCP servers that support service account authentication **[🟨 Intermediate]**
-- **[`kaggle_mcp`](MCP/kaggle_mcp/README.md)**: Demonstrates how to use the Kaggle MCP server with NVIDIA NeMo Agent Toolkit to interact with Kaggle's datasets, notebooks, models, and competitions **[🟨 Intermediate]**
 
 ### Agent2Agent Protocol (A2A)
 - **[`math_assistant_a2a`](./A2A/math_assistant_a2a/README.md)**: Demonstrates an end-to-end A2A workflow with NVIDIA NeMo Agent Toolkit functioning as both A2A client and server. The workflow performs mathematical calculations integrated with time queries and logical reasoning, combining remote calculator operations with local time services and conditional evaluation tools **[🟨 Intermediate]**
@@ -178,7 +185,9 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 
 ## Platform Integrations
 
-### Dynamo Integration
+### Dynamo Integration (experimental)
+> The Dynamo integration examples are experimental and require [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.1.0. For details, see the README in each example directory.
+- **[`latency_sensitivity_demo`](dynamo_integration/latency_sensitivity_demo/README.md)**: Infers per-request latency sensitivity from agent profiles and applies Dynamo runtime hints for cache control, load-aware routing, and priority-aware serving. **[🛑 Advanced]**
 - **[`react_benchmark_agent`](dynamo_integration/react_benchmark_agent/README.md)**: Walks through the complete process of running decision-only evaluations using the `react_benchmark_agent`: downloading data, configuring evaluations, running experiments, and analyzing results. **[🛑 Advanced]**
 - **[`react_benchmark_agent - src - react_benchmark_agent`](dynamo_integration/react_benchmark_agent/src/react_benchmark_agent/DEVELOPER_NOTES.md)**: Developer notes that map React Benchmark Agent configuration files to the underlying components, evaluators, and workflows. **[🛑 Advanced]**
 
@@ -188,7 +197,7 @@ _See the [Dynamo Integration README](dynamo_integration/README.md) for additiona
 - **[`simple_rag`](RAG/simple_rag/README.md)**: Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform **[🛑 Advanced]**
 
 ### NeMo Agent Toolkit Safety and Security
-- **[`retail_agent`](safety_and_security/retail_agent/README.md)**: Demonstrates the NeMo Agent Toolkit Safety and Security capabilities by assessing and improving the security posture of an example Retail Agent **[🛑 Advanced]**
+- **[`retail_agent`](safety_and_security/retail_agent/README.md)**: Demonstrates the NeMo Agent Toolkit Safety and Security capabilities by assessing and improving the security posture of an example Retail Agent with defense middleware, including a [NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails) middleware configuration ([`config-with-guardrails.yml`](safety_and_security/retail_agent/src/nat_retail_agent/configs/config-with-guardrails.yml)) **[🛑 Advanced]**
 
 ## Documentation Guide Files
 

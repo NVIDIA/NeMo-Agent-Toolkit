@@ -15,4 +15,7 @@
 
 # flake8: noqa
 
-from .eval.red_teaming_evaluator.register import register_red_teaming_evaluator
+from nat.plugins.security.eval.red_teaming_evaluator.register import register_red_teaming_evaluator
+from nat.plugins.security.middleware.defense import register as _register_defense
+from nat.plugins.security.middleware.guardrails import register as _register_guardrails
+from nat.plugins.security.middleware.red_teaming import register as _register_red_teaming

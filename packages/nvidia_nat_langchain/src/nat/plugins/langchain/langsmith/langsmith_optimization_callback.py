@@ -350,6 +350,17 @@ class LangSmithOptimizationCallback:
                 break
         return _humanize_dataset_name(name)
 
+    @staticmethod
+    def _clean_handle_part(value: str, fallback: str) -> str:
+        """Clean a prompt handle component for LangSmith prompt repos."""
+        slug = re.sub(r"[^a-z0-9_-]+", "-", value.lower())
+        slug = re.sub(r"-+", "-", slug).strip("-_")
+        if not slug:
+            return fallback
+        if not slug[0].isalpha():
+            return f"{fallback}-{slug}"
+        return slug
+
     def _get_prompt_repo_name(self, param_name: str) -> str:
         """Get or create a unique prompt repo name for this optimization run.
 
@@ -365,10 +376,10 @@ class LangSmithOptimizationCallback:
             if param_slug.startswith(prefix):
                 param_slug = param_slug[len(prefix):]
                 break
-        param_slug = param_slug.lower().replace(".", "-").replace("_", "-")
+        param_slug = self._clean_handle_part(param_slug, fallback="prompt")
 
         # Prefix with project name
-        project_slug = (self._project.lower().replace(" ", "-").replace("_", "-"))
+        project_slug = self._clean_handle_part(self._project, fallback="project")
         base = f"{project_slug}-{param_slug}"
 
         pattern = re.compile(re.escape(base) + r"-run-(\d+)$")

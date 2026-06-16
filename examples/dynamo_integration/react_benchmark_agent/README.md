@@ -20,6 +20,11 @@ limitations under the License.
 
 # Agent Leaderboard v2 - Evaluation Guide
 
+> [!WARNING]
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.1.0**, where `dynamo.sglang` rejects `--schedule-low-priority-values-first` and normalizes request priority so higher values are higher priority. Earlier releases use different priority semantics. (End-to-end tested against the NGC `sglang-runtime` 1.1.1 and 1.2.1 images; no stable 1.3.0 is published yet.)
+
 **Complexity:** 🛑 Advanced
 
 This guide walks through the complete process of running decision-only evaluations using the `react_benchmark_agent`: downloading data, configuring evaluations, running experiments, and analyzing results.
@@ -332,9 +337,9 @@ workflow:
   _type: react_agent
   llm_name: dynamo_llm
   tool_names: [
-    banking_tools.get_account_balance,
-    banking_tools.transfer_funds,
-    # ... all tools with banking_tools. prefix
+    banking_tools__get_account_balance,
+    banking_tools__transfer_funds,
+    # ... all tools with banking_tools__ prefix
   ]
   verbose: true
   max_tool_calls: 25
@@ -469,7 +474,7 @@ functions:
   react_workflow:
     _type: react_agent
     llm_name: dynamo_llm
-    tool_names: [banking_tools.get_account_balance, ...]
+    tool_names: [banking_tools__get_account_balance, ...]
     verbose: true
     max_tool_calls: 25
 

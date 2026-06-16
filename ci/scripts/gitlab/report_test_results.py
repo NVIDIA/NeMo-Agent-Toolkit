@@ -178,8 +178,9 @@ def build_model_health_messages(health_data: dict[str, typing.Any]) -> ReportMes
 
     removed = health_data.get("removed", [])
     down = health_data.get("down", [])
+    deprecated = health_data.get("deprecated", [])
     ok = health_data.get("ok", [])
-    num_failures = len(removed) + len(down)
+    num_failures = len(removed) + len(down) + len(deprecated)
 
     plain_text: list[str] = []
     blocks: list[dict] = []
@@ -196,8 +197,9 @@ def build_model_health_messages(health_data: dict[str, typing.Any]) -> ReportMes
     stats = "\n".join([
         get_error_string(len(removed), "Removed"),
         get_error_string(len(down), "Down"),
+        get_error_string(len(deprecated), "Deprecated"),
         f"OK: {len(ok)}",
-        f"Total models: {len(removed) + len(down) + len(ok)}",
+        f"Total models: {len(removed) + len(down) + len(deprecated) + len(ok)}",
     ])
     add_text(stats, blocks, plain_text)
 
@@ -226,6 +228,16 @@ def build_model_health_messages(health_data: dict[str, typing.Any]) -> ReportMes
                 model_name = entry.get('model', 'unknown')
                 model_type = entry.get('type', 'unknown')
                 msg = f"`{model_name}` ({model_type}) HTTP {status}: {detail}\n{configs}"
+                add_text(msg, failure_blocks, failure_text)
+
+        if deprecated:
+            add_text(f"*Deprecated ({len(deprecated)}):*", failure_blocks, failure_text)
+            for entry in deprecated:
+                detail = entry.get("detail", "")
+                configs = "\n".join(f"  - {c}" for c in entry.get("configs", []))
+                model_name = entry.get('model', 'unknown')
+                model_type = entry.get('type', 'unknown')
+                msg = f"`{model_name}` ({model_type}) Deprecated: {detail}\n{configs}"
                 add_text(msg, failure_blocks, failure_text)
 
         job_url = os.environ.get("CI_JOB_URL")

@@ -17,6 +17,11 @@ limitations under the License.
 
 # Latency Sensitivity Demo
 
+> [!WARNING]
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.1.0**, where `dynamo.sglang` rejects `--schedule-low-priority-values-first` and normalizes request priority so higher values are higher priority. Earlier releases use different priority semantics. (End-to-end tested against the NGC `sglang-runtime` 1.1.1 and 1.2.1 images; no stable 1.3.0 is published yet.)
+
 This example demonstrates **automatic latency sensitivity inference** end-to-end: profiling a multi-step LLM workflow, computing per-node sensitivity scores, and using those scores as Dynamo routing hints at runtime for improved performance.
 
 Agentic workflows are not flat sequences of identical LLM calls. Some calls gate everything downstream (the first classifier), some run in parallel with slack to spare, and some are the last thing before the user sees a response. Treating them all the same leaves performance on the table. This demo shows how the NeMo Agent Toolkit profiler can automatically detect which calls matter most and feed that information to Dynamo so it can route requests accordingly.
@@ -98,19 +103,22 @@ First, run the workflow against a Dynamo endpoint to collect profiler traces and
 
 In a new terminal and directory, or on another machine, install Dynamo from source by following the [Dynamo installation guide](./INSTALL_LIBRARY.md).
 
-Download the `NVIDIA-Nemotron-3-Nano-30B-A3B-BF16` model from Hugging Face by running the command below in the directory where you installed Dynamo.
+Set `DYNAMO_SOURCE_DIR` to the Dynamo source checkout you created in the installation guide and `NAT_REPO_DIR` to the NeMo Agent Toolkit repository root, then download the `NVIDIA-Nemotron-3-Nano-30B-A3B-BF16` model from Hugging Face.
 
 ```bash
+export DYNAMO_SOURCE_DIR="${HOME}/dynamo"  # adjust if you cloned Dynamo elsewhere
+export NAT_REPO_DIR="/path/to/NeMo-Agent-Toolkit"  # adjust to your NeMo Agent Toolkit checkout
+cd "$DYNAMO_SOURCE_DIR"
 export HF_TOKEN=hf_...
 huggingface-cli download nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16
 ```
 
-Then deploy the baseline Dynamo deployment by following the steps below. 
+From the Dynamo source checkout, deploy the baseline Dynamo deployment by following the steps below.
 
 #### A. Start infrastructure containers
 
 ```bash
-cd dynamo/deploy
+cd "$DYNAMO_SOURCE_DIR/deploy"
 docker compose -f docker-compose.yml up -d --remove-orphans
 ```
 
@@ -119,31 +127,49 @@ This starts **etcd** (port 2379) and **NATS** (port 4222/8222).
 #### B. (Optional) Start observability stack
 
 ```bash
+cd "$DYNAMO_SOURCE_DIR/deploy"
 docker compose -f docker-observability.yml up -d --remove-orphans
 ```
 
 #### C. Run the Dynamo stack
 
-Move `scripts/dynamo_stack.sh` into the directory where you installed Dynamo from source, then run it in the virtual environment. 
+Copy `dynamo_stack.sh` into the Dynamo source checkout. Then run it in the Dynamo virtual environment.
 
 ```bash
+cp "$NAT_REPO_DIR/examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/scripts/dynamo_stack.sh" "$DYNAMO_SOURCE_DIR/"
+cd "$DYNAMO_SOURCE_DIR"
+source .venv/bin/activate
 bash dynamo_stack.sh
 ```
 
+The stack script defaults to a local two-GPU setup with `CUDA_VISIBLE_DEVICES=0,1` and `TP_SIZE=2`.
+It also uses single-node NCCL startup defaults (`NCCL_NET_PLUGIN=none`, `NCCL_IB_DISABLE=1`) so local
+validation does not load host-specific network plugins or use RDMA/InfiniBand by default. Override these
+values before running the script if your machine requires a different GPU list, tensor-parallel size, or
+RDMA/InfiniBand configuration.
+The script waits for the model to appear in `/v1/models` and exits with a pointer to
+`/tmp/dynamo-stack/all.log` if the worker dies or startup times out.
+
 #### D. Verify
 
-From this terminal, verify you can reach the Dynamo endpoint assuming your port for inference is 8099 and available
-on localhost:
+From another terminal, verify the Dynamo endpoint has registered the served model:
+
+```bash
+curl -s http://localhost:8099/v1/models | python3 -m json.tool
+```
+
+Then send a test request:
 
 ```bash
 curl http://localhost:8099/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "YOUR_MODEL_NAME",
+    "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
     "messages": [{"role": "user", "content": "Hello!"}],
     "max_tokens": 64
   }'
 ```
+
 ### Step 1b: Run the Profiler to Build the Prediction Trie
 
 ```bash
@@ -219,13 +245,20 @@ ROUTING RECOMMENDATIONS
 
 ## Step 3: Restart Dynamo Backend
 
-Kill your previously running dynamo deployment by pressing `ctrl+c` in the terminal where you ran `dynamo_stack.sh`. Then copy `scripts/dynamo_stack_sensitivity.sh` into the directory where you installed Dynamo from source, and run it.
+Kill your previously running dynamo deployment by pressing `ctrl+c` in the terminal where you ran `dynamo_stack.sh`. Then copy `dynamo_stack_sensitivity.sh` into the Dynamo source checkout, and run it.
 
 This ensures you have a fresh deployment ready to receive routing hints in Step 4.
 
 ```bash
+cp "$NAT_REPO_DIR/examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/scripts/dynamo_stack_sensitivity.sh" "$DYNAMO_SOURCE_DIR/"
+cd "$DYNAMO_SOURCE_DIR"
+source .venv/bin/activate
 bash dynamo_stack_sensitivity.sh
 ```
+
+The sensitivity stack uses the same GPU, tensor-parallel, and NCCL startup defaults as the baseline
+stack. Set the same environment variables before running the script if your environment requires
+different values.
 
 Verify the endpoint is responding:
 
@@ -251,7 +284,7 @@ The Dynamo LLM client reads the prediction trie and, for each LLM call, injects 
 | `osl` | `int` | Predicted output sequence length (tokens) — informs decode cost estimation |
 | `iat` | `int` | Predicted inter-arrival time (ms) — informs request pacing and worker stickiness |
 | `latency_sensitivity` | `float` | The auto-computed sensitivity score (1–5 from the prediction trie) |
-| `priority` | `int` | Integer complement of sensitivity (`max_sensitivity - latency_sensitivity`). Lower value = higher priority. |
+| `priority` | `int` | Engine scheduler priority, equal to `latency_sensitivity`. Dynamo normalizes priority so **higher value = higher priority** on both vLLM (negated internally) and SGLang (`--enable-priority-scheduling`). |
 
 The client also injects `nvext.cache_control` with a TTL computed as `total_requests * iat` (the estimated conversation duration), so KV cache entries auto-expire after the workflow is expected to complete.
 
@@ -268,7 +301,7 @@ The client also injects `nvext.cache_control` with a TTL computed as `total_requ
       "osl": 2,
       "iat": 4,
       "latency_sensitivity": 5.0,
-      "priority": 995
+      "priority": 5
     },
     "cache_control": {
       "type": "ephemeral",

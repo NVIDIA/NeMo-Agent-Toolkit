@@ -16,6 +16,9 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit and Dynamo Integration
 
+> [!WARNING]
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.1.0**, where `dynamo.sglang` rejects `--schedule-low-priority-values-first` and normalizes request priority so higher values are higher priority. Earlier releases use different priority semantics. (End-to-end tested against the NGC `sglang-runtime` 1.1.1 and 1.2.1 images; no stable 1.3.0 is published yet.)
+
 **Complexity:** 🛑 Advanced
 
 > [!NOTE]
@@ -301,7 +304,7 @@ external/dynamo/                       # Dynamo backend (separate location)
 workflow:
   _type: react_agent
   llm_name: dynamo_llm
-  tool_names: [banking_tools.get_account_balance, ...]
+  tool_names: [banking_tools__get_account_balance, ...]
 ```
 
 ### With Self-Evaluation Loop

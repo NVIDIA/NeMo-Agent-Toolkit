@@ -26,6 +26,7 @@ from fastapi.responses import StreamingResponse
 from nat.builder.context import Context
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
+from nat.data_models.interactive_http import ExecutionAcceptedResponse
 from nat.data_models.interactive_http import ExecutionStatus
 from nat.front_ends.fastapi.response_helpers import generate_single_response
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
@@ -34,6 +35,14 @@ from nat.runtime.session import SessionManager
 from .execution import build_accepted_response
 
 logger = logging.getLogger(__name__)
+
+
+def _interactive_response_model(response_type: type | None, enable_interactive: bool) -> Any:
+    """Expand response_type to include ExecutionAcceptedResponse when interactive mode is enabled."""
+    if not enable_interactive or response_type is None:
+        return response_type
+    return response_type | ExecutionAcceptedResponse
+
 
 RESPONSE_500 = {
     "description": "Internal Server Error",
@@ -123,19 +132,22 @@ def get_streaming_endpoint(*,
                            session_manager: SessionManager,
                            streaming: bool,
                            result_type: type | None,
-                           output_type: type | None):
+                           output_type: type | None,
+                           wrap_output_in_payload: bool = False):
     """Build a streaming GET handler."""
     auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
 
     async def get_stream(request: Request):
         async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
             return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                     content=generate_streaming_response_as_str(None,
-                                                                                session=session,
-                                                                                streaming=streaming,
-                                                                                step_adaptor=worker.get_step_adaptor(),
-                                                                                result_type=result_type,
-                                                                                output_type=output_type))
+                                     content=generate_streaming_response_as_str(
+                                         None,
+                                         session=session,
+                                         streaming=streaming,
+                                         step_adaptor=worker.get_step_adaptor(),
+                                         result_type=result_type,
+                                         output_type=output_type,
+                                         wrap_output_in_payload=wrap_output_in_payload))
 
     return get_stream
 
@@ -220,7 +232,8 @@ def post_streaming_endpoint(*,
                             enable_interactive: bool,
                             streaming: bool,
                             result_type: type | None,
-                            output_type: type | None):
+                            output_type: type | None,
+                            wrap_output_in_payload: bool = False):
     """Build a streaming POST handler."""
 
     async def post_stream_interactive(request: Request, payload: Any = Body()):
@@ -234,6 +247,7 @@ def post_streaming_endpoint(*,
                 step_adaptor=worker.get_step_adaptor(),
                 result_type=result_type,
                 output_type=output_type,
+                wrap_output_in_payload=wrap_output_in_payload,
             ),
         )
 
@@ -241,11 +255,13 @@ def post_streaming_endpoint(*,
         auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
         async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
             return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                     content=generate_streaming_response_as_str(payload,
-                                                                                session=session,
-                                                                                streaming=streaming,
-                                                                                step_adaptor=worker.get_step_adaptor(),
-                                                                                result_type=result_type,
-                                                                                output_type=output_type))
+                                     content=generate_streaming_response_as_str(
+                                         payload,
+                                         session=session,
+                                         streaming=streaming,
+                                         step_adaptor=worker.get_step_adaptor(),
+                                         result_type=result_type,
+                                         output_type=output_type,
+                                         wrap_output_in_payload=wrap_output_in_payload))
 
     return _with_annotation(post_stream_interactive if enable_interactive else post_stream, "payload", request_type)

@@ -18,19 +18,15 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit Release Notes
 This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 
-## Release v1.7.0
+## Release v1.8.0
 ### Summary
 
-* Add AI coding agent skills for NeMo Agent Toolkit
-* Add ATIF trajectory exporter for Phoenix visualization and debugging
-* Add Exa Search API support as internet search tool
-* Add OCI LangChain support for hosted Nemotron workflows
-* ATOF v0.1: Agentic Trajectory Observability Format
-* Add consent-gated runtime telemetry for NeMo Agent Toolkit CLI commands
-* Add Arize AX OTLP exporter, docs, and examples
-* Add token streaming support for ReAct Agent
+* Added Guardrails support
+* Added Experimental coding-agent adapters with NeMo-Relay telemetry
+* Added Microsoft Agent 365 integration plugin
+* Added Windows WSL2 setup instructions
 
-Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.7/CHANGELOG.md) for the complete list of changes.
+Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.8/CHANGELOG.md) for the complete list of changes.
 
 ## Known Issues
 - Refer to [https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) for an up to date list of current issues.

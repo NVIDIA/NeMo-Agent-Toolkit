@@ -32,14 +32,16 @@ nat info components -t llm_client -q openai
 
 ## Provider Types
 
-In NeMo Agent Toolkit, there are three provider types: `llm`, `embedder`, and `retriever`. The three provider types are defined by their respective base configuration classes: {class}`nat.data_models.llm.LLMBaseConfig`, {class}`nat.data_models.embedder.EmbedderBaseConfig`, and {class}`nat.data_models.retriever.RetrieverBaseConfig`. This guide focuses on adding an LLM provider. However, the process for adding an [embedder](../../build-workflows/embedders.md) or [retriever](../../build-workflows/retrievers.md) provider is similar.
+In NeMo Agent Toolkit, there are three provider types: `llm`, `embedder`, and `retriever`. The three provider types are defined by their respective base configuration classes: {class}`nat.plugin_api.LLMBaseConfig`, {class}`nat.plugin_api.EmbedderBaseConfig`, and {class}`nat.plugin_api.RetrieverBaseConfig`. This guide focuses on adding an LLM provider. However, the process for adding an [embedder](../../build-workflows/embedders.md) or [retriever](../../build-workflows/retrievers.md) provider is similar.
 
 
 ## Defining an LLM Provider
-The first step to adding an LLM provider is to subclass the {class}`nat.data_models.llm.LLMBaseConfig` class and add the configuration parameters needed to interact with the LLM API. Typically, this involves a `model_name` parameter and an `api_key` parameter; however, the exact parameters will depend on the API. The only requirement is a unique name for the provider.
+The first step to adding an LLM provider is to subclass the {class}`nat.plugin_api.LLMBaseConfig` class and add the configuration parameters needed to interact with the LLM API. Typically, this involves a `model_name` parameter and an `api_key` parameter; however, the exact parameters will depend on the API. The only requirement is a unique name for the provider.
 
 Examine the previously mentioned {class}`nat.llm.openai_llm.OpenAIModelConfig` class:
 ```python
+from nat.plugin_api import LLMBaseConfig
+
 class OpenAIModelConfig(LLMBaseConfig, name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
 
@@ -66,6 +68,7 @@ The {class}`nat.data_models.retry_mixin.RetryMixin` is a mixin that adds a `max_
 
 ```python
 from nat.data_models.retry_mixin import RetryMixin
+from nat.plugin_api import LLMBaseConfig
 
 class OpenAIModelConfig(LLMBaseConfig, RetryMixin, name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
@@ -96,6 +99,7 @@ The {class}`nat.data_models.thinking_mixin.ThinkingMixin` is a mixin that adds a
 
 ```python
 from nat.data_models.thinking_mixin import ThinkingMixin
+from nat.plugin_api import LLMBaseConfig
 
 class NIMModelConfig(LLMBaseConfig, ThinkingMixin, name="nim"):
     """An NIM LLM provider to be used with an LLM client."""
@@ -118,16 +122,20 @@ class NIMModelConfig(LLMBaseConfig, ThinkingMixin, name="nim"):
 ```
 
 ### Registering the Provider
-An asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_provider` is used to register the provider with NeMo Agent Toolkit by yielding an instance of {class}`nat.builder.llm.LLMProviderInfo`.
+An asynchronous function decorated with {py:deco}`nat.plugin_api.register_llm_provider` is used to register the provider with NeMo Agent Toolkit by yielding an instance of {class}`nat.plugin_api.LLMProviderInfo`.
 
 :::{note}
-Registering an embedder or retriever provider is similar; however, the function should be decorated with  {py:deco}`nat.cli.register_workflow.register_embedder_provider` or  {py:deco}`nat.cli.register_workflow.register_retriever_provider`.
+Registering an embedder or retriever provider is similar; however, the function should be decorated with  {py:deco}`nat.plugin_api.register_embedder_provider` or  {py:deco}`nat.plugin_api.register_retriever_provider`.
 :::
 
 
 The `OpenAIModelConfig` from the previous section is registered as follows:
 `packages/nvidia_nat_core/src/nat/llm/openai_llm.py`:
 ```python
+from nat.plugin_api import Builder
+from nat.plugin_api import LLMProviderInfo
+from nat.plugin_api import register_llm_provider
+
 @register_llm_provider(config_type=OpenAIModelConfig)
 async def openai_llm(config: OpenAIModelConfig, builder: Builder):
 
@@ -136,6 +144,10 @@ async def openai_llm(config: OpenAIModelConfig, builder: Builder):
 
 In the above example we didn't need to take any additional actions other than yielding the provider info. However, in some cases additional set up may be required, such as connecting to a cluster and performing validation could be performed in this method. In addition to this, any cleanup that needs to be done when the provider is no longer needed can be performed after the `yield` statement in the `finally` clause of a `try` statement. If this were needed we could update the above example as follows:
 ```python
+from nat.plugin_api import Builder
+from nat.plugin_api import LLMProviderInfo
+from nat.plugin_api import register_llm_provider
+
 @register_llm_provider(config_type=OpenAIModelConfig)
 async def openai_llm(config: OpenAIModelConfig, builder: Builder):
     # Perform any setup actions here and pre-flight checks here raising an exception if needed
@@ -146,18 +158,22 @@ async def openai_llm(config: OpenAIModelConfig, builder: Builder):
 ```
 
 ## LLM Clients
-As previously mentioned, each LLM client is specific to both the LLM API and the framework being used. The LLM client is registered by defining an asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_client`. The `register_llm_client` decorator receives two required parameters: `config_type`, which is the configuration class of the provider, and `wrapper_type`, which identifies the framework being used.
+As previously mentioned, each LLM client is specific to both the LLM API and the framework being used. The LLM client is registered by defining an asynchronous function decorated with {py:deco}`nat.plugin_api.register_llm_client`. The `register_llm_client` decorator receives two required parameters: `config_type`, which is the configuration class of the provider, and `wrapper_type`, which identifies the framework being used.
 
 :::{note}
-Registering an embedder or retriever client is similar. However, the function should be decorated with {py:deco}`nat.cli.register_workflow.register_embedder_client` or {py:deco}`nat.cli.register_workflow.register_retriever_client`.
+Registering an embedder or retriever client is similar. However, the function should be decorated with {py:deco}`nat.plugin_api.register_embedder_client` or {py:deco}`nat.plugin_api.register_retriever_client`.
 :::
 
-The wrapped function in turn receives two required positional arguments: an instance of the configuration class of the provider, and an instance of {class}`nat.builder.builder.Builder`. The function should then yield a client suitable for the given provider and framework. The exact type is dictated by the framework itself and not by NeMo Agent Toolkit.
+The wrapped function in turn receives two required positional arguments: an instance of the configuration class of the provider, and an instance of {class}`nat.plugin_api.Builder`. The function should then yield a client suitable for the given provider and framework. The exact type is dictated by the framework itself and not by NeMo Agent Toolkit.
 
 Since many frameworks provide clients for many of the common LLM APIs, in NeMo Agent Toolkit, the client registration functions are often simple factory methods. For example, the OpenAI client registration function for LangChain/LangGraph is as follows:
 
 `packages/nvidia_nat_langchain/src/nat/plugins/langchain/llm.py`:
 ```python
+from nat.plugin_api import Builder
+from nat.plugin_api import LLMFrameworkEnum
+from nat.plugin_api import register_llm_client
+
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
 
@@ -205,7 +221,7 @@ Note: Since this test requires an API key, it's requesting the `nvidia_api_key` 
 
 ## Packaging the Provider and Client
 
-The provider and client will need to be bundled into a Python package, which in turn will be registered with NeMo Agent Toolkit as a [plugin](../plugins.md). In the `pyproject.toml` file of the package the `project.entry-points.'nat.components'` section, defines a Python module as the entry point of the plugin. Details on how this is defined are found in the [Entry Point](../plugins.md#entry-point) section of the plugins document. By convention, the entry point module is named `register.py`, but this is not a requirement.
+The provider and client will need to be bundled into a Python package, which in turn will be registered with NeMo Agent Toolkit as a [plugin](../plugins.md). In the `pyproject.toml` file of the package the `project.entry-points.'nat.plugins'` section defines a Python module as the entry point of the plugin. Details on how this is defined are found in the [Entry Point](../plugins.md#entry-point) section of the plugins document. By convention, the entry point module is named `register.py`, but this is not a requirement.
 
 In the entry point module it is important that the provider is defined first followed by the client, this ensures that the provider is added to the NeMo Agent Toolkit registry before the client is registered. A hypothetical `register.py` file could be defined as follows:
 ```python

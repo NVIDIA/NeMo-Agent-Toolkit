@@ -35,7 +35,7 @@ The default `nvidia-nat` install includes `nvidia-nat-core`. To keep the library
 
 To install these first-party plugin libraries, you can use the full distribution name (for example, `nvidia-nat-langchain`) or use the `nvidia-nat[langchain]` extra distribution. The following extras are supported:
 
-- `nvidia-nat[adk]` or `nvidia-nat-adk` - [Google ADK](https://github.com/google/adk-python) Conflicts with `nvidia-nat[openpipe-art]` and `nvidia-nat[ragaai]`.
+- `nvidia-nat[adk]` or `nvidia-nat-adk` - [Google ADK](https://github.com/google/adk-python) Conflicts with `nvidia-nat[openpipe-art]`.
 - `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/) Conflicts with `nvidia-nat[openpipe-art]`.
 - `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
@@ -51,12 +51,13 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[openpipe-art]` or `nvidia-nat-openpipe-art` - [Agent Reinforcement Trainer](https://art.openpipe.ai/getting-started/about) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[crewai]`.
 - `nvidia-nat[opentelemetry]` or `nvidia-nat-opentelemetry` - [OpenTelemetry](https://opentelemetry.io/) (includes the `arize_ax` exporter for [Arize AX](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel))
 - `nvidia-nat[phoenix]` or `nvidia-nat-phoenix` - [Arize Phoenix](https://arize.com/docs/phoenix)
-- `nvidia-nat[ragaai]` or `nvidia-nat-ragaai` - [RagaAI Catalyst](https://raga.ai/) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[strands]`.
 - `nvidia-nat[redis]` or `nvidia-nat-redis` - [Redis](https://redis.io/)
 - `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
-- `nvidia-nat[security]` or `nvidia-nat-security` - Security and red-team components (`nat red-team`)
+- `nvidia-nat[security]` or `nvidia-nat-security` - Red-team CLI and evaluators (`nat red-team`)
+- `nvidia-nat[defense]` or `nvidia-nat-security[defense]` - Built-in defense middleware (`pii_defense`, `content_safety_guard`, etc.)
+- `nvidia-nat[guardrails]` or `nvidia-nat-security[guardrails]` - NeMo Guardrails policy middleware
 - `nvidia-nat[semantic-kernel]` or `nvidia-nat-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
-- `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python). Conflicts with `nvidia-nat[ragaai]`.
+- `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python).
 - `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent Toolkit testing package
 - `nvidia-nat[profiler]` or `nvidia-nat-profiler` - Profiling and performance analysis components used by evaluation and sizing workflows
 - `nvidia-nat[weave]` or `nvidia-nat-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai)
@@ -67,8 +68,7 @@ To install these first-party plugin libraries, you can use the full distribution
 
 - `nvidia-nat[async_endpoints]` - Support for asynchronous endpoints when launching `nat serve`
 - `nvidia-nat[gunicorn]` - Support for launching `nat serve` with an alternative server; requires additional configuration file changes
-- `nvidia-nat[most]` - Extra containing all Framework integrations except for: `nvidia-nat-ragaai`, `nvidia-nat-openpipe-art`
-- `nvidia-nat[pii-defense]` - Additional dependencies for red-teaming defenses and middleware
+- `nvidia-nat[most]` - Extra containing all Framework integrations except for: `nvidia-nat-openpipe-art`, `nvidia-nat-a365`
 
 ## Supported Platforms
 
@@ -78,6 +78,8 @@ To install these first-party plugin libraries, you can use the full distribution
 | Linux | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested, Validated in CI |
 | macOS | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
 | macOS | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested |
+| [Windows (WSL2)](#windows-wsl2) | x86_64 | 3.11, 3.12, 3.13 | ✅ Tested |
+| [Windows (WSL2)](#windows-wsl2) | aarch64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
 | Windows | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
 | Windows | aarch64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
 
@@ -119,6 +121,8 @@ The full list of optional dependencies can be found [here](#packages).
 :::{warning}
 Using Conda environments is not recommended and may cause component resolution issues. Only create vanilla Python virtual environments through `python -m venv` or `uv venv` with no other active environments. For more information, see the [Troubleshooting Guide](../resources/troubleshooting.md#workflow-issues).
 :::
+
+For Windows users, it is recommended to run NeMo Agent Toolkit inside WSL2. Follow the [Windows (WSL2)](#windows-wsl2) section below for Windows-specific installation instructions.
 
 Installing from source is required to run any examples provided in the repository or to contribute to the project.
 
@@ -183,6 +187,63 @@ Installing from source is required to run any examples provided in the repositor
      ```
 
      If the installation succeeded, the `nat` command will log the help message and its current version.
+
+## Windows (WSL2)
+
+NeMo Agent Toolkit is developed and tested on Linux and macOS. On Windows, the recommended path is to run the toolkit inside the Windows Subsystem for Linux 2 (WSL2). The steps in this section were verified on Windows 11 with Ubuntu 24.04 LTS.
+
+Complete the Windows-specific steps below, then continue with the standard [Install From Source](#install-from-source) steps, running every command inside the WSL2 Ubuntu shell.
+
+### Install WSL2 and Ubuntu
+
+From an Administrator PowerShell session, install WSL2 with an Ubuntu distribution, then restart the machine when prompted:
+
+```bash
+wsl --install -d Ubuntu-24.04
+```
+
+:::{note}
+To check whether WSL2 is already installed, run `wsl --status`. If the output reports a default distribution and `Default Version: 2`, WSL2 is ready and you can skip to the next step.
+:::
+
+### Set up the Linux user
+
+The first time Ubuntu launches, it prompts you to create a Linux username and password. This password is separate from the Windows password and is used for `sudo` commands inside Ubuntu.
+
+:::{note}
+To set or change the password later, run the following from an Administrator PowerShell session, replacing `<username>` with your Linux username:
+
+```bash
+wsl -u root
+passwd <username>
+exit
+```
+:::
+
+### Install build prerequisites
+
+Open Ubuntu (from the Start menu, or by running `wsl` in PowerShell) and install the build tools. Git Large File Storage (LFS) is required by the repository and is not included in the default Ubuntu image:
+
+```bash
+sudo apt update && sudo apt install -y curl git build-essential git-lfs
+```
+
+### Install uv
+
+Install [`uv`](https://docs.astral.sh/uv/) into your user directory:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+:::{note}
+After installing, run `source $HOME/.local/bin/env` in the current shell, or close and reopen Ubuntu, so that the `uv` command is on your `PATH`.
+:::
+
+### Continue with Install From Source
+
+Follow the [Install From Source](#install-from-source) steps below. Run every command inside the WSL2 Ubuntu shell, not in PowerShell or `cmd`. After activating the virtual environment, the shell prompt begins with `(.venv)`; activate the environment in every new Ubuntu session before running `nat` or `uv` commands.
+
 
 ## Next Steps
 

@@ -138,6 +138,8 @@ class WorkflowEvalBuilder(WorkflowEvalBuilderBase):
 
         async def get_tool(fn_name: str):
             # Maintain backwards compatibility with the old function group name format
+            # TODO(#1952): In the next breaking release, remove dot separator compatibility and require
+            # FunctionGroup.SEPARATOR (`__`) for function group tool names.
             new_fn_name = fn_name.replace(FunctionGroup.LEGACY_SEPARATOR, FunctionGroup.SEPARATOR)
             if (fn_name not in self._functions) and (new_fn_name in self._functions):
                 logger.warning(

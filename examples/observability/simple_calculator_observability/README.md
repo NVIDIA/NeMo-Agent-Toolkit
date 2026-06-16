@@ -23,7 +23,7 @@ This example demonstrates how to implement **observability and tracing capabilit
 
 ## Key Features
 
-- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Arize AX (hosted OTLP), Langfuse, LangSmith, Weave, Patronus, and RagaAI Catalyst for comprehensive monitoring options.
+- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Arize AX (hosted OTLP), Langfuse, LangSmith, Weave, and Patronus for comprehensive monitoring options.
 - **Distributed Tracing Implementation:** Shows how to track agent execution flow across components with detailed trace visualization including agent reasoning, tool calls, and LLM interactions.
 - **Performance Monitoring:** Demonstrates capturing latency metrics, token usage, resource consumption, and error tracking for production-ready AI system monitoring.
 - **Development and Production Patterns:** Provides examples for both local development tracing (Phoenix) and production monitoring setups with various enterprise observability platforms.
@@ -248,46 +248,6 @@ For detailed Weave setup instructions, refer to the [Fine-grained Tracing with W
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-patronus.yml --input "Divide 144 by 12"
     ```
 
-### RagaAI Catalyst Integration
-
-Transmit traces to RagaAI Catalyst.
-
-1. Get your Catalyst credentials and create a project:
-
-    1. Login to [RagaAI Catalyst](https://docs.raga.ai/ragaai-catalyst) and navigate to the settings page.
-
-    2. Click on the "Authenticate" tab, then click on "Generate New Key". Take note of the Access Key and Secret Key as you will need them to run the workflow.
-    3. Click on "Projects" in the left sidebar, then click on the "Create Project" button. Name your project `simple-calculator` and click "Create". Alternately another project name can be used, just ensure to update the project name in `examples/observability/simple_calculator_observability/configs/config-catalyst.yml` to match.
-
-
-2. Set your Catalyst API key:
-
-    ```bash
-    export CATALYST_ACCESS_KEY=<your_access_key>
-    export CATALYST_SECRET_KEY=<your_secret_key>
-    ```
-
-    Optionally set a custom endpoint (default is documented in [RagaAI Catalyst](https://docs.raga.ai/ragaai-catalyst)):
-
-    ```bash
-    export CATALYST_ENDPOINT=<your_endpoint>
-    ```
-
-3. Set the NAT_SPAN_PREFIX environment variable to `aiq` for RagaAI Catalyst compatibility:
-
-    ```bash
-    export NAT_SPAN_PREFIX=aiq
-    ```
-
-4. Run the workflow:
-
-    ```bash
-    nat run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "Divide 144 by 12"
-    ```
-
-5. Return to the RagaAI Catalyst dashboard to view your traces.
-    Click on "Projects" in the left sidebar, then select your `simple-calculator` project (or the name you used). You should see `simple-calculator-dataset` listed in the datasets. Click on the dataset to bring up the traces.
-
 ### Galileo Integration
 
 Transmit traces to Galileo for workflow observability.
@@ -310,36 +270,6 @@ Transmit traces to Galileo for workflow observability.
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-galileo.yml --input "Is 100 > 50?"
     ```
 
-### Analyze Traces with DBNL
-
-[DBNL](https://www.distributional.com/) helps you understand your agent by analyzing your traces.
-
-1. Install DBNL:
-
-    Visit [https://docs.dbnl.com/get-started/quickstart](https://docs.dbnl.com/get-started/quickstart) to install DBNL.
-
-2. Create a trace ingestion project:
-
-    Navigate to your DBNL deployment and go to Projects > + New Project
-
-    Create a trace ingestion project and generate an API token
-
-    Take note of the API token and project id
-
-3. Set your DBNL credentials:
-
-    ```bash
-    # DBNL_API_URL should point to your deployment API URL (e.g. http://localhost:8080/api)
-    export DBNL_API_URL=<your_api_url>
-    export DBNL_API_TOKEN=<your_api_token>
-    export DBNL_PROJECT_ID=<your_project_id>
-    ```
-
-4. Run the workflow
-
-    ```bash
-    nat run --config_file examples/observability/simple_calculator_observability/configs/config-dbnl.yml --input "Is 100 > 50?"
-    ```
 
 ## Configuration Files
 
@@ -355,9 +285,7 @@ The example includes multiple configuration files for different observability pl
 | `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |
 | `config-weave.yml` | Weave | Workflow-focused tracking |
 | `config-patronus.yml` | Patronus | AI safety and compliance monitoring |
-| `config-catalyst.yml` | Catalyst | RagaAI Catalyst integration |
 | `config-galileo.yml` | Galileo | Galileo integration |
-| `config-dbnl.yml` | DBNL | AI product analytics |
 
 ## What Gets Traced
 

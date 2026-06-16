@@ -63,13 +63,21 @@ def _build_api_tree() -> Path:
     with open(dest_dir / "__init__.py", "w", encoding="utf-8") as f:
         f.write("")
 
+    # Subpackages excluded from the generated API tree. ``nat.plugin_api`` is the public
+    # plugin-author facade that re-exports symbols from their canonical modules; including it
+    # here would register duplicate cross-reference targets (e.g. ``InvocationContext`` in both
+    # ``nat.plugin_api`` and ``nat.middleware.middleware``) and trip the docs build's ``-W``.
+    # TODO: once the docs are restructured to make ``nat.plugin_api`` the canonical reference
+    # for plugin authors, remove this exclusion and invert the resolution direction.
+    skip_from_api_docs = {"plugin_api"}
+
     plugin_dirs = [Path(p) for p in glob.glob(f'{plugins_dir}/nvidia_nat_*')]
     for plugin_dir in plugin_dirs:
         src_dir = plugin_dir / 'src/nat'
         print(f"Copying {src_dir} to {dest_dir}")
         if src_dir.exists():
             for plugin_subdir in src_dir.iterdir():
-                if plugin_subdir.is_dir():
+                if plugin_subdir.is_dir() and plugin_subdir.name not in skip_from_api_docs:
                     dest_subdir = dest_dir / plugin_subdir.name
                     shutil.copytree(plugin_subdir, dest_subdir, dirs_exist_ok=True)
                     package_file = dest_subdir / "__init__.py"
@@ -180,6 +188,8 @@ numpydoc_class_members_toctree = False
 # mysql.com  reports a 403 when requested by linkcheck
 # api.service.com is a placeholder for a service example
 # Ignore example.com/mcp as it is inaccessible when building the docs
+# docs.dbnl.com is inaccessible and https://www.distributional.com/ says "Something new is coming", putting this on
+# hold for now
 linkcheck_ignore = [
     r'http://localhost:\d+',
     r'https://localhost:\d+',
@@ -488,7 +498,7 @@ redirects = {
     'workflows/observe/index':
         '/run-workflows/observe/observe.html',
     'workflows/observe/observe-workflow-with-catalyst':
-        '/run-workflows/observe/observe.html?provider=Catalyst#provider-integration-guides',
+        '/run-workflows/observe/observe.html',
     'workflows/observe/observe-workflow-with-data-flywheel':
         '/run-workflows/observe/observe.html?provider=Data-Flywheel#provider-integration-guides',
     'workflows/observe/observe-workflow-with-dynatrace':
