@@ -190,8 +190,8 @@ class WebSocketMessageHandler:
                     provider = await self._session_manager.shared_builder.get_auth_provider(name)
                     try:
                         await provider.authenticate()
-                    except Exception as e:
-                        logger.warning("Preflight auth failed for provider '%s': %s", name, e)
+                    except Exception:
+                        logger.exception("Preflight auth failed for provider '%s'", name)
                         await self._socket.send_json(
                             Error(
                                 code=ErrorTypes.USER_AUTH_ERROR,

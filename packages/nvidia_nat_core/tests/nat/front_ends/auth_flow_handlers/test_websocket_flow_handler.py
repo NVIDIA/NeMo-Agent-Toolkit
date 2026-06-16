@@ -230,7 +230,7 @@ async def test_websocket_oauth2_flow_error_handling(monkeypatch, mock_server, tm
 
 
 # ---------------------------------------------------------------------------
-# WebSocketMessageHandler – preflight authentication
+# WebSocketMessageHandler - preflight authentication
 # ---------------------------------------------------------------------------
 
 

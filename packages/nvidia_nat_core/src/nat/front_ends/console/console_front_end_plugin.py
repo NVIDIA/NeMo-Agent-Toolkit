@@ -118,8 +118,8 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
                 provider = await session_manager.shared_builder.get_auth_provider(name)
                 try:
                     await provider.authenticate()
-                except Exception as e:
-                    logger.warning("Preflight auth failed for provider '%s': %s", name, e)
+                except Exception:
+                    logger.exception("Preflight auth failed for provider '%s'", name)
 
     async def pre_run(self):
         if (self.front_end_config.input_query is not None and self.front_end_config.input_file is not None):

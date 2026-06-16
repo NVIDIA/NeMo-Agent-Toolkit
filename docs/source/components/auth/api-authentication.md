@@ -115,7 +115,7 @@ authentication:
 | `redirect_uri` | The redirect URI for OAuth 2.0 authentication. Must match the registered redirect URI with the OAuth provider.|
 | `scopes` | List of permissions to the API provider (for example, `read`, `write`). |
 | `use_pkce` | Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow, defaults to `False` |
-| `preflight_auth` | When `True`, authentication is triggered at the earliest opportunity for the active frontend, before any workflow messages are processed. Defaults to `False` (on-demand). Not supported for MCP providers. |
+| `preflight_auth` | When `True`, authentication is triggered at the earliest opportunity for the active frontend, before any workflow messages are processed. |
 | `authorization_kwargs` | Additional keyword arguments to include in the authorization request. |
 
 

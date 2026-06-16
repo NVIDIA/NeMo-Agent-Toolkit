@@ -203,7 +203,7 @@ async def test_console_oauth2_flow_error_handling(monkeypatch, mock_server):
 
 
 # ---------------------------------------------------------------------------
-# ConsoleFrontEndPlugin – preflight authentication
+# ConsoleFrontEndPlugin - preflight authentication
 # ---------------------------------------------------------------------------
 
 
