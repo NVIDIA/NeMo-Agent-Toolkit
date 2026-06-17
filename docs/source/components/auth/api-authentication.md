@@ -104,7 +104,7 @@ authentication:
 
 ### OAuth2.0 Authorization Code Grant Configuration Reference
 | Field Name | Description |
-|-------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
 | `test_auth_provider` | A unique name used to identify the client credentials required to access the API provider. |
 | `_type` | Specifies the authentication type. For OAuth 2.0 Authorization Code Grant authentication, set this to `oauth2_auth_code_flow`. |
 | `client_id` | The Identifier provided when registering the OAuth 2.0 client server with an API provider. |
@@ -113,8 +113,9 @@ authentication:
 | `token_url` | URL used to exchange an authorization code for an access token and optional refresh token. |
 | `token_endpoint_auth_method` | Some token provider endpoints require specific types of authentication. For example `client_secret_post`. |
 | `redirect_uri` | The redirect URI for OAuth 2.0 authentication. Must match the registered redirect URI with the OAuth provider.|
-| `scopes` | List of permissions to the API provider (e.g., `read`, `write`). |
+| `scopes` | List of permissions to the API provider (for example, `read`, `write`). |
 | `use_pkce` | Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow, defaults to `False` |
+| `preflight_auth` | When `True`, authentication is triggered at the earliest opportunity for the active frontend, before any workflow messages are processed. |
 | `authorization_kwargs` | Additional keyword arguments to include in the authorization request. |
 
 
@@ -150,7 +151,7 @@ Full source code for the above example can be found in `examples/front_ends/simp
 ## 4. Authentication by Application Configuration
 Authentication methods not needing consent prompts, such as API Keys are supported uniformly across all deployment methods.
 In contrast, support for methods that require user interaction can vary depending on the application's deployment and available
-components. In some configurations, the system’s default browser handles the redirect directly, while in others, the
+components. In some configurations, the system's default browser handles the redirect directly, while in others, the
 front-end UI is responsible for rendering the consent prompt.
 
 Below is a table listing the current support for the various authentication methods based on the application
@@ -167,3 +168,14 @@ The sections below detail how OAuth2.0 authentication is handled in each support
 > If using the OAuth2.0 Authorization Code Grant Flow, ensure that the `redirect_uri` in your workflow configuration matches the
 > registered redirect URI in the API provider's console. Mismatched URIs will result in authentication failures. If you are using it
 > in conjunction with the front-end UI, ensure that your browser supports popups and that the redirect URI is accessible from the browser.
+
+### Preflight Authentication
+
+By default, OAuth2.0 authentication is triggered on-demand when a workflow tool first requests credentials. Setting `preflight_auth: true` on an OAuth2.0 provider changes this so the full authentication flow is initiated at the earliest opportunity for the active frontend, before any workflow messages are processed.
+
+- **`nat serve` (WebSocket)**: Authentication runs on WebSocket connect, before the first user message is received. If a provider fails, an error message is sent to the UI and authentication proceeds to the next configured provider.
+- **`nat run` (console)**: Authentication runs before the first query is processed. If a provider fails, a warning is logged and authentication proceeds to the next configured provider.
+
+When multiple providers have `preflight_auth: true`, each is authenticated in order. On-demand authentication serves as the fallback for any provider that did not complete preflight authentication successfully.
+
+`preflight_auth` is not supported for MCP authentication providers (`_type: mcp_oauth2`). MCP has its own authentication handshake that is triggered automatically when the MCP server returns a 401 response.
