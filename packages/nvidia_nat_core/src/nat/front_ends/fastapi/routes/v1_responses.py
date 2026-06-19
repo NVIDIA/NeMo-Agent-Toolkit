@@ -107,7 +107,8 @@ def _event(event: str, payload: dict[str, Any]) -> str:
 async def _responses_stream(payload: ResponsesRequest,
                             request: Request,
                             worker: Any,
-                            session_manager: SessionManager) -> AsyncGenerator[str]:
+                            session_manager: SessionManager,
+                            enable_interactive: bool = False) -> AsyncGenerator[str]:
     response_id = f"resp_{uuid.uuid4().hex}"
     item_id = f"msg_{uuid.uuid4().hex}"
     content_index = 0
@@ -191,13 +192,15 @@ async def _responses_stream(payload: ResponsesRequest,
     yield _event("response.done", {"type": "response.done", "response": done_response})
 
 
-def post_responses_api_endpoint(*, worker: Any, session_manager: SessionManager):
+def post_responses_api_endpoint(*, worker: Any, session_manager: SessionManager, enable_interactive: bool = False):
     """Build OpenAI Responses API compatible POST handler."""
 
     async def post_responses_api(response: Response, request: Request, payload: ResponsesRequest):
         if payload.stream:
-            return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                     content=_responses_stream(payload, request, worker, session_manager))
+            return StreamingResponse(
+                headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                content=_responses_stream(payload, request, worker, session_manager, enable_interactive),
+            )
 
         response.headers["Content-Type"] = "application/json"
         async with session_manager.session(http_connection=request) as session:
@@ -214,7 +217,7 @@ def post_responses_api_endpoint(*, worker: Any, session_manager: SessionManager)
                         message=str(exc),
                         details=type(exc).__name__,
                     ).model_dump(),
-                    status_code=422,
+                    status_code=500,
                 )
 
     return post_responses_api
@@ -228,11 +231,14 @@ async def add_v1_responses_route(
     method: str,
     description: str,
     session_manager: SessionManager,
+    enable_interactive: bool = False,
 ):
     """Register OpenAI v1 Responses endpoint."""
     app.add_api_route(
         path=path,
-        endpoint=post_responses_api_endpoint(worker=worker, session_manager=session_manager),
+        endpoint=post_responses_api_endpoint(
+            worker=worker, session_manager=session_manager, enable_interactive=enable_interactive
+        ),
         methods=[method],
         description=f"{description} (OpenAI Responses API compatible)",
         responses={500: RESPONSE_500},

@@ -156,7 +156,8 @@ async def add_chat_routes(
                                          path=openai_v1_path,
                                          method=endpoint.method,
                                          description=endpoint.description,
-                                         session_manager=session_manager)
+                                         session_manager=session_manager,
+                                         enable_interactive=enable_interactive_extensions)
         else:
             await add_v1_chat_completions_route(worker,
                                                 app,
