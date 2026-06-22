@@ -123,7 +123,7 @@ async def multi_frameworks_workflow(config: MultiFrameworksWorkflowConfig, build
             route_to = "end"
         elif 'chosen_worker_agent' not in status:
             logger.info(" ############# router to --> supervisor %s", Fore.RESET)
-            route_to = "supevisor"
+            route_to = "supervisor"
         elif 'chosen_worker_agent' in status:
             logger.info(" ############# router to --> workers %s", Fore.RESET)
             route_to = "workers"
@@ -160,7 +160,7 @@ async def multi_frameworks_workflow(config: MultiFrameworksWorkflowConfig, build
         "supervisor",
         router,
         {
-            "workers": "workers", "end": END
+            "supervisor": "supervisor", "workers": "workers", "end": END
         },
     )
     workflow.add_edge("supervisor", "workers")
