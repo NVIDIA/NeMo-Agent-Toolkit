@@ -203,6 +203,7 @@ class RouterAgentGraph(BaseAgent):
         graph.add_node("branch", self.branch_node)
         graph.add_edge("agent", "branch")
         graph.set_entry_point("agent")
+        graph.set_finish_point("branch")
 
         self.graph = graph.compile()
         logger.debug("%s Router Agent Graph built and compiled successfully", AGENT_LOG_PREFIX)
