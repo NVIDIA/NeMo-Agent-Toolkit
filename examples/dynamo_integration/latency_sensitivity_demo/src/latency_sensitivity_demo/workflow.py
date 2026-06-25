@@ -435,11 +435,11 @@ async def latency_sensitivity_demo_function(config: LatencySensitivityDemoConfig
     graph.add_edge("classify", "check_compliance")
     graph.add_edge("classify", "analyze_sentiment")
 
-    # Converge: all 4 branches feed into draft
-    graph.add_edge("research_context", "draft_response")
-    graph.add_edge("lookup_policy", "draft_response")
-    graph.add_edge("check_compliance", "draft_response")
-    graph.add_edge("analyze_sentiment", "draft_response")
+    # Converge: all 4 branches feed into draft  (wait-for-all barrier)
+    graph.add_edge(
+        ["research_context", "lookup_policy", "check_compliance", "analyze_sentiment"],
+        "draft_response",
+    )
 
     # Sequential tail
     graph.add_edge("draft_response", "review")
