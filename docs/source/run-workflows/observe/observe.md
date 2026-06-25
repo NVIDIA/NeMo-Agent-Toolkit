@@ -79,7 +79,7 @@ The following table lists each exporter with its supported features and configur
 | [LangSmith](https://www.langchain.com/langsmith) | [Observing with LangSmith](?provider=LangSmith#provider-integration-guides){.external} | Logging, Tracing, Evaluation Metrics |
 | [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) | [Observing with OTel Collector](?provider=OTel-collector#provider-integration-guides){.external} | Logging, Tracing |
 | [Patronus](https://www.patronus.ai/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
-| [Phoenix](https://phoenix.arize.com/) | [Observing with Phoenix](?provider=Phoenix#provider-integration-guides){.external} | Logging, Tracing |
+| [Phoenix](http://arize.com/phoenix/) | [Observing with Phoenix](?provider=Phoenix#provider-integration-guides){.external} | Logging, Tracing |
 | [W&B Weave](https://wandb.ai/site/weave/) | [Observing with W&B Weave](?provider=Wandb-Weave#provider-integration-guides){.external} | Logging, Tracing, W&B Weave Redaction, Evaluation Metrics |
 
 Additional options:
