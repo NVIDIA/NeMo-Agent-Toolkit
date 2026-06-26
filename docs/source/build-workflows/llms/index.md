@@ -216,7 +216,7 @@ The Hugging Face LLM provider is defined by the {py:class}`~nat.llm.huggingface_
 :::{note}
 Hugging Face is a built-in NeMo Agent Toolkit LLM provider, but requires extra dependencies to run. They can be installed with:
 ```
-pip install "transformers[torch,accelerate]~=4.57"
+pip install "transformers[torch,accelerate]>=5.0,<6.0"
 ```
 :::
 
