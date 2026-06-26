@@ -16,6 +16,26 @@
 import pytest
 
 
+def test_multi_frameworks_router_routes_missing_worker_choice_to_supervisor():
+    from nat_multi_frameworks.register import _route_multi_frameworks_state
+
+    assert _route_multi_frameworks_state({"input": "hello"}) == "supervisor"
+
+
+def test_multi_frameworks_router_routes_worker_choice_to_workers():
+    from nat_multi_frameworks.register import _route_multi_frameworks_state
+
+    assert _route_multi_frameworks_state({"input": "hello", "chosen_worker_agent": "General"}) == "workers"
+
+
+def test_multi_frameworks_router_routes_final_output_to_end():
+    from nat_multi_frameworks.register import _route_multi_frameworks_state
+
+    state = {"input": "hello", "chosen_worker_agent": "General", "final_output": "done"}
+
+    assert _route_multi_frameworks_state(state) == "end"
+
+
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
