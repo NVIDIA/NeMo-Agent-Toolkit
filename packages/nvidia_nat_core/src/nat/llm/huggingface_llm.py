@@ -145,7 +145,7 @@ async def huggingface_provider(
     except ImportError:
         raise ValueError("HuggingFace dependencies not installed. \n"
                          "Install with:\n"
-                         "  `pip install \"transformers[torch,accelerate]~=4.57\"")
+                         "  `pip install \"transformers[torch,accelerate]>=5.0,<6.0\"")
 
     cache = ModelCache()
 
