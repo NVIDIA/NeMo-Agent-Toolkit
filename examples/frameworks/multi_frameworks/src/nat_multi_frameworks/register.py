@@ -14,6 +14,9 @@
 # limitations under the License.
 
 import logging
+from collections.abc import Mapping
+from typing import Any
+from typing import Literal
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -27,6 +30,14 @@ from . import langchain_research_tool  # noqa: F401, pylint: disable=unused-impo
 from . import llama_index_rag_tool  # noqa: F401, pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)
+
+
+def _route_multi_frameworks_state(state: Mapping[str, Any]) -> Literal["supervisor", "workers", "end"]:
+    if 'final_output' in state:
+        return "end"
+    if 'chosen_worker_agent' in state:
+        return "workers"
+    return "supervisor"
 
 
 class MultiFrameworksWorkflowConfig(FunctionBaseConfig, name="multi_frameworks"):
@@ -117,18 +128,9 @@ async def multi_frameworks_workflow(config: MultiFrameworksWorkflowConfig, build
         Route the response to the appropriate handler
         """
 
-        status = list(state.keys())
-        logger.info("========== inside **router node**  current status = \n %s, %s", Fore.CYAN, status)
-        if 'final_output' in status:
-            route_to = "end"
-        elif 'chosen_worker_agent' not in status:
-            logger.info(" ############# router to --> supervisor %s", Fore.RESET)
-            route_to = "supevisor"
-        elif 'chosen_worker_agent' in status:
-            logger.info(" ############# router to --> workers %s", Fore.RESET)
-            route_to = "workers"
-        else:
-            route_to = "end"
+        route_to = _route_multi_frameworks_state(state)
+        logger.info("========== inside **router node**  current status = \n %s, %s", Fore.CYAN, list(state.keys()))
+        logger.info(" ############# router to --> %s %s", route_to, Fore.RESET)
         return route_to
 
     async def workers(state: AgentState):
@@ -160,10 +162,9 @@ async def multi_frameworks_workflow(config: MultiFrameworksWorkflowConfig, build
         "supervisor",
         router,
         {
-            "workers": "workers", "end": END
+            "supervisor": "supervisor", "workers": "workers", "end": END
         },
     )
-    workflow.add_edge("supervisor", "workers")
     workflow.add_edge("workers", END)
     app = workflow.compile()
 
