@@ -73,6 +73,11 @@ trap create_package_report_tarball EXIT
 
 for whl in "${MOVED_WHEELS[@]}"; do
 
+    if is_third_party_dependency_wheel "${whl}"; then
+        echo "Skipping installation test for third-party compatibility wheel: ${whl}"
+        continue
+    fi
+
     for pyver in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
         echo "Testing wheel: ${whl} with Python ${pyver}"
         UV_VENV_OUT=$(uv venv -q -p ${pyver} --seed "${TEMP_INSTALL_LOCATION}" 2>&1)

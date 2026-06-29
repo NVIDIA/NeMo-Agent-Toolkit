@@ -176,5 +176,42 @@ trap cleanup EXIT
 # Change directory to the repo root
 pushd "${PROJECT_ROOT}" &> /dev/null
 
-NAT_EXAMPLES=($(find ./examples/ -maxdepth 4 -name "pyproject.toml" | sort | xargs dirname))
+THIRD_PARTY_DEPENDENCY_PROJECTS_FILE="${PROJECT_ROOT}/ci/third_party_dependency_projects.txt"
+NAT_THIRD_PARTY_DEPENDENCY_PROJECTS=()
+while IFS= read -r project; do
+    NAT_THIRD_PARTY_DEPENDENCY_PROJECTS+=("${project}")
+done < <(grep -Ev '^[[:space:]]*(#|$)' "${THIRD_PARTY_DEPENDENCY_PROJECTS_FILE}")
+
+function is_third_party_dependency_project() {
+    local project="${1#./}"
+    local excluded_project
+    for excluded_project in "${NAT_THIRD_PARTY_DEPENDENCY_PROJECTS[@]}"; do
+        if [[ "${project}" == "${excluded_project}" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+function is_third_party_dependency_wheel() {
+    local wheel_name
+    wheel_name="$(basename "$1")"
+    local excluded_project
+    for excluded_project in "${NAT_THIRD_PARTY_DEPENDENCY_PROJECTS[@]}"; do
+        if [[ "${excluded_project}" == packages/* ]]; then
+            local distribution_name="${excluded_project#packages/}"
+            if [[ "${wheel_name}" == "${distribution_name}-"*.whl ]]; then
+                return 0
+            fi
+        fi
+    done
+    return 1
+}
+
+NAT_EXAMPLES=()
+while IFS= read -r example; do
+    if ! is_third_party_dependency_project "${example}"; then
+        NAT_EXAMPLES+=("${example}")
+    fi
+done < <(find ./examples/ -maxdepth 4 -name "pyproject.toml" | sort | xargs dirname)
 NAT_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
