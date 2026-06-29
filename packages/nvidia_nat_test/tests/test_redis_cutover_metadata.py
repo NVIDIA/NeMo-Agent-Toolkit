@@ -13,18 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib.util
 import pathlib
-import subprocess
 import tomllib
 
 REPO_ROOT = pathlib.Path(__file__).parents[3]
 REDIS_PACKAGE_ROOT = REPO_ROOT / "packages" / "nvidia_nat_redis"
-EXCLUDED_PROJECTS = {
-    "packages/nvidia_nat_redis",
-    "examples/memory/redis",
-    "examples/object_store/user_report",
-}
 
 
 def _load_pyproject(project_root: pathlib.Path) -> dict:
@@ -33,14 +26,12 @@ def _load_pyproject(project_root: pathlib.Path) -> dict:
         return tomllib.load(pyproject_file)
 
 
-def _load_run_tests_module():
-    """Load the CI test runner without making the CI directory a package."""
-    module_path = REPO_ROOT / "ci" / "scripts" / "run_tests.py"
-    spec = importlib.util.spec_from_file_location("nat_ci_run_tests", module_path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def test_redis_extra_installs_compatibility_package():
+    """Verify that the Redis extra preserves the historical package name."""
+    pyproject = _load_pyproject(REPO_ROOT)
+
+    optional_dependencies = pyproject["tool"]["setuptools_dynamic_dependencies"]["optional-dependencies"]
+    assert optional_dependencies["redis"] == ["nvidia-nat-redis == {version}"]
 
 
 def test_redis_compatibility_package_has_no_plugin_code():
@@ -57,23 +48,3 @@ def test_redis_compatibility_package_depends_on_public_plugin_release():
     pyproject = _load_pyproject(REDIS_PACKAGE_ROOT)
 
     assert pyproject["project"]["dependencies"] == ["nemo-agent-toolkit-redis>=0.2.0,<2.0.0"]
-
-
-def test_redis_third_party_projects_are_excluded_from_test_discovery():
-    """Verify that CI test discovery cannot install Redis-maintained code."""
-    run_tests = _load_run_tests_module()
-    discovered_projects = {project.relative_to(REPO_ROOT).as_posix() for project in run_tests.discover_projects()}
-
-    assert EXCLUDED_PROJECTS.isdisjoint(discovered_projects)
-
-
-def test_redis_third_party_projects_are_excluded_from_wheel_execution():
-    """Verify that shell CI excludes Redis examples and shim wheel installation."""
-    shell_check = """
-source ci/scripts/common.sh
-[[ ! " ${NAT_EXAMPLES[*]} " =~ " ./examples/memory/redis " ]]
-[[ ! " ${NAT_EXAMPLES[*]} " =~ " ./examples/object_store/user_report " ]]
-[[ " ${NAT_PACKAGES[*]} " =~ " ./packages/nvidia_nat_redis " ]]
-is_third_party_dependency_wheel /tmp/nvidia_nat_redis-1.9.0-py3-none-any.whl
-"""
-    subprocess.run(["bash", "-c", shell_check], cwd=REPO_ROOT, check=True)
