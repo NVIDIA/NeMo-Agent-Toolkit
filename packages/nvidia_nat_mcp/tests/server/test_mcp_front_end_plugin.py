@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -144,6 +145,23 @@ async def test_workflow_alias_usage_in_mcp_front_end():
     assert "original_type" in functions
     assert functions["original_type"] == mock_workflow
     assert "func1" in functions
+
+
+async def test_function_workflow_config_without_alias_uses_type():
+    """Test function-style workflows that do not define workflow_alias."""
+    from nat.data_models.config import Config
+    from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorker
+
+    mock_workflow = SimpleNamespace(functions={},
+                                    function_groups={},
+                                    config=SimpleNamespace(workflow=SimpleNamespace(type="langgraph_wrapper")))
+
+    config = Config(general=GeneralConfig(front_end=MCPFrontEndConfig()), workflow=EchoFunctionConfig())
+    worker = MCPFrontEndPluginWorker(config)
+
+    functions = await worker._get_all_functions(mock_workflow)
+
+    assert functions == {"langgraph_wrapper": mock_workflow}
 
 
 async def test_workflow_alias_priority_over_type():
