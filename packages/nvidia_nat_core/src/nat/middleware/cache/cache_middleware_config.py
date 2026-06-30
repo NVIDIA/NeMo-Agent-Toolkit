@@ -20,7 +20,6 @@ from pydantic import Field
 
 from nat.data_models.middleware import FunctionMiddlewareBaseConfig
 
-
 class CacheMiddlewareConfig(FunctionMiddlewareBaseConfig, name="cache"):
     """Configuration for cache middleware.
 
@@ -31,14 +30,35 @@ class CacheMiddlewareConfig(FunctionMiddlewareBaseConfig, name="cache"):
         enabled_mode: Controls when caching is active:
             - "always": Cache is always enabled
             - "eval": Cache only active when Context.is_evaluating is True
-        similarity_threshold: Float between 0 and 1 for input matching:
-            - 1.0: Exact string matching (fastest)
-            - < 1.0: Fuzzy matching using difflib similarity
+        similarity_threshold: Float in [0, 1.0] for input matching:
+            - 1.0: Exact string matching (fastest, recommended)
+            - < 1.0: Fuzzy matching via difflib. Note that difflib is
+              quadratic in the worst case, so large caches with low
+              thresholds may have a performance cost. Values near 0
+              increase the risk of cache collisions where different
+              inputs return the same cached response.
+        max_entries: Upper bound on cached entries. When exceeded, the
+            least-recently-used entry is evicted. Must be a positive int;
+            defaults to 1024.
     """
 
     enabled_mode: Literal["always", "eval"] = Field(
         default="eval", description="When caching is enabled: 'always' or 'eval' (only during evaluation)")
-    similarity_threshold: float = Field(default=1.0,
-                                        ge=0.0,
-                                        le=1.0,
-                                        description="Similarity threshold between 0 and 1. Use 1.0 for exact matching")
+    similarity_threshold: float = Field(
+        default=1.0,
+        ge=0,
+        le=1.0,
+        description=(
+            "Similarity threshold in [0, 1.0]. Use 1.0 for exact matching (recommended). "
+            "Lower values enable fuzzy matching via difflib; note that difflib is quadratic "
+            "in the worst case, so large caches with low thresholds may have a performance "
+            "cost. Values near 0 increase the risk of cache collisions where different "
+            "inputs return the same cached response."),
+    )
+    max_entries: int = Field(
+        default=1024,
+        ge=1,
+        description=("Maximum number of cache entries before LRU eviction. Must be >= 1. "
+                     "Prevents memory-exhaustion DoS from unbounded cache growth under "
+                     "sustained unique inputs."),
+    )

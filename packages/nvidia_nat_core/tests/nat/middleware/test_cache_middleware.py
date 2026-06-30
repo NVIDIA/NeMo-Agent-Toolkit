@@ -54,7 +54,7 @@ class TestCacheMiddlewareInitialization:
 
     def test_default_initialization(self):
         """Test default initialization with required parameters."""
-        middleware = CacheMiddleware(enabled_mode="eval", similarity_threshold=1.0)
+        middleware = CacheMiddleware(enabled_mode="eval", similarity_threshold=1.0, max_entries=1024)
         # Check internal attributes
         assert hasattr(middleware, '_enabled_mode')
         assert hasattr(middleware, '_similarity_threshold')
@@ -62,7 +62,7 @@ class TestCacheMiddlewareInitialization:
 
     def test_custom_initialization(self):
         """Test custom initialization."""
-        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.8)
+        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.9, max_entries=1024)
         # Check attributes are set
         assert hasattr(middleware, '_enabled_mode')
         assert hasattr(middleware, '_similarity_threshold')
@@ -73,7 +73,7 @@ class TestCacheMiddlewareCaching:
 
     async def test_exact_match_caching(self, middleware_context):
         """Test exact match caching with similarity_threshold=1.0."""
-        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=1.0)
+        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=1.0, max_entries=1024)
 
         # Mock the next call
         call_count = 0
@@ -109,7 +109,7 @@ class TestCacheMiddlewareCaching:
 
     async def test_fuzzy_match_caching(self, middleware_context):
         """Test fuzzy matching with similarity_threshold < 1.0."""
-        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.8)
+        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.9, max_entries=1024)
 
         call_count = 0
 
@@ -144,7 +144,7 @@ class TestCacheMiddlewareCaching:
 
     async def test_eval_mode_caching(self, middleware_context):
         """Test caching only works in eval mode when configured."""
-        middleware = CacheMiddleware(enabled_mode="eval", similarity_threshold=1.0)
+        middleware = CacheMiddleware(enabled_mode="eval", similarity_threshold=1.0, max_entries=1024)
 
         call_count = 0
 
@@ -183,7 +183,7 @@ class TestCacheMiddlewareCaching:
 
     async def test_serialization_failure(self, middleware_context):
         """Test behavior when input serialization fails."""
-        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=1.0)
+        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=1.0, max_entries=1024)
 
         call_count = 0
 
@@ -214,7 +214,7 @@ class TestCacheMiddlewareStreaming:
 
     async def test_streaming_bypass(self, middleware_context):
         """Test that streaming always bypasses cache."""
-        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=1.0)
+        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=1.0, max_entries=1024)
 
         call_count = 0
 
@@ -249,7 +249,7 @@ class TestCacheMiddlewareEdgeCases:
 
     async def test_context_retrieval_failure(self, middleware_context):
         """Test behavior when context retrieval fails in eval mode."""
-        middleware = CacheMiddleware(enabled_mode="eval", similarity_threshold=1.0)
+        middleware = CacheMiddleware(enabled_mode="eval", similarity_threshold=1.0, max_entries=1024)
 
         call_count = 0
 
@@ -267,8 +267,7 @@ class TestCacheMiddlewareEdgeCases:
 
     def test_similarity_computation_for_different_thresholds(self):
         """Test similarity computation for different thresholds."""
-        # This is more of a unit test for the similarity logic
-        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.5)
+        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.9, max_entries=1024)
 
         # Directly test internal methods
         # Add a cached entry
@@ -278,14 +277,14 @@ class TestCacheMiddlewareEdgeCases:
         # Test various similarity levels
         # Exact match
         assert middleware._find_similar_key(test_key) == test_key  # noqa
-        # Very similar
+        # Very similar (one char shorter, ~0.95 ratio)
         assert middleware._find_similar_key("hello worl") == test_key  # noqa
         # Too different - use a completely different string
         assert middleware._find_similar_key("xyz123abc") is None  # noqa
 
     async def test_multiple_similar_entries(self, middleware_context):
         """Test behavior with multiple similar cached entries."""
-        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.7)
+        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.85, max_entries=1024)
 
         # Pre-populate cache with similar entries
         key1 = middleware._serialize_input(  # noqa
@@ -306,3 +305,73 @@ class TestCacheMiddlewareEdgeCases:
         input_str = {"value": "test input X", "number": 42}
         await middleware.function_middleware_invoke(input_str, call_next=mock_next_call, context=middleware_context)
         # The exact behavior depends on which cached key is most similar
+
+
+class TestMaxEntriesLruEviction:
+    """The cache must bound its size to prevent memory-exhaustion DoS.
+
+    The previous implementation used an unbounded dict; sustained unique
+    inputs would grow the cache without limit, eventually crashing the
+    process. LRU eviction ensures the cache stays within max_entries.
+    """
+
+    async def test_default_max_entries_is_positive(self):
+        mw = CacheMiddleware(enabled_mode="always", similarity_threshold=1.0, max_entries=1024)
+        assert mw._max_entries > 0  # noqa: SLF001
+
+    async def test_cache_evicts_oldest_when_exceeding_max_entries(self, middleware_context):
+        """Insert more unique entries than max_entries; verify size stays bounded."""
+        mw = CacheMiddleware(
+            enabled_mode="always",
+            similarity_threshold=1.0,  # exact match keeps the test deterministic
+            max_entries=3,
+        )
+
+        call_count = 0
+
+        async def mock_next_call(*_args, **_kwargs):
+            nonlocal call_count
+            call_count += 1
+            return _TestOutput(result=f"result_{call_count}")
+
+        for i in range(10):
+            await mw.function_middleware_invoke(
+                {"value": f"unique_input_{i}"},
+                call_next=mock_next_call,
+                context=middleware_context,
+            )
+
+        assert len(mw._cache) == 3  # noqa: SLF001
+        # The MOST recent three inserts should be what's left.
+        latest_keys = list(mw._cache.keys())  # noqa: SLF001
+        for i in range(7, 10):
+            assert any(f"unique_input_{i}" in k for k in latest_keys)
+
+    async def test_cache_hit_promotes_entry_to_most_recently_used(self, middleware_context):
+        """A cache hit should move the entry to MRU so later evictions spare it."""
+        mw = CacheMiddleware(
+            enabled_mode="always",
+            similarity_threshold=1.0,
+            max_entries=3,
+        )
+
+        async def mock_next_call(*_args, **_kwargs):
+            return _TestOutput(result="r")
+
+        # Fill the cache with A, B, C (A is oldest)
+        for key in ("A", "B", "C"):
+            await mw.function_middleware_invoke(
+                {"value": key}, call_next=mock_next_call, context=middleware_context)
+
+        # Hit A again — should promote A to the MRU end
+        await mw.function_middleware_invoke(
+            {"value": "A"}, call_next=mock_next_call, context=middleware_context)
+
+        # Now insert D — B (now oldest) should be evicted, not A.
+        await mw.function_middleware_invoke(
+            {"value": "D"}, call_next=mock_next_call, context=middleware_context)
+
+        keys = "".join(list(mw._cache.keys()))  # noqa: SLF001
+        assert '"value": "A"' in keys
+        assert '"value": "D"' in keys
+        assert '"value": "B"' not in keys
