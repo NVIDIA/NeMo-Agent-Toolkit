@@ -35,6 +35,12 @@ class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth
     use_pkce: bool = Field(default=False,
                            description="Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow.")
 
+    use_redirect_auth: bool = Field(
+        default=False,
+        description=("When False (default), the OAuth login page opens in a popup window and the originating page "
+                     "remains open. When True, the browser navigates to the OAuth login page directly and is "
+                     "redirected back after authentication completes."))
+
     authorization_kwargs: dict[str, str] | None = Field(description=("Additional keyword arguments for the "
                                                                      "authorization request."),
                                                         default=None)

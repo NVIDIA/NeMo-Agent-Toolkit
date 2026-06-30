@@ -23,7 +23,12 @@ from fastapi import FastAPI
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
+from nat.front_ends.fastapi.html_snippets.auth_code_grant_cancelled import AUTH_REDIRECT_CANCELLED_POPUP_HTML
+from nat.front_ends.fastapi.html_snippets.auth_code_grant_cancelled import build_auth_redirect_cancelled_html
+from nat.front_ends.fastapi.html_snippets.auth_code_grant_error import AUTH_REDIRECT_ERROR_HTML
+from nat.front_ends.fastapi.html_snippets.auth_code_grant_error import build_auth_redirect_error_html
 from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
+from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import build_auth_redirect_success_html
 
 if TYPE_CHECKING:
     from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -37,12 +42,50 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
     async def redirect_uri(request: Request):
         """Handle the redirect URI for OAuth2 authentication."""
         state = request.query_params.get("state")
+        error = request.query_params.get("error")
 
         async with worker._outstanding_flows_lock:
             if not state or state not in worker._outstanding_flows:
                 return HTMLResponse("Invalid state. Please restart the authentication process.", status_code=400)
 
             flow_state = worker._outstanding_flows[state]
+
+        # The OAuth provider returned an error in the redirect. Two distinct cases:
+        # - "access_denied": user explicitly declined consent → cancellation UX.
+        # - anything else: provider/server error → error UX.
+        if error:
+            error_description = request.query_params.get("error_description", "")
+            await worker._remove_flow(state)
+
+            if error == "access_denied":
+                logger.info("OAuth authorisation denied for state %s: %s (%s)", state, error, error_description)
+                if not flow_state.future.done():
+                    flow_state.future.set_exception(
+                        RuntimeError(f"Authorisation denied: {error} ({error_description})"))
+                if flow_state.config and flow_state.config.use_redirect_auth:
+                    return HTMLResponse(content=build_auth_redirect_cancelled_html(flow_state.return_url),
+                                        status_code=200,
+                                        headers={
+                                            "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
+                                        })
+                return HTMLResponse(content=AUTH_REDIRECT_CANCELLED_POPUP_HTML,
+                                    status_code=200,
+                                    headers={
+                                        "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
+                                    })
+
+            logger.error("OAuth error for state %s: %s (%s)", state, error, error_description)
+            if not flow_state.future.done():
+                flow_state.future.set_exception(RuntimeError(f"OAuth error: {error} ({error_description})"))
+            if flow_state.config and flow_state.config.use_redirect_auth:
+                error_html = build_auth_redirect_error_html(flow_state.return_url)
+            else:
+                error_html = AUTH_REDIRECT_ERROR_HTML
+            return HTMLResponse(content=error_html,
+                                status_code=200,
+                                headers={
+                                    "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
+                                })
 
         config = flow_state.config
         verifier = flow_state.verifier
@@ -60,27 +103,49 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
             if not flow_state.future.done():
                 flow_state.future.set_exception(
                     RuntimeError(f"Authorization server rejected request: {e.error} ({e.description})"))
-            return HTMLResponse(f"Authorization failed: {e.error}",
-                                status_code=502,
-                                headers={"Cache-Control": "no-cache"})
+            if flow_state.config and flow_state.config.use_redirect_auth:
+                error_html = build_auth_redirect_error_html(flow_state.return_url)
+            else:
+                error_html = AUTH_REDIRECT_ERROR_HTML
+            return HTMLResponse(content=error_html,
+                                status_code=200,
+                                headers={
+                                    "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
+                                })
         except httpx.HTTPError as e:
             logger.error("Network error during token fetch for state %s: %s", state, e)
             if not flow_state.future.done():
                 flow_state.future.set_exception(RuntimeError(f"Network error during token fetch: {e}"))
-            return HTMLResponse("Network error during token exchange. Please try again.",
-                                status_code=502,
-                                headers={"Cache-Control": "no-cache"})
+            if flow_state.config and flow_state.config.use_redirect_auth:
+                error_html = build_auth_redirect_error_html(flow_state.return_url)
+            else:
+                error_html = AUTH_REDIRECT_ERROR_HTML
+            return HTMLResponse(content=error_html,
+                                status_code=200,
+                                headers={
+                                    "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
+                                })
         except Exception as e:
             logger.error("Unexpected error during authentication for state %s: %s", state, e)
             if not flow_state.future.done():
                 flow_state.future.set_exception(RuntimeError(f"Authentication failed: {e}"))
-            return HTMLResponse("Authentication failed. Please try again.",
-                                status_code=500,
-                                headers={"Cache-Control": "no-cache"})
+            if flow_state.config and flow_state.config.use_redirect_auth:
+                error_html = build_auth_redirect_error_html(flow_state.return_url)
+            else:
+                error_html = AUTH_REDIRECT_ERROR_HTML
+            return HTMLResponse(content=error_html,
+                                status_code=200,
+                                headers={
+                                    "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
+                                })
         finally:
             await worker._remove_flow(state)
 
-        return HTMLResponse(content=AUTH_REDIRECT_SUCCESS_HTML,
+        if flow_state.config and flow_state.config.use_redirect_auth:
+            success_html = build_auth_redirect_success_html(flow_state.return_url)
+        else:
+            success_html = AUTH_REDIRECT_SUCCESS_HTML
+        return HTMLResponse(content=success_html,
                             status_code=200,
                             headers={
                                 "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"

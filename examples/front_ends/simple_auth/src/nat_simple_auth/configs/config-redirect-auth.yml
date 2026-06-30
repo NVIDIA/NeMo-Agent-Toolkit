@@ -57,7 +57,9 @@ authentication:
     client_id: ${NAT_OAUTH_CLIENT_ID}
     client_secret: ${NAT_OAUTH_CLIENT_SECRET}
     use_pkce: false
-    use_redirect_auth: false
+    # Navigate the current tab to the OAuth login page and redirect back after
+    # authentication, instead of opening the login page in a popup window.
+    use_redirect_auth: true
     preflight_auth: true
 
 workflow:

@@ -133,15 +133,33 @@ export NAT_OAUTH_CLIENT_SECRET=<your_client_secret>
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
+## Choosing How the Login Page Opens
+
+The OAuth provider's login page can be presented to the user in one of two ways, controlled by the
+`use_redirect_auth` flag on the authentication provider:
+
+| Config file | `use_redirect_auth` | Behavior |
+|-------------|---------------------|----------|
+| `configs/config.yml` | `false` (default) | The login page opens in a **popup window**. The chat tab stays open, and the popup closes automatically once authentication completes. |
+| `configs/config-redirect-auth.yml` | `true` | The current tab **navigates directly** to the login page and is redirected back to the chat after authentication completes. Useful when popups are blocked or undesirable. |
+
 ## Serve The Agent
 
 In a new terminal, serve the agent using the following command:
 
 ```bash
+# Popup login flow (default)
 nat serve --config_file=examples/front_ends/simple_auth/configs/config.yml
 ```
 
-This will start a FastAPI server on `http://localhost:8000` that listens for requests from the UI and
+To demonstrate the redirect login flow instead, serve the redirect config:
+
+```bash
+# Redirect login flow (use_redirect_auth: true)
+nat serve --config_file=examples/front_ends/simple_auth/configs/config-redirect-auth.yml
+```
+
+Either command starts a FastAPI server on `http://localhost:8000` that listens for requests from the UI and
 handles authentication.
 
 ## Query the Agent

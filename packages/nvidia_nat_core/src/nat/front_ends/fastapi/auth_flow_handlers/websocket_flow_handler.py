@@ -42,6 +42,7 @@ class FlowState:
     verifier: str | None = None
     client: AsyncOAuth2Client | None = None
     config: OAuth2AuthCodeFlowProviderConfig | None = None
+    return_url: str | None = None
 
 
 class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
@@ -50,12 +51,14 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
                  add_flow_cb: Callable[[str, FlowState], Awaitable[None]],
                  remove_flow_cb: Callable[[str], Awaitable[None]],
                  web_socket_message_handler: WebSocketMessageHandler,
-                 auth_timeout_seconds: float = 300.0):
+                 auth_timeout_seconds: float = 300.0,
+                 return_url: str | None = None):
 
         self._add_flow_cb: Callable[[str, FlowState], Awaitable[None]] = add_flow_cb
         self._remove_flow_cb: Callable[[str], Awaitable[None]] = remove_flow_cb
         self._web_socket_message_handler: WebSocketMessageHandler = web_socket_message_handler
         self._auth_timeout_seconds: float = auth_timeout_seconds
+        self._return_url: str | None = return_url
 
     async def authenticate(
             self,
@@ -113,8 +116,13 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
 
     async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
 
+        if config.use_redirect_auth and self._return_url is None:
+            raise ValueError("Redirect-based authentication (use_redirect_auth=True) requires a return URL, "
+                             "but none was configured. Pass return_url when constructing the flow handler.")
+
         state = secrets.token_urlsafe(16)
-        flow_state = FlowState(config=config)
+        return_url = self._return_url if config.use_redirect_auth else None
+        flow_state = FlowState(config=config, return_url=return_url)
 
         flow_state.client = self.create_oauth_client(config)
 
@@ -130,8 +138,8 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
                                                            challenge=flow_state.challenge)
 
         await self._add_flow_cb(state, flow_state)
-        await self._web_socket_message_handler.create_websocket_message(_HumanPromptOAuthConsent(text=authorization_url)
-                                                                        )
+        await self._web_socket_message_handler.create_websocket_message(
+            _HumanPromptOAuthConsent(text=authorization_url, use_redirect=config.use_redirect_auth))
         try:
             token = await asyncio.wait_for(flow_state.future, timeout=self._auth_timeout_seconds)
         except TimeoutError as exc:
