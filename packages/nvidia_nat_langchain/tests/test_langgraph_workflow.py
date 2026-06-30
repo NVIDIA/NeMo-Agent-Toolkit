@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import patch
+
 import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
@@ -201,3 +203,26 @@ class TestParseStreamOutput:
         }
         with pytest.raises(Exception):
             LanggraphWrapperFunction._parse_stream_output(raw)
+
+
+class TestBuildRunnableConfig:
+    """Tests for LanggraphWrapperFunction._build_runnable_config: conversation_id -> LangGraph thread_id."""
+
+    def test_conversation_id_maps_to_thread_id(self):
+        """When a conversation_id is in context, it is passed as the LangGraph thread_id."""
+        with patch("nat.plugins.langchain.langgraph_workflow.Context") as mock_context:
+            mock_context.get.return_value.conversation_id = "conv-123"
+
+            config = LanggraphWrapperFunction._build_runnable_config()
+
+        assert config is not None
+        assert config["configurable"]["thread_id"] == "conv-123"
+
+    def test_no_conversation_id_returns_none(self):
+        """When no conversation_id is in context, no config is built (prior behavior preserved)."""
+        with patch("nat.plugins.langchain.langgraph_workflow.Context") as mock_context:
+            mock_context.get.return_value.conversation_id = None
+
+            config = LanggraphWrapperFunction._build_runnable_config()
+
+        assert config is None
