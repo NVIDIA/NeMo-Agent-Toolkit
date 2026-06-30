@@ -14,12 +14,18 @@
 # limitations under the License.
 """Tests for MessageValidator handling of auth_message type."""
 
+import datetime
+import uuid
+
 import pytest
 
+from nat.data_models.api_server import ObservabilityTraceContent
 from nat.data_models.api_server import WebSocketAuthMessage
 from nat.data_models.api_server import WebSocketAuthResponseMessage
 from nat.data_models.api_server import WebSocketMessageType
 from nat.data_models.api_server import WebSocketSystemResponseTokenMessage
+from nat.data_models.interactive import HumanPromptText
+from nat.front_ends.fastapi import message_validator as message_validator_module
 from nat.front_ends.fastapi.message_validator import MessageValidator
 
 
@@ -90,6 +96,70 @@ class TestValidateAuthMessage:
         result = await validator.validate_message(raw)
         assert isinstance(result, WebSocketSystemResponseTokenMessage)
         assert result.type == WebSocketMessageType.ERROR_MESSAGE
+
+
+class TestMessageFactoryDefaults:
+    async def test_factories_generate_fresh_ids_and_timestamps_if_defaults_are_omitted(
+        self, validator: MessageValidator, monkeypatch: pytest.MonkeyPatch
+    ):
+        ids = iter(
+            [
+                uuid.UUID("00000000-0000-0000-0000-000000000001"),
+                uuid.UUID("00000000-0000-0000-0000-000000000002"),
+                uuid.UUID("00000000-0000-0000-0000-000000000003"),
+                uuid.UUID("00000000-0000-0000-0000-000000000004"),
+                uuid.UUID("00000000-0000-0000-0000-000000000005"),
+                uuid.UUID("00000000-0000-0000-0000-000000000006"),
+                uuid.UUID("00000000-0000-0000-0000-000000000007"),
+                uuid.UUID("00000000-0000-0000-0000-000000000008"),
+            ]
+        )
+        timestamps = iter([datetime.datetime(2026, 1, 1, 0, 0, index, tzinfo=datetime.UTC) for index in range(8)])
+
+        class FreshDateTime(datetime.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                assert tz is datetime.UTC
+                return next(timestamps)
+
+        monkeypatch.setattr(message_validator_module.uuid, "uuid4", lambda: next(ids))
+        monkeypatch.setattr(message_validator_module.datetime, "datetime", FreshDateTime)
+
+        messages = [
+            await validator.create_system_response_token_message(),
+            await validator.create_system_response_token_message(),
+            await validator.create_system_intermediate_step_message(),
+            await validator.create_system_intermediate_step_message(),
+            await validator.create_system_interaction_message(content=HumanPromptText(text="Continue?")),
+            await validator.create_system_interaction_message(content=HumanPromptText(text="Continue?")),
+            await validator.create_observability_trace_message(
+                content=ObservabilityTraceContent(observability_trace_id="trace-1")
+            ),
+            await validator.create_observability_trace_message(
+                content=ObservabilityTraceContent(observability_trace_id="trace-1")
+            ),
+        ]
+
+        assert [message.id for message in messages] == [
+            "00000000-0000-0000-0000-000000000001",
+            "00000000-0000-0000-0000-000000000002",
+            "00000000-0000-0000-0000-000000000003",
+            "00000000-0000-0000-0000-000000000004",
+            "00000000-0000-0000-0000-000000000005",
+            "00000000-0000-0000-0000-000000000006",
+            "00000000-0000-0000-0000-000000000007",
+            "00000000-0000-0000-0000-000000000008",
+        ]
+        assert [message.timestamp for message in messages] == [
+            "2026-01-01 00:00:00+00:00",
+            "2026-01-01 00:00:01+00:00",
+            "2026-01-01 00:00:02+00:00",
+            "2026-01-01 00:00:03+00:00",
+            "2026-01-01 00:00:04+00:00",
+            "2026-01-01 00:00:05+00:00",
+            "2026-01-01 00:00:06+00:00",
+            "2026-01-01 00:00:07+00:00",
+        ]
 
     async def test_missing_payload_returns_error(self, validator: MessageValidator):
         raw: dict = {"type": "auth_message"}
