@@ -129,6 +129,10 @@ This example involves one manifest concept that sits outside the repo:
 
 ## Documentation
 
+- [docs/source/run-workflows/existing-agents/openshell.md](../../docs/source/run-workflows/existing-agents/openshell.md)
+  explains the broader pattern for packaging and deploying NeMo Agent Toolkit
+  agents inside OpenShell, including auth boundaries, outbound tool access, and
+  local versus Kubernetes lanes.
 - [docs/SETUP.md](./docs/SETUP.md) explains identities, permissions, licenses,
   Azure resources, and the rebuild sequence.
 - [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) explains image build, worker
