@@ -23,6 +23,7 @@ from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import ChatResponse
 from nat.plugins.langchain.agent.react_agent.register import ReActAgentWorkflowConfig
+from nat.plugins.langchain.agent.react_agent.register import _build_lc_config
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
     """Per-user ReAct Agent - each user gets their own isolated instance."""
     from langchain_core.messages import BaseMessage
     from langchain_core.messages import trim_messages
+    from langchain_core.runnables.configurable import RunnableConfigurableFields
     from langgraph.graph.state import CompiledStateGraph
 
     from nat.data_models.api_server import Usage
@@ -54,6 +56,7 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
 
     prompt = create_react_agent_prompt(config)
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    _supports_model_override = isinstance(llm, RunnableConfigurableFields)
     tools = await builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     if not tools:
@@ -82,7 +85,10 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
                                                         start_on="human",
                                                         include_system=True)
             state = ReActGraphState(messages=messages)
-            state = await graph.ainvoke(state, config={'recursion_limit': (config.max_tool_calls + 1) * 2})
+            state = await graph.ainvoke(
+                state,
+                config=_build_lc_config(config.max_tool_calls, message.model,
+                                        supports_override=_supports_model_override))
             state = ReActGraphState(**state)
             output_message = state.messages[-1]
             content = str(output_message.content)
