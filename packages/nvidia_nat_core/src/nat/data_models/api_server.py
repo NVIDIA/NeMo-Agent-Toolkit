@@ -207,6 +207,104 @@ class ChatRequest(BaseModel):
                            top_p=top_p)
 
 
+ResponsesInput = str | list[dict[str, typing.Any]]
+
+
+class ResponsesRequest(BaseModel):
+    """Request payload for the OpenAI Responses API."""
+
+    model_config = ConfigDict(extra="allow")
+
+    model: str | None = Field(default=None, description="Name of the model to use")
+    input: ResponsesInput = Field(description="Text or structured input items to process")
+    instructions: str | None = Field(default=None, description="System instructions for the model")
+    max_output_tokens: int | None = Field(default=None, description="Maximum number of output tokens to generate")
+    stream: bool | None = Field(default=False, description="Whether to stream response events")
+    temperature: float | None = Field(default=1.0, description="Sampling temperature between 0 and 2")
+    top_p: float | None = Field(default=None, description="Nucleus sampling parameter")
+    tools: list[dict[str, typing.Any]] | None = Field(default=None, description="List of tools the model may call")
+    tool_choice: str | dict[str, typing.Any] | None = Field(default=None, description="Controls which tool is called")
+    user: str | None = Field(default=None, description="Unique identifier representing end-user")
+
+    def to_chat_request(self) -> ChatRequest:
+        messages: list[Message] = []
+        if self.instructions:
+            messages.append(Message(content=self.instructions, role=UserMessageContentRoleType.SYSTEM))
+
+        messages.extend(self._input_to_chat_messages())
+
+        return ChatRequest(messages=messages,
+                           model=self.model,
+                           max_tokens=self.max_output_tokens,
+                           stream=self.stream,
+                           temperature=self.temperature,
+                           top_p=self.top_p,
+                           tools=self._tools_to_chat_tools(),
+                           tool_choice=self.tool_choice,
+                           user=self.user)
+
+    def _input_to_chat_messages(self) -> list[Message]:
+        if isinstance(self.input, str):
+            return [Message(content=self.input, role=UserMessageContentRoleType.USER)]
+
+        messages: list[Message] = []
+        for item in self.input:
+            item_type = item.get("type")
+            if item_type == "message" or (item_type is None and "content" in item):
+                content = item.get("content", [])
+                if isinstance(content, str):
+                    text = content
+                else:
+                    text = "\n".join(self._content_parts_to_text(content))
+                messages.append(Message(content=text, role=UserMessageContentRoleType(item.get("role", "user"))))
+            elif item_type in {"input_text", "text"}:
+                text = item.get("text")
+                if text is not None:
+                    messages.append(Message(content=str(text), role=UserMessageContentRoleType.USER))
+
+        if not messages:
+            return [Message(content="", role=UserMessageContentRoleType.USER)]
+        return messages
+
+    @staticmethod
+    def _content_parts_to_text(content: typing.Any) -> list[str]:
+        if isinstance(content, str):
+            return [content]
+        if not isinstance(content, list):
+            return []
+
+        text_parts: list[str] = []
+        for part in content:
+            if isinstance(part, str):
+                text_parts.append(part)
+            elif isinstance(part, dict) and part.get("type") in {"input_text", "text"}:
+                text = part.get("text")
+                if text is not None:
+                    text_parts.append(str(text))
+        return text_parts
+
+    def _tools_to_chat_tools(self) -> list[dict[str, typing.Any]] | None:
+        if self.tools is None:
+            return None
+
+        chat_tools: list[dict[str, typing.Any]] = []
+        for tool in self.tools:
+            if tool.get("type") != "function":
+                continue
+            if "function" in tool:
+                chat_tools.append(tool)
+            else:
+                chat_tools.append({
+                    "type": "function",
+                    "function": {
+                        "name": tool.get("name"),
+                        "description": tool.get("description", ""),
+                        "parameters": tool.get("parameters", {}),
+                    },
+                })
+        return chat_tools
+
+
 class ChatRequestOrMessage(BaseModel):
     """
     `ChatRequestOrMessage` is a data model that represents either a conversation or a string input.
@@ -1025,3 +1123,4 @@ def _string_to_nat_chat_response_chunk(data: str) -> ChatResponseChunk:
 
 
 GlobalTypeConverter.register_converter(_string_to_nat_chat_response_chunk)
+

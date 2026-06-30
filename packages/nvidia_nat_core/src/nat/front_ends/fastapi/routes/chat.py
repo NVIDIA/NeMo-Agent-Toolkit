@@ -30,6 +30,7 @@ from .common_utils import get_streaming_endpoint
 from .common_utils import post_single_endpoint
 from .common_utils import post_streaming_endpoint
 from .v1_chat_completions import add_v1_chat_completions_route
+from .v1_responses import add_v1_responses_route
 
 
 class _ChatEndpointType(StrEnum):
@@ -149,10 +150,19 @@ async def add_chat_routes(
         if endpoint_method != _ChatEndpointMethod.POST:
             raise ValueError(f"Unsupported method {endpoint.method} for {openai_v1_path}")
 
-        await add_v1_chat_completions_route(worker,
-                                            app,
-                                            path=openai_v1_path,
-                                            method=endpoint.method,
-                                            description=endpoint.description,
-                                            session_manager=session_manager,
-                                            enable_interactive=enable_interactive_extensions)
+        if openai_v1_path.endswith("/responses"):
+            await add_v1_responses_route(worker,
+                                         app,
+                                         path=openai_v1_path,
+                                         method=endpoint.method,
+                                         description=endpoint.description,
+                                         session_manager=session_manager,
+                                         enable_interactive=enable_interactive_extensions)
+        else:
+            await add_v1_chat_completions_route(worker,
+                                                app,
+                                                path=openai_v1_path,
+                                                method=endpoint.method,
+                                                description=endpoint.description,
+                                                session_manager=session_manager,
+                                                enable_interactive=enable_interactive_extensions)

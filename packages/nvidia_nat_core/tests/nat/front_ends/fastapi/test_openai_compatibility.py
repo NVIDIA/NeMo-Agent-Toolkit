@@ -693,3 +693,144 @@ async def test_openai_compatible_streaming_response_format():
 
     # At least one non-null finish_reason should appear across the stream (finalization)
     assert valid_final_reason_seen, "Expected a final chunk with non-null finish_reason"
+
+
+
+def test_responses_request_converts_to_chat_request():
+    """Responses API payloads should map to the existing ChatRequest workflow contract."""
+    from nat.data_models.api_server import ResponsesRequest
+
+    request = ResponsesRequest(model="gpt-4o-mini",
+                               input="What time is it?",
+                               instructions="Answer briefly.",
+                               max_output_tokens=12,
+                               tools=[{
+                                   "type": "function",
+                                   "name": "current_datetime",
+                                   "description": "Get the current date and time",
+                                   "parameters": {"type": "object"},
+                               }])
+
+    chat_request = request.to_chat_request()
+
+    assert [message.role.value for message in chat_request.messages] == ["system", "user"]
+    assert chat_request.messages[0].content == "Answer briefly."
+    assert chat_request.messages[1].content == "What time is it?"
+    assert chat_request.model == "gpt-4o-mini"
+    assert chat_request.max_tokens == 12
+    assert chat_request.tools == [{
+        "type": "function",
+        "function": {
+            "name": "current_datetime",
+            "description": "Get the current date and time",
+            "parameters": {"type": "object"},
+        },
+    }]
+
+
+def test_responses_request_converts_untyped_message_input_to_chat_request():
+    """Responses API message items may omit type and should still preserve their content."""
+    from nat.data_models.api_server import ResponsesRequest
+
+    request = ResponsesRequest(model="gpt-4o-mini",
+                               input=[{
+                                   "role": "user",
+                                   "content": "Explain DCO briefly.",
+                               }])
+
+    chat_request = request.to_chat_request()
+
+    assert len(chat_request.messages) == 1
+    assert chat_request.messages[0].role.value == "user"
+    assert chat_request.messages[0].content == "Explain DCO briefly."
+
+
+def test_responses_request_preserves_structured_message_roles():
+    """Structured Responses API message items should preserve their conversation roles."""
+    from nat.data_models.api_server import ResponsesRequest
+
+    request = ResponsesRequest(input=[{
+        "role": "system",
+        "content": "Be terse.",
+    }, {
+        "role": "user",
+        "content": "What is DCO?",
+    }])
+
+    chat_request = request.to_chat_request()
+
+    assert [(message.role.value, message.content) for message in chat_request.messages] == [
+        ("system", "Be terse."),
+        ("user", "What is DCO?"),
+    ]
+
+
+async def test_openai_responses_endpoint_accepts_responses_payload():
+    """A /v1/responses path should accept Responses API input and return Responses API output."""
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_v1_path = "/v1/responses"
+    front_end_config.workflow.openai_api_path = "/chat"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=True),
+    )
+
+    async with build_nat_client(config) as client:
+        response = await client.post("/v1/responses",
+                                     json={
+                                         "model": "gpt-4o-mini",
+                                         "input": "Hello from Responses API",
+                                     })
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["object"] == "response"
+    assert data["status"] == "completed"
+    assert data["model"] == "gpt-4o-mini"
+    assert data["output"][0]["type"] == "message"
+    assert data["output"][0]["role"] == "assistant"
+    assert data["output"][0]["content"][0] == {
+        "type": "output_text",
+        "text": "Hello from Responses API",
+        "annotations": [],
+    }
+    assert data["usage"] == {"input_tokens": 4, "output_tokens": 4, "total_tokens": 8}
+
+
+async def test_openai_responses_endpoint_streams_responses_events():
+    """Streaming /v1/responses should emit Responses API SSE lifecycle events."""
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_v1_path = "/v1/responses"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=StreamingEchoFunctionConfig(use_openai_api=True),
+    )
+
+    async with build_nat_client(config) as client:
+        events = []
+        async with aconnect_sse(client,
+                                "POST",
+                                "/v1/responses",
+                                json={
+                                    "model": "gpt-4o-mini",
+                                    "input": "Hello streaming",
+                                    "stream": True,
+                                }) as event_source:
+            async for sse in event_source.aiter_sse():
+                events.append((sse.event, sse.json()))
+
+    assert event_source.response.status_code == 200
+    assert [event for event, _ in events] == [
+        "response.created",
+        "response.output_item.added",
+        "response.content_part.added",
+        "response.output_text.delta",
+        "response.output_text.done",
+        "response.content_part.done",
+        "response.output_item.done",
+        "response.done",
+    ]
+    assert events[3][1]["delta"] == "Hello streaming"
+    assert events[-1][1]["response"]["output"][0]["content"][0]["text"] == "Hello streaming"
