@@ -27,6 +27,32 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ## Version Specific Changes
 
+### v1.9.0
+
+#### Redis Package Migration
+
+Redis memory and object store support moved from the in-repository `nvidia-nat-redis` implementation to the Redis-maintained `nemo-agent-toolkit-redis` package.
+
+This provider migration preserves the supported NeMo Agent Toolkit interfaces. The `nvidia-nat[redis]` extra, the historical `nvidia-nat-redis` distribution name, Python imports under `nat.plugins.redis`, and the existing Redis component configuration names continue to work through the compatibility package.
+
+For new projects, install the Redis plugin package directly:
+
+```bash
+pip install nemo-agent-toolkit-redis
+```
+
+Alternatively, install the NeMo Agent Toolkit Redis extra:
+
+```bash
+pip install "nvidia-nat[redis]"
+```
+
+Existing configurations that use `_type: redis` or `_type: redis_memory` continue to work after the Redis plugin package is installed. The external package also provides the `redis_agent_memory_backend` and `redis_agent_memory_auto_memory` component types.
+
+The historical `nvidia-nat-redis` distribution remains as a no-code compatibility package that depends on `nemo-agent-toolkit-redis`. New projects should install `nemo-agent-toolkit-redis` directly. Report Redis integration bugs and package release issues in the [Redis plugin issue tracker](https://github.com/redis-developer/nemo-agent-toolkit-redis/issues).
+
+The external plugin requires `redis>=5.0.0,<6.0.0`, replacing the previous `redis>=4.3.4,<5.0.0` constraint. Environments that explicitly constrain the Redis Python client to a version earlier than 5.0.0 must update that constraint.
+
 ### v1.8.0
 
 #### Tavily Internet Search Package Migration (Breaking)

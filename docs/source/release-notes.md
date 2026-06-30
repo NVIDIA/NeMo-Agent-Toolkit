@@ -18,6 +18,11 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit Release Notes
 This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 
+## Release v1.9.0
+### Summary
+
+* Migrated Redis memory and object store support out of the NeMo Agent Toolkit repository and into the Redis-maintained [`nemo-agent-toolkit-redis`](https://pypi.org/project/nemo-agent-toolkit-redis/) plugin. The `nvidia-nat[redis]` extra, historical `nvidia-nat-redis` distribution, Python imports, and Redis component configuration names remain compatible through the no-code shim. New projects should install the external package directly. The external plugin requires `redis>=5.0.0,<6.0.0`; environments constrained to an earlier Redis Python client must update that constraint. See the [migration guide](./resources/migration-guide.md#redis-package-migration) for details.
+
 ## Release v1.8.0
 ### Summary
 
