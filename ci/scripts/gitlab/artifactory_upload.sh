@@ -21,24 +21,13 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
-GIT_TAG=$(get_git_tag)
-IS_TAGGED=$(is_current_commit_release_tagged)
+export GIT_TAG=$(get_git_tag)
+export IS_TAGGED=$(is_current_commit_release_tagged)
 echo "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
-# Define variables
-NAT_ARCH="any"
-NAT_OS="any"
-
-# nvidia-nat itself and all of the plugins are under "nvidia-nat", while the compatibility packages are under "nat"
-NAT_COMPONENTS=("nvidia-nat" "nat")
-
-# We need to fix the name of the component in artifactory to aiqtoolkit
-ARTIFACTORY_COMPONENT_FIXED_NAME="aiqtoolkit"
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 
-# Define the subdirectories to be exclude
-EXCLUDE_SUBDIRS=("examples")
 
 # Exit if required secrets are not set
 if [[ -z "${URM_USER}" || -z "${URM_API_KEY}" ]]; then
