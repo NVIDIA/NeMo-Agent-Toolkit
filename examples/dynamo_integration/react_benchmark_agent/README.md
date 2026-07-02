@@ -114,8 +114,8 @@ cd /path/to/NeMo-Agent-Toolkit
 uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
-# Install nvidia-nat with LangChain support
-uv pip install -e ".[langchain]"
+# Install `nvidia-nat` with LangChain and config optimizer support
+uv pip install -e ".[config-optimizer,langchain]"
 
 # Install visualization dependencies
 uv pip install matplotlib scipy
@@ -923,6 +923,9 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 ```
 
 ### Optimization
+
+> [!NOTE]
+> The `nat optimize` command is provided by the optional config optimizer package. If `nat optimize` returns `Error: No such command 'optimize'`, reinstall the toolkit with `uv pip install -e ".[config-optimizer,langchain]"` from the repository root, then reinstall this workflow package.
 
 ```bash
 # Optimize Dynamo prefix header parameters for the Predictive KV-Aware Thompson Sampling router
