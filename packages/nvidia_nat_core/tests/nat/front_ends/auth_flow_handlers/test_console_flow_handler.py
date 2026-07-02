@@ -14,7 +14,10 @@
 # limitations under the License.
 
 import asyncio
+import logging
 import socket
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import httpx
 import pytest
@@ -24,6 +27,7 @@ from mock_oauth2_server import MockOAuth2Server
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from nat.data_models.authentication import AuthFlowType
 from nat.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
+from nat.front_ends.console.console_front_end_plugin import ConsoleFrontEndPlugin
 
 
 # --------------------------------------------------------------------------- #
@@ -196,3 +200,83 @@ async def test_console_oauth2_flow_error_handling(monkeypatch, mock_server):
     # Verify the error message contains the original exception information
     error_message = str(exc_info.value)
     assert "Invalid OAuth client configuration" in error_message
+
+
+# ---------------------------------------------------------------------------
+# ConsoleFrontEndPlugin - preflight authentication
+# ---------------------------------------------------------------------------
+
+
+def _sm(auth_providers: dict) -> MagicMock:
+    sm = MagicMock()
+    sm.config.authentication = auth_providers
+    sm.shared_builder.get_auth_provider = AsyncMock()
+    return sm
+
+
+def _cfg(preflight_auth: bool = True) -> MagicMock:
+    cfg = MagicMock()
+    cfg.preflight_auth = preflight_auth
+    return cfg
+
+
+async def _run(sm: MagicMock) -> None:
+    """Call _run_preflight_auth without instantiating the full plugin."""
+    await ConsoleFrontEndPlugin._run_preflight_auth(MagicMock(), sm)
+
+
+async def test_console_preflight_auth_authenticates_single_provider():
+    provider = AsyncMock()
+    sm = _sm({"provider_a": _cfg()})
+    sm.shared_builder.get_auth_provider.return_value = provider
+
+    await _run(sm)
+
+    sm.shared_builder.get_auth_provider.assert_awaited_once_with("provider_a")
+    provider.authenticate.assert_awaited_once()
+
+
+async def test_console_preflight_auth_authenticates_all_preflight_providers():
+    provider_a, provider_b = AsyncMock(), AsyncMock()
+    sm = _sm({"provider_a": _cfg(), "provider_b": _cfg()})
+    sm.shared_builder.get_auth_provider.side_effect = [provider_a, provider_b]
+
+    await _run(sm)
+
+    assert sm.shared_builder.get_auth_provider.await_count == 2
+    provider_a.authenticate.assert_awaited_once()
+    provider_b.authenticate.assert_awaited_once()
+
+
+async def test_console_preflight_auth_skips_non_preflight_providers():
+    provider_a = AsyncMock()
+    sm = _sm({"provider_a": _cfg(), "provider_b": _cfg(preflight_auth=False)})
+    sm.shared_builder.get_auth_provider.return_value = provider_a
+
+    await _run(sm)
+
+    sm.shared_builder.get_auth_provider.assert_awaited_once_with("provider_a")
+
+
+async def test_console_preflight_auth_logs_warning_and_does_not_raise_on_failure(caplog):
+    provider = AsyncMock()
+    provider.authenticate.side_effect = RuntimeError("OAuth server unreachable")
+    sm = _sm({"provider_a": _cfg()})
+    sm.shared_builder.get_auth_provider.return_value = provider
+
+    with caplog.at_level(logging.WARNING):
+        await _run(sm)
+
+    assert any("provider_a" in r.message for r in caplog.records)
+
+
+async def test_console_preflight_auth_continues_remaining_providers_after_one_fails():
+    provider_a, provider_b = AsyncMock(), AsyncMock()
+    provider_a.authenticate.side_effect = RuntimeError("a failed")
+    sm = _sm({"provider_a": _cfg(), "provider_b": _cfg()})
+    sm.shared_builder.get_auth_provider.side_effect = [provider_a, provider_b]
+
+    await _run(sm)
+
+    provider_a.authenticate.assert_awaited_once()
+    provider_b.authenticate.assert_awaited_once()

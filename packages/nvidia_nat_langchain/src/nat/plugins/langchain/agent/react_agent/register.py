@@ -103,6 +103,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from langgraph.graph.state import CompiledStateGraph
 
     from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
+    from nat.plugins.langchain.agent.base import _extract_message_text
     from nat.plugins.langchain.agent.react_agent.agent import ReActAgentGraph
     from nat.plugins.langchain.agent.react_agent.agent import ReActGraphState
     from nat.plugins.langchain.agent.react_agent.agent import create_react_agent_prompt
@@ -168,7 +169,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             # get and return the output from the state
             state = ReActGraphState(**state)
             output_message = state.messages[-1]
-            content = str(output_message.content)
+            content = _extract_message_text(output_message.content)
 
             # Create usage statistics for the response
             prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
@@ -219,11 +220,12 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
                     continue
                 if not isinstance(metadata, dict) or metadata.get("langgraph_node") != "agent":
                     continue
-                if isinstance(msg.content, str) and msg.content and not msg.tool_call_chunks:
+                chunk_text = _extract_message_text(msg.content)
+                if chunk_text and not msg.tool_call_chunks:
                     if found_final_answer:
-                        yield ChatResponseChunk.create_streaming_chunk(msg.content, id_=chunk_id)
+                        yield ChatResponseChunk.create_streaming_chunk(chunk_text, id_=chunk_id)
                     else:
-                        buffer += msg.content
+                        buffer += chunk_text
                         cleaned_buffer = remove_r1_think_tags(buffer)
                         match = FINAL_ANSWER_PATTERN.search(cleaned_buffer)
                         if match:

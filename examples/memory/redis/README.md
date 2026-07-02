@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-These examples use the redis memory backend.
+These examples use the Redis memory backend from the Redis-maintained [`nemo-agent-toolkit-redis`](https://pypi.org/project/nemo-agent-toolkit-redis/) plugin.
 
 ## Table of Contents
 
@@ -58,6 +58,8 @@ To run this example, install the required dependencies by running the following 
 ```bash
 uv pip install -e .
 ```
+
+This installs the external Redis plugin directly. The provider maintains and releases the plugin independently from NVIDIA NeMo Agent Toolkit.
 
 ### Start Services
 
