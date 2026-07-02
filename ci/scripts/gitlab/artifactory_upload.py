@@ -74,7 +74,7 @@ def perform_release(published_wheels: list[tuple[Path, str]]) -> None:
     headers = {"Authorization": f"Bearer {kitmaker_api_token}"}
 
     response = requests.get(
-        f"https://{kitmaker_url}/api/v0/projects",
+        f"{kitmaker_url}/api/v0/projects",
         headers=headers,
         timeout=(30, 600),
     )
@@ -102,7 +102,7 @@ def perform_release(published_wheels: list[tuple[Path, str]]) -> None:
         }
 
         response = requests.post(
-            f"https://{kitmaker_url}/api/v0/projects/{package_id}/releases",
+            f"{kitmaker_url}/api/v0/projects/{package_id}/releases",
             headers=headers,
             json=payload,
             timeout=(30, 600),
@@ -124,7 +124,7 @@ def main() -> int:
     published_wheels: list[tuple[Path, str]] = []
 
     wheels_dir = wheels_base_dir / NAT_COMPONENT
-    print(f"Dir : {wheels_dir.relative_to(project_dir)}", flush=True)
+    print(f"Dir : {wheels_dir.relative_to(wheels_base_dir)}", flush=True)
 
     for subdir in (path for path in wheels_dir.iterdir() if path.is_dir()):
         if subdir.name in EXCLUDE_SUBDIRS:
