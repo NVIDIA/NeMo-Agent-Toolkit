@@ -24,7 +24,7 @@ import requests
 
 NAT_ARCH = "any"
 NAT_OS = "any"
-NAT_COMPONENTS = ("nvidia-nat", "nat")
+NAT_COMPONENT = "nvidia-nat"
 ARTIFACTORY_COMPONENT_FIXED_NAME = "aiqtoolkit"
 EXCLUDE_SUBDIRS = {"examples"}
 
@@ -122,32 +122,32 @@ def main() -> int:
 
     wheels = []
     published_wheels: list[tuple[Path, str]] = []
-    for component_name in NAT_COMPONENTS:
-        wheels_dir = wheels_base_dir / component_name
-        print(f"NAT Component : {component_name} Dir : {wheels_dir}", flush=True)
 
-        for subdir in (path for path in wheels_dir.iterdir() if path.is_dir()):
-            if subdir.name in EXCLUDE_SUBDIRS:
-                print(f"Skipping excluded directory: {subdir.name}", flush=True)
-                continue
+    wheels_dir = wheels_base_dir / NAT_COMPONENT
+    print(f"Dir : {wheels_dir.relative_to(project_dir)}", flush=True)
 
-            print(f"Uploading wheels from {subdir} to Artifactory...", flush=True)
-            for wheel_file in subdir.rglob("*.whl"):
-                wheels.append(wheel_file)
-                try:
-                    wheel_url = upload_wheel(
-                        wheel_file,
-                        wheels_base_dir,
-                        artifactory_url,
-                        artifactory_name,
-                        username,
-                        api_key,
-                        git_tag,
-                        release_approver,
-                    )
-                    published_wheels.append((wheel_file, wheel_url))
-                except Exception as e:
-                    print(f"Failed to upload {wheel_file}: {e}", flush=True)
+    for subdir in (path for path in wheels_dir.iterdir() if path.is_dir()):
+        if subdir.name in EXCLUDE_SUBDIRS:
+            print(f"Skipping excluded directory: {subdir.name}", flush=True)
+            continue
+
+        print(f"Uploading wheels from {subdir} to Artifactory...", flush=True)
+        for wheel_file in subdir.rglob("*.whl"):
+            wheels.append(wheel_file)
+            try:
+                wheel_url = upload_wheel(
+                    wheel_file,
+                    wheels_base_dir,
+                    artifactory_url,
+                    artifactory_name,
+                    username,
+                    api_key,
+                    git_tag,
+                    release_approver,
+                )
+                published_wheels.append((wheel_file, wheel_url))
+            except Exception as e:
+                print(f"Failed to upload {wheel_file}: {e}", flush=True)
 
     if (os.environ.get("CI_CRON_NIGHTLY") == "1" or os.environ.get("IS_TAGGED") == "1"
             or os.environ.get("CI_COMMIT_BRANCH") == "main"):
