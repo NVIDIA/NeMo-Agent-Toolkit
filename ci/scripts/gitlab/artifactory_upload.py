@@ -124,14 +124,14 @@ def main() -> int:
     published_wheels: list[tuple[Path, str]] = []
 
     wheels_dir = wheels_base_dir / NAT_COMPONENT
-    print(f"Dir : {wheels_dir.relative_to(wheels_base_dir)}", flush=True)
+    print(f"Dir : {wheels_dir}", flush=True)
 
     for subdir in (path for path in wheels_dir.iterdir() if path.is_dir()):
         if subdir.name in EXCLUDE_SUBDIRS:
             print(f"Skipping excluded directory: {subdir.name}", flush=True)
             continue
 
-        print(f"Uploading wheels from {subdir} to Artifactory...", flush=True)
+        print(f"Uploading wheels from {subdir.relative_to(wheels_base_dir)} to Artifactory...", flush=True)
         for wheel_file in subdir.rglob("*.whl"):
             wheels.append(wheel_file)
             try:
@@ -149,16 +149,19 @@ def main() -> int:
             except Exception as e:
                 print(f"Failed to upload {wheel_file}: {e}", flush=True)
 
-    if (os.environ.get("CI_CRON_NIGHTLY") == "1" or os.environ.get("IS_TAGGED") == "1"
-            or os.environ.get("CI_COMMIT_BRANCH") == "main"):
-        perform_release(published_wheels)
-
     num_unpublished = len(wheels) - len(published_wheels)
     if num_unpublished > 0:
         print(f"Warning: Only {len(published_wheels)} out of {len(wheels)} wheels were uploaded successfully.",
               flush=True)
     else:
         print("All wheels uploaded to Artifactory.")
+
+    if (os.environ.get("CI_CRON_NIGHTLY") == "1" or os.environ.get("IS_TAGGED") == "1"
+            or os.environ.get("CI_COMMIT_BRANCH") == "main"):
+        print("Performing release of published wheels to KitMaker...", flush=True)
+        perform_release(published_wheels)
+    else:
+        print("Skipping release to KitMaker. This is not a nightly, tagged, or main branch build.", flush=True)
 
     return num_unpublished
 
