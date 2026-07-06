@@ -109,7 +109,6 @@ def finetune_command(
     # Apply overrides if provided
     if override:
         logger.info("Applying config overrides: %s", override)
-        # TODO: Implement config override logic similar to other commands
 
     try:
         # Run the finetuning process

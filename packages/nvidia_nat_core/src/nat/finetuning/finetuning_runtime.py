@@ -100,10 +100,21 @@ async def finetuning_main(run_config: FinetuneRunConfig) -> None:
         run_config: FinetuneRunConfig object containing finetuning settings
     """
 
-    from nat.builder.workflow_builder import WorkflowBuilder
-    from nat.runtime.loader import load_config
+    from pydantic import BaseModel
 
-    config = load_config(config_file=run_config.config_file)
+    from nat.builder.workflow_builder import WorkflowBuilder
+    from nat.cli.cli_utils.config_override import load_and_override_config
+    from nat.data_models.config import Config
+    from nat.runtime.loader import PluginTypes, discover_and_register_plugins
+    from nat.utils.data_models.schema_validator import validate_schema
+
+    if isinstance(run_config.config_file, BaseModel):
+        import typing
+        config = typing.cast(Config, run_config.config_file)
+    else:
+        discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
+        config_dict = load_and_override_config(run_config.config_file, run_config.override)
+        config = validate_schema(config_dict, Config)
     finetuning_config = config.finetuning
     finetuning_config.run_configuration = run_config
 
