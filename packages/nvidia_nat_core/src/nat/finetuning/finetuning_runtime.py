@@ -103,7 +103,7 @@ async def finetuning_main(run_config: FinetuneRunConfig) -> None:
     from pydantic import BaseModel
 
     from nat.builder.workflow_builder import WorkflowBuilder
-    from nat.cli.cli_utils.config_override import load_and_override_config
+    from nat.cli.cli_utils.config_override import LayeredConfig, load_and_override_config
     from nat.data_models.config import Config
     from nat.runtime.loader import PluginTypes, discover_and_register_plugins
     from nat.utils.data_models.schema_validator import validate_schema
@@ -111,6 +111,13 @@ async def finetuning_main(run_config: FinetuneRunConfig) -> None:
     if isinstance(run_config.config_file, BaseModel):
         import typing
         config = typing.cast(Config, run_config.config_file)
+        if run_config.override:
+            config_dict = config.model_dump(by_alias=True)
+            layered_config = LayeredConfig(config_dict)
+            for param_path, value in run_config.override:
+                layered_config.set_override(param_path, value)
+            effective_config = layered_config.get_effective_config()
+            config = validate_schema(effective_config, Config)
     else:
         discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
         config_dict = load_and_override_config(run_config.config_file, run_config.override)
