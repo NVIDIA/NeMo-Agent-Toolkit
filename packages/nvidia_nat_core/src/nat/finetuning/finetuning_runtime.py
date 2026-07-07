@@ -71,16 +71,20 @@ async def run_finetuning(runner: Trainer) -> None:
                              failed_jobs,
                              len(job_statuses))
             elif canceled_jobs:
-                logger.warning("Finetuning was canceled. %d job(s) were canceled out of %d total.",
-                               canceled_jobs,
-                               len(job_statuses))
+                logger.warning(
+                    "Finetuning was canceled. %d job(s) were canceled out of %d total.",
+                    canceled_jobs,
+                    len(job_statuses),
+                )
             elif completed_jobs == len(job_statuses):
                 logger.info("Finetuning completed successfully!")
             else:
                 # Some jobs may still be pending or running (unexpected state)
-                logger.warning("Finetuning finished with %d completed, %d pending/running job(s).",
-                               completed_jobs,
-                               len(job_statuses) - completed_jobs)
+                logger.warning(
+                    "Finetuning finished with %d completed, %d pending/running job(s).",
+                    completed_jobs,
+                    len(job_statuses) - completed_jobs,
+                )
 
     except Exception as e:
         logger.error("Finetuning failed: %s", e)
@@ -100,28 +104,22 @@ async def finetuning_main(run_config: FinetuneRunConfig) -> None:
         run_config: FinetuneRunConfig object containing finetuning settings
     """
 
+    from typing import cast
+
     from pydantic import BaseModel
 
     from nat.builder.workflow_builder import WorkflowBuilder
-    from nat.cli.cli_utils.config_override import LayeredConfig, load_and_override_config
     from nat.data_models.config import Config
-    from nat.runtime.loader import PluginTypes, discover_and_register_plugins
-    from nat.utils.data_models.schema_validator import validate_schema
+    from nat.runtime.loader import load_config
 
     if isinstance(run_config.config_file, BaseModel):
-        import typing
-        config = typing.cast(Config, run_config.config_file)
-        if run_config.override:
-            config_dict = config.model_dump(by_alias=True)
-            layered_config = LayeredConfig(config_dict)
-            for param_path, value in run_config.override:
-                layered_config.set_override(param_path, value)
-            effective_config = layered_config.get_effective_config()
-            config = validate_schema(effective_config, Config)
+        config = cast(Config, run_config.config_file)
     else:
-        discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
-        config_dict = load_and_override_config(run_config.config_file, run_config.override)
-        config = validate_schema(config_dict, Config)
+        if run_config.override:
+            raise ValueError("Overrides require a pre-resolved config object. "
+                             "Please apply overrides and validate the config before calling finetuning_main, "
+                             "or pass a Config object directly.")
+        config = load_config(config_file=run_config.config_file)
     finetuning_config = config.finetuning
     finetuning_config.run_configuration = run_config
 
