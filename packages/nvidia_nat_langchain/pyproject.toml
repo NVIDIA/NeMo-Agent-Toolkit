@@ -85,12 +85,13 @@ oci = ["langchain-oci>=0.2.4,<1.0.0"]
 openai = ["langchain-openai>=1.1.6,<2.0.0"]
 
 all = [
-  "nvidia-nat-langchain[aws,community,exa,huggingface,judge,litellm,milvus,nvidia,oci,openai] == {version}",
+  # Self-references must stay unversioned: {version} bakes the sha-dependent scm version into uv.lock
+  "nvidia-nat-langchain[aws,community,exa,huggingface,judge,litellm,milvus,nvidia,oci,openai]",
 ]
 
 test = [
   "nvidia-nat-eval[profiling] == {version}",
-  "nvidia-nat-langchain[all] == {version}",
+  "nvidia-nat-langchain[all]",
   "nvidia-nat-test == {version}",
 ]
 
