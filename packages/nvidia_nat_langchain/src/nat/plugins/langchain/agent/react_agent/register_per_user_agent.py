@@ -85,10 +85,10 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
                                                         start_on="human",
                                                         include_system=True)
             state = ReActGraphState(messages=messages)
-            state = await graph.ainvoke(
-                state,
-                config=_build_lc_config(config.max_tool_calls, message.model,
-                                        supports_override=_supports_model_override))
+            state = await graph.ainvoke(state,
+                                        config=_build_lc_config(config.max_tool_calls,
+                                                                message.model,
+                                                                supports_override=_supports_model_override))
             state = ReActGraphState(**state)
             output_message = state.messages[-1]
             content = str(output_message.content)

@@ -265,7 +265,8 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         except GraphRecursionError:
             logger.warning(
                 "%s ReAct Agent reached its maximum iteration limit (%d) without producing a final answer. "
-                "This typically means the LLM kept calling tools instead of returning a response.", AGENT_LOG_PREFIX,
+                "This typically means the LLM kept calling tools instead of returning a response.",
+                AGENT_LOG_PREFIX,
                 config.max_tool_calls)
             yield ChatResponseChunk.create_streaming_chunk(
                 f"The react agent could not produce a final answer within {config.max_tool_calls} "
