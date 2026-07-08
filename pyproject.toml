@@ -335,7 +335,9 @@ select = [
   # Enable partial pylint support
   "PL",
   # Enable pyupgrade support
-  "UP"
+  "UP",
+  # flake8-bugbear: enforce the memory-leak rule
+  "B019"
 ]
 
 extend-ignore = [
