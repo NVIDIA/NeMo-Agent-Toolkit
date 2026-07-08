@@ -21,7 +21,6 @@ import os
 import sys
 import types
 import typing
-from functools import lru_cache
 from typing import TypeAlias
 
 from pydantic import BaseModel
@@ -57,6 +56,30 @@ else:
         return func
 
 
+class read_only_cached_property:
+
+    def __init__(self, func):
+        self.func = func
+        self.attrname = func.__name__
+        self.__doc__ = func.__doc__
+
+    def __get__(self, instance, owner=None):
+        if instance is None:
+            return self
+        if self.attrname in instance.__dict__:
+            return instance.__dict__[self.attrname]
+        value = self.func(instance)
+        instance.__dict__[self.attrname] = value
+        return value
+
+    def __set__(self, instance, value):
+        raise AttributeError(f"'{self.attrname}' is read-only")
+
+    def __delete__(self, instance):
+        if self.attrname in instance.__dict__:
+            del instance.__dict__[self.attrname]
+
+
 class DecomposedType:
 
     def __init__(self, original: type):
@@ -66,8 +89,7 @@ class DecomposedType:
 
         self.type = original
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def origin(self):
         """
         Get the origin of the current type using `typing.get_origin`. For example, if the current type is `list[int]`,
@@ -81,8 +103,7 @@ class DecomposedType:
 
         return typing.get_origin(self.type)
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def args(self):
         """
         Get the arguments of the current type using `typing.get_args`. For example, if the current type is `list[int,
@@ -96,8 +117,7 @@ class DecomposedType:
 
         return typing.get_args(self.type)
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def root(self):
         """
         Get the root type of the current type. This is the type without any annotations or async generators.
@@ -110,8 +130,7 @@ class DecomposedType:
 
         return self.origin if self.origin is not None else self.type
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def is_empty(self):
         """
         Check if the current type is eqivalent to `NoneType`.
@@ -123,8 +142,7 @@ class DecomposedType:
         """
         return self.type is types.NoneType
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def is_class(self):
         """
         Check if the current type is a class using `inspect.isclass`. For example, `list[int]` would return False, but
@@ -138,8 +156,7 @@ class DecomposedType:
 
         return inspect.isclass(self.type)
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def is_generic(self):
         """
         Check if the current type is a generic using `typing.GenericMeta`. For example, `list[int]` would return True,
@@ -153,8 +170,7 @@ class DecomposedType:
 
         return self.origin is not None
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def is_annotated(self):
         """
         Check if the current type is an annotated type using `typing.Annotated`. For example, `Annotated[int, str]`
@@ -168,8 +184,7 @@ class DecomposedType:
 
         return self.origin is typing.Annotated
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def is_union(self):
         """
         Check if the current type is a union type using `typing.Union`. For example, `Union[int, str]` would return
@@ -183,8 +198,7 @@ class DecomposedType:
 
         return self.origin in (typing.Union, types.UnionType)
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def is_async_generator(self):
         """
         Check if the current type is an async generator type. For example, `AsyncGenerator[int]` would return True,
@@ -202,8 +216,7 @@ class DecomposedType:
             types.AsyncGeneratorType,
         )
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def is_optional(self):
         """
         Check if the current type is an optional type. For example, `Optional[int]` and `int | None` would return True,
@@ -217,8 +230,7 @@ class DecomposedType:
 
         return self.is_union and types.NoneType in self.args
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def has_base_type(self):
         """
         Check if the current type has a base type, ignoring any annotations or async generators.
