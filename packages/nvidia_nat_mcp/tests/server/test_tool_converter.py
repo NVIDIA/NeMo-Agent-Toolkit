@@ -25,6 +25,8 @@ from pydantic import Field
 from nat.builder.function import Function
 from nat.builder.workflow import Workflow
 from nat.plugins.mcp.server.tool_converter import _USE_PYDANTIC_DEFAULT
+from nat.plugins.mcp.server.tool_converter import _build_name_mapping
+from nat.plugins.mcp.server.tool_converter import _sanitize_parameter_name
 from nat.plugins.mcp.server.tool_converter import create_function_wrapper
 from nat.plugins.mcp.server.tool_converter import get_function_description
 from nat.plugins.mcp.server.tool_converter import is_field_optional
@@ -775,3 +777,155 @@ class TestResultTypeConversion:
             # Assert
             assert isinstance(result, str)
             assert result == expected_output
+
+
+class TestSanitizeParameterName:
+    """Test cases for _sanitize_parameter_name utility function."""
+
+    def test_valid_identifier_unchanged(self):
+        """Test that a valid Python identifier is returned unchanged."""
+        assert _sanitize_parameter_name("query") == "query"
+
+    def test_python_keyword_gets_trailing_underscore(self):
+        """Test that Python keywords get a trailing underscore appended."""
+        assert _sanitize_parameter_name("from") == "from_"
+        assert _sanitize_parameter_name("class") == "class_"
+        assert _sanitize_parameter_name("import") == "import_"
+        assert _sanitize_parameter_name("return") == "return_"
+        assert _sanitize_parameter_name("yield") == "yield_"
+        assert _sanitize_parameter_name("lambda") == "lambda_"
+
+    def test_hyphenated_name_replaced(self):
+        """Test that hyphens are replaced with underscores."""
+        assert _sanitize_parameter_name("cik-A") == "cik_A"
+        assert _sanitize_parameter_name("start-date") == "start_date"
+
+    def test_digit_prefix_gets_underscore(self):
+        """Test that names starting with a digit get a leading underscore."""
+        assert _sanitize_parameter_name("1field") == "_1field"
+
+    def test_special_characters_replaced(self):
+        """Test that special characters are replaced with underscores."""
+        assert _sanitize_parameter_name("field.name") == "field_name"
+        assert _sanitize_parameter_name("field@name") == "field_name"
+        assert _sanitize_parameter_name("field name") == "field_name"
+
+    def test_empty_string_gets_underscore(self):
+        """Test that an empty string gets a leading underscore."""
+        assert _sanitize_parameter_name("") == "_"
+
+    def test_already_valid_name_unchanged(self):
+        """Test that names that are already valid identifiers pass through."""
+        assert _sanitize_parameter_name("my_field") == "my_field"
+        assert _sanitize_parameter_name("_private") == "_private"
+        assert _sanitize_parameter_name("CamelCase") == "CamelCase"
+
+
+class TestBuildNameMapping:
+    """Test cases for _build_name_mapping utility function."""
+
+    def test_no_changes_when_names_are_valid(self):
+        """Test that valid identifiers map to themselves."""
+        result = _build_name_mapping(["name", "age", "email"])
+        assert result == {"name": "name", "age": "age", "email": "email"}
+
+    def test_mapping_for_keywords(self):
+        """Test mapping for Python keywords."""
+        result = _build_name_mapping(["from", "class", "query"])
+        assert result == {"from": "from_", "class": "class_", "query": "query"}
+
+    def test_mapping_for_hyphenated_names(self):
+        """Test mapping for hyphenated names."""
+        result = _build_name_mapping(["cik-A", "start-date", "name"])
+        assert result == {"cik-A": "cik_A", "start-date": "start_date", "name": "name"}
+
+    def test_mapping_mixed(self):
+        """Test mapping with a mix of valid and invalid names."""
+        result = _build_name_mapping(["from", "name", "cik-A"])
+        assert result == {"from": "from_", "name": "name", "cik-A": "cik_A"}
+
+    def test_collision_keyword_and_suffixed_name(self):
+        """Test collision when schema has both 'from' and 'from_'."""
+        result = _build_name_mapping(["from", "from_"])
+        # 'from_' is a valid identifier so it reserves 'from_' in first pass
+        # 'from' sanitizes to 'from_' which collides, so gets 'from_2'
+        assert result["from_"] == "from_"
+        assert result["from"] == "from_2"
+
+    def test_collision_hyphenated_and_underscored(self):
+        """Test collision when schema has both 'cik-A' and 'cik_A'."""
+        result = _build_name_mapping(["cik-A", "cik_A"])
+        # 'cik_A' is valid, reserves itself in first pass
+        # 'cik-A' sanitizes to 'cik_A' which collides, so gets 'cik_A2'
+        assert result["cik_A"] == "cik_A"
+        assert result["cik-A"] == "cik_A2"
+
+
+class TestParameterNameSanitization:
+    """Test that schemas with non-identifier field names produce valid wrappers."""
+
+    def test_wrapper_created_for_schema_with_keyword_fields(self):
+        """Test that create_function_wrapper succeeds with keyword field names."""
+        # Arrange
+        from pydantic import create_model
+        schema = create_model("DateRangeSchema", **{
+            "from": (str, ...), "class": (str, ...), "query": (str, ...)
+        })  # type: ignore[call-overload]
+
+        mock_session_manager = create_mock_session_manager()
+
+        # Act - this previously raised ValueError: 'from' is not a valid parameter name
+        wrapper = create_function_wrapper("date_tool", mock_session_manager, schema)
+
+        # Assert
+        assert callable(wrapper)
+        sig = getattr(wrapper, '__signature__', None)
+        assert sig is not None
+        assert "from_" in sig.parameters
+        assert "class_" in sig.parameters
+        assert "query" in sig.parameters
+
+    def test_wrapper_created_for_schema_with_hyphenated_fields(self):
+        """Test that create_function_wrapper succeeds with hyphenated field names."""
+        # Arrange
+        from pydantic import create_model
+        schema = create_model("SecFilingsSchema", **{
+            "cik-A": (str, ...), "name": (str, ...)
+        })  # type: ignore[call-overload]
+
+        mock_session_manager = create_mock_session_manager()
+
+        # Act
+        wrapper = create_function_wrapper("sec_tool", mock_session_manager, schema)
+
+        # Assert
+        assert callable(wrapper)
+        sig = getattr(wrapper, '__signature__', None)
+        assert sig is not None
+        assert "cik_A" in sig.parameters
+        assert "name" in sig.parameters
+
+    async def test_wrapper_reverse_maps_kwargs_for_validation(self):
+        """Test that sanitized kwargs are reverse-mapped before Pydantic validation."""
+        # Arrange
+        from pydantic import create_model
+        schema = create_model("ToolSchema", **{
+            "from": (str, ...), "cik-A": (str, "default")
+        })  # type: ignore[call-overload]
+
+        mock_session_manager = create_mock_session_manager(result_value="ok")
+
+        wrapper = create_function_wrapper("tool", mock_session_manager, schema)
+
+        # Act - call with sanitized names (as MCP would pass them)
+        result = await wrapper(**{"from_": "2024-01-01", "cik_A": "ABC"})
+
+        # Assert
+        assert result == "ok"
+        # Verify session_manager.run() was called with properly mapped payload
+        mock_session_manager.run.assert_called_once()
+        call_args = mock_session_manager.run.call_args
+        payload = call_args[0][0]
+        # The Pydantic model should have the original field names
+        assert getattr(payload, "from") == "2024-01-01"
+        assert getattr(payload, "cik-A") == "ABC"
