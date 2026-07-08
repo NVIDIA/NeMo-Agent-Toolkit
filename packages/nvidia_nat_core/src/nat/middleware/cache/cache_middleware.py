@@ -45,7 +45,6 @@ from nat.middleware.middleware import InvocationContext
 logger = logging.getLogger(__name__)
 
 
-
 class CacheMiddleware(FunctionMiddleware):
     """Cache middleware that memoizes function outputs based on input similarity.
 
@@ -162,8 +161,7 @@ class CacheMiddleware(FunctionMiddleware):
 
         import difflib
 
-        best_matches = difflib.get_close_matches(
-            input_str, self._cache.keys(), n=1, cutoff=self._similarity_threshold)
+        best_matches = difflib.get_close_matches(input_str, self._cache.keys(), n=1, cutoff=self._similarity_threshold)
         if best_matches:
             return best_matches[0]
         return None
@@ -228,10 +226,7 @@ class CacheMiddleware(FunctionMiddleware):
         self._cache[input_str] = result
         while len(self._cache) > self._max_entries:
             self._cache.popitem(last=False)
-        logger.debug("Cached result for function %s (size=%d/%d)",
-                     context.name,
-                     len(self._cache),
-                     self._max_entries)
+        logger.debug("Cached result for function %s (size=%d/%d)", context.name, len(self._cache), self._max_entries)
 
         # Phase 4: Continue - return the fresh result
         return result

@@ -360,16 +360,13 @@ class TestMaxEntriesLruEviction:
 
         # Fill the cache with A, B, C (A is oldest)
         for key in ("A", "B", "C"):
-            await mw.function_middleware_invoke(
-                {"value": key}, call_next=mock_next_call, context=middleware_context)
+            await mw.function_middleware_invoke({"value": key}, call_next=mock_next_call, context=middleware_context)
 
         # Hit A again — should promote A to the MRU end
-        await mw.function_middleware_invoke(
-            {"value": "A"}, call_next=mock_next_call, context=middleware_context)
+        await mw.function_middleware_invoke({"value": "A"}, call_next=mock_next_call, context=middleware_context)
 
         # Now insert D — B (now oldest) should be evicted, not A.
-        await mw.function_middleware_invoke(
-            {"value": "D"}, call_next=mock_next_call, context=middleware_context)
+        await mw.function_middleware_invoke({"value": "D"}, call_next=mock_next_call, context=middleware_context)
 
         keys = "".join(list(mw._cache.keys()))  # noqa: SLF001
         assert '"value": "A"' in keys

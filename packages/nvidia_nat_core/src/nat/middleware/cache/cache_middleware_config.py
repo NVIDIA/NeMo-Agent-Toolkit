@@ -20,6 +20,7 @@ from pydantic import Field
 
 from nat.data_models.middleware import FunctionMiddlewareBaseConfig
 
+
 class CacheMiddlewareConfig(FunctionMiddlewareBaseConfig, name="cache"):
     """Configuration for cache middleware.
 
@@ -48,12 +49,11 @@ class CacheMiddlewareConfig(FunctionMiddlewareBaseConfig, name="cache"):
         default=1.0,
         ge=0,
         le=1.0,
-        description=(
-            "Similarity threshold in [0, 1.0]. Use 1.0 for exact matching (recommended). "
-            "Lower values enable fuzzy matching via difflib; note that difflib is quadratic "
-            "in the worst case, so large caches with low thresholds may have a performance "
-            "cost. Values near 0 increase the risk of cache collisions where different "
-            "inputs return the same cached response."),
+        description=("Similarity threshold in [0, 1.0]. Use 1.0 for exact matching (recommended). "
+                     "Lower values enable fuzzy matching via difflib; note that difflib is quadratic "
+                     "in the worst case, so large caches with low thresholds may have a performance "
+                     "cost. Values near 0 increase the risk of cache collisions where different "
+                     "inputs return the same cached response."),
     )
     max_entries: int = Field(
         default=1024,
