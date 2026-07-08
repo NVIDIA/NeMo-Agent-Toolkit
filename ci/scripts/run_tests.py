@@ -33,10 +33,21 @@ JUNIT_DIR = ART / "junit"
 COV_DIR = ART / "coverage"
 MAX_PROJECT_DEPTH = 5
 SKIP_DIRS = {"__pycache__", "node_modules"}
+THIRD_PARTY_DEPENDENCY_PROJECTS_FILE = REPO / "ci" / "third_party_dependency_projects.txt"
 
 
 class TestFailure(Exception):
     pass
+
+
+def load_third_party_dependency_projects() -> set[Path]:
+    """Load repository projects that CI must not install or execute."""
+    projects: set[Path] = set()
+    for line in THIRD_PARTY_DEPENDENCY_PROJECTS_FILE.read_text(encoding="utf-8").splitlines():
+        project = line.strip()
+        if project and not project.startswith("#"):
+            projects.add((REPO / project).resolve())
+    return projects
 
 
 def sh(cmd: list[str], *, env: dict[str, str] | None = None) -> int:
@@ -66,7 +77,8 @@ def discover_projects(max_depth: int = MAX_PROJECT_DEPTH, examples_only: bool = 
                 if "pyproject.toml" in files:
                     curr_projects.append(Path(root))
             projects.extend(sorted(curr_projects))
-    return projects
+    excluded_projects = load_third_party_dependency_projects()
+    return [project for project in projects if project.resolve() not in excluded_projects]
 
 
 def resolve_project(project: str) -> Path:
