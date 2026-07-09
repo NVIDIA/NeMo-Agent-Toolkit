@@ -80,6 +80,23 @@ def _extract_tools_schema(invocation_params: dict) -> list:
     return tools_schema
 
 
+def _extract_run_name(serialized: dict[str, Any], fallback: str = "") -> str:
+    if not isinstance(serialized, dict):
+        return fallback
+
+    name = serialized.get("name") or serialized.get("lc_name")
+    if name:
+        return str(name)
+
+    serialized_id = serialized.get("id")
+    if isinstance(serialized_id, list) and serialized_id:
+        return str(serialized_id[-1])
+    if serialized_id:
+        return str(serialized_id)
+
+    return fallback
+
+
 class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
     """Callback Handler that tracks NIM info."""
 
@@ -101,6 +118,8 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self._run_id_to_model_name = {}
         self._run_id_to_llm_input = {}
         self._run_id_to_tool_input = {}
+        self._run_id_to_chain_input = {}
+        self._run_id_to_chain_name = {}
         self._run_id_to_start_time = {}
 
     def __repr__(self) -> str:
@@ -347,6 +366,86 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self.step_manager.push_intermediate_step(stats)
         self._run_id_to_tool_input[str(run_id)] = input_str
         self._run_id_to_start_time[str(run_id)] = time.time()
+
+    async def on_chain_start(
+        self,
+        serialized: dict[str, Any],
+        inputs: dict[str, Any],
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+
+        run_id_str = str(run_id)
+        start_time = time.time()
+        name = _extract_run_name(serialized, fallback=kwargs.get("name", ""))
+        chain_inputs = copy.deepcopy(inputs)
+
+        stats = IntermediateStepPayload(event_type=IntermediateStepType.FUNCTION_START,
+                                        framework=LLMFrameworkEnum.LANGCHAIN,
+                                        name=name,
+                                        UUID=run_id_str,
+                                        tags=copy.deepcopy(tags),
+                                        data=StreamEventData(input=chain_inputs, payload=copy.deepcopy(serialized)),
+                                        metadata=TraceMetadata(span_inputs=chain_inputs,
+                                                               provided_metadata=copy.deepcopy(metadata)),
+                                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
+
+        self.step_manager.push_intermediate_step(stats)
+        self._run_id_to_chain_input[run_id_str] = chain_inputs
+        self._run_id_to_chain_name[run_id_str] = name
+        self._run_id_to_start_time[run_id_str] = start_time
+
+    def _clear_chain_run_state(self, run_id_str: str) -> None:
+        self._run_id_to_chain_input.pop(run_id_str, None)
+        self._run_id_to_chain_name.pop(run_id_str, None)
+        self._run_id_to_start_time.pop(run_id_str, None)
+
+    async def on_chain_end(
+        self,
+        outputs: dict[str, Any],
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
+        **kwargs: Any,
+    ) -> None:
+
+        run_id_str = str(run_id)
+        chain_outputs = copy.deepcopy(outputs)
+        chain_input = self._run_id_to_chain_input.get(run_id_str, "")
+        chain_name = self._run_id_to_chain_name.get(run_id_str, kwargs.get("name", ""))
+        chain_start_time = self._run_id_to_start_time.get(run_id_str, time.time())
+
+        stats = IntermediateStepPayload(event_type=IntermediateStepType.FUNCTION_END,
+                                        span_event_timestamp=chain_start_time,
+                                        framework=LLMFrameworkEnum.LANGCHAIN,
+                                        name=chain_name,
+                                        UUID=run_id_str,
+                                        tags=copy.deepcopy(tags),
+                                        metadata=TraceMetadata(span_outputs=chain_outputs),
+                                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
+                                        data=StreamEventData(input=chain_input,
+                                                             output=chain_outputs,
+                                                             payload=chain_outputs))
+
+        self.step_manager.push_intermediate_step(stats)
+        self._clear_chain_run_state(run_id_str)
+
+    async def on_chain_error(
+        self,
+        error: BaseException,
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
+        **kwargs: Any,
+    ) -> None:
+
+        self._clear_chain_run_state(str(run_id))
 
     async def on_tool_end(
         self,
