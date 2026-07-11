@@ -53,6 +53,9 @@ agent -> transform_document(source)
 
 The function accepts either a local file path or a public HTTP(S) URL (public URLs are passed directly to `transform_files`, skipping the upload). Transforms take from a few seconds up to several minutes depending on page count, and the maximum file size is 50 MB. Each `transform_document` call processes a single document, and the example always requests the default Markdown output; the Transform service also supports element JSON, HTML, and plain-text output, which would require extending `transform_document`.
 
+> [!IMPORTANT]
+> Trust boundary: for a local path, `transform_document` reads that file and uploads its contents to the hosted Transform service. Because the path comes from the agent, a crafted prompt could point it at a sensitive file (for example a private key or a credentials file) and cause that file to leave the host. Run this example with documents and prompts you trust, and if you adapt it for untrusted input, restrict the accepted paths to a designated directory.
+
 ## Prerequisites
 
 1. **Unstructured Transform API key:** Sign up and create a key at [transform.unstructured.io/get-started](https://transform.unstructured.io/get-started).

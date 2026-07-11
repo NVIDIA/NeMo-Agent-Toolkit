@@ -177,10 +177,12 @@ async def _upload_source(tools: TransformTools, http_client: httpx.AsyncClient, 
         return source
 
     path = Path(source).expanduser()
-    if not path.is_file():
+    # Filesystem access is offloaded to a worker thread so the reads (up to the size limit)
+    # do not block the event loop, per the async I/O guideline.
+    if not await asyncio.to_thread(path.is_file):
         raise FileNotFoundError(f"Document not found: {source}")
 
-    size_bytes = path.stat().st_size
+    size_bytes = (await asyncio.to_thread(path.stat)).st_size
     if size_bytes > max_file_size_bytes:
         raise ValueError(f"Document is {size_bytes} bytes which exceeds the "
                          f"{max_file_size_bytes} byte limit of the Transform service.")
@@ -193,9 +195,10 @@ async def _upload_source(tools: TransformTools, http_client: httpx.AsyncClient, 
 
     # Upload the raw bytes to the pre-signed URL. This is a plain HTTP request, not an
     # MCP call, and the pre-signed URL must not receive the bearer token.
+    file_bytes = await asyncio.to_thread(path.read_bytes)
     response = await http_client.request(str(upload.get("method", "PUT")),
                                          _require(upload, "upload_url", "request_file_upload_url"),
-                                         content=path.read_bytes(),
+                                         content=file_bytes,
                                          headers=upload.get("headers") or {})
     _check_http_response(response, "document upload")
 

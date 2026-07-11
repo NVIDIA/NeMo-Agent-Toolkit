@@ -15,7 +15,7 @@
 
 functions:
   # Deterministic wrapper around the four Transform MCP tools. The agent sees this one
-  # tool instead of orchestrating the multi-step upload/transform/poll/download protocol.
+  # tool instead of orchestrating the multi-step upload, transform, poll, and download protocol.
   transform_document:
     _type: transform_document
     mcp_group: unstructured_transform
