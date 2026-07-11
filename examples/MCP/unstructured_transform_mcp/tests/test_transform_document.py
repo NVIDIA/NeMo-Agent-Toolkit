@@ -34,6 +34,7 @@ _GROUP = "unstructured_transform"
 
 
 class _ToolArgs(BaseModel):
+    """Permissive input-schema stand-in that accepts any tool arguments."""
     model_config = ConfigDict(extra="allow")
 
 
@@ -47,6 +48,7 @@ class _FakeTool:
         self._handler = handler
 
     async def ainvoke(self, value: _ToolArgs) -> str:
+        """Record the call arguments and return the handler's canned response."""
         args = value.model_dump()
         self.calls.append(args)
         return await self._handler(**args)
@@ -105,19 +107,23 @@ class _FakeTransformService:
 
     @property
     def tools(self) -> TransformTools:
+        """Resolve the fake group into the TransformTools the code under test expects."""
         return resolve_tools(self.group_functions)  # type: ignore[arg-type]
 
     def tool(self, name: str) -> _FakeTool:
+        """Return the fake tool registered under the given MCP tool name."""
         return typing.cast(_FakeTool, self.group_functions[f"{_GROUP}__{name}"])
 
 
 @pytest.fixture(name="fast_config")
 def fast_config_fixture() -> TransformDocumentConfig:
+    """Config with tiny timeouts so the polling paths run quickly in tests."""
     return TransformDocumentConfig(poll_interval_seconds=0.01, transform_timeout_seconds=5.0, http_timeout_seconds=5.0)
 
 
 @pytest.fixture(name="sample_document")
 def sample_document_fixture(tmp_path: Path) -> Path:
+    """Write a small local file for the upload path to read."""
     document = tmp_path / "sample.pdf"
     document.write_bytes(b"%PDF-1.4 fake test document bytes")
     return document
@@ -125,6 +131,7 @@ def sample_document_fixture(tmp_path: Path) -> Path:
 
 async def test_local_file_transform(httpserver: HTTPServer, fast_config: TransformDocumentConfig,
                                     sample_document: Path):
+    """A local file is uploaded and transformed, with the expected MCP call shapes and no bearer token on the PUT."""
     service = _FakeTransformService(httpserver, statuses=["SCHEDULED", "IN_PROGRESS", "COMPLETED"])
 
     result = await transform_source(service.tools, fast_config, str(sample_document))
@@ -152,6 +159,7 @@ async def test_local_file_transform(httpserver: HTTPServer, fast_config: Transfo
 
 
 async def test_public_url_skips_upload(httpserver: HTTPServer, fast_config: TransformDocumentConfig):
+    """A public URL is passed straight to transform_files, skipping the upload step."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
     url = "https://example.com/whitepaper.pdf"
 
@@ -163,6 +171,7 @@ async def test_public_url_skips_upload(httpserver: HTTPServer, fast_config: Tran
 
 
 async def test_failed_job_raises(httpserver: HTTPServer, fast_config: TransformDocumentConfig, sample_document: Path):
+    """A job that ends in a non-success terminal state raises an error naming the state."""
     service = _FakeTransformService(httpserver, statuses=["FAILED"])
 
     with pytest.raises(RuntimeError, match="unexpected state 'FAILED'"):
@@ -170,6 +179,7 @@ async def test_failed_job_raises(httpserver: HTTPServer, fast_config: TransformD
 
 
 async def test_poll_timeout_raises(httpserver: HTTPServer, sample_document: Path):
+    """Polling stops with a timeout when the job never completes."""
     service = _FakeTransformService(httpserver, statuses=["IN_PROGRESS"])
     config = TransformDocumentConfig(poll_interval_seconds=0.01,
                                      transform_timeout_seconds=0.05,
@@ -180,6 +190,7 @@ async def test_poll_timeout_raises(httpserver: HTTPServer, sample_document: Path
 
 
 async def test_oversized_file_rejected(httpserver: HTTPServer, sample_document: Path):
+    """A file above the size limit is rejected before any upload URL is requested."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
     config = TransformDocumentConfig(poll_interval_seconds=0.01,
                                      transform_timeout_seconds=5.0,
@@ -193,6 +204,7 @@ async def test_oversized_file_rejected(httpserver: HTTPServer, sample_document: 
 
 
 async def test_missing_file_rejected(httpserver: HTTPServer, fast_config: TransformDocumentConfig, tmp_path: Path):
+    """A missing local path raises FileNotFoundError."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
 
     with pytest.raises(FileNotFoundError):
@@ -229,6 +241,7 @@ async def test_results_not_ready_retries_until_available(httpserver: HTTPServer,
 async def test_tool_error_payload_raises(httpserver: HTTPServer,
                                          fast_config: TransformDocumentConfig,
                                          sample_document: Path):
+    """An error envelope returned by an MCP tool is surfaced as an error."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
 
     async def _unauthorized(**_kwargs) -> str:
@@ -243,6 +256,7 @@ async def test_tool_error_payload_raises(httpserver: HTTPServer,
 async def test_non_json_tool_output_raises(httpserver: HTTPServer,
                                            fast_config: TransformDocumentConfig,
                                            sample_document: Path):
+    """Non-JSON tool output raises a descriptive error."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
 
     async def _error_text(**_kwargs) -> str:
@@ -255,6 +269,7 @@ async def test_non_json_tool_output_raises(httpserver: HTTPServer,
 
 
 def test_resolve_tools_reports_missing(httpserver: HTTPServer):
+    """resolve_tools reports which required tool is absent from the group."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
     del service.group_functions[f"{_GROUP}__get_transform_results"]
 
@@ -263,6 +278,7 @@ def test_resolve_tools_reports_missing(httpserver: HTTPServer):
 
 
 def test_workflow_config_loads(monkeypatch: pytest.MonkeyPatch):
+    """The shipped config loads and wires the expected function, group, and workflow types."""
     from nat.runtime.loader import load_config
     from nat.test.utils import locate_example_config
 
@@ -319,6 +335,7 @@ async def test_results_fetch_deadline(httpserver: HTTPServer, sample_document: P
 async def test_empty_files_list_raises(httpserver: HTTPServer,
                                        fast_config: TransformDocumentConfig,
                                        sample_document: Path):
+    """A completed job that returns no files raises an error."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
 
     async def _no_files(**_kwargs) -> str:
@@ -333,6 +350,7 @@ async def test_empty_files_list_raises(httpserver: HTTPServer,
 async def test_missing_required_field_raises(httpserver: HTTPServer,
                                              fast_config: TransformDocumentConfig,
                                              sample_document: Path):
+    """A response missing a required field names that field in the error."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
 
     async def _no_file_ref(**kwargs) -> str:
@@ -347,6 +365,7 @@ async def test_missing_required_field_raises(httpserver: HTTPServer,
 async def test_non_dict_json_payload_raises(httpserver: HTTPServer,
                                             fast_config: TransformDocumentConfig,
                                             sample_document: Path):
+    """A JSON payload that is not an object raises a descriptive error."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
 
     async def _json_array(**_kwargs) -> str:
@@ -383,6 +402,7 @@ async def test_transient_status_blip_is_retried(httpserver: HTTPServer,
 async def test_persistent_status_blips_raise(httpserver: HTTPServer,
                                              fast_config: TransformDocumentConfig,
                                              sample_document: Path):
+    """Repeated transport failures during polling give up after the retry limit."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
     attempts = []
 
@@ -424,6 +444,7 @@ async def test_upload_http_error_sanitized(httpserver: HTTPServer,
 async def test_status_error_envelope_raises(httpserver: HTTPServer,
                                             fast_config: TransformDocumentConfig,
                                             sample_document: Path):
+    """A non-retryable status error envelope is surfaced immediately."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
 
     async def _status_error(**_kwargs) -> str:
@@ -438,6 +459,7 @@ async def test_status_error_envelope_raises(httpserver: HTTPServer,
 async def test_transient_results_blip_is_retried(httpserver: HTTPServer,
                                                  fast_config: TransformDocumentConfig,
                                                  sample_document: Path):
+    """A momentary transport failure during the results fetch is retried."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
     real_results_tool = service.tool("get_transform_results")
     blips = []
@@ -459,6 +481,7 @@ async def test_transient_results_blip_is_retried(httpserver: HTTPServer,
 async def test_non_dict_files_entry_raises(httpserver: HTTPServer,
                                            fast_config: TransformDocumentConfig,
                                            sample_document: Path):
+    """A files entry that is not a mapping raises a descriptive error."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
 
     async def _string_files(**_kwargs) -> str:
@@ -474,20 +497,24 @@ async def test_non_dict_files_entry_raises(httpserver: HTTPServer,
 
 
 class _StubGroup:
+    """Minimal function group that exposes the fake tools to the registered function."""
 
     def __init__(self, group_functions: dict[str, _FakeTool]):
         self._group_functions = group_functions
 
     async def get_accessible_functions(self) -> dict[str, _FakeTool]:
+        """Return the fake group's functions."""
         return self._group_functions
 
 
 class _StubBuilder:
+    """Minimal builder that hands the registered function its function group."""
 
     def __init__(self, group: _StubGroup):
         self._group = group
 
     async def get_function_group(self, _name) -> _StubGroup:
+        """Return the stub group regardless of the requested name."""
         return self._group
 
 
@@ -502,6 +529,7 @@ async def _registered_transform_fn(service: _FakeTransformService, config: Trans
 async def test_registered_function_happy_path(httpserver: HTTPServer,
                                               fast_config: TransformDocumentConfig,
                                               sample_document: Path):
+    """The registered tool returns the transformed Markdown on success."""
     service = _FakeTransformService(httpserver, statuses=["SCHEDULED", "COMPLETED"])
 
     async with _registered_transform_fn(service, fast_config) as transform_fn:
@@ -525,6 +553,7 @@ async def test_registered_function_returns_error_string(httpserver: HTTPServer,
 
 
 async def test_registered_function_truncates_output(httpserver: HTTPServer, sample_document: Path):
+    """Output longer than the limit is truncated and a notice is appended."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
     config = TransformDocumentConfig(poll_interval_seconds=0.01,
                                      transform_timeout_seconds=5.0,
@@ -539,6 +568,7 @@ async def test_registered_function_truncates_output(httpserver: HTTPServer, samp
 
 
 async def test_registered_function_no_truncation_at_boundary(httpserver: HTTPServer, sample_document: Path):
+    """Output exactly at the limit is returned untruncated."""
     service = _FakeTransformService(httpserver, statuses=["COMPLETED"])
     config = TransformDocumentConfig(poll_interval_seconds=0.01,
                                      transform_timeout_seconds=5.0,

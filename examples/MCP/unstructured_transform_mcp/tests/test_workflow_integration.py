@@ -69,6 +69,7 @@ def _build_minimal_pdf(text: str) -> bytes:
 
 @pytest.fixture(name="sample_pdf")
 def sample_pdf_fixture(tmp_path: Path) -> Path:
+    """Write a one-page PDF containing the magic-word sentence for the live transform."""
     pdf_path = tmp_path / "magic_word.pdf"
     pdf_path.write_bytes(_build_minimal_pdf(_MAGIC_SENTENCE))
     return pdf_path
