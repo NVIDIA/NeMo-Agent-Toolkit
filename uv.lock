@@ -6199,6 +6199,20 @@ dependencies = [
 requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "profiler", "strands", "test"], editable = "." }]
 
 [[package]]
+name = "nat-unstructured-transform-mcp"
+source = { editable = "examples/MCP/unstructured_transform_mcp" }
+dependencies = [
+    { name = "httpx" },
+    { name = "nvidia-nat", extra = ["langchain", "mcp", "test"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = "~=0.27" },
+    { name = "nvidia-nat", extras = ["langchain", "mcp", "test"], editable = "." },
+]
+
+[[package]]
 name = "nat-user-report"
 source = { editable = "examples/object_store/user_report" }
 dependencies = [
@@ -6612,6 +6626,7 @@ examples = [
     { name = "nat-simple-web-query" },
     { name = "nat-simple-web-query-eval" },
     { name = "nat-strands-demo" },
+    { name = "nat-unstructured-transform-mcp" },
     { name = "nat-user-report" },
     { name = "text-file-ingest" },
 ]
@@ -6801,6 +6816,7 @@ requires-dist = [
     { name = "nat-simple-web-query", marker = "extra == 'examples'", editable = "examples/getting_started/simple_web_query" },
     { name = "nat-simple-web-query-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_web_query_eval" },
     { name = "nat-strands-demo", marker = "extra == 'examples'", editable = "examples/frameworks/strands_demo" },
+    { name = "nat-unstructured-transform-mcp", marker = "extra == 'examples'", editable = "examples/MCP/unstructured_transform_mcp" },
     { name = "nat-user-report", marker = "extra == 'examples'", editable = "examples/object_store/user_report" },
     { name = "nvidia-nat-a2a", marker = "extra == 'a2a'", editable = "packages/nvidia_nat_a2a" },
     { name = "nvidia-nat-a2a", marker = "extra == 'most'", editable = "packages/nvidia_nat_a2a" },

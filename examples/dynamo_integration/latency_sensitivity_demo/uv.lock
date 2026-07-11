@@ -1870,6 +1870,7 @@ requires-dist = [
     { name = "nat-simple-web-query", marker = "extra == 'examples'", editable = "../../getting_started/simple_web_query" },
     { name = "nat-simple-web-query-eval", marker = "extra == 'examples'", editable = "../../evaluation_and_profiling/simple_web_query_eval" },
     { name = "nat-strands-demo", marker = "extra == 'examples'", editable = "../../frameworks/strands_demo" },
+    { name = "nat-unstructured-transform-mcp", marker = "extra == 'examples'", editable = "../../MCP/unstructured_transform_mcp" },
     { name = "nat-user-report", marker = "extra == 'examples'", editable = "../../object_store/user_report" },
     { name = "nvidia-nat-a2a", marker = "extra == 'a2a'", editable = "../../../packages/nvidia_nat_a2a" },
     { name = "nvidia-nat-a2a", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_a2a" },
