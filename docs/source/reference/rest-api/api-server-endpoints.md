@@ -70,6 +70,23 @@ while keeping others.
 Interactive workflows (Human-in-the-Loop and OAuth) can be used over plain HTTP without
 WebSockets. For details, see [HTTP Interactive Execution](./http-interactive-execution.md).
 
+## Health Check Endpoint
+
+- **Route:** `/health`
+- **Method:** GET
+- **Description:** Health check endpoint intended for liveness and readiness probes. Returns HTTP 200 with a fixed JSON payload when the server is running. This endpoint does not execute a workflow and does not require any API credentials, so it is safe to use behind a reverse proxy, in a Docker `HEALTHCHECK`, or as a Kubernetes-style liveness/readiness probe.
+- **HTTP Request Example:**
+  ```bash
+  curl -s http://localhost:8000/health
+  ```
+- **HTTP Response Example:**
+  ```json
+  {"status":"healthy"}
+  ```
+
+:::{note}
+The MCP and FastMCP servers expose their own `/health` routes on separate default ports. For MCP-specific health checks, refer to the [MCP Server](../../run-workflows/mcp-server.md) and [FastMCP Server](../../run-workflows/fastmcp-server.md) guides.
+:::
 
 ## Start the NeMo Agent Toolkit Server
 This section describes how to start the NeMo Agent Toolkit server.
