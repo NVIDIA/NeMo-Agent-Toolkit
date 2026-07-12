@@ -232,7 +232,6 @@ For complete information about developing and integrating custom telemetry expor
   :sync: MLflow
 
     :::{include} ./observe-workflow-with-mlflow.md
-    :::
   :::
 
   :::{tab-item} OTel Collector
