@@ -77,6 +77,7 @@ The following table lists each exporter with its supported features and configur
 | [Galileo](https://galileo.ai/) | [Observing with Galileo](?provider=Galileo#provider-integration-guides){.external} | Logging, Tracing |
 | [Langfuse](https://langfuse.com/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
 | [LangSmith](https://www.langchain.com/langsmith) | [Observing with LangSmith](?provider=LangSmith#provider-integration-guides){.external} | Logging, Tracing, Evaluation Metrics |
+| [MLflow](https://mlflow.org/docs/latest/tracing/) | [Observing with MLflow](?provider=MLflow#provider-integration-guides){.external} | Logging, Tracing |
 | [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) | [Observing with OTel Collector](?provider=OTel-collector#provider-integration-guides){.external} | Logging, Tracing |
 | [Patronus](https://www.patronus.ai/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
 | [Phoenix](http://arize.com/phoenix/) | [Observing with Phoenix](?provider=Phoenix#provider-integration-guides){.external} | Logging, Tracing |
@@ -225,6 +226,13 @@ For complete information about developing and integrating custom telemetry expor
 
     :::{include} ./observe-workflow-with-langsmith.md
 
+  :::
+
+  :::{tab-item} MLflow
+  :sync: MLflow
+
+    :::{include} ./observe-workflow-with-mlflow.md
+    :::
   :::
 
   :::{tab-item} OTel Collector
