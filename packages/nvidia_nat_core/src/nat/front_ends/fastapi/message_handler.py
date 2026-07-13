@@ -34,6 +34,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
+from nat.data_models.api_server import OAuthModePreferencePayload
 from nat.data_models.api_server import ResponseObservabilityTrace
 from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import ResponseSerializable
@@ -247,7 +248,14 @@ class WebSocketMessageHandler:
         raise ValueError("No user text content found in messages.")
 
     async def _process_auth_message(self, message: WebSocketAuthMessage) -> None:
-        """Resolve user identity from an auth message payload and store the user_id."""
+        """Resolve user identity, or record a non-identity routing hint (OAuth mode)."""
+        if isinstance(message.payload, OAuthModePreferencePayload):
+            from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import (
+                WebSocketAuthenticationFlowHandler)
+            if isinstance(self._flow_handler, WebSocketAuthenticationFlowHandler):
+                self._flow_handler.set_oauth_mode(message.payload.mode)
+            return
+
         try:
             user_info: UserInfo = UserManager._from_auth_payload(message.payload)
             self._user_id = user_info.get_user_id()
