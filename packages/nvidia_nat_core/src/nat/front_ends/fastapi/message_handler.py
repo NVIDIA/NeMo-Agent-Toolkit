@@ -202,30 +202,50 @@ class WebSocketMessageHandler:
     async def run(self) -> None:
         """
         Processes received messages from websocket and routes them appropriately.
+
+        Preflight auth runs concurrently with the receive loop so connection-level messages
+        (e.g. ``oauth_mode_preference``) are handled while a preflight OAuth flow is still awaiting
+        user login. Awaiting preflight before the loop would leave the socket unread during login,
+        so the mode frame would never reach the in-flight preflight FlowState.
         """
-        await self._run_preflight_auth()
+        preflight_task: asyncio.Task = asyncio.create_task(self._run_preflight_auth())
 
-        while True:
+        try:
+            while True:
 
+                try:
+
+                    message: dict[str, Any] = await self._socket.receive_json()
+
+                    validated_message: BaseModel = await self._message_validator.validate_message(message)
+
+                    # Received a request to start a workflow
+                    if (isinstance(validated_message, WebSocketUserMessage)):
+                        await self.process_workflow_request(validated_message)
+
+                    elif (isinstance(validated_message, WebSocketAuthMessage)):
+                        await self._process_auth_message(validated_message)
+
+                    elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
+                        user_content = await self._process_websocket_user_interaction_response_message(
+                            validated_message)
+                        assert self._user_interaction is not None
+                        self._user_interaction.future.set_result(user_content)
+                except (asyncio.CancelledError, WebSocketDisconnect):
+                    break
+        finally:
+            # Cancel and await the preflight task so it is not left pending after the loop exits.
+            if not preflight_task.done():
+                preflight_task.cancel()
             try:
-
-                message: dict[str, Any] = await self._socket.receive_json()
-
-                validated_message: BaseModel = await self._message_validator.validate_message(message)
-
-                # Received a request to start a workflow
-                if (isinstance(validated_message, WebSocketUserMessage)):
-                    await self.process_workflow_request(validated_message)
-
-                elif (isinstance(validated_message, WebSocketAuthMessage)):
-                    await self._process_auth_message(validated_message)
-
-                elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
-                    user_content = await self._process_websocket_user_interaction_response_message(validated_message)
-                    assert self._user_interaction is not None
-                    self._user_interaction.future.set_result(user_content)
-            except (asyncio.CancelledError, WebSocketDisconnect):
-                break
+                await preflight_task
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                # _run_preflight_auth handles/reports its own provider auth failures; this is a
+                # safety net so a background failure that escaped is surfaced to operators at ERROR
+                # with a traceback, not silently swallowed.
+                logger.exception("Preflight auth task failed")
 
     def _extract_last_user_message_content(self, messages: list[UserMessages]) -> TextContent:
         """
