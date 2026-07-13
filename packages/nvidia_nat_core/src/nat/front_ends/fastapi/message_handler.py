@@ -200,13 +200,10 @@ class WebSocketMessageHandler:
                             ).model_dump())
 
     async def run(self) -> None:
-        """
-        Processes received messages from websocket and routes them appropriately.
+        """Process received WebSocket messages and route them to their handlers.
 
         Preflight auth runs concurrently with the receive loop so connection-level messages
-        (e.g. ``oauth_mode_preference``) are handled while a preflight OAuth flow is still awaiting
-        user login. Awaiting preflight before the loop would leave the socket unread during login,
-        so the mode frame would never reach the in-flight preflight FlowState.
+        (e.g. ``oauth_mode_preference``) are handled while a preflight OAuth flow awaits user login.
         """
         preflight_task: asyncio.Task = asyncio.create_task(self._run_preflight_auth())
 
@@ -234,23 +231,18 @@ class WebSocketMessageHandler:
                 except (asyncio.CancelledError, WebSocketDisconnect):
                     break
         finally:
-            # Do NOT cancel an in-flight preflight OAuth flow when the receive loop exits. In
-            # redirect mode the browser navigates the tab to the OAuth provider, which closes this
-            # WebSocket as a normal part of the flow; the flow completes out-of-band via the
-            # /auth/redirect HTTP callback. Cancelling here would run the flow's finally and remove
-            # its state from the outstanding flows before the callback arrives, so the callback
-            # would fail with "Invalid state". Awaiting lets the flow finish (or time out on its
-            # own auth_timeout_seconds bound), and propagates a genuine cancellation (e.g. server
-            # shutdown) into the flow.
+            # Don't cancel an in-flight preflight flow on loop exit: redirect mode closes this socket
+            # by design (the tab navigates to the provider) and the flow completes via the
+            # /auth/redirect callback. Cancelling would drop its state first, failing the callback
+            # with "Invalid state". Await instead (bounded by auth_timeout_seconds) and propagate a
+            # genuine cancellation into the flow.
             try:
                 await preflight_task
             except asyncio.CancelledError:
                 preflight_task.cancel()
                 raise
             except Exception:
-                # _run_preflight_auth handles/reports its own provider auth failures; this is a
-                # safety net so a background failure that escaped is surfaced to operators at ERROR
-                # with a traceback, not silently swallowed.
+                # _run_preflight_auth reports its own provider failures; log anything that escaped.
                 logger.exception("Preflight auth task failed")
 
     def _extract_last_user_message_content(self, messages: list[UserMessages]) -> TextContent:

@@ -118,6 +118,11 @@ authentication:
 | `preflight_auth` | When `True`, authentication is triggered at the earliest opportunity for the active frontend, before any workflow messages are processed. |
 | `authorization_kwargs` | Additional keyword arguments to include in the authorization request. |
 
+#### Choosing How the Login Page Opens
+When using the NeMo Agent Toolkit UI, the OAuth 2.0 login page can be presented either in a popup
+window or by redirecting the current tab. This is a UI configuration option — see the
+[NeMo Agent Toolkit User Interface](../../run-workflows/launching-ui.md) documentation.
+
 
 ### API Key Configuration Reference
 | Field Name | Description |

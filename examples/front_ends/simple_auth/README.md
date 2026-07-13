@@ -135,16 +135,11 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ## Choosing How the Login Page Opens
 
-How the OAuth provider's login page is presented is a **UI-layer** decision, set via the
-`NEXT_PUBLIC_OAUTH_MODE` environment variable in the NeMo Agent Toolkit UI:
+Set the `NEXT_PUBLIC_NAT_OAUTH_MODE` environment variable in the NeMo Agent Toolkit UI to choose how
+the OAuth provider's login page opens:
 
-| `NEXT_PUBLIC_OAUTH_MODE` | Behavior |
-|--------------------------|----------|
-| `redirect` (default)     | The current tab **navigates** to the login page and is redirected back to the chat after authentication completes. Robust when popups are blocked. |
-| `popup`                  | The login page opens in a **popup window**; the chat tab stays open and the popup closes automatically once authentication completes. |
-
-The server does not need to know which mode is used — the UI declares it over the WebSocket
-when it connects.
+- `redirect` (default) — The current tab navigates to the login page and returns to the chat after authentication completes.
+- `popup` — The login page opens in a popup window; the chat tab stays open, and the popup closes automatically once authentication completes.
 
 ## Serve The Agent
 
