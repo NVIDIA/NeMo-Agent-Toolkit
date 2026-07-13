@@ -234,13 +234,19 @@ class WebSocketMessageHandler:
                 except (asyncio.CancelledError, WebSocketDisconnect):
                     break
         finally:
-            # Cancel and await the preflight task so it is not left pending after the loop exits.
-            if not preflight_task.done():
-                preflight_task.cancel()
+            # Do NOT cancel an in-flight preflight OAuth flow when the receive loop exits. In
+            # redirect mode the browser navigates the tab to the OAuth provider, which closes this
+            # WebSocket as a normal part of the flow; the flow completes out-of-band via the
+            # /auth/redirect HTTP callback. Cancelling here would run the flow's finally and remove
+            # its state from the outstanding flows before the callback arrives, so the callback
+            # would fail with "Invalid state". Awaiting lets the flow finish (or time out on its
+            # own auth_timeout_seconds bound), and propagates a genuine cancellation (e.g. server
+            # shutdown) into the flow.
             try:
                 await preflight_task
             except asyncio.CancelledError:
-                pass
+                preflight_task.cancel()
+                raise
             except Exception:
                 # _run_preflight_auth handles/reports its own provider auth failures; this is a
                 # safety net so a background failure that escaped is surfaced to operators at ERROR

@@ -85,21 +85,22 @@ async def test_run_processes_mode_frame_while_preflight_pending():
     sent by the UI on connect was never read during preflight, so the in-flight FlowState kept its default
     REDIRECT mode. With preflight run concurrently, the frame is processed and applied to the pending flow.
 
-    Preflight here blocks forever (until cancelled): the old preflight-first ``run()`` would never process
-    the frame and the ``asyncio.wait_for`` below would time out, surfacing the regression as a failure.
+    Preflight here stays pending until the test releases it: the old preflight-first ``run()`` would
+    never reach ``receive_json`` to process the frame, so ``asyncio.wait_for`` below would time out,
+    surfacing the regression as a failure.
     """
     handler, socket, flow_handler = _make_message_handler()
 
     preflight_started = asyncio.Event()
+    release_preflight = asyncio.Event()
 
-    async def _blocking_preflight() -> None:
-        # Simulate an in-flight preflight OAuth flow awaiting user login.
+    async def _pending_preflight() -> None:
+        # Simulate an in-flight preflight OAuth flow awaiting user login until the test releases it.
         flow_handler._current_flow_state = FlowState()
         preflight_started.set()
-        # Block forever until the receive loop's finally cancels this task.
-        await asyncio.Event().wait()
+        await release_preflight.wait()
 
-    handler._run_preflight_auth = _blocking_preflight  # type: ignore[method-assign]
+    handler._run_preflight_auth = _pending_preflight  # type: ignore[method-assign]
 
     mode_frame = WebSocketAuthMessage(
         type=WebSocketMessageType.AUTH_MESSAGE,
@@ -110,12 +111,13 @@ async def test_run_processes_mode_frame_while_preflight_pending():
 
     async def _receive_json() -> dict:
         # Deliver the mode frame only after preflight has begun (its flow is in flight),
-        # then disconnect to end the loop. If preflight ran first-and-blocking (old code),
-        # this coroutine would never be reached and run() would hang until wait_for times out.
+        # then release preflight and disconnect to end the loop. If preflight ran first-and-blocking
+        # (old code), this coroutine would never be reached and run() would hang until wait_for times out.
         await preflight_started.wait()
         try:
             return next(frames)
         except StopIteration:
+            release_preflight.set()
             raise WebSocketDisconnect() from None
 
     socket.receive_json = _receive_json
@@ -127,3 +129,54 @@ async def test_run_processes_mode_frame_while_preflight_pending():
     assert flow_handler._oauth_mode is OAuthMode.POPUP
     assert flow_handler._current_flow_state is not None
     assert flow_handler._current_flow_state.oauth_mode is OAuthMode.POPUP
+
+
+async def test_run_does_not_cancel_inflight_flow_on_disconnect():
+    """An in-flight preflight OAuth flow must survive a WebSocket disconnect.
+
+    Regression test for "Invalid state" on redirect-mode login: in redirect mode the browser
+    navigates the tab to the OAuth provider, which closes this WebSocket as a normal step of the
+    flow. The flow completes out-of-band via the ``/auth/redirect`` HTTP callback. ``run()`` must
+    NOT cancel the in-flight flow when the receive loop exits, otherwise the flow's ``finally``
+    removes its ``state`` from ``_outstanding_flows`` before the callback arrives and the callback
+    returns "Invalid state. Please restart the authentication process."
+    """
+    handler, socket, flow_handler = _make_message_handler()
+
+    flow_future: asyncio.Future = asyncio.get_running_loop().create_future()
+    cleanup_ran = asyncio.Event()
+    disconnected = asyncio.Event()
+
+    async def _redirect_preflight() -> None:
+        # Simulate an in-flight OAuth flow: register a current flow, then await the future that the
+        # /auth/redirect callback resolves. The finally mirrors the real flow's _remove_flow_cb(state).
+        flow_handler._current_flow_state = FlowState()
+        try:
+            await flow_future
+        finally:
+            cleanup_ran.set()
+
+    handler._run_preflight_auth = _redirect_preflight  # type: ignore[method-assign]
+
+    async def _receive_json() -> dict:
+        # Redirect mode: the browser navigates away immediately, closing the socket.
+        disconnected.set()
+        raise WebSocketDisconnect()
+
+    socket.receive_json = _receive_json
+
+    run_task = asyncio.create_task(handler.run())
+    await asyncio.wait_for(disconnected.wait(), timeout=1)
+    # Give run()'s finally a couple of event-loop turns to (incorrectly) cancel, if it would.
+    await asyncio.sleep(0.05)
+
+    # The disconnect must NOT have cancelled the flow or triggered its cleanup, and run() must still
+    # be waiting for the flow to complete via the HTTP callback.
+    assert not flow_future.cancelled()
+    assert not cleanup_ran.is_set()
+    assert not run_task.done()
+
+    # The provider redirect finally arrives and resolves the flow; only now does it clean up.
+    flow_future.set_result("token")
+    await asyncio.wait_for(run_task, timeout=1)
+    assert cleanup_ran.is_set()
