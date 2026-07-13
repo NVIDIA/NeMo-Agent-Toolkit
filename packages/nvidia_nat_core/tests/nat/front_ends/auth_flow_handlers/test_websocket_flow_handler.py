@@ -191,7 +191,6 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
 
     # ----------------- assertions -------------------------------------- #
     assert opened, "The authorization URL was never emitted."
-    assert received_messages[0].use_redirect is False, "Default use_redirect_auth should emit use_redirect=False"
     token_val = ctx.headers["Authorization"].split()[1]
     assert token_val in mock_server.tokens, "token not issued by mock server"
 
@@ -200,7 +199,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
 
 
 # --------------------------------------------------------------------------- #
-# use_redirect_auth=True test                                                 #
+# return_url propagation test                                                 #
 # --------------------------------------------------------------------------- #
 @pytest.mark.usefixtures("set_nat_config_file_env_var")
 async def test_websocket_oauth2_flow_no_popup(monkeypatch, mock_server, tmp_path):
