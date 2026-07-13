@@ -135,31 +135,26 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ## Choosing How the Login Page Opens
 
-The OAuth provider's login page can be presented to the user in one of two ways, controlled by the
-`use_redirect_auth` flag on the authentication provider:
+How the OAuth provider's login page is presented is a **UI-layer** decision, set via the
+`NEXT_PUBLIC_OAUTH_MODE` environment variable in the NeMo Agent Toolkit UI:
 
-| Config file | `use_redirect_auth` | Behavior |
-|-------------|---------------------|----------|
-| `configs/config.yml` | `false` (default) | The login page opens in a **popup window**. The chat tab stays open, and the popup closes automatically once authentication completes. |
-| `configs/config-redirect-auth.yml` | `true` | The current tab **navigates directly** to the login page and is redirected back to the chat after authentication completes. Useful when popups are blocked or undesirable. |
+| `NEXT_PUBLIC_OAUTH_MODE` | Behavior |
+|--------------------------|----------|
+| `redirect` (default)     | The current tab **navigates** to the login page and is redirected back to the chat after authentication completes. Robust when popups are blocked. |
+| `popup`                  | The login page opens in a **popup window**; the chat tab stays open and the popup closes automatically once authentication completes. |
+
+The server does not need to know which mode is used — the UI declares it over the WebSocket
+when it connects.
 
 ## Serve The Agent
 
 In a new terminal, serve the agent using the following command:
 
 ```bash
-# Popup login flow (default)
 nat serve --config_file=examples/front_ends/simple_auth/configs/config.yml
 ```
 
-To demonstrate the redirect login flow instead, serve the redirect config:
-
-```bash
-# Redirect login flow (use_redirect_auth: true)
-nat serve --config_file=examples/front_ends/simple_auth/configs/config-redirect-auth.yml
-```
-
-Either command starts a FastAPI server on `http://localhost:8000` that listens for requests from the UI and
+This starts a FastAPI server on `http://localhost:8000` that listens for requests from the UI and
 handles authentication.
 
 ## Query the Agent
