@@ -20,29 +20,27 @@ from httpx import ASGITransport
 from httpx import AsyncClient
 
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.data_models.api_server import OAuthMode
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
 from nat.front_ends.fastapi.routes.auth import add_authorization_route
 
 _CALLBACK_PATH = "/auth/redirect"
 _RETURN_URL = "http://localhost:3000"
 
-_POPUP_CONFIG = OAuth2AuthCodeFlowProviderConfig(
+_CONFIG = OAuth2AuthCodeFlowProviderConfig(
     client_id="cid",
     client_secret="secret",
     authorization_url="http://testserver/oauth/authorize",
     token_url="http://testserver/oauth/token",
     redirect_uri="http://localhost:8000/auth/redirect",
-    use_redirect_auth=False,
 )
 
-_REDIRECT_CONFIG = OAuth2AuthCodeFlowProviderConfig(
-    client_id="cid",
-    client_secret="secret",
-    authorization_url="http://testserver/oauth/authorize",
-    token_url="http://testserver/oauth/token",
-    redirect_uri="http://localhost:8000/auth/redirect",
-    use_redirect_auth=True,
-)
+
+class _FakeTokenClient:
+    """Minimal stand-in for AsyncOAuth2Client on the success path."""
+
+    async def fetch_token(self, **kwargs):
+        return {"access_token": "token", "token_type": "Bearer"}
 
 
 def _make_worker(flow_state: FlowState):
@@ -68,7 +66,7 @@ async def _get(worker, params: dict):
 
 async def test_invalid_state_returns_400():
     """An unknown state is rejected with 400 before any flow processing."""
-    flow_state = FlowState(config=_POPUP_CONFIG)
+    flow_state = FlowState(config=_CONFIG, oauth_mode=OAuthMode.POPUP)
     worker = _make_worker(flow_state)
     response = await _get(worker, {"state": "no-such-state", "code": "abc"})
     assert response.status_code == 400
@@ -76,7 +74,7 @@ async def test_invalid_state_returns_400():
 
 async def test_access_denied_popup_returns_cancelled_html():
     """error=access_denied in popup mode returns the cancelled popup HTML."""
-    flow_state = FlowState(config=_POPUP_CONFIG, return_url=None)
+    flow_state = FlowState(config=_CONFIG, return_url=None, oauth_mode=OAuthMode.POPUP)
     worker = _make_worker(flow_state)
     response = await _get(worker, {"state": "teststate", "error": "access_denied"})
     assert response.status_code == 200
@@ -86,7 +84,7 @@ async def test_access_denied_popup_returns_cancelled_html():
 
 async def test_access_denied_popup_with_return_url_still_returns_cancelled_html():
     """error=access_denied in popup mode uses popup HTML even when return_url is set."""
-    flow_state = FlowState(config=_POPUP_CONFIG, return_url=_RETURN_URL)
+    flow_state = FlowState(config=_CONFIG, return_url=_RETURN_URL, oauth_mode=OAuthMode.POPUP)
     worker = _make_worker(flow_state)
     response = await _get(worker, {"state": "teststate", "error": "access_denied"})
     assert response.status_code == 200
@@ -98,7 +96,7 @@ async def test_access_denied_popup_with_return_url_still_returns_cancelled_html(
 
 async def test_access_denied_redirect_returns_cancelled_html():
     """error=access_denied in redirect mode returns the redirect-back cancelled page."""
-    flow_state = FlowState(config=_REDIRECT_CONFIG, return_url=_RETURN_URL)
+    flow_state = FlowState(config=_CONFIG, return_url=_RETURN_URL, oauth_mode=OAuthMode.REDIRECT)
     worker = _make_worker(flow_state)
     response = await _get(worker, {"state": "teststate", "error": "access_denied"})
     assert response.status_code == 200
@@ -109,7 +107,7 @@ async def test_access_denied_redirect_returns_cancelled_html():
 
 async def test_access_denied_sets_cancellation_exception_on_future():
     """error=access_denied resolves the future with an 'Authorisation denied' exception."""
-    flow_state = FlowState(config=_POPUP_CONFIG, return_url=None)
+    flow_state = FlowState(config=_CONFIG, return_url=None, oauth_mode=OAuthMode.POPUP)
     worker = _make_worker(flow_state)
     await _get(worker, {"state": "teststate", "error": "access_denied"})
     assert flow_state.future.done()
@@ -119,7 +117,7 @@ async def test_access_denied_sets_cancellation_exception_on_future():
 
 async def test_provider_error_popup_returns_error_html():
     """Non-access_denied errors in popup mode return error HTML, not cancelled HTML."""
-    flow_state = FlowState(config=_POPUP_CONFIG, return_url=None)
+    flow_state = FlowState(config=_CONFIG, return_url=None, oauth_mode=OAuthMode.POPUP)
     worker = _make_worker(flow_state)
     response = await _get(worker, {"state": "teststate", "error": "server_error"})
     assert response.status_code == 200
@@ -129,7 +127,7 @@ async def test_provider_error_popup_returns_error_html():
 
 async def test_provider_error_redirect_returns_error_html():
     """Non-access_denied errors in redirect mode redirect back without oauth_auth_completed."""
-    flow_state = FlowState(config=_REDIRECT_CONFIG, return_url=_RETURN_URL)
+    flow_state = FlowState(config=_CONFIG, return_url=_RETURN_URL, oauth_mode=OAuthMode.REDIRECT)
     worker = _make_worker(flow_state)
     response = await _get(worker, {"state": "teststate", "error": "server_error"})
     assert response.status_code == 200
@@ -140,10 +138,39 @@ async def test_provider_error_redirect_returns_error_html():
 
 async def test_provider_error_sets_oauth_error_exception_on_future():
     """Non-access_denied errors resolve the future with an 'OAuth error' exception including the code."""
-    flow_state = FlowState(config=_POPUP_CONFIG, return_url=None)
+    flow_state = FlowState(config=_CONFIG, return_url=None, oauth_mode=OAuthMode.POPUP)
     worker = _make_worker(flow_state)
     await _get(worker, {"state": "teststate", "error": "server_error", "error_description": "internal"})
     assert flow_state.future.done()
     assert "OAuth error" in str(flow_state.future.exception())
     assert "server_error" in str(flow_state.future.exception())
     assert "internal" in str(flow_state.future.exception())
+
+
+async def test_success_popup_returns_success_html():
+    """A successful token exchange in popup mode returns the success popup HTML."""
+    flow_state = FlowState(config=_CONFIG, return_url=None, oauth_mode=OAuthMode.POPUP)
+    flow_state.client = _FakeTokenClient()
+    flow_state.verifier = "verifier"
+    worker = _make_worker(flow_state)
+    response = await _get(worker, {"state": "teststate", "code": "authcode"})
+    assert response.status_code == 200
+    assert "AUTH_SUCCESS" in response.text
+    assert "oauth_auth_completed" not in response.text
+    assert _RETURN_URL.replace("/", "\\u002f") not in response.text
+    assert flow_state.future.done()
+    assert flow_state.future.result() == {"access_token": "token", "token_type": "Bearer"}
+
+
+async def test_success_redirect_returns_success_html():
+    """A successful token exchange in redirect mode returns the redirect-back success page."""
+    flow_state = FlowState(config=_CONFIG, return_url=_RETURN_URL, oauth_mode=OAuthMode.REDIRECT)
+    flow_state.client = _FakeTokenClient()
+    flow_state.verifier = "verifier"
+    worker = _make_worker(flow_state)
+    response = await _get(worker, {"state": "teststate", "code": "authcode"})
+    assert response.status_code == 200
+    assert _RETURN_URL.replace("/", "\\u002f") in response.text
+    assert "oauth_auth_completed" in response.text
+    assert flow_state.future.done()
+    assert flow_state.future.result() == {"access_token": "token", "token_type": "Bearer"}

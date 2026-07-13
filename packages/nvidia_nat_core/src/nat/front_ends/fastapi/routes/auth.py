@@ -23,6 +23,7 @@ from fastapi import FastAPI
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
+from nat.data_models.api_server import OAuthMode
 from nat.front_ends.fastapi.html_snippets.auth_code_grant_cancelled import AUTH_REDIRECT_CANCELLED_POPUP_HTML
 from nat.front_ends.fastapi.html_snippets.auth_code_grant_cancelled import build_auth_redirect_cancelled_html
 from nat.front_ends.fastapi.html_snippets.auth_code_grant_error import AUTH_REDIRECT_ERROR_HTML
@@ -62,7 +63,7 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
                 if not flow_state.future.done():
                     flow_state.future.set_exception(
                         RuntimeError(f"Authorisation denied: {error} ({error_description})"))
-                if flow_state.config and flow_state.config.use_redirect_auth:
+                if flow_state.oauth_mode is OAuthMode.REDIRECT:
                     return HTMLResponse(content=build_auth_redirect_cancelled_html(flow_state.return_url),
                                         status_code=200,
                                         headers={
@@ -77,7 +78,7 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
             logger.error("OAuth error for state %s: %s (%s)", state, error, error_description)
             if not flow_state.future.done():
                 flow_state.future.set_exception(RuntimeError(f"OAuth error: {error} ({error_description})"))
-            if flow_state.config and flow_state.config.use_redirect_auth:
+            if flow_state.oauth_mode is OAuthMode.REDIRECT:
                 error_html = build_auth_redirect_error_html(flow_state.return_url)
             else:
                 error_html = AUTH_REDIRECT_ERROR_HTML
@@ -103,7 +104,7 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
             if not flow_state.future.done():
                 flow_state.future.set_exception(
                     RuntimeError(f"Authorization server rejected request: {e.error} ({e.description})"))
-            if flow_state.config and flow_state.config.use_redirect_auth:
+            if flow_state.oauth_mode is OAuthMode.REDIRECT:
                 error_html = build_auth_redirect_error_html(flow_state.return_url)
             else:
                 error_html = AUTH_REDIRECT_ERROR_HTML
@@ -116,7 +117,7 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
             logger.error("Network error during token fetch for state %s: %s", state, e)
             if not flow_state.future.done():
                 flow_state.future.set_exception(RuntimeError(f"Network error during token fetch: {e}"))
-            if flow_state.config and flow_state.config.use_redirect_auth:
+            if flow_state.oauth_mode is OAuthMode.REDIRECT:
                 error_html = build_auth_redirect_error_html(flow_state.return_url)
             else:
                 error_html = AUTH_REDIRECT_ERROR_HTML
@@ -129,7 +130,7 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
             logger.error("Unexpected error during authentication for state %s: %s", state, e)
             if not flow_state.future.done():
                 flow_state.future.set_exception(RuntimeError(f"Authentication failed: {e}"))
-            if flow_state.config and flow_state.config.use_redirect_auth:
+            if flow_state.oauth_mode is OAuthMode.REDIRECT:
                 error_html = build_auth_redirect_error_html(flow_state.return_url)
             else:
                 error_html = AUTH_REDIRECT_ERROR_HTML
@@ -141,7 +142,7 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
         finally:
             await worker._remove_flow(state)
 
-        if flow_state.config and flow_state.config.use_redirect_auth:
+        if flow_state.oauth_mode is OAuthMode.REDIRECT:
             success_html = build_auth_redirect_success_html(flow_state.return_url)
         else:
             success_html = AUTH_REDIRECT_SUCCESS_HTML
