@@ -144,8 +144,8 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
                                                            challenge=flow_state.challenge)
 
         await self._add_flow_cb(state, flow_state)
-        await self._web_socket_message_handler.create_websocket_message(
-            _HumanPromptOAuthConsent(text=authorization_url))
+        await self._web_socket_message_handler.create_websocket_message(_HumanPromptOAuthConsent(text=authorization_url)
+                                                                        )
         try:
             token = await asyncio.wait_for(flow_state.future, timeout=self._auth_timeout_seconds)
         except TimeoutError as exc:

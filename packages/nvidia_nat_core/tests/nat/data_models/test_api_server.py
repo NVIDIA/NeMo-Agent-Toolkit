@@ -14,9 +14,12 @@
 # limitations under the License.
 
 import pytest
-from pydantic import TypeAdapter, ValidationError
+from pydantic import TypeAdapter
+from pydantic import ValidationError
 
-from nat.data_models.api_server import AuthPayload, OAuthMode, OAuthModePreferencePayload
+from nat.data_models.api_server import AuthPayload
+from nat.data_models.api_server import OAuthMode
+from nat.data_models.api_server import OAuthModePreferencePayload
 
 
 def test_oauth_mode_preference_payload_parses_via_union():

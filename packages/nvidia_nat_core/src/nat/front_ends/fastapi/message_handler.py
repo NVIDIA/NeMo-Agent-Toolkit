@@ -224,8 +224,8 @@ class WebSocketMessageHandler:
                         await self._process_auth_message(validated_message)
 
                     elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
-                        user_content = await self._process_websocket_user_interaction_response_message(
-                            validated_message)
+                        user_content = await self._process_websocket_user_interaction_response_message(validated_message
+                                                                                                       )
                         assert self._user_interaction is not None
                         self._user_interaction.future.set_result(user_content)
                 except (asyncio.CancelledError, WebSocketDisconnect):
@@ -268,9 +268,8 @@ class WebSocketMessageHandler:
     async def _process_auth_message(self, message: WebSocketAuthMessage) -> None:
         """Resolve user identity, or record a non-identity routing hint (OAuth mode)."""
         if isinstance(message.payload, OAuthModePreferencePayload):
-            from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import (
-                WebSocketAuthenticationFlowHandler)
-            if isinstance(self._flow_handler, WebSocketAuthenticationFlowHandler):
+            from nat.front_ends.fastapi.auth_flow_handlers import websocket_flow_handler
+            if isinstance(self._flow_handler, websocket_flow_handler.WebSocketAuthenticationFlowHandler):
                 self._flow_handler.set_oauth_mode(message.payload.mode)
             return
 
