@@ -34,6 +34,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
+from nat.data_models.api_server import OAuthModePreferencePayload
 from nat.data_models.api_server import ResponseObservabilityTrace
 from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import ResponseSerializable
@@ -199,32 +200,50 @@ class WebSocketMessageHandler:
                             ).model_dump())
 
     async def run(self) -> None:
-        """
-        Processes received messages from websocket and routes them appropriately.
-        """
-        await self._run_preflight_auth()
+        """Process received WebSocket messages and route them to their handlers.
 
-        while True:
+        Preflight auth runs concurrently with the receive loop so connection-level messages
+        (e.g. ``oauth_mode_preference``) are handled while a preflight OAuth flow awaits user login.
+        """
+        preflight_task: asyncio.Task = asyncio.create_task(self._run_preflight_auth())
 
+        try:
+            while True:
+
+                try:
+
+                    message: dict[str, Any] = await self._socket.receive_json()
+
+                    validated_message: BaseModel = await self._message_validator.validate_message(message)
+
+                    # Received a request to start a workflow
+                    if (isinstance(validated_message, WebSocketUserMessage)):
+                        await self.process_workflow_request(validated_message)
+
+                    elif (isinstance(validated_message, WebSocketAuthMessage)):
+                        await self._process_auth_message(validated_message)
+
+                    elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
+                        user_content = await self._process_websocket_user_interaction_response_message(validated_message
+                                                                                                       )
+                        assert self._user_interaction is not None
+                        self._user_interaction.future.set_result(user_content)
+                except (asyncio.CancelledError, WebSocketDisconnect):
+                    break
+        finally:
+            # Don't cancel an in-flight preflight flow on loop exit: redirect mode closes this socket
+            # by design (the tab navigates to the provider) and the flow completes via the
+            # /auth/redirect callback. Cancelling would drop its state first, failing the callback
+            # with "Invalid state". Await instead (bounded by auth_timeout_seconds) and propagate a
+            # genuine cancellation into the flow.
             try:
-
-                message: dict[str, Any] = await self._socket.receive_json()
-
-                validated_message: BaseModel = await self._message_validator.validate_message(message)
-
-                # Received a request to start a workflow
-                if (isinstance(validated_message, WebSocketUserMessage)):
-                    await self.process_workflow_request(validated_message)
-
-                elif (isinstance(validated_message, WebSocketAuthMessage)):
-                    await self._process_auth_message(validated_message)
-
-                elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
-                    user_content = await self._process_websocket_user_interaction_response_message(validated_message)
-                    assert self._user_interaction is not None
-                    self._user_interaction.future.set_result(user_content)
-            except (asyncio.CancelledError, WebSocketDisconnect):
-                break
+                await preflight_task
+            except asyncio.CancelledError:
+                preflight_task.cancel()
+                raise
+            except Exception:
+                # _run_preflight_auth reports its own provider failures; log anything that escaped.
+                logger.exception("Preflight auth task failed")
 
     def _extract_last_user_message_content(self, messages: list[UserMessages]) -> TextContent:
         """
@@ -247,7 +266,13 @@ class WebSocketMessageHandler:
         raise ValueError("No user text content found in messages.")
 
     async def _process_auth_message(self, message: WebSocketAuthMessage) -> None:
-        """Resolve user identity from an auth message payload and store the user_id."""
+        """Resolve user identity, or record a non-identity routing hint (OAuth mode)."""
+        if isinstance(message.payload, OAuthModePreferencePayload):
+            from nat.front_ends.fastapi.auth_flow_handlers import websocket_flow_handler
+            if isinstance(self._flow_handler, websocket_flow_handler.WebSocketAuthenticationFlowHandler):
+                self._flow_handler.set_oauth_mode(message.payload.mode)
+            return
+
         try:
             user_info: UserInfo = UserManager._from_auth_payload(message.payload)
             self._user_id = user_info.get_user_id()
