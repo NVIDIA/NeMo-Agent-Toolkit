@@ -57,13 +57,20 @@ else:
 
 
 class read_only_cached_property:
+    """Descriptor that caches a computed value per-instance while remaining read-only.
 
-    def __init__(self, func):
+    Unlike `functools.cached_property`, this descriptor rejects attribute assignment,
+    preserving the read-only contract of the original `@property` it replaces, while
+    still avoiding the strong-reference memory leak caused by `functools.lru_cache`
+    on instance methods.
+    """
+
+    def __init__(self, func: collections.abc.Callable[[typing.Any], typing.Any]) -> None:
         self.func = func
         self.attrname = func.__name__
         self.__doc__ = func.__doc__
 
-    def __get__(self, instance, owner=None):
+    def __get__(self, instance: typing.Any, owner: type | None = None) -> typing.Any:
         if instance is None:
             return self
         if self.attrname in instance.__dict__:
@@ -72,10 +79,10 @@ class read_only_cached_property:
         instance.__dict__[self.attrname] = value
         return value
 
-    def __set__(self, instance, value):
+    def __set__(self, instance: typing.Any, value: typing.Any) -> None:
         raise AttributeError(f"'{self.attrname}' is read-only")
 
-    def __delete__(self, instance):
+    def __delete__(self, instance: typing.Any) -> None:
         if self.attrname in instance.__dict__:
             del instance.__dict__[self.attrname]
 
