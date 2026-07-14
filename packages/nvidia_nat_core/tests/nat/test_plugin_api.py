@@ -23,6 +23,8 @@ from nat import plugin_api
 EXPECTED_PLUGIN_API_EXPORTS = {
     "Builder": ("nat.builder.builder", "Builder"),
     "ComponentRef": ("nat.data_models.component_ref", "ComponentRef"),
+    "Context": ("nat.builder.context", "Context"),
+    "ContextState": ("nat.builder.context", "ContextState"),
     "DatasetLoaderInfo": ("nat.builder.dataset_loader", "DatasetLoaderInfo"),
     "Document": ("nat.retriever.models", "Document"),
     "DynamicFunctionMiddleware": ("nat.middleware.dynamic.dynamic_function_middleware", "DynamicFunctionMiddleware"),
@@ -47,6 +49,14 @@ EXPECTED_PLUGIN_API_EXPORTS = {
     "HITLMiddleware": ("nat.middleware.hitl.hitl_middleware", "HITLMiddleware"),
     "HITLMiddlewareConfig": ("nat.middleware.hitl.hitl_middleware_config", "HITLMiddlewareConfig"),
     "HumanPrompt": ("nat.data_models.interactive", "HumanPrompt"),
+    "HumanResponse": ("nat.data_models.interactive", "HumanResponse"),
+    "HumanResponseBinary": ("nat.data_models.interactive", "HumanResponseBinary"),
+    "HumanResponseCheckbox": ("nat.data_models.interactive", "HumanResponseCheckbox"),
+    "HumanResponseDropdown": ("nat.data_models.interactive", "HumanResponseDropdown"),
+    "HumanResponseNotification": ("nat.data_models.interactive", "HumanResponseNotification"),
+    "HumanResponseRadio": ("nat.data_models.interactive", "HumanResponseRadio"),
+    "HumanResponseText": ("nat.data_models.interactive", "HumanResponseText"),
+    "InteractionPrompt": ("nat.data_models.interactive", "InteractionPrompt"),
     "InteractionResponse": ("nat.data_models.interactive", "InteractionResponse"),
     "InvocationAction": ("nat.middleware.middleware", "InvocationAction"),
     "InvocationContext": ("nat.middleware.middleware", "InvocationContext"),
@@ -364,7 +374,11 @@ def test_plugin_authoring_docs_prefer_public_api_imports():
         "from nat.middleware.hitl import HITLMiddlewareConfig",
         "from nat.middleware.hitl import HumanPrompt",
         "from nat.middleware.hitl import InteractionResponse",
+        "from nat.builder.context import Context",
+        "from nat.builder.context import ContextState",
         "from nat.data_models.interactive import HumanPrompt",
+        "from nat.data_models.interactive import HumanResponse",
+        "from nat.data_models.interactive import InteractionPrompt",
         "from nat.data_models.interactive import InteractionResponse",
         "from nat.middleware.middleware import FunctionMiddlewareContext",
         "from nat.middleware.middleware import InvocationAction",
@@ -481,3 +495,46 @@ def test_consumer_style_plugin_group_registration():
     registered = GlobalTypeRegistry.get().get_function_group(_ConsumerTestPluginGroupConfig)
     assert registered.config_type is _ConsumerTestPluginGroupConfig
     assert registered.build_fn is not None
+
+
+def test_consumer_style_context_and_interactive_types():
+    """Exercise the runtime context accessors and interactive models using only ``nat.plugin_api`` imports.
+
+    Middleware and HITL plugin authors read invocation-scoped state through ``Context``/``ContextState`` and
+    consume/produce the interactive prompt and response models, so the public surface must be sufficient for
+    both without falling back to implementation modules.
+    """
+    from nat.plugin_api import Context
+    from nat.plugin_api import ContextState
+    from nat.plugin_api import HumanResponseText
+    from nat.plugin_api import InteractionPrompt
+    from nat.plugin_api import InteractionResponse
+
+    # Context accessors resolve to the shared context state.
+    assert isinstance(Context.get(), Context)
+    assert ContextState.get() is ContextState.get()
+
+    with Context.scope(workflow_run_id="plugin-api-test-run"):
+        assert Context.get().workflow_run_id == "plugin-api-test-run"
+
+    # A prompt as delivered to a user-input callback, and the matching response a plugin would return.
+    prompt = InteractionPrompt(
+        id="interaction-1",
+        timestamp="2026-01-01T00:00:00Z",
+        content={
+            "input_type": "text", "text": "Proceed?"
+        },
+    )
+    assert prompt.content.text == "Proceed?"
+
+    response = InteractionResponse(
+        id="interaction-1",
+        timestamp="2026-01-01T00:00:01Z",
+        content=HumanResponseText(text="yes"),
+    )
+    assert isinstance(response.content, HumanResponseText)
+
+    # The ``HumanResponse`` discriminated union resolves the concrete response models.
+    parsed = InteractionResponse.model_validate(response.model_dump())
+    assert isinstance(parsed.content, HumanResponseText)
+    assert parsed.content.text == "yes"

@@ -47,8 +47,13 @@ The following `nat.plugin_api` exports are intended for plugin authors:
 - Small implementation contracts needed by registered components, including `FunctionMiddleware`,
   `DynamicFunctionMiddleware`, `HITLMiddleware`, `HITLMiddlewareConfig`, `InvocationAction`,
   `MemoryEditor`, `ObjectStore`, `Retriever`, `Document`, `RetrieverOutput`, and their associated context
-  or value models. `HumanPrompt` and `InteractionResponse` are also included as the interactive data
-  models that HITL middleware hooks produce and receive.
+  or value models. The interactive data models that HITL middleware hooks and user-input callbacks produce
+  and receive are also included: `HumanPrompt`, `InteractionPrompt`, `InteractionResponse`, the
+  `HumanResponse` union, and the concrete response models `HumanResponseText`, `HumanResponseBinary`,
+  `HumanResponseNotification`, `HumanResponseRadio`, `HumanResponseCheckbox`, and `HumanResponseDropdown`.
+- Runtime context access through `Context` and `ContextState`, for reading invocation-scoped state
+  such as `workflow_run_id`, `user_id`, and the active function, and for prompting users through
+  `Context.get().user_interaction_manager`.
 - Component reference types, such as `FunctionRef`, `FunctionGroupRef`, `LLMRef`, `EmbedderRef`, `RetrieverRef`,
   `MemoryRef`, `ObjectStoreRef`, and `MiddlewareRef`.
 - Framework wrapper identifiers, including `LLMFrameworkEnum`.
@@ -92,7 +97,8 @@ the current promotion decision for the major plugin-authoring surfaces.
 | Object store | Stable public, trusted plugin | External storage backends need the config base, object-store interface, item model, and standard errors. Plugins must be trusted. |
 | Middleware registration and function middleware | Stable public, trusted plugin | Basic middleware registration and function middleware support caching, policy, auth injection, redaction, and tracing. Middleware can observe or alter calls, so plugins must be trusted. |
 | Dynamic middleware and runtime introspection | Provisional public, trusted plugin | Dynamic middleware reaches deeper into runtime call interception and inventory metadata. The facade exposes the current dynamic middleware types, but inventory and unregister details remain subsystem-specific until the contract is promoted deliberately. |
-| HITL middleware | Provisional public, trusted plugin | HITL middleware is an abstract extension point for human-in-the-loop function interception. The facade exposes `HITLMiddleware`, `HITLMiddlewareConfig`, `InvocationAction`, `HumanPrompt`, and `InteractionResponse` so that concrete subclass authors can import the full authoring and interactive-model surface from `nat.plugin_api`. |
+| HITL middleware | Provisional public, trusted plugin | HITL middleware is an abstract extension point for human-in-the-loop function interception. The facade exposes `HITLMiddleware`, `HITLMiddlewareConfig`, `InvocationAction`, and the interactive data models `HumanPrompt`, `InteractionPrompt`, `InteractionResponse`, and `HumanResponse` with its concrete response models so that concrete subclass authors and user-input integrations can import the full authoring and interactive-model surface from `nat.plugin_api`. |
+| Runtime context access | Provisional public | Middleware, HITL, and telemetry integrations read invocation-scoped state (for example `workflow_run_id`, `user_id`, and the active function) and prompt users through `Context.get().user_interaction_manager`. The facade exposes `Context` and `ContextState`; deeper runtime wiring such as intermediate-step manager internals and exporter management remains subsystem-specific until promoted deliberately. |
 | Telemetry registration | Provisional public, trusted plugin | The facade currently exposes telemetry exporter registration and configuration. Exporter implementation APIs, including raw exporters, span exporters, processors, and intermediate-step models, remain subsystem-specific and may evolve until they are promoted deliberately. Telemetry plugins can observe sensitive workflow data and must be trusted. |
 | Tool wrapper registration | Provisional public | The facade exposes `register_tool_wrapper` for framework integrations. Wrapper callables depend on framework-native tool types and currently return framework-specific objects, so keep this provisional until the wrapper callable contract is promoted deliberately. |
 | Auth provider | Deferred | Authentication provider authoring is still experimental and depends on subsystem APIs such as `AuthProviderBase`, `AuthProviderBaseConfig`, `AuthenticationRef`, and `register_auth_provider`. Keep it out of the stable facade until the auth compatibility and trust contract is promoted deliberately. |
