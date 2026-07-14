@@ -135,7 +135,6 @@ class DiscoveryMetadata(BaseModel):
         return "nvidia-nat"
 
     @staticmethod
-    @lru_cache
     def get_distribution_name_from_config_type(config_type: type["TypedBaseModelT"]) -> str:
         """Get the distribution name from the config type using the mapping of module names to distro names.
 
