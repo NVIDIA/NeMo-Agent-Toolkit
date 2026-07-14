@@ -292,7 +292,7 @@ def test_workflow_config_loads(monkeypatch: pytest.MonkeyPatch):
 
     group_config = config.function_groups["unstructured_transform"]
     assert group_config.server.transport == "streamable-http"
-    assert str(group_config.server.url) == "https://mcp.transform.unstructured.io/"
+    assert str(group_config.server.url).rstrip("/") == "https://mcp.transform.unstructured.io"
     assert str(group_config.server.auth_provider) == "unstructured_auth"
 
     assert config.workflow.type == "react_agent"

@@ -28,7 +28,7 @@ function_groups:
     server:
       transport: streamable-http
       # The Unstructured Transform MCP server is served at the root path.
-      url: https://mcp.transform.unstructured.io/
+      url: https://mcp.transform.unstructured.io
       auth_provider: unstructured_auth
     # The four tools that make up the asynchronous transform protocol.
     include:
