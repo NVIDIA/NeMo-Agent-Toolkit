@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-This example demonstrates how the NVIDIA NeMo Agent Toolkit connects to a third-party remote MCP server that is protected by static bearer-token authentication: the hosted [Unstructured Transform](https://transform.unstructured.io/get-started) service, which converts documents (PDF, DOCX, PPTX, XLSX, HTML, images, and roughly 70 other formats) into clean Markdown that agents can reason over.
+This example demonstrates how the NVIDIA NeMo Agent Toolkit connects to a third-party remote MCP server that is protected by static bearer-token authentication: the hosted [Unstructured Transform](https://transform.unstructured.io/get-started) service, which converts documents (PDF, DOCX, PPTX, XLSX, HTML, images, and 40+ other formats) into clean Markdown that agents can reason over.
 
 It also demonstrates a useful composition pattern: the remote MCP server exposes an asynchronous, multi-step protocol, and this example wraps that protocol in a single deterministic custom function so the agent only needs one reliable tool call.
 

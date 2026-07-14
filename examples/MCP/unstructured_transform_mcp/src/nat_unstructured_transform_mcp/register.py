@@ -379,7 +379,7 @@ async def transform_document(config: TransformDocumentConfig, builder: Builder):
 
     yield FunctionInfo.from_fn(
         _transform,
-        description=("Convert a document (PDF, DOCX, PPTX, XLSX, HTML, images, and roughly 70 other formats) into "
+        description=("Convert a document (PDF, DOCX, PPTX, XLSX, HTML, images, and 40+ other formats) into "
                      "clean Markdown using the Unstructured Transform service. The input must be either the path to "
                      "a local file or a public HTTP or HTTPS URL of the document. Returns the extracted content as "
                      "Markdown. Transformation is asynchronous on the server and can take from a few seconds up to "
