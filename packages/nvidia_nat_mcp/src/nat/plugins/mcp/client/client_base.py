@@ -291,7 +291,7 @@ class MCPBaseClient(ABC):
             if last_error:
                 raise last_error
 
-    def _ensure_lifecycle_worker(self) -> None:
+    def _ensure_lifecycle_worker(self) -> asyncio.Task:
         """Respawn the lifecycle worker if it died, so the client can recover (#2111).
 
         A failing transport background child task cancels the worker that hosts the
@@ -299,11 +299,13 @@ class MCPBaseClient(ABC):
         loop, so it never clears connection state and the task is left ``done``. Rather
         than bricking the client for the rest of the process, drop the orphaned transport
         references and start a fresh worker that the next command can drive to reconnect.
+
+        Returns the live worker task, so callers can watch it alongside their command.
         """
         if self._lifecycle_commands is None:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
         if self._lifecycle_task is not None and not self._lifecycle_task.done():
-            return
+            return self._lifecycle_task
         # The previous worker's transport context was entered in that (now dead) task.
         # Do not close _exit_stack here: closing it off-task raises "cancel scope in a
         # different task". Drop the stale references and let a fresh connect start clean.
@@ -312,14 +314,26 @@ class MCPBaseClient(ABC):
         self._tools = None
         self._connection_established = False
         self._lifecycle_task = asyncio.create_task(self._lifecycle_worker(), name=f"mcp-client-{self.server_name}")
+        return self._lifecycle_task
 
     async def _run_lifecycle_command(self, command: str) -> None:
         """Run a connection lifecycle command in the task that owns the transport stack."""
-        self._ensure_lifecycle_worker()
+        worker = self._ensure_lifecycle_worker()
 
         future: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         await self._lifecycle_commands.put((command, future))
-        await future
+        # The worker can die between the liveness check above and resolving the
+        # future (the same transport-child cancellation this class recovers from),
+        # which would leave the future unresolved forever. Watch both.
+        await asyncio.wait({future, worker}, return_when=asyncio.FIRST_COMPLETED)
+        if future.done():
+            future.result()
+            return
+        # The worker died before resolving our command. Abandon the queued command
+        # (the worker loop skips commands whose future is already done) and surface
+        # a retryable error so _reconnect / the next call can relaunch a worker.
+        future.cancel()
+        raise ConnectionError(f"MCP client lifecycle worker for {self.server_name} exited while running '{command}'")
 
     async def _lifecycle_worker(self) -> None:
         """Own MCP transport context entry and exit to keep AnyIO cancel scopes task-local."""
@@ -328,6 +342,11 @@ class MCPBaseClient(ABC):
 
         while True:
             command, future = await self._lifecycle_commands.get()
+
+            if future.done():
+                # The caller abandoned this command (its previous worker died before
+                # consuming it). Executing it now would replay a stale request.
+                continue
 
             if command == "close":
                 try:
