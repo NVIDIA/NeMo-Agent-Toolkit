@@ -34,6 +34,8 @@ must be explicitly categorized as stable or deferred.
 
 from nat.builder.builder import Builder
 from nat.builder.builder import EvalBuilder
+from nat.builder.context import Context
+from nat.builder.context import ContextState
 from nat.builder.dataset_loader import DatasetLoaderInfo
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.evaluator import EvaluatorInfo
@@ -80,6 +82,14 @@ from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.interactive import HumanPrompt
+from nat.data_models.interactive import HumanResponse
+from nat.data_models.interactive import HumanResponseBinary
+from nat.data_models.interactive import HumanResponseCheckbox
+from nat.data_models.interactive import HumanResponseDropdown
+from nat.data_models.interactive import HumanResponseNotification
+from nat.data_models.interactive import HumanResponseRadio
+from nat.data_models.interactive import HumanResponseText
+from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.interactive import InteractionResponse
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
@@ -114,6 +124,8 @@ from nat.retriever.models import RetrieverOutput
 __all__ = [
     "Builder",
     "ComponentRef",
+    "Context",
+    "ContextState",
     "DatasetLoaderInfo",
     "Document",
     "DynamicFunctionMiddleware",
@@ -138,6 +150,14 @@ __all__ = [
     "HITLMiddleware",
     "HITLMiddlewareConfig",
     "HumanPrompt",
+    "HumanResponse",
+    "HumanResponseBinary",
+    "HumanResponseCheckbox",
+    "HumanResponseDropdown",
+    "HumanResponseNotification",
+    "HumanResponseRadio",
+    "HumanResponseText",
+    "InteractionPrompt",
     "InteractionResponse",
     "InvocationAction",
     "InvocationContext",
