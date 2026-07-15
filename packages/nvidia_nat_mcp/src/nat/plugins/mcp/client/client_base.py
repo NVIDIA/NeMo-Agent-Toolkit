@@ -239,6 +239,13 @@ class MCPBaseClient(ABC):
     @property
     def is_connected(self) -> bool:
         """Whether the client has an active, initialized connection."""
+        # A transport background child task can cancel the lifecycle worker
+        # (which hosts the transport's task group) without running the worker's
+        # state-clearing, leaving _connection_established stale-True (#2111).
+        # Treat a dead worker as not connected so callers do not proceed into
+        # tool calls against a torn-down transport.
+        if self._lifecycle_task is None or self._lifecycle_task.done():
+            return False
         return self._exit_stack is not None and self._connection_established
 
     @property
@@ -284,10 +291,31 @@ class MCPBaseClient(ABC):
             if last_error:
                 raise last_error
 
+    def _ensure_lifecycle_worker(self) -> None:
+        """Respawn the lifecycle worker if it died, so the client can recover (#2111).
+
+        A failing transport background child task cancels the worker that hosts the
+        transport's AnyIO task group. That cancellation bypasses the worker's command
+        loop, so it never clears connection state and the task is left ``done``. Rather
+        than bricking the client for the rest of the process, drop the orphaned transport
+        references and start a fresh worker that the next command can drive to reconnect.
+        """
+        if self._lifecycle_commands is None:
+            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
+        if self._lifecycle_task is not None and not self._lifecycle_task.done():
+            return
+        # The previous worker's transport context was entered in that (now dead) task.
+        # Do not close _exit_stack here: closing it off-task raises "cancel scope in a
+        # different task". Drop the stale references and let a fresh connect start clean.
+        self._exit_stack = None
+        self._session = None
+        self._tools = None
+        self._connection_established = False
+        self._lifecycle_task = asyncio.create_task(self._lifecycle_worker(), name=f"mcp-client-{self.server_name}")
+
     async def _run_lifecycle_command(self, command: str) -> None:
         """Run a connection lifecycle command in the task that owns the transport stack."""
-        if self._lifecycle_commands is None or self._lifecycle_task is None or self._lifecycle_task.done():
-            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
+        self._ensure_lifecycle_worker()
 
         future: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         await self._lifecycle_commands.put((command, future))
