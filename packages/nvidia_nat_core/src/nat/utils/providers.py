@@ -108,17 +108,33 @@ def generate_id() -> str:
 def generate_trace_id() -> int:
     """Return a new 128-bit integer id derived from the installed id provider.
 
-    With the default provider this is equivalent to ``uuid.uuid4().int`` and is always non-zero.
+    With the default provider this is equivalent to ``uuid.uuid4().int``. A provider UUID that
+    derives an all-zero trace ID (the nil UUID) is rejected, upholding the non-zero contract
+    enforced by ``SpanContext``.
+
+    Raises:
+        ValueError: If the installed id provider generated a UUID whose derived trace ID is zero.
     """
-    return uuid.UUID(generate_id()).int
+    trace_id = uuid.UUID(generate_id()).int
+    if trace_id == 0:
+        raise ValueError("The installed id provider generated a UUID with an all-zero trace ID")
+    return trace_id
 
 
 def generate_span_id() -> int:
     """Return a new 64-bit integer id derived from the installed id provider.
 
-    With the default provider this is equivalent to ``uuid.uuid4().int >> 64`` and is always non-zero.
+    With the default provider this is equivalent to ``uuid.uuid4().int >> 64``. A provider UUID
+    whose high 64 bits are zero derives an all-zero span ID and is rejected, upholding the
+    non-zero contract enforced by ``SpanContext``.
+
+    Raises:
+        ValueError: If the installed id provider generated a UUID whose derived span ID is zero.
     """
-    return uuid.UUID(generate_id()).int >> 64
+    span_id = uuid.UUID(generate_id()).int >> 64
+    if span_id == 0:
+        raise ValueError("The installed id provider generated a UUID with an all-zero span ID")
+    return span_id
 
 
 def current_time() -> float:

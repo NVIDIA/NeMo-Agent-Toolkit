@@ -39,8 +39,8 @@ _FIXED_ID = "12345678-1234-4321-8765-123456789abc"
 _FIXED_TIME = 1700000000.5
 
 
-@pytest.fixture(autouse=True)
-def restore_providers():
+@pytest.fixture(name="restore_providers", autouse=True)
+def restore_providers_fixture():
     """Restore the previously installed providers after each test to avoid cross-test leakage."""
     previous_id = providers.get_id_provider()
     previous_time = providers.get_time_provider()
@@ -55,6 +55,23 @@ def _sequential_uuid_provider(start: int = 1) -> typing.Callable[[], str]:
     """Return an id provider yielding UUIDs with sequential high 64 bits (valid trace and span ids)."""
     counter = itertools.count(start)
     return lambda: str(uuid.UUID(int=next(counter) << 64))
+
+
+def test_zero_derived_trace_and_span_ids_are_rejected():
+    # The nil UUID derives an all-zero trace ID and an all-zero span ID.
+    providers.set_id_provider(lambda: "00000000-0000-0000-0000-000000000000")
+    with pytest.raises(ValueError, match="all-zero trace ID"):
+        providers.generate_trace_id()
+    with pytest.raises(ValueError, match="all-zero span ID"):
+        providers.generate_span_id()
+
+
+def test_high_word_zero_uuid_is_rejected_for_span_ids_only():
+    # High 64 bits zero: a valid non-zero trace ID, but an all-zero span ID.
+    providers.set_id_provider(lambda: "00000000-0000-0000-0000-000000000001")
+    assert providers.generate_trace_id() == 1
+    with pytest.raises(ValueError, match="all-zero span ID"):
+        providers.generate_span_id()
 
 
 def test_default_providers_match_uuid4_and_wall_clock():
