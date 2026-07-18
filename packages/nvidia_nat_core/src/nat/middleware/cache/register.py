@@ -30,4 +30,8 @@ async def cache_middleware(config: CacheMiddlewareConfig, builder: Builder):
     Yields:
         A configured cache middleware instance
     """
-    yield CacheMiddleware(enabled_mode=config.enabled_mode, similarity_threshold=config.similarity_threshold)
+    yield CacheMiddleware(
+        enabled_mode=config.enabled_mode,
+        similarity_threshold=config.similarity_threshold,
+        max_entries=config.max_entries,
+    )
