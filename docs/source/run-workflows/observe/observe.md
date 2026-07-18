@@ -314,3 +314,21 @@ Context.get().intermediate_step_manager.push_intermediate_steps(remote_intermedi
 ```
 
 This is useful when you call a remote workflow and want its steps to appear under the trace of the current workflow in your observability backend, so you get one connected tree for the full request.
+
+## Deterministic Identifiers and Timestamps
+
+The runtime stamps workflow runs, intermediate steps, spans, and function invocations with generated identifiers (`uuid.uuid4`) and wall-clock timestamps (`time.time`). For reproducible runs — for example, record or replay style tests, golden-file trace comparison, or runtimes that re-execute workflow code and need identifiers to remain stable across re-executions — install process-wide providers that the runtime uses instead:
+
+```python
+import itertools
+import uuid
+
+from nat.utils.providers import set_id_provider
+from nat.utils.providers import set_time_provider
+
+counter = itertools.count(1)
+previous_id_provider = set_id_provider(lambda: str(uuid.uuid5(uuid.NAMESPACE_OID, f"my-run-{next(counter)}")))
+previous_time_provider = set_time_provider(lambda: 1700000000.0)
+```
+
+The id provider must return canonical `UUID` strings. Integer identifiers, such as the OpenTelemetry-style trace and span ids, are derived from the id provider by parsing the returned value. Both hooks default to `uuid.uuid4` and `time.time`, and each setter returns the previously installed provider so it can be restored. When no provider is installed, behavior is unchanged.
