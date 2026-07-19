@@ -20,9 +20,11 @@ import re
 from inspect import Parameter
 from inspect import Signature
 from typing import TYPE_CHECKING
+from typing import Annotated
 from typing import Any
 
 from pydantic import BaseModel
+from pydantic import Field
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
@@ -35,9 +37,6 @@ if TYPE_CHECKING:
     from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
-
-# Sentinel: marks "optional; let Pydantic supply default/factory"
-_USE_PYDANTIC_DEFAULT = object()
 
 
 def _sanitize_parameter_name(name: str) -> str:
@@ -111,7 +110,8 @@ def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
     For MCP tool signatures, we need to distinguish:
     - Required fields: marked with Parameter.empty
     - Optional with concrete default: use that default
-    - Optional with factory: use sentinel so Pydantic can apply the factory later
+    - Optional with factory: omit the signature default and retain the factory in
+      the annotated Pydantic field
 
     Args:
         field: The Pydantic FieldInfo to check
@@ -120,7 +120,7 @@ def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
         A tuple of (is_optional, default_value):
         - (False, Parameter.empty) for required fields
         - (True, actual_default) for optional fields with explicit defaults
-        - (True, _USE_PYDANTIC_DEFAULT) for optional fields with default_factory
+        - (True, Parameter.empty) for optional fields with default_factory
     """
     if field.is_required():
         return False, Parameter.empty
@@ -129,12 +129,13 @@ def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
     if field.default is not PydanticUndefined:
         return True, field.default
 
-    # Factory case: mark optional in signature but don't fabricate a value
+    # Factory case: the FieldInfo annotation carries the factory. Leaving the
+    # signature default empty avoids exposing a non-serializable sentinel.
     if field.default_factory is not None:
-        return True, _USE_PYDANTIC_DEFAULT
+        return True, Parameter.empty
 
     # Rare corner case: non-required yet no default surfaced
-    return True, _USE_PYDANTIC_DEFAULT
+    return True, Parameter.empty
 
 
 def create_function_wrapper(
@@ -183,14 +184,17 @@ def create_function_wrapper(
 
         parameters = []
         for name, field in param_fields.items():
-            # Get the field type and convert to appropriate Python type
-            field_type = field.annotation
+            # Retain the complete Pydantic FieldInfo so FastMCP preserves field
+            # constraints, descriptions, and default factories in its argument model.
+            # Look up the collision-safe parameter name
+            safe_name = name_map[name]
+
+            field_type = Annotated[field.annotation or Any, field]
+            if safe_name != name:
+                field_type = Annotated[field_type, Field(alias=name)]
 
             # Check if field is optional and get its default value
             _is_optional, param_default = is_field_optional(field)
-
-            # Look up the collision-safe parameter name
-            safe_name = name_map[name]
 
             # Add the parameter to our list
             parameters.append(
@@ -233,13 +237,11 @@ def create_function_wrapper(
                     query = kwargs.get("query", "")
                     payload = ChatRequest.from_string(query)
                 else:
-                    # Strip sentinel values so Pydantic can apply defaults/factories
-                    cleaned_kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
                     # Reverse-map sanitized parameter names to original schema names
                     if alias_map:
-                        cleaned_kwargs = {alias_map.get(k, k): v for k, v in cleaned_kwargs.items()}
+                        kwargs = {alias_map.get(k, k): v for k, v in kwargs.items()}
                     # Always validate with the declared schema
-                    payload = schema.model_validate(cleaned_kwargs)
+                    payload = schema.model_validate(kwargs)
 
                 # Use SessionManager.run() pattern - this automatically handles all observability
                 # The Runner created by session_manager.run() will:
