@@ -20,9 +20,11 @@ import re
 from inspect import Parameter
 from inspect import Signature
 from typing import TYPE_CHECKING
+from typing import Annotated
 from typing import Any
 
 from pydantic import BaseModel
+from pydantic import Field
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
@@ -185,6 +187,8 @@ def create_function_wrapper(
         for name, field in param_fields.items():
             # Get the field type and convert to appropriate Python type
             field_type = field.annotation
+            if field.description:
+                field_type = Annotated[field_type, Field(description=field.description)]
 
             # Check if field is optional and get its default value
             _is_optional, param_default = is_field_optional(field)

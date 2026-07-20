@@ -19,6 +19,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -77,6 +78,11 @@ class MockOptionalTypesSchema(BaseModel):
     optional_str_none: str | None = None
     optional_int_none: int | None = None
     optional_list_none: list[float] | None = None
+
+
+class MockDescribedSchema(BaseModel):
+    """Schema with a field carrying a description."""
+    x: str = Field(description="the x value")
 
 
 def create_mock_workflow_with_observability():
@@ -316,6 +322,23 @@ class TestCreateFunctionWrapper:
         # Assert
         assert result == "chat response"
         mock_session_manager.run.assert_called_once()
+
+    async def test_field_description_propagates_to_tools_list(self):
+        """Test that a field's description is exposed in the MCP tool's inputSchema."""
+        # Arrange
+        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
+        mock_function.input_schema = MockDescribedSchema
+        mock_function.description = "described function"
+        mcp = FastMCP()
+
+        # Act
+        register_function_with_mcp(mcp, "described_function", mock_session_manager, function=mock_function)
+        tools = await mcp.list_tools()
+
+        # Assert
+        tool = next(t for t in tools if t.name == "described_function")
+        assert tool.inputSchema["properties"]["x"]["description"] == "the x value"
 
 
 class TestGetFunctionDescription:
