@@ -188,6 +188,10 @@ class FunctionMiddleware(Middleware):
         if ctx.action == InvocationAction.SKIP:
             return None
 
+        # Final middleware does not call next by default; subclass must override to invoke the function.
+        if self.is_final:
+            return ctx.output
+
         # Execute function with (potentially modified) args/kwargs
         ctx.output = await call_next(*ctx.modified_args, **ctx.modified_kwargs)
 
@@ -246,6 +250,10 @@ class FunctionMiddleware(Middleware):
             ctx = result
 
         if ctx.action == InvocationAction.SKIP:
+            return
+
+        # Final middleware does not call next by default; subclass must override to stream function output.
+        if self.is_final:
             return
 
         # Stream with per-chunk post-invoke
@@ -359,19 +367,19 @@ def validate_middleware(middleware: Sequence[Middleware] | None) -> tuple[Middle
     if not middleware:
         return tuple()
 
-    final_found = False
-    for idx, mw in enumerate(middleware):
+    for mw in middleware:
         if not isinstance(mw, Middleware):
             raise TypeError("All middleware must be instances of Middleware")
 
-        if mw.is_final:
-            if final_found:
-                raise ValueError("Only one final Middleware may be specified per function")
+    final_indices: list[int] = [i for i, mw in enumerate(middleware) if mw.is_final]
 
-            if idx != len(middleware) - 1:
-                raise ValueError("A final Middleware must be the last middleware in the chain")
+    if len(final_indices) > 1:
+        names: str = ", ".join(type(middleware[i]).__name__ for i in final_indices)
+        raise ValueError(f"Only one final middleware may be specified per function, but found multiple: {names}")
 
-            final_found = True
+    if final_indices and final_indices[0] != len(middleware) - 1:
+        name: str = type(middleware[final_indices[0]]).__name__
+        raise ValueError(f"{name} is marked as final but is not the last middleware in the chain")
 
     return tuple(middleware)
 
