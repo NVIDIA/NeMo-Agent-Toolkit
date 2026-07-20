@@ -20,7 +20,7 @@
 #
 # Prerequisites (from the Dynamo source checkout; run once, stays up):
 #   export DYNAMO_SOURCE_DIR="${HOME}/dynamo"
-#   cd "$DYNAMO_SOURCE_DIR/dev"
+#   cd "$DYNAMO_SOURCE_DIR/deploy"
 #   docker compose -f docker-compose.yml up -d --remove-orphans
 #   docker compose -f docker-observability.yml up -d --remove-orphans
 #   cd "$DYNAMO_SOURCE_DIR"
@@ -152,19 +152,28 @@ curl -sf http://localhost:2379/health >/dev/null 2>&1 || { echo "etcd not runnin
 curl -sf http://localhost:8222/healthz >/dev/null 2>&1 || { echo "NATS not running. See header comment."; exit 1; }
 
 # ── Priority scheduling flags (SGLang version-dependent) ───────────────────────
-# dynamo.sglang passes these through to SGLang's argparse, so an unsupported flag
-# makes the worker exit during argument parsing before the model registers on
-# /v1/models. The supported set varies with the SGLang version bundled in the
-# installed Dynamo, so probe ServerArgs and include only what is available.
+# The worker is launched via `python3 -m dynamo.sglang`, which validates CLI args
+# at its OWN layer before delegating to SGLang's argparse. An arg that raw SGLang
+# accepts can still be rejected by dynamo.sglang, making the worker exit during
+# argument parsing before the model registers on /v1/models.
+#
+# --schedule-low-priority-values-first is one such arg: SGLang exposes it, but
+# dynamo.sglang forbids it (components/src/dynamo/sglang/args.py) because Dynamo
+# normalizes request priority so that HIGHER values are always higher priority at
+# the API layer. We therefore never pass it. Priority routing still works through
+# --enable-priority-scheduling alone; the priority *values* injected by the NAT
+# Dynamo client must follow Dynamo's higher-is-higher convention (see dynamo_llm.py).
+#
+# Probe raw SGLang ServerArgs only to decide whether --enable-priority-scheduling
+# is available; dynamo.sglang accepts that flag when SGLang supports it.
 PRIORITY_ARGS=()
 SGLANG_PRIORITY_PROBE="$(python3 - <<'PY' 2>/dev/null || true
 try:
     from sglang.srt.server_args import ServerArgs
     fields = getattr(ServerArgs, "__dataclass_fields__", {})
     print("PROBE_OK")
-    for name in ("enable_priority_scheduling", "schedule_low_priority_values_first"):
-        if name in fields:
-            print(name)
+    if "enable_priority_scheduling" in fields:
+        print("enable_priority_scheduling")
 except Exception:
     pass
 PY
@@ -175,14 +184,6 @@ if ! grep -q PROBE_OK <<<"$SGLANG_PRIORITY_PROBE"; then
     echo "         will not be exercised."
 elif grep -q enable_priority_scheduling <<<"$SGLANG_PRIORITY_PROBE"; then
     PRIORITY_ARGS+=(--enable-priority-scheduling)
-    if grep -q schedule_low_priority_values_first <<<"$SGLANG_PRIORITY_PROBE"; then
-        PRIORITY_ARGS+=(--schedule-low-priority-values-first)
-    else
-        echo "WARNING: installed SGLang lacks --schedule-low-priority-values-first."
-        echo "         Priority scheduling is enabled, but lower-priority-value-first"
-        echo "         ordering (HIGH calls jump the queue) is unavailable. Upgrade"
-        echo "         Dynamo/SGLang for full priority-routing fidelity."
-    fi
 else
     echo "WARNING: installed SGLang does not support --enable-priority-scheduling;"
     echo "         starting worker without priority scheduling. The priority-routing"

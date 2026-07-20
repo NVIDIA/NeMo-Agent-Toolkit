@@ -17,6 +17,11 @@ limitations under the License.
 
 # Latency Sensitivity Demo
 
+> [!WARNING]
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.1.0**, where `dynamo.sglang` rejects `--schedule-low-priority-values-first` and normalizes request priority so higher values are higher priority. Earlier releases use different priority semantics. (End-to-end tested against the NGC `sglang-runtime` 1.1.1 and 1.2.1 images; no stable 1.3.0 is published yet.)
+
 This example demonstrates **automatic latency sensitivity inference** end-to-end: profiling a multi-step LLM workflow, computing per-node sensitivity scores, and using those scores as Dynamo routing hints at runtime for improved performance.
 
 Agentic workflows are not flat sequences of identical LLM calls. Some calls gate everything downstream (the first classifier), some run in parallel with slack to spare, and some are the last thing before the user sees a response. Treating them all the same leaves performance on the table. This demo shows how the NeMo Agent Toolkit profiler can automatically detect which calls matter most and feed that information to Dynamo so it can route requests accordingly.
@@ -113,7 +118,7 @@ From the Dynamo source checkout, deploy the baseline Dynamo deployment by follow
 #### A. Start infrastructure containers
 
 ```bash
-cd "$DYNAMO_SOURCE_DIR/dev"
+cd "$DYNAMO_SOURCE_DIR/deploy"
 docker compose -f docker-compose.yml up -d --remove-orphans
 ```
 
@@ -122,7 +127,7 @@ This starts **etcd** (port 2379) and **NATS** (port 4222/8222).
 #### B. (Optional) Start observability stack
 
 ```bash
-cd "$DYNAMO_SOURCE_DIR/dev"
+cd "$DYNAMO_SOURCE_DIR/deploy"
 docker compose -f docker-observability.yml up -d --remove-orphans
 ```
 
@@ -279,7 +284,7 @@ The Dynamo LLM client reads the prediction trie and, for each LLM call, injects 
 | `osl` | `int` | Predicted output sequence length (tokens) — informs decode cost estimation |
 | `iat` | `int` | Predicted inter-arrival time (ms) — informs request pacing and worker stickiness |
 | `latency_sensitivity` | `float` | The auto-computed sensitivity score (1–5 from the prediction trie) |
-| `priority` | `int` | Integer complement of sensitivity (`max_sensitivity - latency_sensitivity`). Lower value = higher priority. |
+| `priority` | `int` | Engine scheduler priority, equal to `latency_sensitivity`. Dynamo normalizes priority so **higher value = higher priority** on both vLLM (negated internally) and SGLang (`--enable-priority-scheduling`). |
 
 The client also injects `nvext.cache_control` with a TTL computed as `total_requests * iat` (the estimated conversation duration), so KV cache entries auto-expire after the workflow is expected to complete.
 
@@ -296,7 +301,7 @@ The client also injects `nvext.cache_control` with a TTL computed as `total_requ
       "osl": 2,
       "iat": 4,
       "latency_sensitivity": 5.0,
-      "priority": 995
+      "priority": 5
     },
     "cache_control": {
       "type": "ephemeral",
