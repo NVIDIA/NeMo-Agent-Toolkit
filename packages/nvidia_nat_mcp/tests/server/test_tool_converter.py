@@ -454,7 +454,7 @@ class TestRegisterFunctionWithMcp:
         mock_mcp.tool.assert_called_once_with(name=function_name, description="Workflow description")
 
     async def test_registered_tool_preserves_pydantic_schema_without_warnings(self):
-        """The MCP schema should preserve constraints and serializable defaults."""
+        """The MCP schema should preserve field metadata and serializable defaults."""
         mock_session_manager = create_mock_session_manager()
         mock_function = MagicMock(spec=Function)
         mock_function.input_schema = MockConstrainedSchema
@@ -471,6 +471,9 @@ class TestRegisterFunctionWithMcp:
 
         input_schema = tools[0].inputSchema
         assert input_schema["required"] == ["page", "query"]
+        assert input_schema["properties"]["page"]["description"] == "Page number"
+        assert input_schema["properties"]["query"]["description"] == "Search query"
+        assert input_schema["properties"]["tags"]["description"] == "Tags to include"
         assert input_schema["properties"]["page"]["minimum"] == 1
         assert input_schema["properties"]["page"]["maximum"] == 2000
         assert input_schema["properties"]["query"]["minLength"] == 2
