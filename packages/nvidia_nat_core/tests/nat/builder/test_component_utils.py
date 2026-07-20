@@ -15,6 +15,7 @@
 
 import os
 import sys
+import typing
 from unittest import mock
 
 if sys.version_info >= (3, 12):
@@ -305,6 +306,17 @@ def test_recursive_componentref_discovery():
 
         # Validate discovery of the expected ComponentRef types
         assert len(result_set.difference(expected_result)) == 0
+
+
+def test_recursive_componentref_discovery_bare_generic():
+
+    class TestConfig(FunctionBaseConfig, name="bare_generic"):
+        pass
+
+    instance_config = TestConfig()
+
+    assert list(recursive_componentref_discovery(instance_config, ["x"], typing.List)) == []  # noqa: UP006
+    assert list(recursive_componentref_discovery(instance_config, {"a": "b"}, typing.Dict)) == []  # noqa: UP006
 
 
 def test_update_dependency_graph(nested_nat_config: Config):

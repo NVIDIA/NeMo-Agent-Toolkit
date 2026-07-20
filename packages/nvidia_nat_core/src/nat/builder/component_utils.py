@@ -166,11 +166,13 @@ def recursive_componentref_discovery(cls: TypedBaseModel, value: typing.Any,
             yield instance_id, value_node
 
     elif ((decomposed_type.origin in (tuple, list, set)) and (isinstance(value, Iterable))):
-        for v in value:
-            yield from recursive_componentref_discovery(cls, v, decomposed_type.args[0])
+        if (decomposed_type.args):
+            for v in value:
+                yield from recursive_componentref_discovery(cls, v, decomposed_type.args[0])
     elif ((decomposed_type.origin in (dict, type(typing.TypedDict))) and (isinstance(value, dict))):
-        for v in value.values():
-            yield from recursive_componentref_discovery(cls, v, decomposed_type.args[1])
+        if (len(decomposed_type.args) >= 2):
+            for v in value.values():
+                yield from recursive_componentref_discovery(cls, v, decomposed_type.args[1])
     elif (issubclass(type(value), BaseModel)):
         for field, field_info in type(value).model_fields.items():
             field_data = getattr(value, field)
