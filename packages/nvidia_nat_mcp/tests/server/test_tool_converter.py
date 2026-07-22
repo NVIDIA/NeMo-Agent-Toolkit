@@ -90,9 +90,10 @@ class MockConstrainedSchema(BaseModel):
 
     page: int = Field(ge=1, le=2000, description="Page number")
     query: str = Field(min_length=2, max_length=100, description="Search query")
-    tags: list[str] = Field(default_factory=lambda: ["default"],
+    tags: list[str] = Field(default_factory=lambda data: [data["query"]],
                             min_length=1,
                             max_length=5,
+                            validate_default=True,
                             description="Tags to include")
 
 
@@ -185,7 +186,7 @@ class TestIsFieldOptional:
 
         # Assert
         assert is_optional is True
-        # The FieldInfo annotation carries the factory without a signature default.
+        # Factory fields remain optional without a concrete signature default.
         assert default_value is Parameter.empty
 
     def test_optional_field_with_none_default(self):
@@ -484,10 +485,47 @@ class TestRegisterFunctionWithMcp:
 
         await mcp.call_tool("constrained_tool", {"page": 1, "query": "valid"})
         payload = mock_session_manager.run.call_args.args[0]
-        assert payload.tags == ["default"]
+        assert payload.tags == ["valid"]
+        assert "tags" not in payload.model_fields_set
 
-        with pytest.raises(ToolError, match="greater than or equal to 1"):
-            await mcp.call_tool("constrained_tool", {"page": 0, "query": "valid"})
+        await mcp.call_tool("constrained_tool", {"page": 1, "query": "valid", "tags": ["valid"]})
+        payload = mock_session_manager.run.call_args.args[0]
+        assert payload.tags == ["valid"]
+        assert "tags" in payload.model_fields_set
+
+    @pytest.mark.parametrize(
+        "arguments,message",
+        [
+            pytest.param({
+                "page": 0, "query": "valid"
+            }, "greater than or equal to 1", id="page-minimum"),
+            pytest.param({
+                "page": 2001, "query": "valid"
+            }, "less than or equal to 2000", id="page-maximum"),
+            pytest.param({
+                "page": 1, "query": "x"
+            }, "at least 2 characters", id="query-minimum"),
+            pytest.param({
+                "page": 1, "query": "x" * 101
+            }, "at most 100 characters", id="query-maximum"),
+            pytest.param({
+                "page": 1, "query": "valid", "tags": []
+            }, "at least 1 item", id="tags-minimum"),
+            pytest.param({
+                "page": 1, "query": "valid", "tags": ["tag"] * 6
+            }, "at most 5 items", id="tags-maximum"),
+        ])
+    async def test_registered_tool_enforces_pydantic_constraints(self, arguments, message):
+        """The MCP server should enforce every constraint it advertises."""
+        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
+        mock_function.input_schema = MockConstrainedSchema
+        mock_function.description = "Constrained tool"
+        mcp = FastMCP("test-server")
+        register_function_with_mcp(mcp, "constrained_tool", mock_session_manager, function=mock_function)
+
+        with pytest.raises(ToolError, match=message):
+            await mcp.call_tool("constrained_tool", arguments)
 
 
 class TestParameterSchemaValidation:
@@ -569,7 +607,7 @@ class TestParameterSchemaValidation:
         assert "optional_list" in sig.parameters
         assert sig.parameters["optional_str"].default == "default_value"
         assert sig.parameters["optional_int"].default == 42
-        # FieldInfo carries the default factory without exposing a signature default.
+        # Factory fields remain optional without a concrete signature default.
         assert sig.parameters["optional_list"].default is Parameter.empty
 
     def test_optional_with_none_type(self):

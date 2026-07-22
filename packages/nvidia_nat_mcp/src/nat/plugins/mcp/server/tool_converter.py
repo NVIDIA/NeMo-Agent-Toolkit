@@ -38,6 +38,30 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_USE_PYDANTIC_DEFAULT = object()
+
+
+def _use_pydantic_default() -> object:
+    """Mark an omitted FastMCP argument for removal before model validation."""
+    return _USE_PYDANTIC_DEFAULT
+
+
+def _build_mcp_field_annotation(field: FieldInfo) -> Any:
+    """Build a field annotation for FastMCP's intermediate argument model.
+
+    FastMCP materializes default-factory values before calling the wrapper. Use
+    a private marker factory in that intermediate model so the declared schema
+    remains responsible for applying its original factory and tracking whether
+    the caller supplied the field.
+    """
+    field_metadata: list[Any] = [field]
+    if field.default_factory is not None:
+        # The type-agnostic marker need not satisfy the field type. The wrapper
+        # removes it before the declared schema validates the original factory's value.
+        field_metadata.append(Field(default_factory=_use_pydantic_default, validate_default=False))
+
+    return Annotated[(field.annotation or Any, *field_metadata)]
+
 
 def _sanitize_parameter_name(name: str) -> str:
     """Sanitize a JSON schema property name into a valid Python identifier.
@@ -110,8 +134,8 @@ def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
     For MCP tool signatures, we need to distinguish:
     - Required fields: marked with Parameter.empty
     - Optional with concrete default: use that default
-    - Optional with factory: omit the signature default and retain the factory in
-      the annotated Pydantic field
+    - Optional with factory: omit the signature default; the annotated field uses
+      an internal marker so the declared schema can apply its factory later
 
     Args:
         field: The Pydantic FieldInfo to check
@@ -129,8 +153,9 @@ def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
     if field.default is not PydanticUndefined:
         return True, field.default
 
-    # Factory case: the FieldInfo annotation carries the factory. Leaving the
-    # signature default empty avoids exposing a non-serializable sentinel.
+    # Factory case: the generated field annotation carries an internal marker factory.
+    # Leaving the signature default empty avoids exposing a non-serializable
+    # sentinel in the generated JSON schema.
     if field.default_factory is not None:
         return True, Parameter.empty
 
@@ -184,12 +209,12 @@ def create_function_wrapper(
 
         parameters = []
         for name, field in param_fields.items():
-            # Retain the complete Pydantic FieldInfo so FastMCP preserves field
-            # constraints, descriptions, and default factories in its argument model.
+            # Retain the Pydantic field metadata so FastMCP preserves its
+            # constraints, descriptions, and optionality.
             # Look up the collision-safe parameter name
             safe_name = name_map[name]
 
-            field_type = Annotated[field.annotation or Any, field]
+            field_type = _build_mcp_field_annotation(field)
             if safe_name != name:
                 field_type = Annotated[field_type, Field(alias=name)]
 
@@ -223,6 +248,11 @@ def create_function_wrapper(
             # Remove ctx if present
             if "ctx" in kwargs:
                 del kwargs["ctx"]
+
+            # FastMCP applies the wrapper field's factory to omitted arguments.
+            # Remove its marker so the declared schema can apply the original
+            # default factory and preserve model_fields_set semantics.
+            kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
 
             # Process the function call
             if ctx:
