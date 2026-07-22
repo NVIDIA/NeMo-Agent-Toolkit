@@ -42,14 +42,14 @@ _USE_PYDANTIC_DEFAULT = object()
 
 
 def _use_pydantic_default() -> object:
-    """Mark an omitted FastMCP argument for removal before model validation."""
+    """Mark an omitted `FastMCP` argument for removal before model validation."""
     return _USE_PYDANTIC_DEFAULT
 
 
 def _build_mcp_field_annotation(field: FieldInfo) -> Any:
-    """Build a field annotation for FastMCP's intermediate argument model.
+    """Build a field annotation for `FastMCP`'s intermediate argument model.
 
-    FastMCP materializes default-factory values before calling the wrapper. Use
+    `FastMCP` materializes default-factory values before calling the wrapper. Use
     a private marker factory in that intermediate model so the declared schema
     remains responsible for applying its original factory and tracking whether
     the caller supplied the field.
@@ -203,9 +203,10 @@ def create_function_wrapper(
         # Extract parameter information from the input schema
         param_fields = schema.model_fields
 
-        # Build collision-safe name mapping and derive reverse alias map
+        # Build collision-safe name mapping and derive the keys FastMCP may
+        # emit for each declared schema field.
         name_map = _build_name_mapping(list(param_fields.keys()))
-        alias_map = {safe: orig for orig, safe in name_map.items() if orig != safe}
+        argument_name_map = {safe: orig for orig, safe in name_map.items() if orig != safe}
 
         parameters = []
         for name, field in param_fields.items():
@@ -216,7 +217,12 @@ def create_function_wrapper(
 
             field_type = _build_mcp_field_annotation(field)
             if safe_name != name:
-                field_type = Annotated[field_type, Field(alias=name)]
+                # Only synthesize the original JSON name when the declared
+                # field has no input alias semantics of its own.
+                if field.validation_alias is None:
+                    field_type = Annotated[field_type, Field(alias=name)]
+                if isinstance(field.alias, str):
+                    argument_name_map[field.alias] = name
 
             # Check if field is optional and get its default value
             _is_optional, param_default = is_field_optional(field)
@@ -267,11 +273,11 @@ def create_function_wrapper(
                     query = kwargs.get("query", "")
                     payload = ChatRequest.from_string(query)
                 else:
-                    # Reverse-map sanitized parameter names to original schema names
-                    if alias_map:
-                        kwargs = {alias_map.get(k, k): v for k, v in kwargs.items()}
+                    # Canonicalize sanitized names and aliases emitted by FastMCP.
+                    if argument_name_map:
+                        kwargs = {argument_name_map.get(k, k): v for k, v in kwargs.items()}
                     # Always validate with the declared schema
-                    payload = schema.model_validate(kwargs)
+                    payload = schema.model_validate(kwargs, by_name=True)
 
                 # Use SessionManager.run() pattern - this automatically handles all observability
                 # The Runner created by session_manager.run() will:

@@ -22,6 +22,7 @@ from unittest.mock import patch
 import pytest
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
+from pydantic import AliasChoices
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -995,11 +996,29 @@ class TestParameterNameSanitization:
         assert "cik_A" in sig.parameters
         assert "name" in sig.parameters
 
-    async def test_registered_tool_accepts_original_keyword_field_name(self):
-        """The advertised JSON field name should remain callable after sanitization."""
+    @pytest.mark.parametrize(
+        ("field", "advertised_name"),
+        [
+            pytest.param(Field(), "from", id="no-alias"),
+            pytest.param(Field(alias="fromDate"), "fromDate", id="alias"),
+            pytest.param(Field(validation_alias="fromDate"), "fromDate", id="validation-alias"),
+            pytest.param(
+                Field(validation_alias=AliasChoices("fromDate", "from_date")),
+                "fromDate",
+                id="alias-choices",
+            ),
+            pytest.param(
+                Field(alias="genericDate", validation_alias="fromDate", serialization_alias="outDate"),
+                "fromDate",
+                id="distinct-aliases",
+            ),
+        ],
+    )
+    async def test_registered_tool_preserves_aliases_for_sanitized_fields(self, field, advertised_name):
+        """Sanitized fields should retain their declared input alias behavior."""
         from pydantic import create_model
         schema = create_model("DateRangeSchema", **{
-            "from": (str, ...), "query": (str, ...)
+            "from": (str, field), "query": (str, ...)
         })  # type: ignore[call-overload]
         mock_session_manager = create_mock_session_manager()
         mock_function = MagicMock(spec=Function)
@@ -1010,10 +1029,9 @@ class TestParameterNameSanitization:
         register_function_with_mcp(mcp, "date_tool", mock_session_manager, function=mock_function)
         tools = await mcp.list_tools()
 
-        assert "from" in tools[0].inputSchema["properties"]
-        assert "from_" not in tools[0].inputSchema["properties"]
+        assert set(tools[0].inputSchema["properties"]) == {advertised_name, "query"}
 
-        await mcp.call_tool("date_tool", {"from": "2026-01-01", "query": "test"})
+        await mcp.call_tool("date_tool", {advertised_name: "2026-01-01", "query": "test"})
         payload = mock_session_manager.run.call_args.args[0]
         assert getattr(payload, "from") == "2026-01-01"
 
