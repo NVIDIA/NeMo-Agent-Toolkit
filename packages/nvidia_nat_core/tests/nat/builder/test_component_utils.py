@@ -319,13 +319,16 @@ def test_recursive_componentref_discovery_bare_generic():
     assert list(recursive_componentref_discovery(instance_config, ["x"], typing.List)) == []  # noqa: UP006
     assert list(recursive_componentref_discovery(instance_config, {"a": "b"}, typing.Dict)) == []  # noqa: UP006
 
-    list_refs = list(recursive_componentref_discovery(instance_config, [FunctionRef("function0")], typing.List))  # noqa: UP006
+    list_refs = list(recursive_componentref_discovery(instance_config, [FunctionRef("function0")],
+                                                      typing.List))  # noqa: UP006
     assert list_refs == [(expected_instance_id,
-                          ComponentRefNode(ref_name="function0", component_group=ComponentGroup.FUNCTIONS))]  # type: ignore
+                          ComponentRefNode(ref_name="function0",
+                                           component_group=ComponentGroup.FUNCTIONS))]  # type: ignore
 
-    dict_refs = list(recursive_componentref_discovery(instance_config, {"k": LLMRef("llm0")}, typing.Dict))  # noqa: UP006
-    assert dict_refs == [(expected_instance_id,
-                          ComponentRefNode(ref_name="llm0", component_group=ComponentGroup.LLMS))]  # type: ignore
+    dict_refs = list(recursive_componentref_discovery(instance_config, {"k": LLMRef("llm0")},
+                                                      typing.Dict))  # noqa: UP006
+    assert dict_refs == [(expected_instance_id, ComponentRefNode(ref_name="llm0",
+                                                                 component_group=ComponentGroup.LLMS))]  # type: ignore
 
 
 def test_update_dependency_graph(nested_nat_config: Config):
