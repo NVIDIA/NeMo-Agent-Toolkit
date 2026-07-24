@@ -68,9 +68,12 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
       written back in place and the structurally-preserved output is returned; a blocked value
       returns the refusal message in place of the output.
 
-    Prefer a single ``GuardrailsMiddleware`` per function. A NeMo Guardrails policy can declare
-    many rails, and the library runs them as a chain (all input rails, then all output rails, within
-    one ``LLMRails`` instance), so one middleware can apply every rail a function needs.
+    A NeMo Guardrails policy can declare many rails, and the library runs them as a chain (all
+    input rails, then all output rails, within one ``LLMRails`` instance), so one middleware can
+    apply every rail a function needs.
+
+    Setting ``is_final=True`` enforces ``GuardrailsMiddleware`` to operate directly on the function
+    call itself, ensuring ``call_next`` always invokes the function and not another middleware.
     """
 
     def __init__(
@@ -88,7 +91,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         self._guardrails_config: GuardrailsMiddlewareConfig = config
         self._rail_llms: set[str] = set((config.llm_bindings or {}).values())
         self._rail_llms_bound: bool = False
-        super().__init__(config, builder)
+        super().__init__(config, builder, is_final=False)
 
     async def pre_invoke(self, context: InvocationContext) -> InvocationContext | None:
         """Run input rails over the input fields and block on refusal.
