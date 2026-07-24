@@ -23,7 +23,7 @@ This example demonstrates how to implement **observability and tracing capabilit
 
 ## Key Features
 
-- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Arize AX (hosted OTLP), Langfuse, LangSmith, Weave, and Patronus for comprehensive monitoring options.
+- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Arize AX (hosted OTLP), MLflow (local), Langfuse, LangSmith, Weave, and Patronus for comprehensive monitoring options.
 - **Distributed Tracing Implementation:** Shows how to track agent execution flow across components with detailed trace visualization including agent reasoning, tool calls, and LLM interactions.
 - **Performance Monitoring:** Demonstrates capturing latency metrics, token usage, resource consumption, and error tracking for production-ready AI system monitoring.
 - **Development and Production Patterns:** Provides examples for both local development tracing (Phoenix) and production monitoring setups with various enterprise observability platforms.
@@ -43,7 +43,7 @@ Before starting this example, you need:
 
 1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
-3. **Observability platform**: Access to at least one of the supported platforms (Phoenix, Arize AX, Langfuse, LangSmith, Weave, or Patronus)
+3. **Observability platform**: Access to at least one of the supported platforms (Phoenix, Arize AX, MLflow, Langfuse, LangSmith, Weave, or Patronus)
 
 ## Installation
 
@@ -119,6 +119,24 @@ Send traces to [Arize AX](https://arize.com/docs/ax/) using the `arize_ax` expor
     ```
 
 3. Open the Arize project matching your project name to view traces. For **EU** residency, set `use_eu_region: true` under `arize_ax` in the config file.
+
+### MLflow
+
+Send traces to a local [MLflow](https://mlflow.org/docs/latest/tracing/) tracking server using the `mlflow` exporter (`nvidia-nat[opentelemetry]`). MLflow 3.6+ ingests OTLP spans at `<server>/v1/traces`, routed to an experiment via `x-mlflow-experiment-id`.
+
+1. Start a DB-backed tracking server:
+
+    ```bash
+    mlflow server --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5000
+    ```
+
+2. Run the example:
+
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-mlflow.yml --input "What is 2 * 4?"
+    ```
+
+3. Open the MLflow UI at `http://localhost:5000` and view the trace under the experiment's **Traces** tab. Override the target with `MLFLOW_OTLP_ENDPOINT` / `MLFLOW_EXPERIMENT_ID`.
 
 ### File-Based Tracing
 
@@ -280,6 +298,7 @@ The example includes multiple configuration files for different observability pl
 | `config-phoenix.yml` | Phoenix | Tracing with Phoenix |
 | `config-phoenix-nested.yml` | Phoenix | Testing parent-child span tracking with nested tool calls |
 | `config-arize-ax.yml` | Arize AX | Hosted OTLP tracing to Arize AX (requires `ARIZE_*` environment variables) |
+| `config-mlflow.yml` | MLflow | Local OTLP tracing to an MLflow tracking server |
 | `config-otel-file.yml` | File Export | Local file-based tracing for development and debugging |
 | `config-langfuse.yml` | Langfuse | Langfuse monitoring and analytics |
 | `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |

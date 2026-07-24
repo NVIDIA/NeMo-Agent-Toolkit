@@ -214,7 +214,10 @@ class FunctionDescriptor:
 
         converters = []
 
-        sig = inspect.signature(func)
+        # Resolve string annotations (e.g. from modules using `from __future__ import annotations`) against the
+        # defining module's namespace. The inspected types are interpolated into the annotations of wrappers
+        # synthesized in this module, so unresolved strings would later be evaluated against the wrong globals.
+        sig = inspect.signature(func, eval_str=True)
 
         arg_count = len(sig.parameters)
 
@@ -582,7 +585,9 @@ class FunctionInfo:
         if (inspect.isasyncgenfunction(fn)):
             stream_fn = fn
 
-            sig = inspect.signature(fn)
+            # Resolve string annotations against the defining module's namespace so the return annotation can be
+            # introspected for `Streaming` metadata regardless of `from __future__ import annotations`.
+            sig = inspect.signature(fn, eval_str=True)
 
             output_origin = typing.get_origin(sig.return_annotation)
             output_args = typing.get_args(sig.return_annotation)

@@ -29,6 +29,9 @@
         },
         {
             "pattern": "^https://www\\.sphinx-doc\\.org/en/master/?$"
+        },
+        {
+            "pattern": "^https://docs\\.nvidia\\.com/dynamo"
         }
     ]
 }

@@ -43,6 +43,23 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+async def _noop_async(*_args, **_kwargs):
+    return None
+
+
+class _FakeMessageHandler:
+    """Minimal stand-in for the WebSocket message handler."""
+
+    def __init__(self):
+        self.messages: list = []
+
+    def set_flow_handler(self, _):
+        return
+
+    async def create_websocket_message(self, msg):
+        self.messages.append(msg)
+
+
 class _AuthHandler(WebSocketAuthenticationFlowHandler):
     """
     Override just one factory so the OAuth2 client talks to our in‑process
@@ -111,6 +128,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
 
     # ----------------- dummy WebSocket “UI” handler --------------------- #
     opened: list[str] = []
+    received_messages: list = []
 
     class _DummyWSHandler:  # minimal stand‑in for the UI layer
 
@@ -119,6 +137,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
 
         async def create_websocket_message(self, msg):
             opened.append(msg.text)  # record the auth URL
+            received_messages.append(msg)
 
             # 1) ── Hit /oauth/authorize on the mock server ─────────── #
             async with httpx.AsyncClient(
@@ -175,8 +194,113 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
     token_val = ctx.headers["Authorization"].split()[1]
     assert token_val in mock_server.tokens, "token not issued by mock server"
 
-    # all flow‑state cleaned up
+    # all flow-state cleaned up
     assert worker._outstanding_flows == {}
+
+
+# --------------------------------------------------------------------------- #
+# return_url propagation test                                                 #
+# --------------------------------------------------------------------------- #
+@pytest.mark.usefixtures("set_nat_config_file_env_var")
+async def test_websocket_oauth2_flow_no_popup(monkeypatch, mock_server, tmp_path):
+    """Verify that a configured return_url is propagated into FlowState."""
+
+    redirect_port = _free_port()
+
+    mock_server.register_client(
+        client_id="cid",
+        client_secret="secret",
+        redirect_base=f"http://localhost:{redirect_port}",
+    )
+
+    cfg_nat = Config(workflow=EchoFunctionConfig())
+    worker = FastApiFrontEndPluginWorker(cfg_nat)
+    add_flow = worker._add_flow
+    remove_flow = worker._remove_flow
+
+    received_messages: list = []
+    captured_flow_states: list = []
+
+    class _DummyWSHandler:
+
+        def set_flow_handler(self, _):
+            return
+
+        async def create_websocket_message(self, msg):
+            received_messages.append(msg)
+
+            async with httpx.AsyncClient(
+                    transport=ASGITransport(app=mock_server._app),
+                    base_url="http://testserver",
+                    follow_redirects=False,
+                    timeout=10,
+            ) as client:
+                r = await client.get(msg.text)
+                assert r.status_code == 302
+                redirect_url = r.headers["location"]
+
+            qs = parse_qs(urlparse(redirect_url).query)
+            code = qs["code"][0]
+            state = qs["state"][0]
+
+            flow_state = worker._outstanding_flows[state]
+            captured_flow_states.append(flow_state)
+            token = await flow_state.client.fetch_token(
+                url=flow_state.config.token_url,
+                code=code,
+                code_verifier=flow_state.verifier,
+                state=state,
+            )
+            flow_state.future.set_result(token)
+
+    ws_handler = _AuthHandler(
+        oauth_server=mock_server,
+        add_flow_cb=add_flow,
+        remove_flow_cb=remove_flow,
+        web_socket_message_handler=_DummyWSHandler(),
+        return_url="http://localhost:3000",
+    )
+
+    cfg_flow = OAuth2AuthCodeFlowProviderConfig(
+        client_id="cid",
+        client_secret="secret",
+        authorization_url="http://testserver/oauth/authorize",
+        token_url="http://testserver/oauth/token",
+        scopes=["read"],
+        use_pkce=True,
+        redirect_uri=f"http://localhost:{redirect_port}/auth/redirect",
+    )
+
+    monkeypatch.setattr("click.echo", lambda *_: None, raising=True)
+
+    ctx = await ws_handler.authenticate(cfg_flow, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
+
+    assert received_messages, "The authorization URL was never emitted."
+    assert captured_flow_states[0].return_url == "http://localhost:3000"
+    token_val = ctx.headers["Authorization"].split()[1]
+    assert token_val in mock_server.tokens, "token not issued by mock server"
+    assert worker._outstanding_flows == {}
+
+
+# --------------------------------------------------------------------------- #
+# set_oauth_mode                                                              #
+# --------------------------------------------------------------------------- #
+def test_set_oauth_mode_updates_current_flow(monkeypatch):
+    from nat.data_models.api_server import OAuthMode
+    from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
+    from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
+
+    handler = WebSocketAuthenticationFlowHandler(add_flow_cb=_noop_async,
+                                                 remove_flow_cb=_noop_async,
+                                                 web_socket_message_handler=_FakeMessageHandler(),
+                                                 return_url="https://ui.example")
+    flow = FlowState()
+    handler._current_flow_state = flow
+
+    handler.set_oauth_mode(OAuthMode.POPUP)
+
+    assert handler._oauth_mode is OAuthMode.POPUP
+    assert flow.oauth_mode is OAuthMode.POPUP
 
 
 # --------------------------------------------------------------------------- #

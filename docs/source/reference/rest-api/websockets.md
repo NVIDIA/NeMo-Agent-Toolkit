@@ -104,6 +104,21 @@ The server responds with an `auth_response_message` in both cases — with `stat
 }
 ```
 
+### OAuth Mode Preference Message
+Declares how the UI presents the OAuth 2.0 login page. Unlike the identity methods above, it carries no
+credential and receives no `auth_response_message`. The UI sends it once when the WebSocket opens;
+`mode` is `"redirect"` (default) or `"popup"`.
+
+```json
+{
+  "type": "auth_message",
+  "payload": {
+    "method": "oauth_mode_preference",
+    "mode": "redirect"
+  }
+}
+```
+
 ## Auth Response Message
 The server responds to an `auth_message` with an `auth_response_message` indicating success (with the resolved
 `user_id`) or failure (with structured error details).
@@ -484,6 +499,30 @@ Each interaction prompt `content` object supports the following optional fields:
       }
     ],
     "required": true,
+    "timeout": null,
+    "error": "This prompt is no longer available."
+  },
+  "status": "in_progress",
+  "timestamp": "2025-01-13T10:00:03Z"
+}
+```
+
+### OAuth Consent Interaction
+Sent by the server when the user must complete an OAuth 2.0 login. The `content.text` field holds the
+authorization URL for the UI to open — as a popup or same-tab redirect per the
+[OAuth Mode Preference Message](#oauth-mode-preference-message). It has no options and expects no reply.
+
+#### OAuth Consent Interaction Message Example:
+```json
+{
+  "type": "system_interaction_message",
+  "id": "interaction_308",
+  "thread_id": "thread_456",
+  "parent_id": "msg_123",
+  "conversation_id": "string",
+  "content": {
+    "input_type": "oauth_consent",
+    "text": "https://auth.example.com/oauth/authorize?client_id=...&redirect_uri=...&state=...",
     "timeout": null,
     "error": "This prompt is no longer available."
   },
