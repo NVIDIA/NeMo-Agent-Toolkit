@@ -52,9 +52,15 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
 
     async def web_search(topic: str) -> str:
         output = (await tavily_tool.ainvoke(topic))
-        output = output.split("\n\n---\n\n")
-
-        return output[0]
+        if isinstance(output, dict):
+            if output.get("answer"):
+                return output["answer"]
+            results = output.get("results") or []
+            if results:
+                first_result = results[0]
+                return first_result.get("content") or first_result.get("raw_content") or str(first_result)
+            return str(output)
+        return output.split("\n\n---\n\n")[0]
 
     prompt_template: str = """Extract a single keyword or topic from the following user query \
 that can be used to search the web. Return ONLY the keyword or topic, nothing else.

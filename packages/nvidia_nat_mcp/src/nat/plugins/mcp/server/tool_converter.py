@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import json
+import keyword
 import logging
+import re
 from inspect import Parameter
 from inspect import Signature
 from typing import TYPE_CHECKING
@@ -36,6 +38,71 @@ logger = logging.getLogger(__name__)
 
 # Sentinel: marks "optional; let Pydantic supply default/factory"
 _USE_PYDANTIC_DEFAULT = object()
+
+
+def _sanitize_parameter_name(name: str) -> str:
+    """Sanitize a JSON schema property name into a valid Python identifier.
+
+    The MCP specification places no restriction on property names, but Python's
+    ``inspect.Parameter`` requires valid identifiers.  This function:
+
+    1. Replaces non-alphanumeric/underscore characters with ``_``.
+    2. Prepends ``_`` when the result starts with a digit.
+    3. Appends ``_`` when the result is a Python keyword (PEP 8 convention).
+
+    Args:
+        name: The original property name from the MCP tool schema.
+
+    Returns:
+        A valid Python identifier derived from *name*.
+    """
+    safe = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+    if not safe or safe[0].isdigit():
+        safe = '_' + safe
+    if keyword.iskeyword(safe):
+        safe = safe + '_'
+    return safe
+
+
+def _build_name_mapping(field_names: list[str]) -> dict[str, str]:
+    """Map each original schema field name to a unique, valid Python identifier.
+
+    Handles collisions by appending numeric suffixes when multiple original names
+    sanitize to the same Python identifier (e.g. ``from`` and ``from_`` both
+    sanitize to ``from_``; the second one becomes ``from_2``).
+
+    Names that are already valid Python identifiers map to themselves.
+
+    Args:
+        field_names: Original field names from the Pydantic model.
+
+    Returns:
+        A dict mapping ``{original_name: safe_name}`` for every field.
+    """
+    name_map: dict[str, str] = {}
+    used: set[str] = set()
+
+    # First pass: reserve names that need no sanitization
+    for name in field_names:
+        safe = _sanitize_parameter_name(name)
+        if safe == name:
+            name_map[name] = name
+            used.add(name)
+
+    # Second pass: assign safe names for fields that need sanitization
+    for name in field_names:
+        if name in name_map:
+            continue
+        safe = _sanitize_parameter_name(name)
+        candidate = safe
+        suffix = 2
+        while candidate in used:
+            candidate = f"{safe}{suffix}"
+            suffix += 1
+        name_map[name] = candidate
+        used.add(candidate)
+
+    return name_map
 
 
 def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
@@ -110,6 +177,10 @@ def create_function_wrapper(
         # Extract parameter information from the input schema
         param_fields = schema.model_fields
 
+        # Build collision-safe name mapping and derive reverse alias map
+        name_map = _build_name_mapping(list(param_fields.keys()))
+        alias_map = {safe: orig for orig, safe in name_map.items() if orig != safe}
+
         parameters = []
         for name, field in param_fields.items():
             # Get the field type and convert to appropriate Python type
@@ -118,10 +189,13 @@ def create_function_wrapper(
             # Check if field is optional and get its default value
             _is_optional, param_default = is_field_optional(field)
 
+            # Look up the collision-safe parameter name
+            safe_name = name_map[name]
+
             # Add the parameter to our list
             parameters.append(
                 Parameter(
-                    name=name,
+                    name=safe_name,
                     kind=Parameter.KEYWORD_ONLY,
                     default=param_default,
                     annotation=field_type,
@@ -161,6 +235,9 @@ def create_function_wrapper(
                 else:
                     # Strip sentinel values so Pydantic can apply defaults/factories
                     cleaned_kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
+                    # Reverse-map sanitized parameter names to original schema names
+                    if alias_map:
+                        cleaned_kwargs = {alias_map.get(k, k): v for k, v in cleaned_kwargs.items()}
                     # Always validate with the declared schema
                     payload = schema.model_validate(cleaned_kwargs)
 

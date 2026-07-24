@@ -70,8 +70,9 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from nat.data_models.evaluate_runtime import EvaluationRunOutput
-from nat.data_models.finetuning import FinetuneConfig, TrajectoryBuilderConfig, TrajectoryCollection
 from nat.data_models.evaluator import EvalOutputItem
+from nat.data_models.finetuning import FinetuneConfig, TrajectoryCollection
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 
 
 class TrajectoryBuilder(ABC):
@@ -171,7 +172,7 @@ Implement the `TrajectoryBuilder` interface's methods.
 Create a registration module:
 
 ```python
-from nat.builder.builder import Builder
+from nat.plugin_api import Builder
 from nat.cli.register_workflow import register_trajectory_builder
 
 from .my_trajectory_builder import MyTrajectoryBuilder, MyTrajectoryBuilderConfig
@@ -202,9 +203,9 @@ The `TrainerAdapter` bridges the gap between NeMo Agent Toolkit and external tra
 from abc import ABC, abstractmethod
 from typing import Any
 
+from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import (
     FinetuneConfig,
-    TrainerAdapterConfig,
     TrainingJobRef,
     TrainingJobStatus,
     TrajectoryCollection,
@@ -297,7 +298,7 @@ Implement the `TrainerAdapter` interface's methods.
 #### Step 3: Register the Component
 
 ```python
-from nat.builder.builder import Builder
+from nat.plugin_api import Builder
 from nat.cli.register_workflow import register_trainer_adapter
 
 from .my_trainer_adapter import MyTrainerAdapter, MyTrainerAdapterConfig
@@ -319,10 +320,10 @@ The `Trainer` orchestrates the complete finetuning workflow, coordinating the tr
 from abc import ABC, abstractmethod
 from typing import Any
 
+from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import (
     FinetuneConfig,
     FinetuneRunConfig,
-    TrainerConfig,
     TrainingJobRef,
     TrainingJobStatus,
     TrajectoryCollection,
@@ -411,7 +412,7 @@ define configuration, implement methods, and register the component.
 Once you have your `MyTrainer` and `MyTrainerConfig` implemented, register it as follows:
 
 ```python
-from nat.builder.builder import Builder
+from nat.plugin_api import Builder
 from nat.cli.register_workflow import register_trainer
 
 from .my_trainer import MyTrainer, MyTrainerConfig

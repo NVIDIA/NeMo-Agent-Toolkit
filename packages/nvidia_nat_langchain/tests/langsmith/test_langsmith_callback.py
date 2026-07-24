@@ -64,6 +64,8 @@ class TestLangSmithEvaluationCallback:
 
     def test_on_dataset_loaded_reuses_existing_dataset_and_loads_examples(self, eval_cb):
         from nat.plugins.langchain.langsmith.langsmith_evaluation_callback import langsmith
+
+        dataset_name = "existing"
         self.mock_client.create_dataset.side_effect = langsmith.utils.LangSmithConflictError("exists")
         mock_existing = MagicMock()
         mock_existing.id = "ds-existing"
@@ -74,9 +76,9 @@ class TestLangSmithEvaluationCallback:
         mock_ex.inputs = {"nat_item_id": "1", "question": "q"}
         self.mock_client.list_examples.return_value = [mock_ex]
         eval_cb.on_dataset_loaded(
-            dataset_name="existing",
+            dataset_name=dataset_name,
             items=[EvalInputItem(id=1, input_obj="q", expected_output_obj="a", full_dataset_entry={})])
-        self.mock_client.read_dataset.assert_called_once_with(dataset_name="Benchmark Dataset (Existing)")
+        self.mock_client.read_dataset.assert_called_once_with(dataset_name=dataset_name)
         self.mock_client.create_example.assert_not_called()
         # Should have loaded the existing example ID keyed by nat_item_id
         assert eval_cb._example_ids["1"] == "ex-existing"
@@ -426,6 +428,35 @@ class TestLangSmithOptimizationCallback:
     def opt_cb(self):
         from nat.plugins.langchain.langsmith.langsmith_optimization_callback import LangSmithOptimizationCallback
         return LangSmithOptimizationCallback(project="test-proj")
+
+    @pytest.mark.parametrize(
+        ("param_name", "expected_repo_name"),
+        [
+            (
+                "functions.Agent.prompt.value",
+                "project-123-project-name_with-spaces-agent-prompt-value-run-1",
+            ),
+            (
+                "llms.9-NIM.temperature",
+                "project-123-project-name_with-spaces-prompt-9-nim-temperature-run-1",
+            ),
+            (
+                "workflow.__",
+                "project-123-project-name_with-spaces-prompt-run-1",
+            ),
+            (
+                "custom/path with spaces",
+                "project-123-project-name_with-spaces-custom-path-with-spaces-run-1",
+            ),
+        ],
+    )
+    def test_get_prompt_repo_name_cleans_langsmith_handle(self, opt_cb, param_name, expected_repo_name):
+        opt_cb._project = "123 Project.Name_With Spaces"
+        self.mock_client.list_prompts.return_value.repos = []
+
+        repo_name = opt_cb._get_prompt_repo_name(param_name)
+
+        assert repo_name == expected_repo_name
 
     @patch("nat.plugins.langchain.langsmith.langsmith_evaluation_callback.time.sleep")
     def test_on_trial_end_links_otel_runs(self, _mock_sleep, opt_cb):

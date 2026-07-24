@@ -77,3 +77,41 @@ def test_config_yaml_loads_and_has_keys() -> None:
             "embedding_dim:",
     ]:
         assert key in text, f"Missing key: {key}"
+
+
+def test_indexing_chunks_stay_within_embedder_token_limit() -> None:
+    """Regression test for NAT-309.
+
+    The indexing pipeline previously split by sentence (``split_length=10``), which could
+    emit chunks larger than the NIM embedder 512-token limit and abort the entire indexing
+    run. Guard the fix: bounded word-based chunking, plus ``truncate="END"`` on the embedder
+    as a safety net. Runs fully offline (in-memory store, no embedding calls), so it needs
+    neither OpenSearch nor a live NIM endpoint.
+    """
+    from haystack import Document
+    from haystack.document_stores.in_memory import InMemoryDocumentStore
+
+    from nat_haystack_deep_research_agent.pipelines.indexing import _build_indexing_pipeline
+
+    pipeline = _build_indexing_pipeline(InMemoryDocumentStore(), embedder_model="nvidia/nv-embedqa-e5-v5")
+    components = pipeline.to_dict()["components"]
+
+    # The embedder must truncate over-long inputs instead of failing the run.
+    assert components["embedder"]["init_parameters"]["truncate"] == "END"
+
+    # Chunking must be word-bounded (not sentence-based) so no chunk approaches the limit.
+    splitter_params = components["splitter"]["init_parameters"]
+    assert splitter_params["split_by"] == "word"
+    split_length = splitter_params["split_length"]
+
+    # A long, low-punctuation passage: sentence-based chunking grouped this into chunks far
+    # larger than the limit, while word-based chunking keeps every chunk bounded.
+    splitter = pipeline.get_component("splitter")
+    splitter.warm_up()
+    long_sentence = " ".join(f"token{i}" for i in range(30)) + "."
+    document = Document(content=" ".join(long_sentence for _ in range(20)))
+    chunks = splitter.run(documents=[document])["documents"]
+
+    assert len(chunks) > 1, "expected the long document to be split into multiple chunks"
+    for chunk in chunks:
+        assert len(chunk.content.split()) <= split_length

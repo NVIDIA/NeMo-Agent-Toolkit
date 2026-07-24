@@ -38,7 +38,8 @@ async def generate_streaming_response_as_str(payload: typing.Any,
                                              streaming: bool,
                                              step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                              result_type: type | None = None,
-                                             output_type: type | None = None) -> AsyncGenerator[str]:
+                                             output_type: type | None = None,
+                                             wrap_output_in_payload: bool = False) -> AsyncGenerator[str]:
 
     from nat.data_models.api_server import ChatResponseChunk
 
@@ -48,7 +49,8 @@ async def generate_streaming_response_as_str(payload: typing.Any,
                                                       streaming=streaming,
                                                       step_adaptor=step_adaptor,
                                                       result_type=result_type,
-                                                      output_type=output_type):
+                                                      output_type=output_type,
+                                                      wrap_output_in_payload=wrap_output_in_payload):
 
             if (isinstance(item, ResponseSerializable)):
                 yield item.get_stream_data()
@@ -56,8 +58,8 @@ async def generate_streaming_response_as_str(payload: typing.Any,
                 raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                                  str(type(item)))
 
-        # Emit OpenAI-compatible stream termination: a final chunk with finish_reason="stop" and [DONE] sentinel
-        if output_type is ChatResponseChunk:
+        # OpenAI/chat stream termination only; generate uses the {"value": ...} envelope (no [DONE]).
+        if output_type is ChatResponseChunk and not wrap_output_in_payload:
             yield ChatResponseChunk.create_streaming_chunk("", finish_reason="stop").get_stream_data()
             yield "data: [DONE]\n\n"
     except Exception as e:
@@ -70,7 +72,13 @@ async def generate_streaming_response(payload: typing.Any,
                                       streaming: bool,
                                       step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                       result_type: type | None = None,
-                                      output_type: type | None = None) -> AsyncGenerator[ResponseSerializable]:
+                                      output_type: type | None = None,
+                                      wrap_output_in_payload: bool = False) -> AsyncGenerator[ResponseSerializable]:
+
+    # Generate endpoints wrap the workflow output in ResponsePayloadOutput (the {"value": ...} envelope)
+    # so a ChatResponseChunk-streaming workflow doesn't leak the raw OpenAI chunk shape.
+    def _wrap(item: typing.Any) -> typing.Any:
+        return ResponsePayloadOutput(payload=item) if wrap_output_in_payload else item
 
     async with session.run(payload) as runner:
 
@@ -83,10 +91,10 @@ async def generate_streaming_response(payload: typing.Any,
             try:
                 if session.workflow.has_streaming_output and streaming:
                     async for chunk in runner.result_stream(to_type=output_type):
-                        await q.put(chunk)
+                        await q.put(_wrap(chunk))
                 else:
                     result = await runner.result(to_type=result_type)
-                    await q.put(runner.convert(result, output_type))
+                    await q.put(_wrap(runner.convert(result, output_type)))
 
                 await intermediate_complete.wait()
             finally:

@@ -14,9 +14,12 @@
 # limitations under the License.
 
 
-functions:
+function_groups:
   internet_search:
-    _type: tavily_internet_search
+    _type: tavily
+    include: [search]
+
+functions:
   llama_index_rag:
     _type: llama_index_rag
     llm_name: nim_llm
@@ -25,7 +28,7 @@ functions:
     data_dir : ./examples/frameworks/multi_frameworks/README.md
   langchain_researcher_tool:
     _type: langchain_researcher_tool
-    web_tool: internet_search
+    web_tool: internet_search__search
     llm_name: nim_llm
   haystack_chitchat_agent:
     _type: haystack_chitchat_agent

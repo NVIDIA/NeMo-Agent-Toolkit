@@ -43,6 +43,7 @@ from nat.plugins.langchain.agent.base import INPUT_SCHEMA_MESSAGE
 from nat.plugins.langchain.agent.base import NO_INPUT_ERROR_MESSAGE
 from nat.plugins.langchain.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
 from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.base import _extract_message_text
 from nat.plugins.langchain.agent.base import _format_agent_thoughts_for_log
 from nat.plugins.langchain.agent.dual_node import DualNodeAgent
 from nat.plugins.langchain.agent.react_agent.output_parser import ReActAgentParsingFailedError
@@ -221,8 +222,9 @@ class ReActAgentGraph(DualNodeAgent):
                     chat_history = self._get_chat_history(state.messages)
                     inputs = {"question": question, "chat_history": chat_history}
                     output_message = await self._stream_llm(self.agent, inputs, config=config)  # type: ignore
-                    if isinstance(output_message.content, str):
-                        output_message.content = remove_r1_think_tags(output_message.content)
+                    # Normalize content to text up front: providers such as Anthropic / AWS Bedrock
+                    # return list-style content blocks that the parsing and retry logic below cannot handle.
+                    output_message.content = remove_r1_think_tags(_extract_message_text(output_message.content))
                     agent_thoughts = _format_agent_thoughts_for_log(output_message)
 
                     if self.detailed_logs:
@@ -245,8 +247,9 @@ class ReActAgentGraph(DualNodeAgent):
 
                     inputs = {"question": question, "agent_scratchpad": agent_scratchpad, "chat_history": chat_history}
                     output_message = await self._stream_llm(self.agent, inputs, config=config)  # type: ignore
-                    if isinstance(output_message.content, str):
-                        output_message.content = remove_r1_think_tags(output_message.content)
+                    # Normalize content to text up front: providers such as Anthropic / AWS Bedrock
+                    # return list-style content blocks that the parsing and retry logic below cannot handle.
+                    output_message.content = remove_r1_think_tags(_extract_message_text(output_message.content))
                     agent_thoughts = _format_agent_thoughts_for_log(output_message)
 
                     if self.detailed_logs:

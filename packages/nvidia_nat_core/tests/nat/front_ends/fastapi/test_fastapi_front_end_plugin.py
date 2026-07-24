@@ -18,21 +18,32 @@ import os
 import time
 import typing
 from pathlib import Path
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 from fastapi import FastAPI
+from httpx import ASGITransport
+from httpx import AsyncClient
 from httpx_sse import aconnect_sse
 
 from _utils.dask_utils import wait_job
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
-from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Message
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
+from nat.data_models.interactive import HumanPromptText
+from nat.data_models.interactive_http import ExecutionAcceptedInteraction
+from nat.front_ends.fastapi.execution_store import ExecutionStore
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.front_ends.fastapi.routes.generate import _GenerateEndpointMethod
+from nat.front_ends.fastapi.routes.generate import _GenerateEndpointType
+from nat.front_ends.fastapi.routes.generate import add_generate_route
+from nat.front_ends.fastapi.routes.v1_chat_completions import add_v1_chat_completions_route
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
 from nat.test.functions import EchoFunctionConfig
 from nat.test.functions import HeaderCaptureFunctionConfig
@@ -125,7 +136,7 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
             payload = ChatRequest(messages=[Message(content=x, role="user") for x in values]).model_dump()
             async with aconnect_sse(client, "POST", f"{workflow_path}/stream", json=payload) as event_source:
                 async for sse in event_source.aiter_sse():
-                    response.append(ChatResponseChunk.model_validate(sse.json()).choices[0].delta.content or "")
+                    response.append(sse.json()["value"])
 
                 assert event_source.response.status_code == 200
                 assert response == values
@@ -392,3 +403,90 @@ async def test_health_endpoint():
 
         assert response.status_code == 200
         assert response.json() == {"status": "healthy"}
+
+
+async def test_workflow_single_hitl_pause_returns_202():
+    """The workflow endpoint accepts ExecutionAcceptedInteraction as a valid response
+    when interactive mode is enabled and the workflow pauses for human input."""
+    app = FastAPI()
+    mock_session_manager = MagicMock()
+    mock_session_manager.get_workflow_input_schema.return_value = typing.Any
+    mock_session_manager.get_workflow_single_output_schema.return_value = None
+
+    await add_generate_route(
+        worker=MagicMock(),
+        app=app,
+        session_manager=mock_session_manager,
+        enable_interactive=True,
+        endpoint_path="/v1/workflow",
+        endpoint_type=_GenerateEndpointType.SINGLE,
+        endpoint_method=_GenerateEndpointMethod.POST,
+    )
+
+    store = ExecutionStore()
+    record = await store.create_execution()
+    await store.set_interaction_required(
+        execution_id=record.execution_id,
+        prompt=HumanPromptText(text="Confirm?"),
+        interaction_id="int-1",
+    )
+
+    mock_runner = AsyncMock()
+    mock_runner.start_non_streaming.return_value = record
+
+    with patch("nat.front_ends.fastapi.routes.common_utils._build_interactive_runner", return_value=mock_runner):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/v1/workflow", json={})
+
+    assert response.status_code == 202
+    body = ExecutionAcceptedInteraction.model_validate(response.json())
+    assert body.execution_id == record.execution_id
+    assert body.interaction_id == "int-1"
+    assert body.prompt == HumanPromptText(text="Confirm?")
+    assert body.status_url == f"/executions/{record.execution_id}"
+    assert body.response_url == f"/executions/{record.execution_id}/interactions/int-1/response"
+
+
+async def test_v1_chat_completions_hitl_pause_returns_202():
+    """The chat completions endpoint accepts ExecutionAcceptedInteraction as a valid response
+    when interactive mode is enabled and the workflow pauses for human input."""
+    app = FastAPI()
+    mock_session_manager = MagicMock()
+
+    await add_v1_chat_completions_route(
+        MagicMock(),
+        app,
+        path="/v1/chat/completions",
+        method="POST",
+        description="test",
+        session_manager=mock_session_manager,
+        enable_interactive=True,
+    )
+
+    store = ExecutionStore()
+    record = await store.create_execution()
+    await store.set_interaction_required(
+        execution_id=record.execution_id,
+        prompt=HumanPromptText(text="Confirm?"),
+        interaction_id="int-1",
+    )
+
+    mock_runner = AsyncMock()
+    mock_runner.start_non_streaming.return_value = record
+
+    with patch("nat.front_ends.fastapi.routes.v1_chat_completions._build_interactive_runner", return_value=mock_runner):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/v1/chat/completions",
+                json={"messages": [{
+                    "role": "user", "content": "test"
+                }]},
+            )
+
+    assert response.status_code == 202
+    body = ExecutionAcceptedInteraction.model_validate(response.json())
+    assert body.execution_id == record.execution_id
+    assert body.interaction_id == "int-1"
+    assert body.prompt == HumanPromptText(text="Confirm?")
+    assert body.status_url == f"/executions/{record.execution_id}"
+    assert body.response_url == f"/executions/{record.execution_id}/interactions/int-1/response"

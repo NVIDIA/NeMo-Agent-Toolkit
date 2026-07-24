@@ -36,14 +36,15 @@ Per-user functions are useful when you need:
 
 ### The `@register_per_user_function` Decorator
 
-To register a per-user function, use the {py:deco}`nat.cli.register_workflow.register_per_user_function` decorator. This decorator is similar to {py:deco}`nat.cli.register_workflow.register_function` but requires explicit schema definitions for input and output types.
+To register a per-user function, use the {py:deco}`nat.plugin_api.register_per_user_function` decorator. This decorator is similar to {py:deco}`nat.plugin_api.register_function` but requires explicit schema definitions for input and output types.
 
 ```python
 from pydantic import BaseModel, Field
-from nat.builder.builder import Builder
-from nat.builder.function_info import FunctionInfo
-from nat.cli.register_workflow import register_per_user_function
-from nat.data_models.function import FunctionBaseConfig
+
+from nat.plugin_api import Builder
+from nat.plugin_api import FunctionBaseConfig
+from nat.plugin_api import FunctionInfo
+from nat.plugin_api import register_per_user_function
 
 
 # Define input and output schemas
@@ -114,12 +115,12 @@ async def with_simple_types(config, builder):
 
 ## Registering Per-User Function Groups
 
-Function groups that need per-user state can be registered using the {py:deco}`nat.cli.register_workflow.register_per_user_function_group` decorator.
+Function groups that need per-user state can be registered using the {py:deco}`nat.plugin_api.register_per_user_function_group` decorator.
 
 ```python
-from nat.cli.register_workflow import register_per_user_function_group
-from nat.data_models.function import FunctionGroupBaseConfig
-from nat.builder.function import FunctionGroup
+from nat.plugin_api import FunctionGroup
+from nat.plugin_api import FunctionGroupBaseConfig
+from nat.plugin_api import register_per_user_function_group
 
 
 class MyPerUserGroupConfig(FunctionGroupBaseConfig, name="my_per_user_group"):

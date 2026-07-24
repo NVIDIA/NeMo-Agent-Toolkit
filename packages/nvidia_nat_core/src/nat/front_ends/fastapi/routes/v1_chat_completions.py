@@ -28,6 +28,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
+from nat.data_models.interactive_http import ExecutionAcceptedResponse
 from nat.data_models.interactive_http import ExecutionStatus
 from nat.front_ends.fastapi.response_helpers import generate_single_response
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
@@ -35,6 +36,7 @@ from nat.runtime.session import SessionManager
 
 from .common_utils import RESPONSE_500
 from .common_utils import _build_interactive_runner
+from .common_utils import _interactive_response_model
 from .common_utils import add_context_headers_to_response
 from .execution import build_accepted_response
 
@@ -155,7 +157,11 @@ async def add_v1_chat_completions_route(
                                                      session_manager=session_manager,
                                                      enable_interactive=enable_interactive),
         methods=[method],
-        response_model=ChatResponse | ChatResponseChunk,
+        response_model=_interactive_response_model(ChatResponse | ChatResponseChunk, enable_interactive),
         description=f"{description} (OpenAI Chat Completions API compatible{extra})",
-        responses={500: RESPONSE_500},
+        responses={
+            500: RESPONSE_500, 202: {
+                "model": ExecutionAcceptedResponse
+            }
+        },
     )

@@ -27,6 +27,77 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ## Version Specific Changes
 
+### v1.9.0
+
+#### Redis Package Migration
+
+Redis memory and object store support moved from the in-repository `nvidia-nat-redis` implementation to the Redis-maintained `nemo-agent-toolkit-redis` package.
+
+This provider migration preserves the supported NeMo Agent Toolkit interfaces. The `nvidia-nat[redis]` extra, the historical `nvidia-nat-redis` distribution name, Python imports under `nat.plugins.redis`, and the existing Redis component configuration names continue to work through the compatibility package.
+
+For new projects, install the Redis plugin package directly:
+
+```bash
+pip install nemo-agent-toolkit-redis
+```
+
+Alternatively, install the NeMo Agent Toolkit Redis extra:
+
+```bash
+pip install "nvidia-nat[redis]"
+```
+
+Existing configurations that use `_type: redis` or `_type: redis_memory` continue to work after the Redis plugin package is installed. The external package also provides the `redis_agent_memory_backend` and `redis_agent_memory_auto_memory` component types.
+
+The historical `nvidia-nat-redis` distribution remains as a no-code compatibility package that depends on `nemo-agent-toolkit-redis`. New projects should install `nemo-agent-toolkit-redis` directly. Report Redis integration bugs and package release issues in the [Redis plugin issue tracker](https://github.com/redis-developer/nemo-agent-toolkit-redis/issues).
+
+The external plugin requires `redis>=5.0.0,<6.0.0`, replacing the previous `redis>=4.3.4,<5.0.0` constraint. Environments that explicitly constrain the Redis Python client to a version earlier than 5.0.0 must update that constraint.
+
+### v1.8.0
+
+#### Tavily Internet Search Package Migration (Breaking)
+
+Tavily web search support moved from the LangChain-backed `tavily_internet_search` function in `nvidia-nat[langchain]` to the provider-managed `nemo-agent-toolkit-tavily` package.
+
+This is a breaking change for workflows that configure:
+
+```yaml
+functions:
+  internet_search:
+    _type: tavily_internet_search
+```
+
+Those workflows no longer get Tavily search by installing only `nvidia-nat[langchain]`. Install the Tavily package and migrate the configuration to a function group:
+
+```bash
+pip install nemo-agent-toolkit-tavily
+```
+
+```yaml
+function_groups:
+  internet_search:
+    _type: tavily
+    include: [search]
+
+workflow:
+  tool_names: [internet_search__search]
+```
+
+The old `_type: tavily_internet_search` remains registered as a migration stub in `nvidia-nat-langchain`, but it raises an error with these migration instructions instead of performing a search. The old implementation depended on `langchain-tavily`; the new package uses the public NeMo Agent Toolkit plugin API and is not limited to LangChain workflows.
+
+#### Workflow YAML environment variable interpolation
+
+Bare `$VAR` (without braces) is not supported. Use `${VAR}` instead.
+
+Configuration loading only expands **braced** environment references (`${VAR}`, `${VAR:-default}`). Bare `$VAR` in a workflow YAML file is left unchanged and is not read from the environment.
+
+Previously, the loader applied shell-style expansion to the entire config file, so bare `$VAR` could be substituted (and `$` inside longer strings could be altered unintentionally).
+
+To migrate:
+
+- Replace bare references with braced form, for example `api_key: $OPENAI_API_KEY` → `api_key: ${OPENAI_API_KEY}`.
+- See [Environment Variable Interpolation](../build-workflows/workflow-configuration.md#environment-variable-interpolation) for supported syntax.
+
 ### v1.6.0
 
 #### User Identity Resolution

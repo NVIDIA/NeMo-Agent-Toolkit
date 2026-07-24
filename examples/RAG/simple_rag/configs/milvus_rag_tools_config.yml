@@ -36,18 +36,18 @@ functions:
     _type: nat_retriever
     retriever: mcp_retriever
     topic: Retrieve information about Model Context Protocol (MCP)
-
-  # To use these tools you will need to install the "nvidia-nat[langchain]" package
-  web_search_tool:
-    _type: tavily_internet_search
-    max_results: 5
-    # Tavily internet search requires an API Key. You can specify it here, or export the TAVILY_API_KEY environment variable
-    # api_key: "{your key goes here}"
   code_generation_tool:
     _type: code_generation
     llm_name: nim_llm
     description: |
       Always call this tool to generate python code. Returns a code snippet which MUST be included in your response.
+
+function_groups:
+  web_search_tool:
+    _type: tavily
+    include: [search]
+    # Tavily internet search requires an API Key. You can specify it here, or export the TAVILY_API_KEY environment variable
+    # api_key: "{your key goes here}"
 
 llms:
   nim_llm:
@@ -68,7 +68,7 @@ workflow:
   tool_names:
     - cuda_retriever_tool
     - mcp_retriever_tool
-    - web_search_tool
+    - web_search_tool__search
     - code_generation_tool
   verbose: true
   llm_name: nim_llm

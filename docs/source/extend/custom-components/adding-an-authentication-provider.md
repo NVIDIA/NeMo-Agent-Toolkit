@@ -48,6 +48,8 @@ authenticate with the target API resource.
 The following example shows how to define and register a custom evaluator and can be found here:
 {py:class}`~nat.authentication.oauth2.oauth2_auth_code_flow_provider_config.OAuth2AuthCodeFlowProviderConfig` class:
 ```python
+from nat.data_models.authentication import AuthProviderBaseConfig
+
 class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth_code_flow"):
 
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
@@ -75,6 +77,9 @@ An asynchronous function decorated with {py:func}`~nat.cli.register_workflow.reg
 
 The `OAuth2AuthCodeFlowProviderConfig` from the previous section is registered as follows:
 ```python
+from nat.plugin_api import Builder
+from nat.cli.register_workflow import register_auth_provider
+
 @register_auth_provider(config_type=OAuth2AuthCodeFlowProviderConfig)
 async def oauth2_client(authentication_provider: OAuth2AuthCodeFlowProviderConfig, builder: Builder):
     from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
@@ -91,7 +96,7 @@ After implementing a new authentication provider, it’s important to verify tha
 ## Packaging the Provider
 
 The provider will need to be bundled into a Python package, which in turn will be registered with the toolkit as a [plugin](../plugins.md). In the `pyproject.toml` file of the package the
-`project.entry-points.'nat.components'` section, defines a Python module as the entry point of the plugin. Details on how this is defined are found in the [Entry Point](../plugins.md#entry-point) section of the plugins document. By convention, the entry point module is named `register.py`, but this is not a requirement.
+`project.entry-points.'nat.plugins'` section defines a Python module as the entry point of the plugin. Details on how this is defined are found in the [Entry Point](../plugins.md#entry-point) section of the plugins document. By convention, the entry point module is named `register.py`, but this is not a requirement.
 
 In the entry point module, the registration of provider, that is the function decorated with `register_auth_provider`, needs to be defined, either directly or imported from another module. A hypothetical `register.py` file could be defined as follows:
 

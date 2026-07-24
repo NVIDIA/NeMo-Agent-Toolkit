@@ -940,7 +940,7 @@ wheels = [
 
 [[package]]
 name = "langsmith"
-version = "0.8.5"
+version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -953,9 +953,9 @@ dependencies = [
     { name = "xxhash" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/17/eb/8883d1158c743d0aac350f09df7880714d27283497e8c80bb9fe3480f165/langsmith-0.8.5.tar.gz", hash = "sha256:3615243d99c12f4047f13042bdc05a373dce232d106a6511b3ca7b48c5af1c2c", size = 4462348, upload-time = "2026-05-15T21:31:41.093Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a8/64/95f1f013531395f4e8ed73caeee780f65c7c58fe028cb543f8937b45611b/langsmith-0.8.0.tar.gz", hash = "sha256:59fe5b2a56bbbe14a08aa76691f84b49e8675dd21e11b57d80c6db8c08bac2e3", size = 4432996, upload-time = "2026-04-30T22:13:07.341Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/23/85/968c88a63e32a59b3e5c68afd2fe114ce0708a125db0be1a85efc25fb2ea/langsmith-0.8.5-py3-none-any.whl", hash = "sha256:efc779f9d450dcaf9d97bc8894f4926276509d6e730e05289af9a64debce06ae", size = 399564, upload-time = "2026-05-15T21:31:39.046Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/e1/a4be2e696c9473bb53298df398237da5674704d781d4b748ed35aeef592a/langsmith-0.8.0-py3-none-any.whl", hash = "sha256:12cc4bc5622b835a6d841964d6034df3617bdb912dae0c1381fd0a68a9b3a3ef", size = 393268, upload-time = "2026-04-30T22:13:05.56Z" },
 ]
 
 [[package]]
@@ -1377,16 +1377,21 @@ requires-dist = [
     { name = "nat-alert-triage-agent", marker = "extra == 'examples'", editable = "../advanced_agents/alert_triage_agent" },
     { name = "nat-autogen-demo", marker = "extra == 'examples'", editable = "../frameworks/nat_autogen_demo" },
     { name = "nat-automated-description-generation", marker = "extra == 'examples'", editable = "../custom_functions/automated_description_generation" },
+    { name = "nat-claude-code-agent-adapter", marker = "extra == 'examples'", editable = "../experimental/claude_code_agent_adapter" },
+    { name = "nat-codex-agent-adapter", marker = "extra == 'examples'", editable = "../experimental/codex_agent_adapter" },
+    { name = "nat-cursor-agent-adapter", marker = "extra == 'examples'", editable = "../experimental/cursor_agent_adapter" },
     { name = "nat-documentation-guides", marker = "extra == 'examples'", editable = "../documentation_guides" },
     { name = "nat-dpo-tic-tac-toe", marker = "extra == 'examples'", editable = "../finetuning/dpo_tic_tac_toe" },
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "../evaluation_and_profiling/email_phishing_analyzer" },
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "../frameworks/haystack_deep_research_agent" },
+    { name = "nat-hermes-agent-adapter", marker = "extra == 'examples'", editable = "../experimental/hermes_agent_adapter" },
     { name = "nat-hybrid-control-flow", marker = "extra == 'examples'", editable = "../control_flow/hybrid_control_flow" },
     { name = "nat-latency-sensitivity-demo", marker = "extra == 'examples'", editable = "../dynamo_integration/latency_sensitivity_demo" },
     { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "../A2A/math_assistant_a2a" },
     { name = "nat-math-assistant-a2a-protected", marker = "extra == 'examples'", editable = "../A2A/math_assistant_a2a_protected" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "../frameworks/multi_frameworks" },
     { name = "nat-notebooks", marker = "extra == 'examples'", editable = "../notebooks" },
+    { name = "nat-openclaw-agent-adapter", marker = "extra == 'examples'", editable = "../experimental/openclaw_agent_adapter" },
     { name = "nat-parallel-executor", marker = "extra == 'examples'", editable = "../control_flow/parallel_executor" },
     { name = "nat-per-user-workflow", marker = "extra == 'examples'", editable = "../front_ends/per_user_workflow" },
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "../custom_functions/plot_charts" },
@@ -1435,9 +1440,8 @@ requires-dist = [
     { name = "nvidia-nat-core", editable = "../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", marker = "extra == 'core'", editable = "../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'async-endpoints'", editable = "../../packages/nvidia_nat_core" },
-    { name = "nvidia-nat-core", extras = ["async-endpoints", "gunicorn", "pii-defense"], marker = "extra == 'most'", editable = "../../packages/nvidia_nat_core" },
+    { name = "nvidia-nat-core", extras = ["async-endpoints", "gunicorn"], marker = "extra == 'most'", editable = "../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["gunicorn"], marker = "extra == 'gunicorn'", editable = "../../packages/nvidia_nat_core" },
-    { name = "nvidia-nat-core", extras = ["pii-defense"], marker = "extra == 'pii-defense'", editable = "../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-crewai", marker = "extra == 'crewai'", editable = "../../packages/nvidia_nat_crewai" },
     { name = "nvidia-nat-crewai", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_crewai" },
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'data-flywheel'", editable = "../../packages/nvidia_nat_data_flywheel" },
@@ -1446,8 +1450,8 @@ requires-dist = [
     { name = "nvidia-nat-eval", extras = ["full"], marker = "extra == 'most'", editable = "../../packages/nvidia_nat_eval" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'fastmcp'", editable = "../../packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_fastmcp" },
-    { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "../../packages/nvidia_nat_langchain" },
-    { name = "nvidia-nat-langchain", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_langchain" },
+    { name = "nvidia-nat-langchain", extras = ["all"], marker = "extra == 'langchain'", editable = "../../packages/nvidia_nat_langchain" },
+    { name = "nvidia-nat-langchain", extras = ["all"], marker = "extra == 'most'", editable = "../../packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-llama-index", marker = "extra == 'llama-index'", editable = "../../packages/nvidia_nat_llama_index" },
     { name = "nvidia-nat-llama-index", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_llama_index" },
     { name = "nvidia-nat-mcp", marker = "extra == 'mcp'", editable = "../../packages/nvidia_nat_mcp" },
@@ -1468,7 +1472,6 @@ requires-dist = [
     { name = "nvidia-nat-profiler", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_profiler" },
     { name = "nvidia-nat-profiler", marker = "extra == 'profiler'", editable = "../../packages/nvidia_nat_profiler" },
     { name = "nvidia-nat-rag", marker = "extra == 'rag'", editable = "../../packages/nvidia_nat_rag" },
-    { name = "nvidia-nat-ragaai", marker = "extra == 'ragaai'", editable = "../../packages/nvidia_nat_ragaai" },
     { name = "nvidia-nat-ragas", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_ragas" },
     { name = "nvidia-nat-ragas", marker = "extra == 'ragas'", editable = "../../packages/nvidia_nat_ragas" },
     { name = "nvidia-nat-redis", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_redis" },
@@ -1477,6 +1480,9 @@ requires-dist = [
     { name = "nvidia-nat-s3", marker = "extra == 's3'", editable = "../../packages/nvidia_nat_s3" },
     { name = "nvidia-nat-security", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_security" },
     { name = "nvidia-nat-security", marker = "extra == 'security'", editable = "../../packages/nvidia_nat_security" },
+    { name = "nvidia-nat-security", extras = ["defense"], marker = "extra == 'defense'", editable = "../../packages/nvidia_nat_security" },
+    { name = "nvidia-nat-security", extras = ["defense", "guardrails"], marker = "extra == 'most'", editable = "../../packages/nvidia_nat_security" },
+    { name = "nvidia-nat-security", extras = ["guardrails"], marker = "extra == 'guardrails'", editable = "../../packages/nvidia_nat_security" },
     { name = "nvidia-nat-semantic-kernel", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_semantic_kernel" },
     { name = "nvidia-nat-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "../../packages/nvidia_nat_semantic_kernel" },
     { name = "nvidia-nat-strands", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_strands" },
@@ -1489,7 +1495,7 @@ requires-dist = [
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "../../packages/nvidia_nat_zep_cloud" },
     { name = "text-file-ingest", marker = "extra == 'examples'", editable = "../documentation_guides/workflows/text_file_ingest" },
 ]
-provides-extras = ["a2a", "a365", "adk", "agno", "app", "autogen", "atif", "config-optimizer", "core", "crewai", "data-flywheel", "eval", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "memmachine", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragas", "ragaai", "mysql", "redis", "s3", "security", "semantic-kernel", "strands", "test", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "most", "examples"]
+provides-extras = ["a2a", "a365", "adk", "agno", "app", "autogen", "atif", "config-optimizer", "core", "crewai", "data-flywheel", "eval", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "memmachine", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragas", "mysql", "redis", "s3", "security", "defense", "guardrails", "semantic-kernel", "strands", "test", "weave", "zep-cloud", "async-endpoints", "gunicorn", "most", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1623,17 +1629,15 @@ requires-dist = [
     { name = "networkx", specifier = "~=3.4" },
     { name = "numpy", specifier = "~=2.3" },
     { name = "nvidia-nat-atif", editable = "../../packages/nvidia_nat_atif" },
-    { name = "nvidia-nat-eval", marker = "extra == 'test'", editable = "../../packages/nvidia_nat_eval" },
+    { name = "nvidia-nat-eval", extras = ["full"], marker = "extra == 'test'", editable = "../../packages/nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../packages/nvidia_nat_test" },
     { name = "pandas", specifier = "~=2.2" },
     { name = "pip", specifier = ">=24.3.1" },
     { name = "pkce", specifier = "==1.0.3" },
     { name = "pkginfo", specifier = "~=1.12" },
     { name = "platformdirs", specifier = "~=4.3" },
-    { name = "presidio-analyzer", marker = "extra == 'pii-defense'" },
-    { name = "presidio-anonymizer", marker = "extra == 'pii-defense'" },
     { name = "pydantic", specifier = "~=2.11" },
-    { name = "pyjwt", specifier = "~=2.11" },
+    { name = "pyjwt", specifier = "~=2.13" },
     { name = "pymilvus", specifier = "==2.6.9" },
     { name = "python-dotenv", specifier = ">=1.1.1,<2.0.0" },
     { name = "python-multipart", specifier = ">=0.0.21" },
@@ -1646,7 +1650,7 @@ requires-dist = [
     { name = "urllib3", specifier = ">=2.6.3,<3.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
 ]
-provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "test"]
+provides-extras = ["async-endpoints", "gunicorn", "test"]
 
 [[package]]
 name = "nvidia-nat-opentelemetry"
@@ -2215,11 +2219,11 @@ wheels = [
 
 [[package]]
 name = "pyjwt"
-version = "2.12.1"
+version = "2.13.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c2/27/a3b6e5bf6ff856d2509292e95c8f57f0df7017cf5394921fc4e4ef40308a/pyjwt-2.12.1.tar.gz", hash = "sha256:c74a7a2adf861c04d002db713dd85f84beb242228e671280bf709d765b03672b", size = 102564, upload-time = "2026-03-13T19:27:37.25Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3b/81/58d0ac84e1ef3a3843791d6954d94c0b33d526c75eeb1efbce9d0a4c4077/pyjwt-2.13.0.tar.gz", hash = "sha256:41571c89ca91598c79e8ef18a2d07367d4810fbbd6f637794879baf1b7703423", size = 107515, upload-time = "2026-05-21T19:54:36.618Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e5/7a/8dd906bd22e79e47397a61742927f6747fe93242ef86645ee9092e610244/pyjwt-2.12.1-py3-none-any.whl", hash = "sha256:28ca37c070cad8ba8cd9790cd940535d40274d22f80ab87f3ac6a713e6e8454c", size = 29726, upload-time = "2026-03-13T19:27:35.677Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/5e/ecf12fdb62546d64385c158514e9b2b671f7832108ef2ecd2020ce0af2d1/pyjwt-2.13.0-py3-none-any.whl", hash = "sha256:66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728", size = 31274, upload-time = "2026-05-21T19:54:35.362Z" },
 ]
 
 [package.optional-dependencies]

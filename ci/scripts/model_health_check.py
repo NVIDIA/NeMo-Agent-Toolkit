@@ -31,18 +31,23 @@ config needs a model swap (removed) or just needs to wait (down).
 
 import argparse
 import json
+import logging
 import os
 import ssl
+import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
+_logger = logging.getLogger(__name__)
+
 try:
     import yaml
 except ImportError:
-    print("ERROR: pyyaml is required. Install with: pip install pyyaml", file=sys.stderr)
+    logging.basicConfig(format="%(message)s", level=logging.ERROR)
+    _logger.error("ERROR: pyyaml is required. Install with: pip install pyyaml")
     sys.exit(1)
 
 try:
@@ -55,6 +60,22 @@ REPO = Path(os.environ.get('PROJECT_ROOT', _FALLBACK_REPO))
 NIM_API_BASE = "https://integrate.api.nvidia.com/v1"
 REQUEST_TIMEOUT = 30
 INTER_REQUEST_DELAY = 1.0
+LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+SCHEMA_VERSION = "1.0"
+
+EXCLUDE_YAMLS = ("examples/documentation_guides/locally_hosted_llms/nim_config.yml", )
+
+
+def get_git_files() -> frozenset[str]:
+    """Return the set of files tracked by git."""
+    result = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    return frozenset(result.stdout.splitlines())
 
 
 def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
@@ -73,25 +94,32 @@ def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str,
     for pattern in ("*.yml", "*.yaml"):
         config_paths.extend(examples_dir.rglob(pattern))
 
+    git_files = get_git_files()
+
     for config_path in sorted(config_paths):
+        try:
+            relative_path = str(config_path.resolve().relative_to(REPO))
+        except ValueError:
+            _logger.warning("Skipping config outside repository root: %s", config_path)
+            continue
+
+        if relative_path in EXCLUDE_YAMLS:
+            _logger.debug("Skipping excluded config: %s", relative_path)
+            continue
+
+        if relative_path not in git_files:
+            _logger.warning("Skipping untracked config: %s", relative_path)
+            continue
+
         with open(config_path, encoding="utf-8") as f:
             try:
                 cfg = yaml.safe_load(f)
             except yaml.YAMLError as exc:
-                try:
-                    rel = str(config_path.relative_to(REPO))
-                except ValueError:
-                    rel = str(config_path)
-                print(f"  WARNING: could not parse {rel}: {exc}", file=sys.stderr)
+                _logger.warning("  WARNING: could not parse %s: %s", relative_path, exc)
                 continue
 
         if not isinstance(cfg, dict):
             continue
-
-        try:
-            rel = str(config_path.relative_to(REPO))
-        except ValueError:
-            rel = str(config_path)
 
         for section_key, target in (("llms", llm_models), ("embedders", embedder_models)):
             section = cfg.get(section_key)
@@ -106,7 +134,7 @@ def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str,
 
                 model = block.get("model_name") or block.get("model")
                 if model:
-                    target.setdefault(model, []).append(rel)
+                    target.setdefault(model, set()).add(relative_path)
 
                 search_space = block.get("search_space", {})
                 if isinstance(search_space, dict):
@@ -115,7 +143,7 @@ def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str,
                         if isinstance(space_entry, dict):
                             for val in space_entry.get("values", []):
                                 if isinstance(val, str):
-                                    target.setdefault(val, []).append(rel)
+                                    target.setdefault(val, set()).add(relative_path)
 
     return llm_models, embedder_models
 
@@ -141,7 +169,7 @@ def get_catalog_models(api_key: str) -> set[str]:
             body = json.loads(resp.read().decode())
             return {m["id"] for m in body.get("data", []) if isinstance(m, dict) and "id" in m}
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError, KeyError) as e:
-        print(f"  WARNING: could not fetch /v1/models catalog: {e}", file=sys.stderr)
+        _logger.warning("  WARNING: could not fetch /v1/models catalog: %s", e)
         return set()
 
 
@@ -159,11 +187,11 @@ def _nim_post(endpoint: str, payload: bytes, api_key: str) -> tuple[int, str, st
     ctx = ssl.create_default_context()
     try:
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT, context=ctx) as resp:
-            print(f"    Received response: HTTP {resp.status}")
+            _logger.info("    Received response: HTTP %s", resp.status)
             deprecated = resp.headers.get("Deprecation", "")
             return resp.status, "", deprecated
     except urllib.error.HTTPError as e:
-        print(f"    Received response: HTTP {e.code}")
+        _logger.error("    Received response: HTTP %s", e.code)
         detail = ""
         try:
             body = json.loads(e.read().decode())
@@ -197,6 +225,42 @@ def check_embedder(model: str, api_key: str) -> tuple[int, str, str]:
     return _nim_post("embeddings", payload, api_key)
 
 
+def write_json_report(output_file: Path, report: dict) -> None:
+    """Write the report dict to a JSON file at the given path."""
+    with open(output_file, "w", encoding="utf-8") as jf:
+        json.dump(report, jf, indent=2)
+    _logger.info("Results written to %s", output_file)
+
+
+def _handle_dry_run(llm_models: dict[str, list[str]],
+                    embedder_models: dict[str, list[str]],
+                    output_file: Path | None,
+                    verbose: bool) -> int:
+    try:
+        report = {"schema_version": SCHEMA_VERSION}
+        for label, section in (("LLMs", llm_models), ("Embedders", embedder_models)):
+            report_rows: list[dict[str, str | int]] = []
+            model_by_usage = sorted(((len(files), model) for model, files in section.items()), reverse=True)
+            _logger.info("  %s: Usage count", label)
+            for count, model in model_by_usage:
+                _logger.info("    %s: %s", model, count)
+                report_rows.append({"model": model, "num_configs": count})
+                if verbose:
+                    files = section[model]
+                    for f in sorted(set(files)):
+                        _logger.info("      - %s", f)
+
+            report[label.lower()] = report_rows
+
+        if output_file is not None:
+            write_json_report(output_file=output_file, report=report)
+
+        return 0
+    except Exception:
+        _logger.exception("ERROR during dry run")
+        return 1
+
+
 def main() -> int:
     """Parse CLI args, discover NIM models from configs, and health-check each one."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -222,16 +286,26 @@ def main() -> int:
         default=None,
         help="Write structured results to a JSON file for downstream reporting",
     )
+    parser.add_argument(
+        "--log-level",
+        choices=LOG_LEVELS,
+        default=os.environ.get("NAT_LOG_LEVEL", "INFO").upper(),
+        help="Set logging level (default: INFO, or NAT_LOG_LEVEL if set)",
+        type=str.upper,
+    )
     args = parser.parse_args()
+    if args.log_level not in LOG_LEVELS:
+        parser.error(f"invalid log level: {args.log_level}. Choose from {', '.join(LOG_LEVELS)}")
+    logging.basicConfig(format="%(message)s", level=getattr(logging, args.log_level))
 
     api_key = os.environ.get("NVIDIA_API_KEY", "")
     if not api_key and not args.dry_run:
-        print("ERROR: NVIDIA_API_KEY environment variable is not set", file=sys.stderr)
-        print("Set it or use --dry-run to just list discovered models", file=sys.stderr)
+        _logger.error("ERROR: NVIDIA_API_KEY environment variable is not set")
+        _logger.error("Set it or use --dry-run to just list discovered models")
         return 1
 
     if not args.examples_dir.is_dir():
-        print(f"ERROR: {args.examples_dir} is not a directory", file=sys.stderr)
+        _logger.error("ERROR: %s is not a directory", args.examples_dir)
         return 1
 
     llm_models, embedder_models = find_nim_models(args.examples_dir)
@@ -242,28 +316,19 @@ def main() -> int:
     all_configs.update(embedder_models)
 
     if not all_configs:
-        print("No NIM models found in config files")
+        _logger.info("No NIM models found in config files")
         return 0
 
-    print(f"Found {len(llm_models)} LLM(s) and {len(embedder_models)} embedder(s) "
-          f"({len(all_configs)} unique model(s)) across example configs\n")
+    _logger.info("Found %s LLM(s) and %s embedder(s) (%s unique model(s)) across example configs\n",
+                 len(llm_models),
+                 len(embedder_models),
+                 len(all_configs))
 
     if args.dry_run:
-        for label, section in (("LLMs", llm_models), ("Embedders", embedder_models)):
-            if not section:
-                continue
-            model_by_usage = sorted(((len(files), model) for model, files in section.items()), reverse=True)
-            print(f"  {label}: Usage count")
-            for count, model in model_by_usage:
-                print(f"    {model}: {count}")
-                if args.verbose:
-                    files = section[model]
-                    for f in sorted(set(files)):
-                        print(f"      - {f}")
-        return 0
+        return _handle_dry_run(llm_models, embedder_models, args.output_json, args.verbose)
 
     # -- Pass 1: catalog check for ALL models (LLMs + embedders) -------------
-    print("Pass 1: checking /v1/models catalog...")
+    _logger.info("Pass 1: checking /v1/models catalog...")
     catalog = get_catalog_models(api_key)
 
     all_model_names = set(all_configs.keys())
@@ -274,20 +339,21 @@ def main() -> int:
 
         for model in removed:
             mtype = "embedder" if model in embedder_models else "llm"
-            print(f"  REMOVED  {model}  ({mtype})")
+            _logger.info("  REMOVED  %s  (%s)", model, mtype)
     else:
-        print("  WARNING: catalog unavailable, falling back to inference-only checks")
+        _logger.warning("  WARNING: catalog unavailable, falling back to inference-only checks")
         removed = []
         catalog_ok = all_model_names
 
-    print()
+    _logger.info("")
 
     # -- Pass 2: inference check on models still in catalog ------------------
     llm_to_test = sorted(set(llm_models.keys()) & catalog_ok)
     embedder_to_test = sorted(set(embedder_models.keys()) & catalog_ok)
 
     if llm_to_test or embedder_to_test:
-        print("Pass 2: inference check on catalog-listed models...")
+        _logger.info("Pass 2: inference check on catalog-listed models...")
+
     down: list[tuple[str, int, str]] = []
     deprecation: list[tuple[str, str]] = []
     call_count = 0
@@ -299,16 +365,16 @@ def main() -> int:
 
         status, detail, deprecation_detail = check_model(model, api_key)
         if status in (401, 403):
-            print(f"\n  ERROR: API key is invalid or expired (HTTP {status}): {detail}", file=sys.stderr)
+            _logger.error("\n  ERROR: API key is invalid or expired (HTTP %s): %s", status, detail)
             return 1
         elif deprecation_detail != "":
-            print(f"  Deprecation: {deprecation_detail}")
+            _logger.info("  Deprecation: %s", deprecation_detail)
             deprecation.append((model, deprecation_detail))
         elif status == 200:
-            print(f"  OK      {model}")
+            _logger.info("  OK      %s", model)
         else:
             label = f"HTTP {status}" if status > 0 else "ERROR"
-            print(f"  DOWN    {model} -> {label}: {detail}")
+            _logger.info("  DOWN    %s -> %s: %s", model, label, detail)
             down.append((model, status, detail))
 
     for model in embedder_to_test:
@@ -318,50 +384,50 @@ def main() -> int:
 
         status, detail, deprecation_detail = check_embedder(model, api_key)
         if status in (401, 403):
-            print(f"\n  ERROR: API key is invalid or expired (HTTP {status}): {detail}", file=sys.stderr)
+            _logger.error("\n  ERROR: API key is invalid or expired (HTTP %s): %s", status, detail)
             return 1
         elif deprecation_detail != "":
-            print(f"  Deprecation: {deprecation_detail}")
+            _logger.info("  Deprecation: %s", deprecation_detail)
             deprecation.append((model, deprecation_detail))
         elif status == 200:
-            print(f"  OK      {model}  (embedder)")
+            _logger.info("  OK      %s  (embedder)", model)
         else:
             label = f"HTTP {status}" if status > 0 else "ERROR"
-            print(f"  DOWN    {model} -> {label} (embedder): {detail}")
+            _logger.info("  DOWN    %s -> %s (embedder): %s", model, label, detail)
             down.append((model, status, detail))
 
-    print()
+    _logger.info("")
 
     # -- Summary -------------------------------------------------------------
     has_failures = bool(removed) or bool(down) or bool(deprecation)
 
     if removed:
-        print(f"{len(removed)} model(s) REMOVED from catalog (need config update):\n")
+        _logger.info("%s model(s) REMOVED from catalog (need config update):\n", len(removed))
         for model in removed:
-            print(f"  {model}")
+            _logger.info("  %s", model)
             for f in sorted(set(all_configs[model])):
-                print(f"    - {f}")
-            print()
+                _logger.info("    - %s", f)
+            _logger.info("")
 
     if deprecation:
-        print(f"{len(deprecation)} model(s) DEPRECATED (in catalog but deprecated):\n")
+        _logger.info("%s model(s) DEPRECATED (in catalog but deprecated):\n", len(deprecation))
         for model, detail in deprecation:
-            print(f"  {model} ({detail})")
+            _logger.info("  %s (%s)", model, detail)
             for f in sorted(set(all_configs[model])):
-                print(f"    - {f}")
-            print()
+                _logger.info("    - %s", f)
+            _logger.info("")
 
     if down:
-        print(f"{len(down)} model(s) DOWN (in catalog but unreachable):\n")
+        _logger.info("%s model(s) DOWN (in catalog but unreachable):\n", len(down))
         for model, status, _detail in down:
             label = f"HTTP {status}" if status > 0 else "ERROR"
-            print(f"  {model} ({label})")
+            _logger.info("  %s (%s)", model, label)
             for f in sorted(set(all_configs[model])):
-                print(f"    - {f}")
-            print()
+                _logger.info("    - %s", f)
+            _logger.info("")
 
     if not has_failures:
-        print(f"All {len(all_configs)} model(s) are reachable.")
+        _logger.info("All %s model(s) are reachable.", len(all_configs))
 
     if args.output_json:
         down_models = {m for m, _s, _d in down}
@@ -379,7 +445,7 @@ def main() -> int:
                 "detail": d,
                 "configs": sorted(set(all_configs[m])),
             } for m, s, d in down],
-            "deprecation": [{
+            "deprecated": [{
                 "model": m,
                 "type": "embedder" if m in embedder_models else "llm",
                 "detail": d,
@@ -392,9 +458,8 @@ def main() -> int:
             } for m in sorted(all_model_names)
                    if m not in removed and m not in down_models and m not in deprecated_models],
         }
-        with open(args.output_json, "w", encoding="utf-8") as jf:
-            json.dump(report, jf, indent=2)
-        print(f"Results written to {args.output_json}")
+
+        write_json_report(output_file=args.output_json, report=report)
 
     return 1 if has_failures else 0
 

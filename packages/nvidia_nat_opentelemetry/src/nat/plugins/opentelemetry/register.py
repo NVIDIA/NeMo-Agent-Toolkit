@@ -21,7 +21,6 @@ from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
-from nat.data_models.common import OptionalSecretStr
 from nat.data_models.common import SerializableSecretStr
 from nat.data_models.common import get_secret_value
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
@@ -283,7 +282,51 @@ async def weave_otel_telemetry_exporter(config: WeaveOtelTelemetryExporter, buil
         shutdown_timeout=config.shutdown_timeout,
     )
 
-    
+
+def _mlflow_experiment_headers(experiment_id: str) -> dict[str, str]:
+    """Build the OTLP header that routes traces to an MLflow experiment (matches MLflow's own ingestion)."""
+    return {"x-mlflow-experiment-id": experiment_id}
+
+
+class MLflowTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="mlflow"):
+    """Export traces to an MLflow tracking server over OTLP/HTTP.
+
+    MLflow 3.6+ ingests OpenTelemetry spans at ``<tracking-server>/v1/traces`` and routes them to an
+    experiment via the ``x-mlflow-experiment-id`` header. Point ``endpoint`` at that path and set
+    ``experiment_id`` to the target experiment. The tracking server must run with a database backend
+    store for trace ingestion.
+    """
+
+    endpoint: str = Field(
+        default="http://localhost:5000/v1/traces",
+        description="The MLflow OTLP/HTTP trace ingestion endpoint (the tracking server URL plus /v1/traces).",
+    )
+    experiment_id: str = Field(
+        default="0",
+        description="MLflow experiment ID that traces are routed to. If empty, uses the MLFLOW_EXPERIMENT_ID "
+        "environment variable, otherwise the default experiment (\"0\").",
+    )
+
+
+@register_telemetry_exporter(config_type=MLflowTelemetryExporter)
+async def mlflow_telemetry_exporter(config: MLflowTelemetryExporter, builder: Builder):
+    """Create a telemetry exporter that sends OTLP traces to an MLflow tracking server."""
+
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
+
+    experiment_id = (config.experiment_id or os.environ.get("MLFLOW_EXPERIMENT_ID") or "0").strip()
+
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        headers=_mlflow_experiment_headers(experiment_id),
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
+
+
 class ArizeAxTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="arize_ax"):
     """Export traces to Arize AX over OTLP.
 
@@ -356,48 +399,6 @@ async def arize_ax_telemetry_exporter(config: ArizeAxTelemetryExporter, builder:
         headers=headers,
         protocol=config.protocol,
         resource_attributes=merged_resource_attributes,
-        batch_size=config.batch_size,
-        flush_interval=config.flush_interval,
-        max_queue_size=config.max_queue_size,
-        drop_on_overflow=config.drop_on_overflow,
-        shutdown_timeout=config.shutdown_timeout,
-    )
-
-
-class DBNLTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="dbnl"):
-    """A telemetry exporter to transmit traces to DBNL."""
-
-    api_url: str | None = Field(description="The DBNL API URL.", default=None)
-    api_token: OptionalSecretStr = Field(description="The DBNL API token.", default=None)
-    project_id: str | None = Field(description="The DBNL project id.", default=None)
-
-
-@register_telemetry_exporter(config_type=DBNLTelemetryExporter)
-async def dbnl_telemetry_exporter(config: DBNLTelemetryExporter, builder: Builder):
-    """Create a DBNL telemetry exporter."""
-
-    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
-
-    api_token = get_secret_value(config.api_token) if config.api_token else os.environ.get("DBNL_API_TOKEN")
-    if not api_token:
-        raise ValueError("API token is required for DBNL")
-    project_id = config.project_id or os.environ.get("DBNL_PROJECT_ID")
-    if not project_id:
-        raise ValueError("Project id is required for DBNL")
-
-    headers = {
-        "Authorization": f"Bearer {api_token}",
-        "x-dbnl-project-id": project_id,
-    }
-
-    api_url = config.api_url or os.environ.get("DBNL_API_URL")
-    if not api_url:
-        raise ValueError("API url is required for DBNL")
-    endpoint = api_url.rstrip("/") + "/otel/v1/traces"
-
-    yield OTLPSpanAdapterExporter(
-        endpoint=endpoint,
-        headers=headers,
         batch_size=config.batch_size,
         flush_interval=config.flush_interval,
         max_queue_size=config.max_queue_size,

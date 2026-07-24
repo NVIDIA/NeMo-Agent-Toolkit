@@ -1253,7 +1253,7 @@ wheels = [
 
 [[package]]
 name = "langsmith"
-version = "0.7.5"
+version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -1266,9 +1266,9 @@ dependencies = [
     { name = "xxhash" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/55/a3641cae990c842d3f4c52e5308b391267c98ce531a7a586dfedf1a78c42/langsmith-0.7.5.tar.gz", hash = "sha256:e3bfc2d7ff0a6f9a719125e1e136b5f4fa11828a2be8979f47ee1a4c0510030e", size = 1038926, upload-time = "2026-02-19T20:47:51.144Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a8/64/95f1f013531395f4e8ed73caeee780f65c7c58fe028cb543f8937b45611b/langsmith-0.8.0.tar.gz", hash = "sha256:59fe5b2a56bbbe14a08aa76691f84b49e8675dd21e11b57d80c6db8c08bac2e3", size = 4432996, upload-time = "2026-04-30T22:13:07.341Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/0e/65b3fab6db843150ed38f226b39213565c644f0aaa515e0168bb1eaee5ae/langsmith-0.7.5-py3-none-any.whl", hash = "sha256:c120c43c98af5f5af8877341f8256aba1a170a292645b31572f06b0cf703c683", size = 324337, upload-time = "2026-02-19T20:47:47.537Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/e1/a4be2e696c9473bb53298df398237da5674704d781d4b748ed35aeef592a/langsmith-0.8.0-py3-none-any.whl", hash = "sha256:12cc4bc5622b835a6d841964d6034df3617bdb912dae0c1381fd0a68a9b3a3ef", size = 393268, upload-time = "2026-04-30T22:13:05.56Z" },
 ]
 
 [[package]]
@@ -1687,17 +1687,15 @@ requires-dist = [
     { name = "networkx", specifier = "~=3.4" },
     { name = "numpy", specifier = "~=2.3" },
     { name = "nvidia-nat-atif", editable = "../nvidia_nat_atif" },
-    { name = "nvidia-nat-eval", marker = "extra == 'test'", editable = "../nvidia_nat_eval" },
+    { name = "nvidia-nat-eval", extras = ["full"], marker = "extra == 'test'", editable = "../nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "pandas", specifier = "~=2.2" },
     { name = "pip", specifier = ">=24.3.1" },
     { name = "pkce", specifier = "==1.0.3" },
     { name = "pkginfo", specifier = "~=1.12" },
     { name = "platformdirs", specifier = "~=4.3" },
-    { name = "presidio-analyzer", marker = "extra == 'pii-defense'" },
-    { name = "presidio-anonymizer", marker = "extra == 'pii-defense'" },
     { name = "pydantic", specifier = "~=2.11" },
-    { name = "pyjwt", specifier = "~=2.11" },
+    { name = "pyjwt", specifier = "~=2.13" },
     { name = "pymilvus", specifier = "==2.6.9" },
     { name = "python-dotenv", specifier = ">=1.1.1,<2.0.0" },
     { name = "python-multipart", specifier = ">=0.0.21" },
@@ -1710,7 +1708,7 @@ requires-dist = [
     { name = "urllib3", specifier = ">=2.6.3,<3.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
 ]
-provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "test"]
+provides-extras = ["async-endpoints", "gunicorn", "test"]
 
 [[package]]
 name = "nvidia-nat-eval"
@@ -2354,11 +2352,11 @@ wheels = [
 
 [[package]]
 name = "pyjwt"
-version = "2.11.0"
+version = "2.13.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5c/5a/b46fa56bf322901eee5b0454a34343cdbdae202cd421775a8ee4e42fd519/pyjwt-2.11.0.tar.gz", hash = "sha256:35f95c1f0fbe5d5ba6e43f00271c275f7a1a4db1dab27bf708073b75318ea623", size = 98019, upload-time = "2026-01-30T19:59:55.694Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3b/81/58d0ac84e1ef3a3843791d6954d94c0b33d526c75eeb1efbce9d0a4c4077/pyjwt-2.13.0.tar.gz", hash = "sha256:41571c89ca91598c79e8ef18a2d07367d4810fbbd6f637794879baf1b7703423", size = 107515, upload-time = "2026-05-21T19:54:36.618Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6f/01/c26ce75ba460d5cd503da9e13b21a33804d38c2165dec7b716d06b13010c/pyjwt-2.11.0-py3-none-any.whl", hash = "sha256:94a6bde30eb5c8e04fee991062b534071fd1439ef58d2adc9ccb823e7bcd0469", size = 28224, upload-time = "2026-01-30T19:59:54.539Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/5e/ecf12fdb62546d64385c158514e9b2b671f7832108ef2ecd2020ce0af2d1/pyjwt-2.13.0-py3-none-any.whl", hash = "sha256:66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728", size = 31274, upload-time = "2026-05-21T19:54:35.362Z" },
 ]
 
 [[package]]

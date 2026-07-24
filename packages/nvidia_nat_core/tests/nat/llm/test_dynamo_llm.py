@@ -593,8 +593,8 @@ class TestDynamoTransport:
         assert agent_hints["total_requests"] == 10
         assert agent_hints["osl"] == 512
         assert agent_hints["iat"] == 750
-        # Default latency_sensitivity=2, max_sensitivity=1000 -> priority=998
-        assert agent_hints["priority"] == 998
+        # Dynamo uses higher value = higher priority, so priority == latency_sensitivity (default 2)
+        assert agent_hints["priority"] == 2
 
         # Cleanup
         DynamoPrefixContext.clear()
@@ -779,7 +779,7 @@ class TestDynamoTransport:
         assert agent_hints["iat"] == 250
         # Standard Dynamo AgentHints fields
         assert agent_hints["osl"] == 512
-        assert agent_hints["priority"] == 998  # 1000 - 2
+        assert agent_hints["priority"] == 2  # == latency_sensitivity (higher = higher priority)
         assert agent_hints["latency_sensitivity"] == 2.0
 
         DynamoPrefixContext.clear()
@@ -816,8 +816,8 @@ class TestDynamoTransport:
         assert "agent_hints" in body["nvext"]
         agent_hints = body["nvext"]["agent_hints"]
         assert agent_hints["latency_sensitivity"] == 2.0
-        # priority = max_sensitivity(1000) - latency_sensitivity(2) = 998
-        assert agent_hints["priority"] == 998
+        # priority == latency_sensitivity(2): Dynamo treats higher value as higher priority
+        assert agent_hints["priority"] == 2
 
         DynamoPrefixContext.clear()
 
@@ -1051,7 +1051,7 @@ class TestDynamoTransport:
 
         # Auto sensitivity=4 should be used (no manual decorator active)
         assert agent_hints["latency_sensitivity"] == 4.0
-        assert agent_hints["priority"] == 1000 - 4
+        assert agent_hints["priority"] == 4
 
         DynamoPrefixContext.clear()
 
@@ -1103,7 +1103,7 @@ class TestDynamoTransport:
 
         # Manual sensitivity=7 should win over auto sensitivity=4
         assert agent_hints["latency_sensitivity"] == 7.0
-        assert agent_hints["priority"] == 1000 - 7
+        assert agent_hints["priority"] == 7
 
         DynamoPrefixContext.clear()
 
@@ -1150,7 +1150,7 @@ class TestDynamoTransport:
 
         # Should use context default (2)
         assert agent_hints["latency_sensitivity"] == 2.0
-        assert agent_hints["priority"] == 1000 - 2
+        assert agent_hints["priority"] == 2
 
         DynamoPrefixContext.clear()
 
@@ -1230,8 +1230,11 @@ class TestDynamoTransport:
 
         DynamoPrefixContext.clear()
 
-    async def test_transport_raises_when_total_requests_zero(self):
-        """Test that ValueError is raised when prediction trie yields total_requests < 1."""
+    async def test_transport_falls_back_when_prediction_total_requests_zero(self):
+        """Prediction total_requests < 1 (e.g. remaining_calls.mean=0 on the final call)
+        falls back to the static config value rather than failing the request."""
+        import json
+
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
@@ -1262,13 +1265,20 @@ class TestDynamoTransport:
         DynamoPrefixContext.set("zero-total-requests-test")
 
         request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
-        with pytest.raises(ValueError, match="total_requests must be >= 1"):
-            await transport.handle_async_request(request)
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        hints = json.loads(modified_request.content)["nvext"]["agent_hints"]
+        assert hints["total_requests"] == 10  # fell back to static config
+        assert hints["osl"] == 512  # prediction value preserved
+        assert hints["iat"] == 250  # prediction value preserved
 
         DynamoPrefixContext.clear()
 
-    async def test_transport_raises_when_osl_zero(self):
-        """Test that ValueError is raised when prediction trie yields osl < 1."""
+    async def test_transport_falls_back_when_prediction_osl_zero(self):
+        """Prediction osl < 1 falls back to the static config value."""
+        import json
+
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
@@ -1299,13 +1309,20 @@ class TestDynamoTransport:
         DynamoPrefixContext.set("zero-osl-test")
 
         request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
-        with pytest.raises(ValueError, match="osl must be >= 1"):
-            await transport.handle_async_request(request)
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        hints = json.loads(modified_request.content)["nvext"]["agent_hints"]
+        assert hints["osl"] == 512  # fell back to static config
+        assert hints["total_requests"] == 5  # prediction value preserved
+        assert hints["iat"] == 250  # prediction value preserved
 
         DynamoPrefixContext.clear()
 
-    async def test_transport_raises_when_iat_zero(self):
-        """Test that ValueError is raised when prediction trie yields iat < 1."""
+    async def test_transport_falls_back_when_prediction_iat_zero(self):
+        """Prediction iat < 1 falls back to the static config value."""
+        import json
+
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
@@ -1336,8 +1353,13 @@ class TestDynamoTransport:
         DynamoPrefixContext.set("zero-iat-test")
 
         request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
-        with pytest.raises(ValueError, match="iat must be >= 1"):
-            await transport.handle_async_request(request)
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        hints = json.loads(modified_request.content)["nvext"]["agent_hints"]
+        assert hints["iat"] == 250  # fell back to static config
+        assert hints["total_requests"] == 5  # prediction value preserved
+        assert hints["osl"] == 512  # prediction value preserved
 
         DynamoPrefixContext.clear()
 

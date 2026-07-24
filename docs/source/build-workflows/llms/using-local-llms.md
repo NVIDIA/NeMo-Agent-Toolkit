@@ -172,7 +172,7 @@ The `CUDA_VISIBLE_DEVICES` environment variable is used to specify the GPUs to u
 
 In a terminal from within the vLLM environment, run the following command to serve the LLM:
 ```bash
-CUDA_VISIBLE_DEVICES=0 vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16
+CUDA_VISIBLE_DEVICES=0 vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16 --trust-remote-code --max-num-seqs 256
 ```
 
 In a second terminal also from within the vLLM environment, run the following command to serve the embedding model:

@@ -22,7 +22,7 @@ FROM python:3.13-slim-bookworm
 
 
 RUN apt update && \
-    apt upgrade && \
+    apt upgrade -y && \
     apt install -y --no-install-recommends libexpat1 && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*

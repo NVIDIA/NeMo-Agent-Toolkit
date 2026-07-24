@@ -33,10 +33,21 @@ JUNIT_DIR = ART / "junit"
 COV_DIR = ART / "coverage"
 MAX_PROJECT_DEPTH = 5
 SKIP_DIRS = {"__pycache__", "node_modules"}
+THIRD_PARTY_DEPENDENCY_PROJECTS_FILE = REPO / "ci" / "third_party_dependency_projects.txt"
 
 
 class TestFailure(Exception):
     pass
+
+
+def load_third_party_dependency_projects() -> set[Path]:
+    """Load repository projects that CI must not install or execute."""
+    projects: set[Path] = set()
+    for line in THIRD_PARTY_DEPENDENCY_PROJECTS_FILE.read_text(encoding="utf-8").splitlines():
+        project = line.strip()
+        if project and not project.startswith("#"):
+            projects.add((REPO / project).resolve())
+    return projects
 
 
 def sh(cmd: list[str], *, env: dict[str, str] | None = None) -> int:
@@ -66,7 +77,8 @@ def discover_projects(max_depth: int = MAX_PROJECT_DEPTH, examples_only: bool = 
                 if "pyproject.toml" in files:
                     curr_projects.append(Path(root))
             projects.extend(sorted(curr_projects))
-    return projects
+    excluded_projects = load_third_party_dependency_projects()
+    return [project for project in projects if project.resolve() not in excluded_projects]
 
 
 def resolve_project(project: str) -> Path:
@@ -114,6 +126,16 @@ def make_env(project_dir: Path) -> dict[str, str]:
         env["UV_ENV_FILE"] = dotenv_path
 
     return env
+
+
+def remove_env(project_dir: Path) -> None:
+    cmd = ["rm", "-rf", str(project_dir / ".venv")]
+    sh(cmd)
+
+
+def remove_project_envs(projects: list[Path]) -> None:
+    for project in projects:
+        remove_env(project)
 
 
 def run_one(
@@ -204,8 +226,8 @@ def run_one(
             logger.info(f"{display_project_dir} (tested)")
         return 0
     finally:
-        cmd = ["rm", "-rf", str(project_dir / ".venv")]
-        sh(cmd, env=env)
+        if not enable_coverage:
+            remove_env(project_dir)
 
 
 def main(junit_xml: str | None,
@@ -296,14 +318,15 @@ def main(junit_xml: str | None,
         finally:
             ex = None
             _restore_handler()
-            for p in projects:
-                sh(["rm", "-rf", str(p / ".venv")])
+            if cov_xml is None:
+                remove_project_envs(projects)
 
     if cov_xml is not None:
         sh(["uv", "tool", "install", "coverage[toml]"])
         sh(["coverage", "combine", "--keep", str(COV_DIR)])
         sh(["coverage", "xml", "-o", str(cov_xml)])
         sh(["coverage", "report"])
+        remove_project_envs(projects)
 
     if junit_xml is not None:
         sh(["uv", "tool", "install", "junitparser"])

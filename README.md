@@ -40,8 +40,9 @@ limitations under the License.
 ## 🔥 New Features
 
 - [**AI Coding Agent Skills:**](./AGENTS.md) Use focused NeMo Agent Toolkit skills to give coding agents task-specific guidance for building, evaluating, optimizing, and observing workflows.
-- [**Dynamo Runtime Intelligence:**](./examples/dynamo_integration/latency_sensitivity_demo/README.md) Automatically infer per-request latency sensitivity from agent profiles and apply runtime hints for cache control, load-aware routing, and priority-aware serving.
+- [**Dynamo Runtime Intelligence:**](./examples/dynamo_integration/latency_sensitivity_demo/README.md) _(experimental)_ Automatically infer per-request latency sensitivity from agent profiles and apply runtime hints for cache control, load-aware routing, and priority-aware serving.
 - [**Agent Performance Primitives (APP):**](https://docs.langchain.com/oss/python/integrations/providers/nvidia#install-2) Introduce framework-agnostic performance primitives that accelerate graph-based agent frameworks such as LangChain, CrewAI, and Agno with parallel execution, speculative branching, and node-level priority routing.
+- [**Public Plugin API for Third-Party Tools:**](./docs/source/extend/third-party-plugins.md) Build provider-managed integrations against the public NeMo Agent Toolkit plugin API instead of framework-specific internal packages. Thank you to the maintainers of externally managed plugins including [NeMo-Agent-Toolkit-Tavily](https://github.com/tavily-ai/NeMo-Agent-Toolkit-tavily), [NeMo-Agent-Toolkit-Redis](https://github.com/redis-developer/nemo-agent-toolkit-redis), and [NeMo-Agent-Toolkit-ATR](https://github.com/Agent-Threat-Rule/NeMo-Agent-Toolkit-atr). This new workflow is intended to help third-party package maintainers bring their integrations into NeMo Agent Toolkit workflows more quickly. Note that these third-party packages are managed outside the NeMo Agent Toolkit repository and may release, change, or run CI on schedules independent of NeMo Agent Toolkit.
 - [**LangSmith Native Integration:**](./docs/source/run-workflows/observe/observe-workflow-with-langsmith.md) Observe end-to-end agent execution with native LangSmith tracing, run evaluation experiments, compare outcomes, and manage prompt versions across development and production workflows.
 - [**FastMCP Workflow Publishing:**](./docs/source/run-workflows/fastmcp-server.md) Publish NeMo Agent Toolkit workflows as MCP servers using the FastMCP server runtime to simplify MCP-native deployment and integration.
 - **Migration notice:** `1.5.0` simplifies package installation and dependency management. See the [Migration Guide](./docs/source/resources/migration-guide.md#v150).
@@ -60,7 +61,7 @@ limitations under the License.
   - 🧪 [**Evaluation System:**](./docs/source/improve-workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with a suite of tools for offline evaluation.
   - 🎯 [**Hyper-Parameter and Prompt Optimizer:**](./docs/source/improve-workflows/optimizer.md) Automatically identify the best configuration and prompts to ensure you are getting the most out of your agent.
   - 🧠 [**Fine-tuning with Reinforcement Learning:**](./docs/source/improve-workflows/finetuning/index.md) Fine-tune LLMs specifically for your agent and train intrinsic information about your workflow directly into the model.
-  - ⚡ [**NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Use Dynamo and NeMo Agent Toolkit together to improve agent performance at scale.
+  - ⚡ [**NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) _(experimental)_ Use Dynamo and NeMo Agent Toolkit together to improve agent performance at scale.
   - ⚙️ [**Agent Performance Primitives (APP):**](https://docs.langchain.com/oss/python/integrations/providers/nvidia#install-2) Accelerate graph-based agent frameworks such as LangChain, CrewAI, and Agno with parallel execution, speculative branching, and node-level priority routing.
 - 🔌 **Protocol Support:** Integrate with common protocols used to build agents.
   - 🔗 [**Model Context Protocol (MCP):**](./docs/source/build-workflows/mcp-client.md) Integrate [MCP tools](./docs/source/build-workflows/mcp-client.md) into your agents or serve your tools and agents as an [MCP server](./docs/source/run-workflows/mcp-server.md) for others to consume.
@@ -145,7 +146,7 @@ Before getting started, it's possible to run this simple workflow and many other
 
 ## 📚 Additional Resources
 
-* 📖 [Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest): Explore the full documentation for NeMo Agent Toolkit.
+* 📖 [Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest/): Explore the full documentation for NeMo Agent Toolkit.
 * 🧭 [Get Started Guide](./docs/source/get-started/installation.md): Set up your environment and start building with NeMo Agent Toolkit.
 * 🤝 [Contributing](./docs/source/resources/contributing/index.md): Learn how to contribute to NeMo Agent Toolkit and set up your development environment.
 * 🧪 [Examples](./examples/README.md): Explore examples of NeMo Agent Toolkit workflows located in the [`examples`](./examples) directory of the source repository.

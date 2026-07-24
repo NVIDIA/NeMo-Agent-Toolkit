@@ -21,7 +21,7 @@ limitations under the License.
 **Complexity:** 🟢 Beginner
 
 <!-- Note: "Agno" is the official product name despite Vale spelling checker warnings -->
-Built on [Agno](https://github.com/agno-agi/agno) and NeMo Agent Toolkit, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM (can be customized to use OpenAI models). It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
+Built on [Agno](https://github.com/agno-agi/agno) and NVIDIA NeMo Agent Toolkit, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM. It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
 
 This personal financial planner was revised based on the [Awesome-LLM-App](https://github.com/Shubhamsaboo/awesome-llm-apps) GitHub repo's [AI Personal Finance Planner](https://github.com/Shubhamsaboo/awesome-llm-apps/tree/main/advanced_ai_agents/single_agent_apps/ai_personal_finance_agent) sample.
 
@@ -64,7 +64,6 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
-export OPENAI_API_KEY=<YOUR_API_KEY>
 export SERP_API_KEY=<YOUR_API_KEY>
 ```
 

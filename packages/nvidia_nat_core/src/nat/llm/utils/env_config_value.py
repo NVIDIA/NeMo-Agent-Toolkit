@@ -19,6 +19,8 @@ from enum import Enum
 
 
 class EnvConfigValueSource(Enum):
+    """Sources from which an environment-backed config value can be loaded."""
+
     ENV_DEFAULT = 1
     CONSTRUCTOR = 2
     ENV_OVERRIDE = 3

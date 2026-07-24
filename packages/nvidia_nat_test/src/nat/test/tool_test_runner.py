@@ -584,6 +584,120 @@ class ToolTestRunner:
 
             return result
 
+    def _resolve_function_group_tool(self, functions: dict[str, Function], function_name: str) -> Function:
+        if function_name in functions:
+            return functions[function_name]
+
+        suffix = f"{FunctionGroup.SEPARATOR}{function_name}"
+        matches = [fn for name, fn in functions.items() if name.endswith(suffix)]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ValueError(
+                f"Function name '{function_name}' is ambiguous. Use the fully qualified function group name.")
+
+        raise ValueError(f"Function group tool '{function_name}' not found. Available tools: {sorted(functions)}")
+
+    async def test_function_group(
+        self,
+        config_type: type[FunctionGroupBaseConfig],
+        config_params: dict[str, typing.Any] | None = None,
+        expected_functions: Sequence[str] | None = None,
+        builder: MockBuilder | None = None,
+    ) -> set[str]:
+        """
+        Test a function group in isolation and optionally assert the exposed function names.
+
+        Args:
+            config_type: The function group configuration class.
+            config_params: Parameters to pass to the config constructor.
+            expected_functions: Fully qualified function names expected from the group.
+            builder: Optional pre-configured MockBuilder with mocked dependencies.
+
+        Returns:
+            The function group's accessible function names.
+        """
+        config_params = config_params or {}
+        config = config_type(**config_params)
+
+        registry = GlobalTypeRegistry.get()
+        try:
+            group_registration = registry.get_function_group(config_type)
+        except KeyError:
+            raise ValueError(
+                f"Function group {config_type} is not registered. Make sure it's imported and registered with "
+                "@register_function_group.")
+
+        async with group_registration.build_fn(config, builder or MockBuilder()) as group_result:
+            if not isinstance(group_result, FunctionGroup):
+                raise ValueError(f"Unexpected function group result type: {type(group_result)}")
+
+            functions = await group_result.get_accessible_functions()
+            function_names = set(functions)
+            if expected_functions is not None:
+                assert function_names == set(expected_functions), (
+                    f"Expected function group tools {sorted(expected_functions)}, got {sorted(function_names)}")
+
+            return function_names
+
+    async def test_function_group_tool(
+        self,
+        config_type: type[FunctionGroupBaseConfig],
+        function_name: str,
+        config_params: dict[str, typing.Any] | None = None,
+        input_data: typing.Any = None,
+        input_kwargs: dict[str, typing.Any] | None = None,
+        expected_output: typing.Any = None,
+        builder: MockBuilder | None = None,
+    ) -> typing.Any:
+        """
+        Test one tool exposed by a function group.
+
+        Args:
+            config_type: The function group configuration class.
+            function_name: Fully qualified function name, or the unqualified name when it is unique in the group.
+            config_params: Parameters to pass to the config constructor.
+            input_data: Positional input to pass to the function.
+            input_kwargs: Keyword input to pass to the function.
+            expected_output: Expected output for assertion.
+            builder: Optional pre-configured MockBuilder with mocked dependencies.
+
+        Returns:
+            The function output.
+        """
+        if input_data is not None and input_kwargs is not None:
+            raise ValueError("Use either input_data or input_kwargs, not both.")
+
+        config_params = config_params or {}
+        config = config_type(**config_params)
+
+        registry = GlobalTypeRegistry.get()
+        try:
+            group_registration = registry.get_function_group(config_type)
+        except KeyError:
+            raise ValueError(
+                f"Function group {config_type} is not registered. Make sure it's imported and registered with "
+                "@register_function_group.")
+
+        async with group_registration.build_fn(config, builder or MockBuilder()) as group_result:
+            if not isinstance(group_result, FunctionGroup):
+                raise ValueError(f"Unexpected function group result type: {type(group_result)}")
+
+            functions = await group_result.get_accessible_functions()
+            tool = self._resolve_function_group_tool(functions, function_name)
+
+            if input_kwargs is not None:
+                result = await tool.acall_invoke(**input_kwargs)
+            elif input_data is not None:
+                result = await tool.acall_invoke(input_data)
+            else:
+                result = await tool.acall_invoke()
+
+            if expected_output is not None:
+                assert result == expected_output, f"Expected {expected_output}, got {result}"
+
+            return result
+
 
 @asynccontextmanager
 async def with_mocked_dependencies():

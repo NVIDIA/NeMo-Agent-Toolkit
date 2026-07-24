@@ -70,21 +70,24 @@ workflow:
 
 ### Installing Web Search Dependencies
 ```bash
-# Install LangChain/LangGraph integration for web search tools
-uv pip install -e '.[langchain]'
+# Install the provider-managed Tavily plugin for web search
+uv pip install nemo-agent-toolkit-tavily
 ```
 
 ### Using Tavily Internet Search
 ```yaml
-functions:
+function_groups:
   internet_search:
-    _type: tavily_internet_search
+    _type: tavily
+    include: [search]
+
+functions:
   current_datetime:
     _type: current_datetime
 
 workflow:
   _type: react_agent
-  tool_names: [internet_search, current_datetime]
+  tool_names: [internet_search__search, current_datetime]
 ```
 
 ### Required Environment Variables
@@ -107,9 +110,11 @@ tool_name:
 
 ### 2. Internet Search Tools
 ```yaml
-search_tool:
-  _type: tavily_internet_search
-  # No additional parameters needed
+function_groups:
+  search_tool:
+    _type: tavily
+    include: [search]
+    # Reference the exposed tool as search_tool__search in tool_names
 ```
 
 ### 3. Utility Tools

@@ -20,15 +20,14 @@ functions:
     api_key: ${SERP_API_KEY}
 
 llms:
-  openai_llm:
-    _type: openai
-    model_name: gpt-4o
-    max_tokens: 2000
-    api_key: ${OPENAI_API_KEY}
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    max_tokens: 16384
     temperature: 0.0
 
 workflow:
   _type: agno_personal_finance
-  llm_name: openai_llm
+  llm_name: nim_llm
   tools: [web_search_tool]
   parse_agent_response_max_retries: 3

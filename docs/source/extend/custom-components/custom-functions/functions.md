@@ -68,7 +68,7 @@ Both of these methods will result in a function that can be used in the same way
 
 ### Function Configuration Object
 
-To use a function from a configuration file, it must be registered with NeMo Agent Toolkit. Registering a function is done with the {py:deco}`nat.cli.register_workflow.register_function` decorator. More information about registering components can be found in the [Plugin System](../../plugins.md) documentation.
+To use a function from a configuration file, it must be registered with NVIDIA NeMo Agent Toolkit. Registering a function is done with the {py:deco}`nat.plugin_api.register_function` decorator. More information about registering components can be found in the [Plugin System](../../plugins.md) documentation.
 
 When registering a function, we first need to define the function configuration object. This object is used to configure the function and is passed to the function when it is invoked. Any options that are available to the function must be specified in the configuration object.
 
@@ -82,7 +82,7 @@ class MyFunctionConfig(FunctionBaseConfig, name="my_function"):
     option3: dict[str, float]
 ```
 
-The configuration object must inherit from {py:class}`~nat.data_models.function.FunctionBaseConfig` and must have a `name` attribute. The `name` attribute is used to identify the function in the configuration file.
+The configuration object must inherit from {py:class}`~nat.plugin_api.FunctionBaseConfig` and must have a `name` attribute. The `name` attribute is used to identify the function in the configuration file.
 
 Additionally, the configuration object can use Pydantic's features to provide validation and documentation for each of the options. For example, the following configuration will validate that `option2` is a positive integer, and documents all properties with a description and default value.
 
@@ -101,7 +101,7 @@ This additional metadata will ensure that the configuration object is properly v
 
 With the configuration object defined, there are several options available to register the function:
 
-* **Register a function from a callable using {py:class}`~nat.builder.function_info.FunctionInfo`**:
+* **Register a function from a callable using {py:class}`~nat.plugin_api.FunctionInfo`**:
 
     ```python
     @register_function(config_type=MyFunctionConfig)
@@ -194,7 +194,7 @@ With the configuration object defined, there are several options available to re
 
 ## Initialization and Cleanup
 
-Its required to use an async context manager coroutine to register a function (it's not necessary to use `@asynccontextmanager`, since {py:deco}`nat.cli.register_workflow.register_function` does this for you). This is because the function may need to execute some initialization before construction or cleanup after it is used. For example, if the function needs to load a model, connect to a resource, or download data, this can be done in the register function.
+It's required to use an async context manager coroutine to register a function (it's not necessary to use `@asynccontextmanager`, since {py:deco}`nat.plugin_api.register_function` does this for you). This is because the function may need to execute some initialization before construction or cleanup after it is used. For example, if the function needs to load a model, connect to a resource, or download data, this can be done in the register function.
 
 ```python
 @register_function(config_type=MyFunctionConfig)
@@ -296,7 +296,7 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
 
 ### Functions with Multiple Arguments
 
-It is possible to create a function with a callable that has multiple arguments. When a function with multiple arguments is passed to {py:meth}`~nat.builder.function_info.FunctionInfo.from_fn`, the function will be wrapped with a lambda function which takes a single argument and passes it to the original function. For example, the following function takes two arguments, `input_data` and `repeat`:
+It is possible to create a function with a callable that has multiple arguments. When a function with multiple arguments is passed to {py:meth}`~nat.plugin_api.FunctionInfo.from_fn`, the function will be wrapped with a lambda function which takes a single argument and passes it to the original function. For example, the following function takes two arguments, `input_data` and `repeat`:
 
 ```python
 async def multi_arg_function(input_data: list[float], repeat: int) -> list[float]:
@@ -338,7 +338,7 @@ class MyFunction(Function[MyInput, MySingleOutput, MyStreamingOutput]):
             yield MyStreamingOutput(value, i)
 ```
 
-Similarly this can be accomplished using {py:meth}`~nat.builder.function_info.FunctionInfo.create` which is a more verbose version of {py:meth}`~nat.builder.function_info.FunctionInfo.from_fn`.
+Similarly this can be accomplished using {py:meth}`~nat.plugin_api.FunctionInfo.create` which is a more verbose version of {py:meth}`~nat.plugin_api.FunctionInfo.from_fn`.
 
 ```python
 async def my_ainvoke(self, value: MyInput) -> MySingleOutput:
@@ -358,7 +358,7 @@ assert function_info.single_output_type == MySingleOutput
 assert function_info.stream_output_type == MyStreamingOutput
 ```
 
-Finally, when using {py:meth}`~nat.builder.function_info.FunctionInfo.create` a conversion function can be provided to convert the single output to a streaming output, and a streaming output into a single output. This is useful when converting between streaming and single outputs is trivial and defining both methods would be overkill. For example, the following function converts a streaming output to a single output by joining the items with a comma:
+Finally, when using {py:meth}`~nat.plugin_api.FunctionInfo.create` a conversion function can be provided to convert the single output to a streaming output, and a streaming output into a single output. This is useful when converting between streaming and single outputs is trivial and defining both methods would be overkill. For example, the following function converts a streaming output to a single output by joining the items with a comma:
 
 ```python
 # Define a conversion function to convert a streaming output to a single output
@@ -412,7 +412,7 @@ Output schemas can also be overridden in a similar manner but for different purp
 
 ## Instantiating Functions
 
-Once a function is registered, it can be instantiated using the {py:class}`~nat.builder.workflow_builder.WorkflowBuilder` class. The `WorkflowBuilder` class is used to create and manage all components in a workflow. When calling {py:meth}`~nat.builder.workflow_builder.WorkflowBuilder.add_function`, which function to create is determined by the type of the configuration object. The builder will match the configuration object type to the type used in the {py:deco}`nat.cli.register_workflow.register_function` decorator.
+Once a function is registered, it can be instantiated by a workflow builder. The builder will match the configuration object type to the type used in the {py:deco}`nat.plugin_api.register_function` decorator.
 
 ```python
 
@@ -526,7 +526,7 @@ async def ainvoke(value: typing.Any, to_type: type):
 
 ### Adding Custom Converters
 
-Functions support custom type converters for complex conversion scenarios. To add a custom converter to a function, provide a list of converter callables to the {py:meth}`~nat.builder.function_info.FunctionInfo.from_fn` or {py:meth}`~nat.builder.function_info.FunctionInfo.create` methods when creating a function. A converter callable is any python function which takes a single value and returns a converted value. These functions must be annotated with the type it will convert from and the type it will convert to.
+Functions support custom type converters for complex conversion scenarios. To add a custom converter to a function, provide a list of converter callables to the {py:meth}`~nat.plugin_api.FunctionInfo.from_fn` or {py:meth}`~nat.plugin_api.FunctionInfo.create` methods when creating a function. A converter callable is any python function which takes a single value and returns a converted value. These functions must be annotated with the type it will convert from and the type it will convert to.
 
 For example, the following converter will convert an `int` to a `str`:
 
@@ -535,7 +535,7 @@ def my_converter(value: int) -> str:
     return str(value)
 ```
 
-This converter can then be passed to the {py:meth}`~nat.builder.function_info.FunctionInfo.from_fn` or {py:meth}`~nat.builder.function_info.FunctionInfo.create` methods when registering the function:
+This converter can then be passed to the {py:meth}`~nat.plugin_api.FunctionInfo.from_fn` or {py:meth}`~nat.plugin_api.FunctionInfo.create` methods when registering the function:
 
 ```python
 @register_function(config_type=MyFunctionConfig)

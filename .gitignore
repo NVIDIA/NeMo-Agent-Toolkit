@@ -1,4 +1,5 @@
 ###### Place new entries directly below this line! ######
+node_modules/
 /.codex
 
 # auto-generated chainlit stuff

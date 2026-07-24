@@ -31,18 +31,18 @@ Create a custom function group when you need to:
 - **Bundle related operations**: Group CRUD operations, file operations, or API endpoints that belong together
 - **Centralize configuration**: Manage credentials, endpoints, and settings in one place for multiple functions
 - **Create reusable components**: Package functionality that can be used across multiple workflows
-- **Namespace functions**: Organize functions into logical groups, such as `db.query`, `db.insert`, `api.get`, and `api.post`
+- **Namespace functions**: Organize functions into logical groups, such as `db__query`, `db__insert`, `api__get`, and `api__post`
 
 ## Step 1: Define the Configuration
 
-Every function group needs a configuration class that inherits from {py:class}`~nat.data_models.function.FunctionGroupBaseConfig`.
+Every function group needs a configuration class that inherits from {py:class}`~nat.plugin_api.FunctionGroupBaseConfig`.
 
 ### Minimal Configuration
 
 Start with the simplest possible configuration:
 
 ```python
-from nat.data_models.function import FunctionGroupBaseConfig
+from nat.plugin_api import FunctionGroupBaseConfig
 
 class MyGroupConfig(FunctionGroupBaseConfig, name="my_group"):
     """Configuration for my custom function group."""
@@ -57,7 +57,8 @@ Add fields for any settings your functions need to share:
 
 ```python
 from pydantic import Field
-from nat.data_models.function import FunctionGroupBaseConfig
+
+from nat.plugin_api import FunctionGroupBaseConfig
 
 class DatabaseGroupConfig(FunctionGroupBaseConfig, name="database_group"):
     """Configuration for database operations."""
@@ -85,7 +86,7 @@ function_groups:
 
 ### Controlling Function Exposure
 
-The {py:class}`~nat.data_models.function.FunctionGroupBaseConfig` configuration class has two optional fields: `include` and `exclude`. These fields are used to control which functions are exposed through the function group or excluded from the function group.
+The {py:class}`~nat.plugin_api.FunctionGroupBaseConfig` configuration class has two optional fields: `include` and `exclude`. These fields are used to control which functions are exposed through the function group or excluded from the function group.
 
 If your function group is intended to override the default behavior of the function group, you can use the `include` field to specify which functions to expose and the `exclude` field to specify which functions to exclude.
 
@@ -121,17 +122,17 @@ When to use `include`, `exclude`, or neither:
 
 ## Step 2: Register and Implement the Function Group
 
-Use the {py:deco}`~nat.cli.register_workflow.register_function_group` decorator to register your function group builder.
+Use the {py:deco}`~nat.plugin_api.register_function_group` decorator to register your function group builder.
 
 ### Basic Implementation
 
 Here's the simplest function group implementation:
 
 ```python
-from nat.builder.workflow_builder import Builder
-from nat.builder.function import FunctionGroup
-from nat.cli.register_workflow import register_function_group
-from nat.data_models.function import FunctionGroupBaseConfig
+from nat.plugin_api import Builder
+from nat.plugin_api import FunctionGroup
+from nat.plugin_api import FunctionGroupBaseConfig
+from nat.plugin_api import register_function_group
 
 class MyGroupConfig(FunctionGroupBaseConfig, name="my_group"):
     """Configuration for my custom function group."""
@@ -161,7 +162,7 @@ async def build_my_group(config: MyGroupConfig, _builder: Builder):
 
 **Key components**:
 - **Decorator**: `@register_function_group(config_type=MyGroupConfig)` registers the builder
-- **Instance name**: `instance_name="my"` creates the namespace (`my.greet`, `my.farewell`)
+- **Instance name**: `instance_name="my"` creates the namespace (`my__greet`, `my__farewell`)
 - **Function definitions**: Define async functions that implement your logic
 - **Add to group**: Use `group.add_function()` to register each function
 - **Yield**: `yield group` makes the group available to workflows
@@ -172,7 +173,8 @@ Access configuration values in your functions to customize behavior:
 
 ```python
 import httpx
-from nat.cli.register_workflow import register_function_group
+
+from nat.plugin_api import register_function_group
 
 @register_function_group(config_type=APIGroupConfig)
 async def build_api_group(config: APIGroupConfig, _builder: Builder):
@@ -212,9 +214,9 @@ For functions that need shared resources (for example, connections and clients),
 ```python
 import asyncpg
 
-from nat.cli.register_workflow import register_function_group
-from nat.builder.workflow_builder import Builder
-from nat.builder.function import FunctionGroup
+from nat.plugin_api import Builder
+from nat.plugin_api import FunctionGroup
+from nat.plugin_api import register_function_group
 
 @register_function_group(config_type=DatabaseGroupConfig)
 async def build_database_group(config: DatabaseGroupConfig, _builder: Builder):
@@ -276,7 +278,7 @@ After creating your function group, you can work with it programmatically in you
 
 ### Accessing Functions
 
-Functions are referenced as `instance_name.function_name`:
+Functions are referenced as `instance_name__function_name`:
 
 ```python
 from nat.builder.workflow_builder import WorkflowBuilder
@@ -286,7 +288,7 @@ async with WorkflowBuilder() as builder:
     await builder.add_function_group("my", MyGroupConfig(include=["greet", "farewell"]))
     
     # Access individual function by fully qualified name
-    greet = await builder.get_function("my.greet")
+    greet = await builder.get_function("my__greet")
     result = await greet.ainvoke("World")
     print(result)  # "Hello, World!"
 ```
@@ -321,30 +323,26 @@ async with WorkflowBuilder() as builder:
 
 ### Testing Your Function Group
 
-Test individual functions through the group:
+Test individual functions through the group with `nvidia-nat-test`:
 
 ```python
-import pytest
-from nat.builder.workflow_builder import WorkflowBuilder
+from nat.test import ToolTestRunner
 
-@pytest.mark.asyncio
+
 async def test_my_function_group():
-    async with WorkflowBuilder() as builder:
-        await builder.add_function_group("my", MyGroupConfig())
-        my_group = await builder.get_function_group("my")
-        
-        # Test each function
-        all_funcs = await my_group.get_all_functions()
-        
-        # Test greet function
-        greet = all_funcs["greet"]
-        result = await greet.ainvoke("Alice")
-        assert result == "Hello, Alice!"
-        
-        # Test farewell function
-        farewell = all_funcs["farewell"]
-        result = await farewell.ainvoke("Bob")
-        assert result == "Goodbye, Bob!"
+    runner = ToolTestRunner()
+
+    await runner.test_function_group(
+        config_type=MyGroupConfig,
+        expected_functions=["my__greet", "my__farewell"],
+    )
+
+    result = await runner.test_function_group_tool(
+        config_type=MyGroupConfig,
+        function_name="greet",
+        input_data="Alice",
+    )
+    assert result == "Hello, Alice!"
 ```
 
 ## Step 5: Advanced - Dynamic Filtering (Optional)
@@ -374,8 +372,9 @@ Group-level filters receive a list of function names and return a filtered list:
 
 ```python
 from collections.abc import Sequence
-from nat.cli.register_workflow import register_function_group
-from nat.builder.function import FunctionGroup
+
+from nat.plugin_api import FunctionGroup
+from nat.plugin_api import register_function_group
 
 class EnvironmentGroupConfig(FunctionGroupBaseConfig, name="env_group"):
     """Configuration with environment setting."""

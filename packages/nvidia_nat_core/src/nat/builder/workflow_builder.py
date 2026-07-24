@@ -706,6 +706,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def _check_backwards_compatibility_function_name(self, name: str) -> str:
         if name in self._functions:
             return name
+        # TODO(#1952): In the next breaking release, remove dot separator compatibility and require
+        # FunctionGroup.SEPARATOR (`__`) for function group tool names.
         new_name = name.replace(FunctionGroup.LEGACY_SEPARATOR, FunctionGroup.SEPARATOR)
         if new_name in self._functions:
             logger.warning(

@@ -35,10 +35,14 @@ def _extract_serve_response_text(response_json: dict) -> str:
     return "\n".join(combined)
 
 
-def _assert_expected_answer(result: str, expected_answer: str) -> None:
+def _assert_expected_answer(result: str, expected_answers: str | list[str]) -> None:
     """Assert that the expected answer appears in the result, normalizing whitespace and case."""
-    normalized = ' '.join(result.split())
-    assert expected_answer.lower() in normalized.lower(), f"Expected '{expected_answer}' in '{result}'"
+    normalized = ' '.join(result.split()).lower()
+    if isinstance(expected_answers, str):
+        expected_answers = [expected_answers]
+
+    assert any(expected.lower() in normalized for expected in expected_answers), \
+        f"Expected one of '{expected_answers}' in '{result}'"
 
 
 # ---------------------------------------------------------------------------
@@ -82,19 +86,21 @@ class TestReWOONatServe:
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("openai_api_key")
-async def test_tool_calling_responses_api(agents_dir: Path, question: str, answer: str):
+async def test_tool_calling_responses_api(agents_dir: Path, question: str, expected_answers: list[str]):
     await run_workflow(config_file=agents_dir / "tool_calling/configs/config-responses-api.yml",
                        question=question,
-                       expected_answer=answer)
+                       expected_answer=expected_answers)
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("openai_api_key")
-async def test_nat_run_tool_calling_responses_api(tool_calling_responses_api_nat_client, question: str, answer: str):
+async def test_nat_run_tool_calling_responses_api(tool_calling_responses_api_nat_client,
+                                                  question: str,
+                                                  expected_answers: list[str]):
     resp = await tool_calling_responses_api_nat_client.post("/generate", json={"input_message": question})
     resp.raise_for_status()
     response_text = _extract_serve_response_text(resp.json())
-    _assert_expected_answer(response_text, answer)
+    _assert_expected_answer(response_text, expected_answers)
 
 
 # ---------------------------------------------------------------------------
@@ -107,11 +113,11 @@ async def test_nat_run_tool_calling_responses_api(tool_calling_responses_api_nat
 @pytest.mark.usefixtures("nvidia_api_key")
 class TestAgentNatRun:
 
-    async def test_question(self, agent_session_manager, question: str, answer: str):
+    async def test_question(self, agent_session_manager, question: str, expected_answers: list[str]):
         async with agent_session_manager.session() as session:
             async with session.run(question) as runner:
                 result = await runner.result(to_type=str)
-                _assert_expected_answer(result, answer)
+                _assert_expected_answer(result, expected_answers)
 
 
 @pytest.mark.slow
@@ -119,11 +125,11 @@ class TestAgentNatRun:
 @pytest.mark.usefixtures("nvidia_api_key")
 class TestAgentNatServe:
 
-    async def test_question(self, agent_nat_client, question: str, answer: str):
+    async def test_question(self, agent_nat_client, question: str, expected_answers: list[str]):
         resp = await agent_nat_client.post("/generate", json={"messages": [{"role": "user", "content": question}]})
         resp.raise_for_status()
         response_text = _extract_serve_response_text(resp.json())
-        _assert_expected_answer(response_text, answer)
+        _assert_expected_answer(response_text, expected_answers)
 
 
 # Code examples from `docs/source/resources/running-tests.md`

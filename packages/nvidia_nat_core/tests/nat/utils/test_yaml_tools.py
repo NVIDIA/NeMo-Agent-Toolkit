@@ -110,6 +110,34 @@ def test_interpolate_variables(env_vars: dict):
     assert _interpolate_variables(None) is None
 
 
+def test_interpolate_variables_preserves_embedded_dollar_identifiers(env_vars: dict):
+    """Verify _interpolate_variables expands braced references and leaves other strings unchanged."""
+    flow = "content safety check input $model=content_safety"
+    assert _interpolate_variables(flow) == flow
+
+    assert _interpolate_variables("${TEST_VAR}") == env_vars["TEST_VAR"]
+
+
+def test_interpolate_variables_does_not_expand_bare_env_var(env_vars: dict):
+    """Verify _interpolate_variables does not modify a bare dollar-prefixed identifier."""
+    assert _interpolate_variables("$LIST_VAR") == "$LIST_VAR"
+    assert _interpolate_variables("${TEST_VAR}") == env_vars["TEST_VAR"]
+
+
+def test_yaml_loads_leaves_embedded_dollar_identifiers_in_string_values():
+    """Verify yaml_load returns list string values exactly as written in the source YAML."""
+    yaml_str = """
+    middleware:
+      example:
+        rails:
+          input:
+            flows: [content safety check input $model=content_safety]
+    """
+    config: dict = yaml_loads(yaml_str, Path("."))
+    flows: list[str] = config["middleware"]["example"]["rails"]["input"]["flows"]
+    assert flows == ["content safety check input $model=content_safety"]
+
+
 def test_yaml_load(env_vars: dict):
     # Create a temporary YAML file
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:

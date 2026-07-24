@@ -16,7 +16,6 @@
 import contextvars
 import logging
 import typing
-import uuid
 from enum import Enum
 
 from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
@@ -30,12 +29,16 @@ from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.observability.exporter_manager import ExporterManager
+from nat.utils.providers import generate_id
+from nat.utils.providers import generate_trace_id
 from nat.utils.reactive.subject import Subject
 
 logger = logging.getLogger(__name__)
 
 
 class RunnerState(Enum):
+    """Lifecycle states for a workflow runner."""
+
     UNINITIALIZED = 0
     INITIALIZED = 1
     RUNNING = 2
@@ -178,15 +181,15 @@ class Runner:
             existing_run_id = self._context_state.workflow_run_id.get()
             existing_trace_id = self._context_state.workflow_trace_id.get()
 
-            workflow_run_id = existing_run_id or str(uuid.uuid4())
+            workflow_run_id = existing_run_id or generate_id()
 
-            workflow_trace_id = existing_trace_id or uuid.uuid4().int
+            workflow_trace_id = existing_trace_id or generate_trace_id()
 
             token_run_id = self._context_state.workflow_run_id.set(workflow_run_id)
             token_trace_id = self._context_state.workflow_trace_id.set(workflow_trace_id)
 
             # Prepare workflow-level intermediate step identifiers
-            workflow_step_uuid = str(uuid.uuid4())
+            workflow_step_uuid = generate_id()
 
             # Get workflow name with backwards-compatible fallback chain:
             # 1. Check for explicit 'name' in config (allows user customization in config yaml)
@@ -269,15 +272,15 @@ class Runner:
             existing_run_id = self._context_state.workflow_run_id.get()
             existing_trace_id = self._context_state.workflow_trace_id.get()
 
-            workflow_run_id = existing_run_id or str(uuid.uuid4())
+            workflow_run_id = existing_run_id or generate_id()
 
-            workflow_trace_id = existing_trace_id or uuid.uuid4().int
+            workflow_trace_id = existing_trace_id or generate_trace_id()
 
             token_run_id = self._context_state.workflow_run_id.set(workflow_run_id)
             token_trace_id = self._context_state.workflow_trace_id.set(workflow_trace_id)
 
             # Prepare workflow-level intermediate step identifiers
-            workflow_step_uuid = str(uuid.uuid4())
+            workflow_step_uuid = generate_id()
 
             # Get workflow name with backwards-compatible fallback chain:
             # 1. Check for explicit 'name' in config (allows user customization in config yaml)

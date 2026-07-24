@@ -20,7 +20,8 @@ import os
 import re
 
 import httpx
-import requests
+from pydantic import Field
+from pydantic import model_validator
 
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
@@ -252,13 +253,41 @@ def process_input_text(input_text):
     return input_text
 
 
+def _validate_jira_credentials(require_userid: bool = True) -> str | None:
+    """Return an error message if required Jira environment variables are missing, else None.
+
+    Args:
+        require_userid: When True, also checks for JIRA_USERID (needed for Basic auth).
+            Set to False for Bearer-auth-only paths that only need JIRA_TOKEN.
+
+    Returns:
+        A human-readable error string listing missing env vars, or None if all present.
+    """
+    missing: list[str] = []
+    if require_userid and not os.getenv("JIRA_USERID"):
+        missing.append("JIRA_USERID")
+    if not os.getenv("JIRA_TOKEN"):
+        missing.append("JIRA_TOKEN")
+    if missing:
+        return f"Missing Jira credentials: {', '.join(missing)}. Set them in .env."
+    return None
+
+
 class CreateJiraToolConfig(FunctionBaseConfig, name="create_jira_tickets_tool"):
-    root_path: str
-    jira_domain: str
-    jira_project_key: str
-    timeout: float
-    connect: float
-    hitl_approval_fn: FunctionRef
+    root_path: str = Field(...,
+                           min_length=1,
+                           description="Directory for reading extracted JSON and writing ticket results")
+    jira_domain: str = Field(..., min_length=1, description="Jira instance base URL (e.g. https://jirasw.nvidia.com)")
+    jira_project_key: str = Field(..., min_length=1, description="Jira project key to create tickets in (e.g. NAT)")
+    timeout: float = Field(..., gt=0, description="Total HTTP request timeout in seconds")
+    connect: float = Field(..., gt=0, description="HTTP connection timeout in seconds")
+    hitl_approval_fn: FunctionRef = Field(..., description="HITL approval function to call before creating tickets")
+
+    @model_validator(mode="after")
+    def validate_connect_le_timeout(self) -> "CreateJiraToolConfig":
+        if self.connect > self.timeout:
+            raise ValueError(f"connect timeout ({self.connect}s) must not exceed total timeout ({self.timeout}s)")
+        return self
 
 
 @register_function(config_type=CreateJiraToolConfig)
@@ -267,6 +296,10 @@ async def create_jira_tickets_tool(config: CreateJiraToolConfig, builder: Builde
     hitl_approval_fn = await builder.get_function(config.hitl_approval_fn)
 
     async def _arun(input_text: str) -> str:
+
+        config_error: str | None = _validate_jira_credentials()
+        if config_error:
+            return config_error
 
         # Get user confirmation first
         try:
@@ -284,6 +317,8 @@ async def create_jira_tickets_tool(config: CreateJiraToolConfig, builder: Builde
         logger.debug("Creating %s in Jira", input_text)
         # input_text = process_input_text(input_text)
         jira_issues = get_epics_tool(config.root_path)
+        if jira_issues is None:
+            return "Could not load extracted data. Please run extract_por_tool first."
         logger.debug("Creating %s in Jira", input_text)
         jira = JiraTool(domain=config.jira_domain, project_key=config.jira_project_key, ticket_type=input_text)
         timeout_config = httpx.Timeout(config.timeout, connect=config.connect)
@@ -307,7 +342,11 @@ async def create_jira_tickets_tool(config: CreateJiraToolConfig, builder: Builde
                 results = await asyncio.gather(*tickets)
 
         for _, result in enumerate(results, start=1):
-            lines.append(f"- **{result[0]}**: {config.jira_domain + '/browse/' + str(result[0])}")
+            if isinstance(result, dict) and "error" in result:
+                detail: str = result.get("details") or result.get("message", "")
+                lines.append(f"- ERROR: {result['error']} — {detail}")
+            else:
+                lines.append(f"- **{result[0]}**: {config.jira_domain + '/browse/' + str(result[0])}")
 
         output_file = config.root_path + str(input_text) + "_data.json"
         with open(output_file, "w", encoding='utf-8') as json_file:
@@ -323,9 +362,9 @@ async def create_jira_tickets_tool(config: CreateJiraToolConfig, builder: Builde
 
 
 class GetJiraToolConfig(FunctionBaseConfig, name="get_jira_tickets_tool"):
-    root_path: str
-    jira_domain: str
-    jira_project_key: str
+    root_path: str = Field(..., min_length=1, description="Directory to write the fetched Jira tickets JSON")
+    jira_domain: str = Field(..., min_length=1, description="Jira instance base URL (e.g. https://jirasw.nvidia.com)")
+    jira_project_key: str = Field(..., min_length=1, description="Jira project key to query tickets from (e.g. NAT)")
 
 
 @register_function(config_type=GetJiraToolConfig)
@@ -344,38 +383,45 @@ async def get_jira_tickets_tool(config: GetJiraToolConfig, builder: Builder):
     }
 
     async def _arun(input_text: str) -> str:
-        response = requests.get(api_endpoint, headers=headers, params=query_params, timeout=30)
+        cred_error: str | None = _validate_jira_credentials(require_userid=False)
+        if cred_error:
+            return cred_error
 
-        if response.status_code == 200:
-            data = response.json()["issues"]
-            result = {"tasks": [], "epics": [], "new_features": [], "bugs": []}
+        async with httpx.AsyncClient() as client:
+            response = await client.get(api_endpoint, headers=headers, params=query_params, timeout=30)
 
-            # Map JIRA issue types to categories in the result dictionary
-            issue_type_mapping = {
-                "Task": "tasks",
-                "Epic": "epics",
-                "New Feature": "new_features",
-                "Bug": "bugs",
+        if response.status_code != 200:
+            return f"Failed to fetch Jira tickets: HTTP {response.status_code} — {response.text[:200]}"
+
+        data = response.json()["issues"]
+        result = {"tasks": [], "epics": [], "new_features": [], "bugs": []}
+
+        # Map JIRA issue types to categories in the result dictionary
+        issue_type_mapping = {
+            "Task": "tasks",
+            "Epic": "epics",
+            "New Feature": "new_features",
+            "Bug": "bugs",
+        }
+
+        for issue in data:
+            issue_type = issue["fields"]["issuetype"]["name"]
+            category = issue_type_mapping.get(issue_type, "tasks")
+            formatted_issue = {
+                "title": issue["fields"]["summary"],
+                "epic": issue["fields"].get("epic", "None"),
+                "priority": issue["fields"]["priority"]["name"] if issue["fields"].get("priority") else "None",
+                "storypoints": issue["fields"].get("customfield_10016", "None"),
+                "description": issue["fields"].get("description", "None"),
             }
 
-            for issue in data:
-                issue_type = issue["fields"]["issuetype"]["name"]
-                category = issue_type_mapping.get(issue_type, "tasks")
-                formatted_issue = {
-                    "title": issue["fields"]["summary"],
-                    "epic": issue["fields"].get("epic", "None"),
-                    "priority": issue["fields"]["priority"]["name"] if issue["fields"].get("priority") else "None",
-                    "storypoints": issue["fields"].get("customfield_10016", "None"),
-                    "description": issue["fields"].get("description", "None"),
-                }
+            result[category].append(formatted_issue)
 
-                result[category].append(formatted_issue)
+        # Save the result to a JSON file
+        with open(config.root_path + "jira_tickets.json", "w", encoding='utf-8') as json_file:
+            json.dump(result, json_file, indent=4)
 
-            # Save the result to a JSON file
-            with open(config.root_path + "jira_tickets.json", "w", encoding='utf-8') as json_file:
-                json.dump(result, json_file, indent=4)
-
-            return "JIRA issues have been successfully saved to jira_tickets.json"
+        return "JIRA issues have been successfully saved to jira_tickets.json"
 
     yield FunctionInfo.from_fn(
         _arun,

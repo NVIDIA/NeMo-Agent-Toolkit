@@ -24,6 +24,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.tools import BaseTool
+from langgraph.graph import END
 from langgraph.graph.state import CompiledStateGraph
 
 from nat.plugins.langchain.control_flow.router_agent.agent import RouterAgentGraph
@@ -271,7 +272,9 @@ class TestRouterAgentGraph:
             mock_state_graph.assert_called_once_with(RouterAgentGraphState)
             mock_graph_instance.add_node.assert_any_call("agent", router_agent.agent_node)
             mock_graph_instance.add_node.assert_any_call("branch", router_agent.branch_node)
-            mock_graph_instance.add_edge.assert_called_once_with("agent", "branch")
+            mock_graph_instance.add_edge.assert_any_call("agent", "branch")
+            mock_graph_instance.add_edge.assert_any_call("branch", END)
+            assert mock_graph_instance.add_edge.call_count == 2
             mock_graph_instance.set_entry_point.assert_called_once_with("agent")
             mock_graph_instance.compile.assert_called_once()
 
@@ -285,6 +288,14 @@ class TestRouterAgentGraph:
                    side_effect=Exception("Graph error")):
             with pytest.raises(Exception, match="Graph error"):
                 await router_agent.build_graph()
+
+    @pytest.mark.asyncio
+    async def test_build_graph_routes_branch_to_end(self, router_agent):
+        """Test graph building explicitly terminates after branch execution."""
+        graph = await router_agent.build_graph()
+
+        assert ("agent", "branch") in graph.builder.edges
+        assert ("branch", END) in graph.builder.edges
 
 
 class TestPromptValidation:

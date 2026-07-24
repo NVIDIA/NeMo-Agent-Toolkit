@@ -358,7 +358,7 @@ class TestTrajectoryExtraction:
             },
             "payload": {
                 "event_type": "TOOL_START",
-                "name": "banking_tools.report_lost_stolen_card",
+                "name": "banking_tools__report_lost_stolen_card",
                 "data": {
                     "input": {
                         "input_params": {
@@ -371,7 +371,7 @@ class TestTrajectoryExtraction:
 
         tool_calls = self.extract_tool_calls_from_trajectory(trajectory)
         assert len(tool_calls) == 1
-        assert tool_calls[0]["tool"] == "banking_tools.report_lost_stolen_card"
+        assert tool_calls[0]["tool"] == "banking_tools__report_lost_stolen_card"
 
     def test_flat_legacy_format(self):
         """Test extraction from flat structure (legacy format)."""
@@ -470,7 +470,7 @@ class TestTrajectoryExtraction:
                 "event_timestamp": 1764917512.0873613,
                 "span_event_timestamp": None,
                 "framework": None,
-                "name": "banking_tools.report_lost_stolen_card",
+                "name": "banking_tools__report_lost_stolen_card",
                 "tags": None,
                 "metadata": {},
                 "data": {
@@ -487,7 +487,7 @@ class TestTrajectoryExtraction:
 
         tool_calls = self.extract_tool_calls_from_trajectory(trajectory)
         assert len(tool_calls) == 1
-        assert tool_calls[0]["tool"] == "banking_tools.report_lost_stolen_card"
+        assert tool_calls[0]["tool"] == "banking_tools__report_lost_stolen_card"
         # Should extract nested input_params
         assert "card_type" in tool_calls[0]["parameters"]
         assert isinstance(tool_calls[0]["parameters"], dict)

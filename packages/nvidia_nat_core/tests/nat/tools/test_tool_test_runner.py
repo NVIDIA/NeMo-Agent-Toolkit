@@ -14,9 +14,12 @@
 # limitations under the License.
 
 from nat.builder.builder import Builder
+from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.cli.register_workflow import register_function_group
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.test.tool_test_runner import ToolTestRunner
 
 
@@ -38,6 +41,21 @@ async def simple_calculator_tool(_config: SimpleCalculatorToolConfig, _builder: 
         return "Invalid input"
 
     yield FunctionInfo.from_fn(_calc_fn, description=_calc_fn.__doc__)
+
+
+class SimpleCalculatorGroupConfig(FunctionGroupBaseConfig, name="test_simple_calculator_group"):
+    pass
+
+
+@register_function_group(config_type=SimpleCalculatorGroupConfig)
+async def simple_calculator_group(config: SimpleCalculatorGroupConfig, _builder: Builder):
+
+    async def _add(lhs: int, rhs: int) -> int:
+        return lhs + rhs
+
+    group = FunctionGroup(config=config, instance_name="calculator")
+    group.add_function("add", _add, description="Add two numbers.")
+    yield group
 
 
 # This test is to ensure ToolTestRunner is working correctly, and also a demonstration of how to test tools
@@ -125,3 +143,25 @@ async def test_tool_with_mocked_training_components():
         trajectory_builder = await mock_builder.get_trajectory_builder("my_trajectory_builder")
         assert trajectory_builder is not None
         assert await trajectory_builder.build() == {"trajectories": []}
+
+
+async def test_function_group_exposes_expected_tools():
+    runner = ToolTestRunner()
+
+    function_names = await runner.test_function_group(config_type=SimpleCalculatorGroupConfig,
+                                                      expected_functions=["calculator__add"])
+
+    assert function_names == {"calculator__add"}
+
+
+async def test_function_group_tool_with_kwargs():
+    runner = ToolTestRunner()
+
+    result = await runner.test_function_group_tool(config_type=SimpleCalculatorGroupConfig,
+                                                   function_name="add",
+                                                   input_kwargs={
+                                                       "lhs": 2, "rhs": 3
+                                                   },
+                                                   expected_output=5)
+
+    assert result == 5

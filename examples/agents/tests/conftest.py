@@ -43,9 +43,9 @@ def fixture_question() -> str:
     return "What are LLMs"
 
 
-@pytest.fixture(name="answer", scope="session")
-def fixture_answer() -> str:
-    return "large language model"
+@pytest.fixture(name="expected_answers", scope="session")
+def fixture_expected_answers() -> list[str]:
+    return ["llm", "large language model"]
 
 
 @pytest.fixture(name="rewoo_data", scope="session")

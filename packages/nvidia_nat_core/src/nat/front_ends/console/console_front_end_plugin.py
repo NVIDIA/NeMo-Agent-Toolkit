@@ -82,7 +82,8 @@ async def prompt_for_input_cli(question: InteractionPrompt) -> HumanResponse:
             ready, _, _ = select.select([sys.stdin], [], [], 1)
             if ready:
                 user_response: str = sys.stdin.readline().strip()
-                return HumanResponseText(text=user_response)
+                if user_response:
+                    return HumanResponseText(text=user_response)
             remaining -= 1
             # Save cursor position, update countdown line, restore cursor position
             sys.stdout.write(f"\033[s\033[A\r[{remaining}s remaining]\033[K\033[u")
@@ -104,6 +105,22 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         # Set the authentication flow handler
         self.auth_flow_handler = ConsoleAuthenticationFlowHandler()
 
+    async def _run_preflight_auth(self, session_manager: SessionManager) -> None:
+        """Authenticate providers with ``preflight_auth=True``.
+
+        Must be called inside an already-open session context so the auth
+        challenge can reach the user and the token is stored for the
+        workflow run that follows.
+        """
+        for name, cfg in session_manager.config.authentication.items():
+            if cfg.preflight_auth:
+                logger.debug("Preflight auth: authenticating provider '%s'", name)
+                provider = await session_manager.shared_builder.get_auth_provider(name)
+                try:
+                    await provider.authenticate()
+                except Exception:
+                    logger.exception("Preflight auth failed for provider '%s'", name)
+
     async def pre_run(self):
         if (self.front_end_config.input_query is not None and self.front_end_config.input_file is not None):
             raise click.UsageError("Must specify either --input or --input_file, not both")
@@ -113,6 +130,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
     async def run_workflow(self, session_manager: SessionManager):
 
         assert session_manager is not None, "Session manager must be provided"
+
         runner_outputs = None
 
         run_user_id = self.front_end_config.user_id
@@ -127,6 +145,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
                         conversation_id=conversation_id,
                         user_input_callback=prompt_for_input_cli,
                         user_authentication_callback=self.auth_flow_handler.authenticate) as session:
+                    await self._run_preflight_auth(session_manager)
                     async with session.run(query) as runner:
                         base_output = await runner.result(to_type=str)
 
@@ -145,7 +164,11 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
             # Run the workflow
             with open(self.front_end_config.input_file, encoding="utf-8") as f:
                 input_content = f.read()
-            async with session_manager.session(user_id=run_user_id, conversation_id=conversation_id) as session:
+            async with session_manager.session(
+                    user_id=run_user_id,
+                    conversation_id=conversation_id,
+                    user_authentication_callback=self.auth_flow_handler.authenticate) as session:
+                await self._run_preflight_auth(session_manager)
                 async with session.run(input_content) as runner:
                     runner_outputs = await runner.result(to_type=str)
         else:

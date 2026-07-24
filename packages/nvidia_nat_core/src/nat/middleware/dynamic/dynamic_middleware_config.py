@@ -121,6 +121,11 @@ class DynamicMiddlewareConfig(FunctionMiddlewareBaseConfig, name="dynamic_middle
     register_workflow_functions: bool | None = Field(default=False,
                                                      description="Auto-discover and register all workflow functions")
 
+    workflow_functions: list[str] | None = Field(
+        default=None,
+        description="Register specific workflow functions by name",
+    )
+
     # === Enable/Disable ===
 
     enabled: bool = Field(default=True, description="Whether this middleware is active")

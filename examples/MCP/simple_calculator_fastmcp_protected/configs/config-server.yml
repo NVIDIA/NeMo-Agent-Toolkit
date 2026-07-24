@@ -33,10 +33,17 @@ general:
       # Keycloak issuer URL (required by the resource server config)
       issuer_url: http://localhost:8080/realms/master
 
+      # Keycloak discovery endpoint used to resolve JWKS for JWT access-token validation
+      discovery_url: http://localhost:8080/realms/master/.well-known/openid-configuration
+
       # Keycloak introspection endpoint
       introspection_endpoint: http://localhost:8080/realms/master/protocol/openid-connect/token/introspect
 
+      # Expected token audience for this resource server
+      audience: nat-mcp-resource-server
+
       # Client credentials used by the FastMCP server when calling the introspection endpoint
+      # For Keycloak, this client must also be present in the token audience. See the example README.
       client_id: ${NAT_CALCULATOR_RESOURCE_CLIENT_ID:-"nat-mcp-resource-server"}
       client_secret: ${NAT_CALCULATOR_RESOURCE_CLIENT_SECRET}
 

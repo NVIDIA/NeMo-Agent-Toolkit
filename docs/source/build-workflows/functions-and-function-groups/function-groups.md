@@ -206,7 +206,7 @@ workflow:
 
 - **Multiple functions need the same connection** (database, API client, cache)
 - **Functions share configuration** (credentials, endpoints, settings)
-- **You want to namespace related functions** (`math.add`, `math.multiply`)
+- **You want to namespace related functions** (`math__add`, `math__multiply`)
 - **Functions need to share state** (session data, counters, caches)
 - **You have a family of operations** (CRUD operations, data transformations)
 
@@ -365,7 +365,7 @@ This will return a list of all accessible functions in the function group that a
 
 Functions inside a group are automatically namespaced by the group instance name. This creates a clear hierarchy and prevents naming conflicts.
 
-To maintain compatibility with third-party libraries, the namespace separator switched from `.` (period) to `__` (double underscore).
+Function groups expose functions with fully qualified names that use `__` (double underscore) between the group instance name and the function name. This keeps names compatible with third-party frameworks that reject or reinterpret `.` in tool names.
 
 **Pattern**: `instance_name__function_name`
 
@@ -495,7 +495,7 @@ workflow:
   llm_name: my_llm
 ```
 
-All functions in the `math` group (`math.add`, `math.multiply`) become available as tools for the agent.
+All functions in the `math` group (`math__add`, `math__multiply`) become available as tools for the agent.
 
 #### Example 2: Including Specific Functions
 
@@ -602,8 +602,8 @@ async with WorkflowBuilder() as builder:
 To wrap all accessible functions in a group for a specific agent framework:
 
 ```python
-from nat.data_models.component_ref import FunctionGroupRef
-from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.plugin_api import FunctionGroupRef
+from nat.plugin_api import LLMFrameworkEnum
 
 async with WorkflowBuilder() as builder:
     await builder.add_function_group("math", MathGroupConfig(include=["add", "multiply"]))
@@ -640,7 +640,7 @@ async with WorkflowBuilder() as builder:
     
     # Now only "add" functions are accessible
     accessible = await math_group.get_accessible_functions()
-    # Returns: ["math.add"]
+    # Returns: ["math__add"]
 ```
 
 #### Per-Function Filters
@@ -758,11 +758,11 @@ Instance names become part of function names, so keep them concise:
 ```python
 # Good
 group = FunctionGroup(config=config, instance_name="db")
-# Results in: db.query, db.insert
+# Results in: db__query, db__insert
 
 # Less ideal
 group = FunctionGroup(config=config, instance_name="database_operations")
-# Results in: database_operations.query, database_operations.insert
+# Results in: database_operations__query, database_operations__insert
 ```
 
 #### Use Environment Variables for Secrets

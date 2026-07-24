@@ -62,7 +62,7 @@ This is a simple example RAG application to showcase how one can configure and u
 - **Advanced RAG Pipeline with NVIDIA RAG:** Showcases enhanced retrieval with semantic reranking, query rewriting, confidence filtering, and structured citations.
 - **Long-term Memory with Mem0:** Includes integration with Mem0 platform for persistent memory, allowing the agent to remember user preferences across sessions.
 - **Multi-Collection Retrieval:** Demonstrates multiple retriever tools (`cuda_retriever_tool` and `mcp_retriever_tool`) for searching different knowledge bases.
-- **Additional Tool Integration:** Shows how to extend the RAG system with complementary tools like `tavily_internet_search` and `code_generation` for comprehensive question answering.
+- **Additional Tool Integration:** Shows how to extend the RAG system with complementary tools like Tavily search from `nemo-agent-toolkit-tavily` and `code_generation` for comprehensive question answering.
 
 ## Quickstart: RAG with Milvus
 
@@ -297,9 +297,9 @@ In this way, you can easily construct an agent that answers questions about your
 Note: The long-term memory feature relies on LLM-based tool invocation, which can occasionally be non-deterministic. If you notice that the memory functionality isn't working as expected (e.g., the agent doesn't remember your preferences), simply re-run your first and second inputs. This will help ensure the memory tools are properly invoked and your preferences are correctly stored.
 
 ## Adding Additional Tools
-This workflow can be further enhanced by adding additional tools. Included with this example are two additional tools: `tavily_internet_search` and `code_generation`.
+This workflow can be further enhanced by adding additional tools. Included with this example are two additional tools: Tavily search from `nemo-agent-toolkit-tavily` and `code_generation`.
 
-Prior to using the `tavily_internet_search` tool, create an account at [`tavily.com`](https://tavily.com/) and obtain an API key. Once obtained, set the `TAVILY_API_KEY` environment variable to the API key:
+Prior to using Tavily search, create an account at [`tavily.com`](https://tavily.com/) and obtain an API key. Once obtained, set the `TAVILY_API_KEY` environment variable to the API key:
 ```bash
 export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 ```

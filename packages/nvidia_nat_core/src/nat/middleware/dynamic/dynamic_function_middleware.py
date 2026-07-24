@@ -45,14 +45,15 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
     per-component configuration.
     """
 
-    def __init__(self, config: DynamicMiddlewareConfig, builder: Builder):
+    def __init__(self, config: DynamicMiddlewareConfig, builder: Builder, *, is_final: bool = False):
         """Initialize middleware and discover workflow functions.
 
         Args:
             config: Middleware configuration
             builder: Workflow builder
+            is_final: When True, marks this middleware as the terminal boundary for a function.
         """
-        super().__init__()
+        super().__init__(is_final=is_final)
         self._config = config
         self._builder = builder
 
@@ -375,9 +376,11 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
         function = await self._get_builder_get_function()(name)
 
         if not self._config.register_workflow_functions:
-            return function
-
-        func_name = str(name)
+            func_name = str(name)
+            if func_name not in (self._config.workflow_functions or []):
+                return function
+        else:
+            func_name = str(name)
 
         if any(f.name == func_name for f in self._workflow_inventory.workflow_functions):
             return function
@@ -403,7 +406,7 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
 
     def _discover_functions(self) -> None:
         """Discover and register workflow functions already in the builder."""
-        if not self._config.register_workflow_functions:
+        if not self._config.register_workflow_functions and self._config.workflow_functions is None:
             return
 
         if not hasattr(self._builder, '_functions'):
@@ -411,8 +414,7 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
 
         # Discover functions already registered
         for func_name, configured_func in self._builder._functions.items():  # type: ignore
-            # Skip if already in inventory
-            if any(func.name == func_name for func in self._workflow_inventory.workflow_functions):
+            if not self._should_intercept_function(func_name):
                 continue
 
             # Add to inventory
@@ -425,6 +427,21 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
             self._register_function(discovered_function)
 
     # ==================== Helper Methods for Interception ====================
+
+    def _should_intercept_function(self, func_name: str) -> bool:
+        """Check if a workflow function should be intercepted based on config.
+
+        Args:
+            func_name: Name of the workflow function to check
+
+        Returns:
+            True if should intercept, False otherwise
+        """
+        if any(f.name == func_name for f in self._workflow_inventory.workflow_functions):
+            return False
+        if self._config.register_workflow_functions:
+            return True
+        return self._config.workflow_functions is not None and func_name in self._config.workflow_functions
 
     def _should_intercept_llm(self, llm_name: str) -> bool:
         """Check if LLM should be intercepted based on config.
@@ -856,6 +873,7 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
         self._patch_get_object_store()
         self._patch_get_auth_provider()
         self._patch_get_function()
+        self._patch_add_function_group()
 
     def _patch_get_llm(self):
         """Patch builder.get_llm() for runtime LLM interception."""
@@ -913,6 +931,23 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
 
         self._builder_get_function = self._builder.get_function
         self._builder.get_function = self._discover_and_register_function
+
+    def _patch_add_function_group(self):
+        """Patch builder.add_function_group() to discover workflow_functions after a group is built."""
+        if not hasattr(self._builder, 'add_function_group'):
+            return
+
+        if not self._config.workflow_functions and not self._config.register_workflow_functions:
+            return
+
+        original_add_function_group = self._builder.add_function_group
+
+        async def _patched_add_function_group(name, config):
+            result = await original_add_function_group(name, config)
+            self._discover_functions()
+            return result
+
+        self._builder.add_function_group = _patched_add_function_group
 
     # ==================== Original Method Getters ====================
 

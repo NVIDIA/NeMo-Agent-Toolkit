@@ -36,13 +36,15 @@ def _build_indexing_pipeline(document_store, embedder_model: str) -> Pipeline:
     p = Pipeline()
     p.add_component("joiner", DocumentJoiner())
     p.add_component("cleaner", DocumentCleaner())
+    # Use word-based chunking to keep chunks under the 512-token limit of the
+    # embedder; truncate="END" is a safety net for any chunks that still exceed it.
     p.add_component(
         "splitter",
-        DocumentSplitter(split_by="sentence", split_length=10, split_overlap=2),
+        DocumentSplitter(split_by="word", split_length=200, split_overlap=30),
     )
     p.add_component(
         "embedder",
-        NvidiaDocumentEmbedder(model=embedder_model),
+        NvidiaDocumentEmbedder(model=embedder_model, truncate="END"),
     )
     p.add_component(
         "writer",

@@ -34,6 +34,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
+from nat.data_models.api_server import OAuthModePreferencePayload
 from nat.data_models.api_server import ResponseObservabilityTrace
 from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import ResponseSerializable
@@ -175,31 +176,74 @@ class WebSocketMessageHandler:
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
         pass
 
+    async def _run_preflight_auth(self) -> None:
+        """Authenticate all providers with ``preflight_auth=True`` at WebSocket connect time."""
+        if self._flow_handler is None or not any(cfg.preflight_auth
+                                                 for cfg in self._session_manager.config.authentication.values()):
+            return
+        async with self._session_manager.session(
+                http_connection=self._socket,
+                user_authentication_callback=self._flow_handler.authenticate,
+        ):
+            for name, cfg in self._session_manager.config.authentication.items():
+                if cfg.preflight_auth:
+                    logger.debug("Preflight auth: authenticating provider '%s'", name)
+                    provider = await self._session_manager.shared_builder.get_auth_provider(name)
+                    try:
+                        await provider.authenticate()
+                    except Exception:
+                        logger.exception("Preflight auth failed for provider '%s'", name)
+                        await self._socket.send_json(
+                            Error(
+                                code=ErrorTypes.USER_AUTH_ERROR,
+                                message=f"Preflight authentication failed for provider '{name}'",
+                            ).model_dump())
+
     async def run(self) -> None:
-        """
-        Processes received messages from websocket and routes them appropriately.
-        """
-        while True:
+        """Process received WebSocket messages and route them to their handlers.
 
+        Preflight auth runs concurrently with the receive loop so connection-level messages
+        (e.g. ``oauth_mode_preference``) are handled while a preflight OAuth flow awaits user login.
+        """
+        preflight_task: asyncio.Task = asyncio.create_task(self._run_preflight_auth())
+
+        try:
+            while True:
+
+                try:
+
+                    message: dict[str, Any] = await self._socket.receive_json()
+
+                    validated_message: BaseModel = await self._message_validator.validate_message(message)
+
+                    # Received a request to start a workflow
+                    if (isinstance(validated_message, WebSocketUserMessage)):
+                        await self.process_workflow_request(validated_message)
+
+                    elif (isinstance(validated_message, WebSocketAuthMessage)):
+                        await self._process_auth_message(validated_message)
+
+                    elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
+                        user_content = await self._process_websocket_user_interaction_response_message(validated_message
+                                                                                                       )
+                        assert self._user_interaction is not None
+                        self._user_interaction.future.set_result(user_content)
+                except (asyncio.CancelledError, WebSocketDisconnect):
+                    break
+        finally:
+            # Don't cancel an in-flight preflight flow on loop exit: redirect mode closes this socket
+            # by design (the tab navigates to the provider) and the flow completes via the
+            # /auth/redirect callback. Cancelling would drop its state first, failing the callback
+            # with "Invalid state". Await instead (bounded by auth_timeout_seconds) and propagate a
+            # genuine cancellation into the flow.
             try:
-
-                message: dict[str, Any] = await self._socket.receive_json()
-
-                validated_message: BaseModel = await self._message_validator.validate_message(message)
-
-                # Received a request to start a workflow
-                if (isinstance(validated_message, WebSocketUserMessage)):
-                    await self.process_workflow_request(validated_message)
-
-                elif (isinstance(validated_message, WebSocketAuthMessage)):
-                    await self._process_auth_message(validated_message)
-
-                elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
-                    user_content = await self._process_websocket_user_interaction_response_message(validated_message)
-                    assert self._user_interaction is not None
-                    self._user_interaction.future.set_result(user_content)
-            except (asyncio.CancelledError, WebSocketDisconnect):
-                break
+                await preflight_task
+            except asyncio.CancelledError:
+                preflight_task.cancel()
+                raise
+            except Exception:
+                # _run_preflight_auth reports its own provider failures; log anything that escaped.
+                logger.exception("Preflight auth task failed")
 
     def _extract_last_user_message_content(self, messages: list[UserMessages]) -> TextContent:
         """
@@ -222,7 +266,13 @@ class WebSocketMessageHandler:
         raise ValueError("No user text content found in messages.")
 
     async def _process_auth_message(self, message: WebSocketAuthMessage) -> None:
-        """Resolve user identity from an auth message payload and store the user_id."""
+        """Resolve user identity, or record a non-identity routing hint (OAuth mode)."""
+        if isinstance(message.payload, OAuthModePreferencePayload):
+            from nat.front_ends.fastapi.auth_flow_handlers import websocket_flow_handler
+            if isinstance(self._flow_handler, websocket_flow_handler.WebSocketAuthenticationFlowHandler):
+                self._flow_handler.set_oauth_mode(message.payload.mode)
+            return
+
         try:
             user_info: UserInfo = UserManager._from_auth_payload(message.payload)
             self._user_id = user_info.get_user_id()
@@ -292,10 +342,16 @@ class WebSocketMessageHandler:
                    self._worker.get_conversation_handler(_conversation_id) is self:
                     self._worker.remove_conversation_handler(_conversation_id)
 
+            # Only the *_STREAM schemas stream; others aggregate a single result. Streaming a
+            # non-streaming schema converts chunks to the single output schema and raises.
+            streaming = self._workflow_schema_type in (WorkflowSchemaType.CHAT_STREAM,
+                                                       WorkflowSchemaType.GENERATE_STREAM)
+
             self._running_workflow_task = asyncio.create_task(
                 self._run_workflow(payload=message_content,
                                    user_message_id=self._message_parent_id,
                                    conversation_id=self._conversation_id,
+                                   streaming=streaming,
                                    result_type=self._schema_output_mapping[self._workflow_schema_type],
                                    output_type=self._schema_output_mapping[self._workflow_schema_type]))
             self._running_workflow_task.add_done_callback(_done_callback)
@@ -447,6 +503,7 @@ class WebSocketMessageHandler:
                             payload: typing.Any,
                             user_message_id: str | None = None,
                             conversation_id: str | None = None,
+                            streaming: bool = True,
                             result_type: type | None = None,
                             output_type: type | None = None) -> None:
 
@@ -462,7 +519,7 @@ class WebSocketMessageHandler:
                 self._session_manager._context.metadata._request.payload = self._user_message_payload
                 async for value in generate_streaming_response(payload,
                                                                session=session,
-                                                               streaming=True,
+                                                               streaming=streaming,
                                                                step_adaptor=self._step_adaptor,
                                                                result_type=result_type,
                                                                output_type=output_type):

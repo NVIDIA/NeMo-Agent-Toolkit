@@ -134,7 +134,7 @@ test:python_tests:
       alias: phoenix
       pull_policy: if-not-present
 
-    - name: $CI_REGISTRY_IMAGE/nginx-rewrite-models:20260303
+    - name: $CI_REGISTRY_IMAGE/nginx-rewrite-models:20260529
       alias: nginx-rewrite-models
       pull_policy: if-not-present
 
@@ -326,7 +326,7 @@ package:wheel:
 
 upload:artifactory:
   # Container defined in ci/scripts/gitlab/artifactory/Dockerfile
-  image: $CI_REGISTRY_IMAGE/artifactory:20260413
+  image: $CI_REGISTRY_IMAGE/artifactory:20260702
   stage: upload
   script:
     - echo "Uploading wheel to artifactory"

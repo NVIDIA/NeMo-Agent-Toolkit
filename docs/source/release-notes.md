@@ -18,19 +18,20 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit Release Notes
 This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 
-## Release v1.7.0
+## Release v1.9.0
 ### Summary
 
-* Add AI coding agent skills for NeMo Agent Toolkit
-* Add ATIF trajectory exporter for Phoenix visualization and debugging
-* Add Exa Search API support as internet search tool
-* Add OCI LangChain support for hosted Nemotron workflows
-* ATOF v0.1: Agentic Trajectory Observability Format
-* Add consent-gated runtime telemetry for NeMo Agent Toolkit CLI commands
-* Add Arize AX OTLP exporter, docs, and examples
-* Add token streaming support for ReAct Agent
+* Migrated Redis memory and object store support out of the NeMo Agent Toolkit repository and into the Redis-maintained [`nemo-agent-toolkit-redis`](https://pypi.org/project/nemo-agent-toolkit-redis/) plugin. The `nvidia-nat[redis]` extra, historical `nvidia-nat-redis` distribution, Python imports, and Redis component configuration names remain compatible through the no-code shim. New projects should install the external package directly. The external plugin requires `redis>=5.0.0,<6.0.0`; environments constrained to an earlier Redis Python client must update that constraint. See the [migration guide](./resources/migration-guide.md#redis-package-migration) for details.
 
-Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.7/CHANGELOG.md) for the complete list of changes.
+## Release v1.8.0
+### Summary
+
+* Added Guardrails support
+* Added Experimental coding-agent adapters with NeMo-Relay telemetry
+* Added Microsoft Agent 365 integration plugin
+* Added Windows WSL2 setup instructions
+
+Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.8/CHANGELOG.md) for the complete list of changes.
 
 ## Known Issues
 - Refer to [https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) for an up to date list of current issues.

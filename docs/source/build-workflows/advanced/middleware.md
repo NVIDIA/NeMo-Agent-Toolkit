@@ -39,7 +39,7 @@ Middleware components are first-class components in NeMo Agent Toolkit, configur
 
 **Middleware Chain**: A sequence of middleware that execute in order, forming an "onion" structure where control flows in through preprocessing, down to the function, and back out through postprocessing.
 
-**Final Middleware**: A special middleware marked with `is_final=True` that can terminate the chain. Only one final middleware is allowed per function, and it must be the last in the chain.
+**Final Middleware**: A middleware marked with `is_final=True` that acts as the terminal point in the chain. Only one final middleware is allowed per function and it must be the last — placing it in any other position, or listing more than one, raises a `ValueError` at build time. At runtime, the base implementation does not call `call_next` unless the subclass overrides the invoke method to call it explicitly.
 
 ## Component-Based Architecture
 
@@ -84,7 +84,7 @@ Create a configuration class inheriting from `DynamicMiddlewareConfig`:
 
 ```python
 from pydantic import Field
-from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
+from nat.plugin_api import DynamicMiddlewareConfig
 
 
 class LoggingMiddlewareConfig(DynamicMiddlewareConfig, name="logging_middleware"):
@@ -168,8 +168,8 @@ Create the middleware class inheriting from `DynamicFunctionMiddleware`:
 ```python
 import logging
 
-from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
-from nat.middleware.middleware import InvocationContext
+from nat.plugin_api import DynamicFunctionMiddleware
+from nat.plugin_api import InvocationContext
 
 logger = logging.getLogger(__name__)
 
@@ -244,8 +244,8 @@ Key benefits of extending `DynamicFunctionMiddleware`:
 Create a registration module following the idiomatic pattern:
 
 ```python
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_middleware
+from nat.plugin_api import Builder
+from nat.plugin_api import register_middleware
 from .logging_middleware import LoggingMiddleware, LoggingMiddlewareConfig
 
 
@@ -289,8 +289,8 @@ functions:
 Register your function without needing to specify middleware in the decorator:
 
 ```python
-from nat.cli.register_workflow import register_function
-from nat.builder.builder import Builder
+from nat.plugin_api import register_function
+from nat.plugin_api import Builder
 
 
 @register_function(config_type=MyAPIFunctionConfig)
@@ -404,6 +404,180 @@ Timeout middleware extends `DynamicFunctionMiddleware`, enabling interception of
 - **Streaming**: Enforces the time limit across the entire stream duration, not per-chunk
 - **Error handling**: Raises `TimeoutError` with the configured `timeout_message`
 
+### HITL Middleware
+
+The HITL (Human-in-the-Loop) middleware (`HITLMiddleware`) is an abstract base class for intercept patterns that require a human decision before or after a function call. It integrates directly with the `UserInteractionManager` to display any configured `HumanPrompt` at two points in the function lifecycle: before the call (`pre_invoke`) and after it returns (`post_invoke`). Each phase delegates the handling of the human response to two abstract methods that subclasses must implement, leaving the decision logic entirely to the implementer.
+
+`HITLMiddleware` is abstract and cannot be used directly. To use it, create a concrete subclass, pair it with a config class that declares a `name`, and register it with `@register_middleware`. The declared name becomes the `_type` value used in workflow YAML.
+
+#### Abstract interface
+
+Both abstract methods receive the `InteractionResponse` from the user and the current `InvocationContext`. They return `InvocationContext | None`:
+
+- **`_on_pre_invoke_response(response, context)`**: Called after the pre-invoke prompt is answered. Return `None` to proceed with the call unchanged. To skip the call entirely, set `context.action = InvocationAction.SKIP` and return `context`. To modify arguments, update `context.modified_args` and return `context`.
+- **`_on_post_invoke_response(response, context)`**: Called after the post-invoke prompt is answered. Return `None` to accept the output as-is. To replace or clear the output, update `context.output` and return `context`.
+
+#### Configuration
+
+`HITLMiddlewareConfig` is the base configuration class. It has no YAML `_type` of its own — because `HITLMiddleware` is abstract, concrete subclasses must declare their own `name` to be runnable. It provides two prompt fields and inherits all function-targeting fields from `DynamicMiddlewareConfig`.
+
+- **`pre_invoke_prompt`**: Any `HumanPrompt` to display before the function is called. Omit or set to `null` to disable pre-invoke interaction.
+- **`post_invoke_prompt`**: Any `HumanPrompt` to display after the function returns. Omit or set to `null` to disable post-invoke interaction.
+- **`register_workflow_functions`**, **`register_llms`**, and explicit component lists control which functions are intercepted (inherited from `DynamicMiddlewareConfig`).
+
+A workflow using a custom HITL middleware looks like this (using `name="my_hitl"` as the declared type):
+
+```yaml
+middleware:
+  my_tools_hitl:
+    _type: my_hitl
+    pre_invoke_prompt:
+      input_type: text
+      text: "Approve this call?"
+    post_invoke_prompt:
+      input_type: binary_choice
+      text: "Accept this result?"
+      options:
+        - id: continue
+          label: Accept
+          value: continue
+        - id: cancel
+          label: Reject
+          value: cancel
+    register_workflow_functions: true
+```
+
+#### Implementing a custom HITL middleware
+
+Subclass `HITLMiddleware` to implement the decision logic. Subclass `HITLMiddlewareConfig` with a new `name` only when you need a distinct `_type`:
+
+```python
+from nat.plugin_api import HITLMiddleware
+from nat.plugin_api import HITLMiddlewareConfig
+from nat.plugin_api import InteractionResponse
+from nat.plugin_api import InvocationAction
+from nat.plugin_api import InvocationContext
+
+
+class MyHITLConfig(HITLMiddlewareConfig, name="my_hitl"):
+    pass
+
+
+class MyHITLMiddleware(HITLMiddleware):
+
+    async def _on_pre_invoke_response(
+        self, response: InteractionResponse, context: InvocationContext
+    ) -> InvocationContext | None:
+        # Return None to proceed, or set context.action = InvocationAction.SKIP to bypass.
+        ...
+
+    async def _on_post_invoke_response(
+        self, response: InteractionResponse, context: InvocationContext
+    ) -> InvocationContext | None:
+        # Return None to keep the output, or update context.output to replace it.
+        ...
+```
+
+#### Registering
+
+Register the concrete subclass with `@register_middleware`, binding it to the config class. The `name` declared on the config class becomes the `_type` value in YAML:
+
+```python
+from nat.plugin_api import Builder, register_middleware
+
+
+@register_middleware(config_type=MyHITLConfig)
+async def my_hitl_middleware(config: MyHITLConfig, builder: Builder):
+    yield MyHITLMiddleware(config=config, builder=builder)
+```
+
+#### Behavior
+
+- **Single invocations**: `pre_invoke` runs once before the function is called; `post_invoke` runs once after it returns.
+- **Streaming**: `pre_invoke` runs once before the stream starts. `post_invoke` is called once per yielded chunk, with `context.output` set to the individual chunk value. If `pre_invoke` sets `InvocationAction.SKIP`, streaming stops immediately and no chunks are yielded.
+
+### Guardrails Middleware
+
+The Guardrails middleware (`_type: guardrails`) hosts [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) as a policy engine at function input and output boundaries. It is provided by the `nvidia-nat-security` plugin; install it with `nvidia-nat-security[guardrails]`. Input rails run on `pre_invoke` (function arguments) and output rails run on `post_invoke` (function output). The middleware operates on strings only.
+
+#### Selecting what to guard
+
+The `workflow_functions` field selects which functions are intercepted and, optionally, which string fields on each are sent to the rail:
+
+```yaml
+middleware:
+  # List form: guard each listed function on every top-level string field of
+  # its input (pre) and output (post).
+  workflow_guardrails:
+    _type: guardrails
+    workflow_functions:
+      - my_tool
+    guardrails: { ... }   # NeMo Guardrails policy
+
+  # Mapping form: guard only the named string fields.
+  product_guardrails:
+    _type: guardrails
+    workflow_functions:
+      retail_tools__get_product_info:
+        reviews:
+          - review        # Product.reviews[].review (nested list fan-out)
+        description: []   # Product.description (top-level scalar; empty list = the field itself)
+    guardrails: { ... }
+```
+
+- **List form / no field selection** — every top-level string field of the input (`pre_invoke`) and output (`post_invoke`) is guarded, each in its own rail call; a top-level `list[str]` field fans out per element. A bare string value is guarded as a whole. Nested models and lists of models are not descended — use the mapping form to reach those.
+- **Mapping form** — only the listed string fields are guarded. Dotted paths (`reviews.review`) traverse nested Pydantic models; list fields fan out so each string element is evaluated in its own rail call. NeMo Agent Toolkit unwraps a single Pydantic-model argument into the input schema, so that model's fields are the top-level field names (no wrapper argument name to key on).
+
+#### Per-leaf processing
+
+Each selected string is evaluated independently:
+
+- **Input rails (`pre_invoke`)** — *PASS* leaves the argument unchanged; *MODIFY* writes the rewritten string back into the original argument structure (siblings untouched); *BLOCK* skips the function call and returns the refusal message.
+- **Output rails (`post_invoke`)** — *PASS* returns the original output; *MODIFY* writes the rewritten string back in place and returns the structurally-preserved output; *BLOCK* returns the NeMo Guardrails refusal string.
+
+#### Field-path validation
+
+Configured field paths are validated at function registration (the earliest point the function schema is known), against the function's input *or* output schema. A path that names a field that does not exist, or that resolves to a non-string field, raises a `ValueError` immediately rather than silently guarding nothing. A valid path whose runtime data is empty (for example, an empty `reviews` list) is a no-op.
+
+#### One middleware per function
+
+NeMo Guardrails sequences its own rails internally (all input rails, then all output rails, within a single `LLMRails` instance). Attach a **single** `guardrails` middleware to a given function and list every rail it needs inside that instance. Do **not** chain multiple `guardrails` middleware onto the same function: the outer instance would re-evaluate the inner instance's already-blocked refusal string, wasting rail calls and obscuring which rail blocked.
+
+A custom subclass of `GuardrailsMiddleware` can be marked as *final* so that when it runs, `call_next` invokes the intercepted function directly — not another middleware:
+
+```python
+class ConcreteGuardrailsMiddleware(GuardrailsMiddleware):
+    def __init__(self, config: GuardrailsMiddlewareConfig, builder: Builder) -> None:
+        ...
+        super().__init__(config, builder, is_final=True)
+```
+
+
+#### Streaming output rails
+
+By default (`stream_output_rails: false`), a streaming function's output is fully buffered, evaluated by the output rails as a single payload, and then emitted. This is the safe default because most output rails need the complete text to decide.
+
+Set `stream_output_rails: true` to apply output rails token-by-token as the stream is produced (via `LLMRails.stream_async()`) instead of buffering:
+
+```yaml
+middleware:
+  workflow_guardrails:
+    _type: guardrails
+    stream_output_rails: true
+    workflow_functions:
+      - my_streaming_tool
+    guardrails: { ... }   # Colang policy must set rails.output.streaming.enabled: true
+```
+
+This option has two requirements:
+
+- The Colang policy must enable streaming output rails (`rails.output.streaming.enabled: true`); otherwise no output rails run on the stream.
+- It is **incompatible with the mapping form** of `workflow_functions` (per-field selection). Use it only when `workflow_functions` is a list of function names or omitted entirely. Configuring both raises a `ValueError` at config load.
+
+When a streaming rail blocks, the block is surfaced through `on_post_invoke_blocked` (the rail's message replaces the remainder of the stream).
+
+For a complete, runnable configuration (PII masking, content safety, jailbreak heuristics, and a self-check output policy across tool and workflow boundaries), see the retail agent example at `examples/safety_and_security/retail_agent/README.md`.
+
 ## Advanced Patterns
 
 ### Accessing the Builder
@@ -429,6 +603,9 @@ async def caching_middleware(config: CachingMiddlewareConfig, builder: Builder):
 Final middleware can short-circuit execution:
 
 ```python
+from nat.plugin_api import FunctionMiddleware
+from nat.plugin_api import FunctionMiddlewareBaseConfig
+
 class ValidationMiddlewareConfig(FunctionMiddlewareBaseConfig, name="validation"):
     strict_mode: bool = Field(default=True)
 
@@ -521,9 +698,9 @@ function_groups:
 ```
 
 ```python
-from nat.cli.register_workflow import register_function_group
-from nat.builder.function import FunctionGroup
-from nat.data_models.function import FunctionGroupBaseConfig
+from nat.plugin_api import register_function_group
+from nat.plugin_api import FunctionGroup
+from nat.plugin_api import FunctionGroupBaseConfig
 
 
 class WeatherAPIGroupConfig(FunctionGroupBaseConfig, name="weather_api_group"):
@@ -603,7 +780,8 @@ Test middleware in isolation:
 ```python
 import pytest
 from unittest.mock import MagicMock
-from nat.middleware.middleware import FunctionMiddlewareContext, InvocationContext
+from nat.plugin_api import FunctionMiddlewareContext
+from nat.plugin_api import InvocationContext
 
 
 @pytest.mark.asyncio
@@ -823,12 +1001,12 @@ Solution: Ensure the register module is imported. NeMo Agent Toolkit automatical
 
 ## API Reference
 
-- {py:class}`~nat.middleware.function_middleware.FunctionMiddleware`: Base class
-- {py:class}`~nat.middleware.function_middleware.FunctionMiddlewareContext`: Context info
+- {py:class}`~nat.plugin_api.FunctionMiddleware`: Base class
+- {py:class}`~nat.plugin_api.FunctionMiddlewareContext`: Context info
 - {py:class}`~nat.middleware.function_middleware.FunctionMiddlewareChain`: Chain management
 - {py:class}`~nat.middleware.cache.cache_middleware_config.CacheMiddlewareConfig`: Cache configuration
 - {py:class}`~nat.middleware.cache.cache_middleware.CacheMiddleware`: Cache implementation
-- {py:func}`~nat.cli.register_workflow.register_middleware`: Registration decorator
+- {py:func}`~nat.plugin_api.register_middleware`: Registration decorator
 
 ## See Also
 

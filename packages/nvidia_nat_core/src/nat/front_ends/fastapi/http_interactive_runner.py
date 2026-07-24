@@ -320,6 +320,7 @@ class HTTPInteractiveRunner:
         step_adaptor: StepAdaptor,
         result_type: type | None = None,
         output_type: type | None = None,
+        wrap_output_in_payload: bool = False,
     ) -> AsyncGenerator[str]:
         """
         Async generator that yields SSE ``data:`` / ``event:`` lines.
@@ -336,7 +337,8 @@ class HTTPInteractiveRunner:
                     streaming=streaming,
                     step_adaptor=step_adaptor,
                     result_type=result_type,
-                    output_type=output_type, ),
+                    output_type=output_type,
+                    wrap_output_in_payload=wrap_output_in_payload, ),
                 error_log_message="Interactive streaming execution failed",
                 passthrough_str_items=False):
             yield chunk

@@ -19,7 +19,6 @@ import pytest
 from nat_app.compiler.compilation_context import CompilationContext
 from nat_app.graph.types import Graph
 from nat_app.stages.edge_classification import EdgeClassificationStage
-from tests.conftest import make_node as _node
 
 
 class TestEdgeClassificationStage:
@@ -36,14 +35,14 @@ class TestEdgeClassificationStage:
         ],
         ids=["necessary", "unnecessary"],
     )
-    def test_edge_classification(self, b_reads, expected_set):
+    def test_edge_classification(self, make_node, b_reads, expected_set):
         g = Graph()
         g.add_node("a")
         g.add_node("b")
         g.add_edge("a", "b")
         analyses = {
-            "a": _node("a", writes={"x"}),
-            "b": _node("b", reads=b_reads),
+            "a": make_node("a", writes={"x"}),
+            "b": make_node("b", reads=b_reads),
         }
         ctx = CompilationContext(
             compiled=None,
@@ -57,12 +56,12 @@ class TestEdgeClassificationStage:
         ctx = stage.apply(ctx)
         assert ("a", "b") in ctx.metadata[expected_set]
 
-    def test_writes_all_metadata(self):
+    def test_writes_all_metadata(self, make_node):
         g = Graph()
         g.add_node("a")
         g.add_node("b")
         g.add_edge("a", "b")
-        analyses = {"a": _node("a"), "b": _node("b")}
+        analyses = {"a": make_node("a"), "b": make_node("b")}
         ctx = CompilationContext(
             compiled=None,
             metadata={

@@ -91,6 +91,37 @@ async def test_tool_error_handling():
 
 ## Advanced Usage
 
+### Testing Function Groups
+
+Use `test_function_group` to validate the tools exposed by a function group, and `test_function_group_tool` to invoke one
+tool from the group without creating a full workflow:
+
+```python
+from nat.test import ToolTestRunner
+from my_search_provider.register import SearchGroupConfig
+
+
+async def test_search_group_exposes_tools():
+    runner = ToolTestRunner()
+
+    await runner.test_function_group(
+        config_type=SearchGroupConfig,
+        expected_functions=["search__query", "search__extract"]
+    )
+
+
+async def test_search_group_query_tool():
+    runner = ToolTestRunner()
+
+    result = await runner.test_function_group_tool(
+        config_type=SearchGroupConfig,
+        function_name="query",
+        input_kwargs={"query": "latest CUDA release"},
+    )
+
+    assert "results" in result
+```
+
 ### Testing Tools with Dependencies
 
 For tools that depend on [LLMs](../../build-workflows/llms/index.md), [memory](../../build-workflows/memory.md), [retrievers](../../build-workflows/retrievers.md), or other components, use the mocked dependencies context:

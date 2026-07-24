@@ -18,6 +18,11 @@ limitations under the License.
 # React Benchmark Agent - Developer Notes
 
 > [!NOTE]
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.1.0**, where `dynamo.sglang` rejects `--schedule-low-priority-values-first` and normalizes request priority so higher values are higher priority. Earlier releases use different priority semantics. (End-to-end tested against the NGC `sglang-runtime` 1.1.1 and 1.2.1 images; no stable 1.3.0 is published yet.)
+
+> [!NOTE]
 > This document details the source code implementation of the React Benchmark Agent, explaining how configuration files map to underlying components, evaluators, and workflows.
 >
 > For **setup instructions, running evaluations, and troubleshooting**, see the [Evaluation Guide](../../README.md).
@@ -203,7 +208,7 @@ class ReactBenchmarkAgentFunctionConfig(FunctionBaseConfig, name="react_benchmar
 
 - Loads tool schemas from `data/raw/banking/tools.json`
 - Creates stub functions for each tool via `create_tool_stub_function()`
-- Registers them as a function group accessible by `banking_tools.<tool_name>`
+- Registers them as a function group accessible by `banking_tools__<tool_name>`
 
 **`tool_intent_stubs.py`** (lines 79-136)
 
@@ -511,4 +516,3 @@ def calculate_tool_accuracy(actual, expected):
 **File:** `evaluators/action_completion_evaluator.py`
 
 The AC evaluator measures whether the agent addressed all user goals.
-

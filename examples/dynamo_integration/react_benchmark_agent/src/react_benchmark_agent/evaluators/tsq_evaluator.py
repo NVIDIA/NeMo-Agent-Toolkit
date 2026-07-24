@@ -150,7 +150,7 @@ async def tsq_evaluator_function(config: TSQEvaluatorConfig, builder: EvalBuilde
         Handles:
         - Case normalization (lowercase)
         - Underscore and dash removal
-        - Module prefix stripping (e.g., 'banking_tools.report_lost_stolen_card' -> 'reportloststolencard')
+        - Module prefix stripping (e.g., 'banking_tools__report_lost_stolen_card' -> 'reportloststolencard')
 
         Args:
             tool_name: Raw tool name from trajectory or expected list
@@ -161,7 +161,7 @@ async def tsq_evaluator_function(config: TSQEvaluatorConfig, builder: EvalBuilde
         if not tool_name:
             return ""
 
-        # Strip module prefix (e.g., "banking_tools.report_lost_stolen_card" -> "report_lost_stolen_card")
+        # Strip module prefix (e.g., "banking_tools__report_lost_stolen_card" -> "report_lost_stolen_card")
         if FunctionGroup.SEPARATOR in tool_name:
             _, tool_name = FunctionGroup.decompose(tool_name)
 

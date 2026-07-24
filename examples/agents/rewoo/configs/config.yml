@@ -24,17 +24,18 @@ llms:
 function_groups:
   calculator:
     _type: calculator
+  internet_search:
+    _type: tavily
+    include: [search]
 
 functions:
-  internet_search:
-    _type: tavily_internet_search
   haystack_chitchat_agent:
     _type: haystack_chitchat_agent
     llm_name: nvidia/nemotron-mini-4b-instruct
 
 workflow:
   _type: rewoo_agent
-  tool_names: [calculator, internet_search, haystack_chitchat_agent]
+  tool_names: [calculator, internet_search__search, haystack_chitchat_agent]
   llm_name: nim_llm
   verbose: true
   tool_call_max_retries: 3
