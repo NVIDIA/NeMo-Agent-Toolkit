@@ -132,6 +132,7 @@ def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
     """Determine if a Pydantic field is optional and extract its default value for MCP signatures.
 
     For MCP tool signatures, we need to distinguish:
+
     - Required fields: marked with Parameter.empty
     - Optional with concrete default: use that default
     - Optional with factory: omit the signature default; the annotated field uses
