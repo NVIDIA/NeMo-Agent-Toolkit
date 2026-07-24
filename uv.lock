@@ -5897,11 +5897,11 @@ requires-dist = [
 name = "nat-react-benchmark-agent"
 source = { editable = "examples/dynamo_integration/react_benchmark_agent" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["eval", "langchain", "profiler", "test"] },
+    { name = "nvidia-nat", extra = ["config-optimizer", "eval", "langchain", "profiler", "test"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "profiler", "test"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["config-optimizer", "eval", "langchain", "profiler", "test"], editable = "." }]
 
 [[package]]
 name = "nat-redis-example"
