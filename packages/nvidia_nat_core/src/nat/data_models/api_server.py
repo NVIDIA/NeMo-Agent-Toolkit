@@ -45,6 +45,7 @@ class UserMessageContentRoleType(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
+    TOOL = "tool"
 
 
 class Request(BaseModel):
@@ -114,8 +115,23 @@ UserContent = typing.Annotated[TextContent | ImageContent | AudioContent, Discri
 
 
 class Message(BaseModel):
-    content: str | list[UserContent]
+    model_config = ConfigDict(extra="allow")
+
+    content: str | list[UserContent] | None
     role: UserMessageContentRoleType
+    tool_calls: list[dict[str, typing.Any]] | None = None
+    tool_call_id: str | None = None
+
+    @model_validator(mode="after")
+    def validate_content(self):
+        if self.content is not None:
+            return self
+
+        if self.role == UserMessageContentRoleType.ASSISTANT:
+            if self.tool_calls or (self.model_extra and self.model_extra.get("function_call")):
+                return self
+
+        raise ValueError("content may be null only for assistant messages with tool_calls or function_call")
 
 
 class ChatRequest(BaseModel):
@@ -720,6 +736,13 @@ class AuthMethod(StrEnum):
     JWT = "jwt"
     API_KEY = "api_key"
     BASIC = "basic"
+    OAUTH_MODE_PREFERENCE = "oauth_mode_preference"
+
+
+class OAuthMode(StrEnum):
+    """How the UI presents the OAuth login page."""
+    REDIRECT = "redirect"
+    POPUP = "popup"
 
 
 class JwtAuthPayload(BaseModel):
@@ -744,8 +767,20 @@ class BasicAuthPayload(BaseModel):
     password: SerializableSecretStr = Field(min_length=1, description="Password for basic authentication.")
 
 
+class OAuthModePreferencePayload(BaseModel):
+    """UI-declared preference for how the OAuth login page is opened.
+
+    This is a routing hint, not a credential: it carries no identity and does
+    not resolve a ``user_id``.
+    """
+    model_config = ConfigDict(extra="forbid")
+    method: typing.Literal[AuthMethod.OAUTH_MODE_PREFERENCE] = Field(
+        description="Authentication message discriminator.")
+    mode: OAuthMode = Field(description="Preferred OAuth login presentation mode.")
+
+
 AuthPayload = typing.Annotated[
-    JwtAuthPayload | ApiKeyAuthPayload | BasicAuthPayload,
+    JwtAuthPayload | ApiKeyAuthPayload | BasicAuthPayload | OAuthModePreferencePayload,
     Discriminator("method"),
 ]
 
@@ -905,9 +940,12 @@ GlobalTypeConverter.register_converter(_generate_response_to_chat_response)
 
 # ======== ChatRequest Converters ========
 def _nat_chat_request_to_string(data: ChatRequest) -> str:
-    if isinstance(data.messages[-1].content, str):
-        return data.messages[-1].content
-    return str(data.messages[-1].content)
+    content = data.messages[-1].content
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    return str(content)
 
 
 GlobalTypeConverter.register_converter(_nat_chat_request_to_string)

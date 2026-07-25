@@ -16,9 +16,12 @@
 import pytest
 from langchain_core.agents import AgentAction
 from langchain_core.agents import AgentFinish
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.tool import ToolMessage
+from langchain_core.outputs import ChatGeneration
+from langchain_core.outputs import ChatResult
 from langgraph.graph.state import CompiledStateGraph
 
 from nat.plugins.langchain.agent.base import AgentDecision
@@ -34,6 +37,33 @@ from nat.plugins.langchain.agent.react_agent.output_parser import ReActAgentPars
 from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParser
 from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParserException
 from nat.plugins.langchain.agent.react_agent.register import ReActAgentWorkflowConfig
+
+
+class _ListContentChatModel(BaseChatModel):
+    """Fake chat model that returns list-style content blocks.
+
+    Anthropic models, including via AWS Bedrock (``ChatBedrockConverse``), return
+    message content as a list of typed blocks (for example
+    ``[{"type": "text", "text": "..."}]``) instead of a plain string. This fake
+    reproduces that shape so the ReAct graph can be exercised against it.
+    """
+
+    blocks: list
+
+    async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG002
+        message = AIMessage(content=list(self.blocks), response_metadata={"mock_llm_response": True})
+        return ChatResult(generations=[ChatGeneration(message=message)])
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG002
+        message = AIMessage(content=list(self.blocks), response_metadata={"mock_llm_response": True})
+        return ChatResult(generations=[ChatGeneration(message=message)])
+
+    def bind_tools(self, tools, **kwargs):  # noqa: ARG002
+        return self
+
+    @property
+    def _llm_type(self) -> str:
+        return "list-content-mock-llm"
 
 
 async def test_state_schema():
@@ -241,6 +271,51 @@ async def test_agent_node_parse_agent_finish_with_action_and_input_after_max_ret
     final_answer = final_answer.messages[-1]
     assert isinstance(final_answer, AIMessage)
     assert FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in final_answer.content
+
+
+async def test_agent_node_flattens_list_style_final_answer(mock_config_react_agent, mock_tool):
+    """Regression: Anthropic/Bedrock list-style content must be flattened, not crash the parser.
+
+    ``ChatBedrockConverse`` returns message content as a list of typed blocks. Previously
+    ``agent_node`` passed that list straight into ``remove_r1_think_tags`` and
+    ``ReActOutputParser`` raising "TypeError: expected string or bytes-like object, got
+    'list'". The agent must flatten the content to text and return the parsed final answer.
+    """
+    blocks = [{"type": "text", "text": "Thought: I know it.\nFinal Answer: block answer"}]
+    llm = _ListContentChatModel(blocks=blocks)
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=llm, prompt=prompt, tools=tools, detailed_logs=True, raise_on_parsing_failure=True)
+
+    state = await agent.agent_node(ReActGraphState(messages=[HumanMessage(content="what is the answer?")]))
+
+    assert state.final_answer == "block answer"
+    assert isinstance(state.messages[-1], AIMessage)
+    assert state.messages[-1].content == "block answer"
+
+
+async def test_agent_node_flattens_list_style_tool_call(mock_config_react_agent, mock_tool):
+    """Regression: list-style content on a tool-calling step must yield a string scratchpad log.
+
+    The agent's thoughts are stored on ``AgentAction.log`` for the next cycle. With list
+    content this previously became a stringified list; it must be flattened to text so the
+    scratchpad replayed to the LLM is clean.
+    """
+    blocks = [{"type": "text", "text": "Thought: use the tool\nAction: Tool A\nAction Input: hello, world!\n"}]
+    llm = _ListContentChatModel(blocks=blocks)
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=llm, prompt=prompt, tools=tools, detailed_logs=True, raise_on_parsing_failure=True)
+
+    state = await agent.agent_node(ReActGraphState(messages=[HumanMessage(content="please use a tool")]))
+
+    assert len(state.agent_scratchpad) == 1
+    action = state.agent_scratchpad[-1]
+    assert isinstance(action, AgentAction)
+    assert action.tool == "Tool A"
+    assert action.tool_input == "hello, world!"
+    assert isinstance(action.log, str)
+    assert "Action: Tool A" in action.log
 
 
 async def test_agent_node_parse_agent_finish_with_action_and_input_after_retry(mock_react_agent_no_raise):

@@ -20,7 +20,11 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source ${SCRIPT_DIR}/common.sh
 
 set +e
-pre-commit run --all-files --show-diff-on-failure
+if [[ "${IS_PULL_REQUEST}" == "true" ]]; then
+   pre-commit run --from-ref "${BASE_SHA}" --to-ref "${COMMIT_SHA}" --show-diff-on-failure
+else
+   pre-commit run --all-files --show-diff-on-failure
+fi
 PRE_COMMIT_RETVAL=$?
 
 echo "Checking copyright headers"

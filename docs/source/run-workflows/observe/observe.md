@@ -77,9 +77,10 @@ The following table lists each exporter with its supported features and configur
 | [Galileo](https://galileo.ai/) | [Observing with Galileo](?provider=Galileo#provider-integration-guides){.external} | Logging, Tracing |
 | [Langfuse](https://langfuse.com/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
 | [LangSmith](https://www.langchain.com/langsmith) | [Observing with LangSmith](?provider=LangSmith#provider-integration-guides){.external} | Logging, Tracing, Evaluation Metrics |
+| [MLflow](https://mlflow.org/docs/latest/tracing/) | [Observing with MLflow](?provider=MLflow#provider-integration-guides){.external} | Logging, Tracing |
 | [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) | [Observing with OTel Collector](?provider=OTel-collector#provider-integration-guides){.external} | Logging, Tracing |
 | [Patronus](https://www.patronus.ai/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
-| [Phoenix](https://phoenix.arize.com/) | [Observing with Phoenix](?provider=Phoenix#provider-integration-guides){.external} | Logging, Tracing |
+| [Phoenix](http://arize.com/phoenix/) | [Observing with Phoenix](?provider=Phoenix#provider-integration-guides){.external} | Logging, Tracing |
 | [W&B Weave](https://wandb.ai/site/weave/) | [Observing with W&B Weave](?provider=Wandb-Weave#provider-integration-guides){.external} | Logging, Tracing, W&B Weave Redaction, Evaluation Metrics |
 
 Additional options:
@@ -227,6 +228,12 @@ For complete information about developing and integrating custom telemetry expor
 
   :::
 
+  :::{tab-item} MLflow
+  :sync: MLflow
+
+    :::{include} ./observe-workflow-with-mlflow.md
+  :::
+
   :::{tab-item} OTel Collector
   :sync: OTel-collector
 
@@ -307,3 +314,21 @@ Context.get().intermediate_step_manager.push_intermediate_steps(remote_intermedi
 ```
 
 This is useful when you call a remote workflow and want its steps to appear under the trace of the current workflow in your observability backend, so you get one connected tree for the full request.
+
+## Deterministic Identifiers and Timestamps
+
+The runtime stamps workflow runs, intermediate steps, spans, and function invocations with generated identifiers (`uuid.uuid4`) and wall-clock timestamps (`time.time`). For reproducible runs — for example, record or replay style tests, golden-file trace comparison, or runtimes that re-execute workflow code and need identifiers to remain stable across re-executions — install process-wide providers that the runtime uses instead:
+
+```python
+import itertools
+import uuid
+
+from nat.utils.providers import set_id_provider
+from nat.utils.providers import set_time_provider
+
+counter = itertools.count(1)
+previous_id_provider = set_id_provider(lambda: str(uuid.uuid5(uuid.NAMESPACE_OID, f"my-run-{next(counter)}")))
+previous_time_provider = set_time_provider(lambda: 1700000000.0)
+```
+
+The id provider must return canonical `UUID` strings. Integer identifiers, such as the OpenTelemetry-style trace and span ids, are derived from the id provider by parsing the returned value. Both hooks default to `uuid.uuid4` and `time.time`, and each setter returns the previously installed provider so it can be restored. When no provider is installed, behavior is unchanged.

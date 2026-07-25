@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import socket
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
@@ -23,10 +25,12 @@ from httpx import ASGITransport
 from mock_oauth2_server import MockOAuth2Server
 
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.data_models.api_server import ErrorTypes
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.config import Config
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 from nat.test.functions import EchoFunctionConfig
 
 
@@ -37,6 +41,23 @@ def _free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
+
+
+async def _noop_async(*_args, **_kwargs):
+    return None
+
+
+class _FakeMessageHandler:
+    """Minimal stand-in for the WebSocket message handler."""
+
+    def __init__(self):
+        self.messages: list = []
+
+    def set_flow_handler(self, _):
+        return
+
+    async def create_websocket_message(self, msg):
+        self.messages.append(msg)
 
 
 class _AuthHandler(WebSocketAuthenticationFlowHandler):
@@ -107,6 +128,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
 
     # ----------------- dummy WebSocket “UI” handler --------------------- #
     opened: list[str] = []
+    received_messages: list = []
 
     class _DummyWSHandler:  # minimal stand‑in for the UI layer
 
@@ -115,6 +137,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
 
         async def create_websocket_message(self, msg):
             opened.append(msg.text)  # record the auth URL
+            received_messages.append(msg)
 
             # 1) ── Hit /oauth/authorize on the mock server ─────────── #
             async with httpx.AsyncClient(
@@ -171,8 +194,113 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
     token_val = ctx.headers["Authorization"].split()[1]
     assert token_val in mock_server.tokens, "token not issued by mock server"
 
-    # all flow‑state cleaned up
+    # all flow-state cleaned up
     assert worker._outstanding_flows == {}
+
+
+# --------------------------------------------------------------------------- #
+# return_url propagation test                                                 #
+# --------------------------------------------------------------------------- #
+@pytest.mark.usefixtures("set_nat_config_file_env_var")
+async def test_websocket_oauth2_flow_no_popup(monkeypatch, mock_server, tmp_path):
+    """Verify that a configured return_url is propagated into FlowState."""
+
+    redirect_port = _free_port()
+
+    mock_server.register_client(
+        client_id="cid",
+        client_secret="secret",
+        redirect_base=f"http://localhost:{redirect_port}",
+    )
+
+    cfg_nat = Config(workflow=EchoFunctionConfig())
+    worker = FastApiFrontEndPluginWorker(cfg_nat)
+    add_flow = worker._add_flow
+    remove_flow = worker._remove_flow
+
+    received_messages: list = []
+    captured_flow_states: list = []
+
+    class _DummyWSHandler:
+
+        def set_flow_handler(self, _):
+            return
+
+        async def create_websocket_message(self, msg):
+            received_messages.append(msg)
+
+            async with httpx.AsyncClient(
+                    transport=ASGITransport(app=mock_server._app),
+                    base_url="http://testserver",
+                    follow_redirects=False,
+                    timeout=10,
+            ) as client:
+                r = await client.get(msg.text)
+                assert r.status_code == 302
+                redirect_url = r.headers["location"]
+
+            qs = parse_qs(urlparse(redirect_url).query)
+            code = qs["code"][0]
+            state = qs["state"][0]
+
+            flow_state = worker._outstanding_flows[state]
+            captured_flow_states.append(flow_state)
+            token = await flow_state.client.fetch_token(
+                url=flow_state.config.token_url,
+                code=code,
+                code_verifier=flow_state.verifier,
+                state=state,
+            )
+            flow_state.future.set_result(token)
+
+    ws_handler = _AuthHandler(
+        oauth_server=mock_server,
+        add_flow_cb=add_flow,
+        remove_flow_cb=remove_flow,
+        web_socket_message_handler=_DummyWSHandler(),
+        return_url="http://localhost:3000",
+    )
+
+    cfg_flow = OAuth2AuthCodeFlowProviderConfig(
+        client_id="cid",
+        client_secret="secret",
+        authorization_url="http://testserver/oauth/authorize",
+        token_url="http://testserver/oauth/token",
+        scopes=["read"],
+        use_pkce=True,
+        redirect_uri=f"http://localhost:{redirect_port}/auth/redirect",
+    )
+
+    monkeypatch.setattr("click.echo", lambda *_: None, raising=True)
+
+    ctx = await ws_handler.authenticate(cfg_flow, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
+
+    assert received_messages, "The authorization URL was never emitted."
+    assert captured_flow_states[0].return_url == "http://localhost:3000"
+    token_val = ctx.headers["Authorization"].split()[1]
+    assert token_val in mock_server.tokens, "token not issued by mock server"
+    assert worker._outstanding_flows == {}
+
+
+# --------------------------------------------------------------------------- #
+# set_oauth_mode                                                              #
+# --------------------------------------------------------------------------- #
+def test_set_oauth_mode_updates_current_flow(monkeypatch):
+    from nat.data_models.api_server import OAuthMode
+    from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
+    from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
+
+    handler = WebSocketAuthenticationFlowHandler(add_flow_cb=_noop_async,
+                                                 remove_flow_cb=_noop_async,
+                                                 web_socket_message_handler=_FakeMessageHandler(),
+                                                 return_url="https://ui.example")
+    flow = FlowState()
+    handler._current_flow_state = flow
+
+    handler.set_oauth_mode(OAuthMode.POPUP)
+
+    assert handler._oauth_mode is OAuthMode.POPUP
+    assert flow.oauth_mode is OAuthMode.POPUP
 
 
 # --------------------------------------------------------------------------- #
@@ -223,3 +351,141 @@ async def test_websocket_oauth2_flow_error_handling(monkeypatch, mock_server, tm
     # Verify timeout RuntimeError is raised (demonstrates partial error handling)
     error_message = str(exc_info.value)
     assert "Authentication flow timed out" in error_message
+
+
+# ---------------------------------------------------------------------------
+# WebSocketMessageHandler - preflight authentication
+# ---------------------------------------------------------------------------
+
+
+def _preflight_provider_cfg(preflight_auth: bool = True) -> MagicMock:
+    cfg = MagicMock()
+    cfg.preflight_auth = preflight_auth
+    return cfg
+
+
+def _preflight_session_manager(auth_providers: dict) -> MagicMock:
+    sm = MagicMock()
+    sm.get_workflow_single_output_schema.return_value = None
+    sm.get_workflow_streaming_output_schema.return_value = None
+    sm.config.authentication = auth_providers
+    sm.shared_builder.get_auth_provider = AsyncMock()
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=MagicMock())
+    cm.__aexit__ = AsyncMock(return_value=False)
+    sm.session.return_value = cm
+    return sm
+
+
+def _preflight_handler(session_manager: MagicMock) -> tuple:
+    socket = AsyncMock()
+    handler = WebSocketMessageHandler(
+        socket=socket,
+        session_manager=session_manager,
+        step_adaptor=MagicMock(),
+        worker=MagicMock(),
+    )
+    return handler, socket
+
+
+async def test_preflight_auth_authenticates_single_provider():
+    provider = AsyncMock()
+    sm = _preflight_session_manager({"provider_a": _preflight_provider_cfg()})
+    sm.shared_builder.get_auth_provider.return_value = provider
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    sm.shared_builder.get_auth_provider.assert_awaited_once_with("provider_a")
+    provider.authenticate.assert_awaited_once()
+    socket.send_json.assert_not_called()
+
+
+async def test_preflight_auth_authenticates_all_preflight_providers():
+    provider_a, provider_b = AsyncMock(), AsyncMock()
+    sm = _preflight_session_manager({
+        "provider_a": _preflight_provider_cfg(),
+        "provider_b": _preflight_provider_cfg(),
+    })
+    sm.shared_builder.get_auth_provider.side_effect = [provider_a, provider_b]
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    assert sm.shared_builder.get_auth_provider.await_count == 2
+    provider_a.authenticate.assert_awaited_once()
+    provider_b.authenticate.assert_awaited_once()
+    socket.send_json.assert_not_called()
+
+
+async def test_preflight_auth_skips_non_preflight_providers():
+    provider_a = AsyncMock()
+    sm = _preflight_session_manager({
+        "provider_a": _preflight_provider_cfg(),
+        "provider_b": _preflight_provider_cfg(preflight_auth=False),
+    })
+    sm.shared_builder.get_auth_provider.return_value = provider_a
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    sm.shared_builder.get_auth_provider.assert_awaited_once_with("provider_a")
+    socket.send_json.assert_not_called()
+
+
+async def test_preflight_auth_sends_error_and_does_not_raise_on_failure():
+    provider = AsyncMock()
+    provider.authenticate.side_effect = RuntimeError("OAuth server unreachable")
+    sm = _preflight_session_manager({"provider_a": _preflight_provider_cfg()})
+    sm.shared_builder.get_auth_provider.return_value = provider
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    socket.send_json.assert_awaited_once()
+    payload: dict = socket.send_json.call_args[0][0]
+    assert payload["code"] == ErrorTypes.USER_AUTH_ERROR
+    assert "provider_a" in payload["message"]
+
+
+async def test_preflight_auth_continues_remaining_providers_after_one_fails():
+    provider_a, provider_b = AsyncMock(), AsyncMock()
+    provider_a.authenticate.side_effect = RuntimeError("a failed")
+    sm = _preflight_session_manager({
+        "provider_a": _preflight_provider_cfg(),
+        "provider_b": _preflight_provider_cfg(),
+    })
+    sm.shared_builder.get_auth_provider.side_effect = [provider_a, provider_b]
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    provider_a.authenticate.assert_awaited_once()
+    provider_b.authenticate.assert_awaited_once()
+    socket.send_json.assert_awaited_once()
+    assert "provider_a" in socket.send_json.call_args[0][0]["message"]
+
+
+async def test_preflight_auth_sends_one_error_per_failed_provider():
+    provider_a, provider_b = AsyncMock(), AsyncMock()
+    provider_a.authenticate.side_effect = RuntimeError("a failed")
+    provider_b.authenticate.side_effect = RuntimeError("b failed")
+    sm = _preflight_session_manager({
+        "provider_a": _preflight_provider_cfg(),
+        "provider_b": _preflight_provider_cfg(),
+    })
+    sm.shared_builder.get_auth_provider.side_effect = [provider_a, provider_b]
+    handler, socket = _preflight_handler(sm)
+    handler.set_flow_handler(MagicMock())
+
+    await handler._run_preflight_auth()
+
+    assert socket.send_json.await_count == 2
+    messages = {c[0][0]["message"] for c in socket.send_json.call_args_list}
+    assert any("provider_a" in m for m in messages)
+    assert any("provider_b" in m for m in messages)

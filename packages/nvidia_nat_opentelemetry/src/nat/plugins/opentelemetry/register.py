@@ -233,6 +233,55 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
     )
 
 
+# MLflow routes OTLP traces to an experiment via this header
+# (matches mlflow.tracing.utils.otlp.MLFLOW_EXPERIMENT_ID_HEADER).
+_MLFLOW_EXPERIMENT_ID_HEADER = "x-mlflow-experiment-id"
+
+
+def _mlflow_experiment_headers(experiment_id: str) -> dict[str, str]:
+    """Build the OTLP header that routes traces to an MLflow experiment (matches MLflow's own ingestion)."""
+    return {_MLFLOW_EXPERIMENT_ID_HEADER: experiment_id}
+
+
+class MLflowTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="mlflow"):
+    """Export traces to an MLflow tracking server over OTLP/HTTP.
+
+    MLflow 3.6+ ingests OpenTelemetry spans at ``<tracking-server>/v1/traces`` and routes them to an
+    experiment via the ``x-mlflow-experiment-id`` header. Point ``endpoint`` at that path and set
+    ``experiment_id`` to the target experiment. The tracking server must run with a database backend
+    store for trace ingestion.
+    """
+
+    endpoint: str = Field(
+        default="http://localhost:5000/v1/traces",
+        description="The MLflow OTLP/HTTP trace ingestion endpoint (the tracking server URL plus /v1/traces).",
+    )
+    experiment_id: str = Field(
+        default="0",
+        description="MLflow experiment ID that traces are routed to. If empty, uses the MLFLOW_EXPERIMENT_ID "
+        "environment variable, otherwise the default experiment (\"0\").",
+    )
+
+
+@register_telemetry_exporter(config_type=MLflowTelemetryExporter)
+async def mlflow_telemetry_exporter(config: MLflowTelemetryExporter, builder: Builder):
+    """Create a telemetry exporter that sends OTLP traces to an MLflow tracking server."""
+
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
+
+    experiment_id = (config.experiment_id or os.environ.get("MLFLOW_EXPERIMENT_ID") or "0").strip()
+
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        headers=_mlflow_experiment_headers(experiment_id),
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
+
+
 class ArizeAxTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="arize_ax"):
     """Export traces to Arize AX over OTLP.
 

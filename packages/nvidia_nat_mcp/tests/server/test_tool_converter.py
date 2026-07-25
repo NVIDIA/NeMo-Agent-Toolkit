@@ -13,18 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
 from inspect import Parameter
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
+from pydantic import AliasChoices
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
+from pydantic.json_schema import PydanticJsonSchemaWarning
 
 from nat.builder.function import Function
 from nat.builder.workflow import Workflow
-from nat.plugins.mcp.server.tool_converter import _USE_PYDANTIC_DEFAULT
+from nat.plugins.mcp.server.tool_converter import _build_name_mapping
+from nat.plugins.mcp.server.tool_converter import _sanitize_parameter_name
 from nat.plugins.mcp.server.tool_converter import create_function_wrapper
 from nat.plugins.mcp.server.tool_converter import get_function_description
 from nat.plugins.mcp.server.tool_converter import is_field_optional
@@ -75,6 +82,20 @@ class MockOptionalTypesSchema(BaseModel):
     optional_str_none: str | None = None
     optional_int_none: int | None = None
     optional_list_none: list[float] | None = None
+
+
+class MockConstrainedSchema(BaseModel):
+    """Schema with constraints that must be advertised to MCP clients."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    page: int = Field(ge=1, le=2000, description="Page number")
+    query: str = Field(min_length=2, max_length=100, description="Search query")
+    tags: list[str] = Field(default_factory=lambda data: [data["query"]],
+                            min_length=1,
+                            max_length=5,
+                            validate_default=True,
+                            description="Tags to include")
 
 
 def create_mock_workflow_with_observability():
@@ -166,9 +187,8 @@ class TestIsFieldOptional:
 
         # Assert
         assert is_optional is True
-        # When default_factory is used, we return the sentinel
-        # This allows Pydantic to apply the factory at validation time
-        assert default_value is _USE_PYDANTIC_DEFAULT
+        # Factory fields remain optional without a concrete signature default.
+        assert default_value is Parameter.empty
 
     def test_optional_field_with_none_default(self):
         """Test optional field with None as default (Union types)."""
@@ -228,7 +248,8 @@ class TestIsFieldOptional:
             field = MockMixedRequiredOptionalSchema.model_fields[field_name]
             is_optional, default_value = is_field_optional(field)
             assert is_optional is True, f"Field {field_name} should be optional"
-            assert default_value != Parameter.empty, f"Field {field_name} should have a default"
+            if field.default_factory is None:
+                assert default_value != Parameter.empty, f"Field {field_name} should have a default"
 
 
 class TestCreateFunctionWrapper:
@@ -434,6 +455,79 @@ class TestRegisterFunctionWithMcp:
                                                     None)  # memory_profiler defaults to None
         mock_mcp.tool.assert_called_once_with(name=function_name, description="Workflow description")
 
+    async def test_registered_tool_preserves_pydantic_schema_without_warnings(self):
+        """The MCP schema should preserve field metadata and serializable defaults."""
+        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
+        mock_function.input_schema = MockConstrainedSchema
+        mock_function.description = "Constrained tool"
+        mcp = FastMCP("test-server")
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            register_function_with_mcp(mcp, "constrained_tool", mock_session_manager, function=mock_function)
+            tools = await mcp.list_tools()
+
+        assert not [warning for warning in caught if issubclass(warning.category, PydanticJsonSchemaWarning)]
+        assert len(tools) == 1
+
+        input_schema = tools[0].inputSchema
+        assert input_schema["required"] == ["page", "query"]
+        assert input_schema["properties"]["page"]["description"] == "Page number"
+        assert input_schema["properties"]["query"]["description"] == "Search query"
+        assert input_schema["properties"]["tags"]["description"] == "Tags to include"
+        assert input_schema["properties"]["page"]["minimum"] == 1
+        assert input_schema["properties"]["page"]["maximum"] == 2000
+        assert input_schema["properties"]["query"]["minLength"] == 2
+        assert input_schema["properties"]["query"]["maxLength"] == 100
+        assert input_schema["properties"]["tags"]["minItems"] == 1
+        assert input_schema["properties"]["tags"]["maxItems"] == 5
+        assert "default" not in input_schema["properties"]["tags"]
+
+        await mcp.call_tool("constrained_tool", {"page": 1, "query": "valid"})
+        payload = mock_session_manager.run.call_args.args[0]
+        assert payload.tags == ["valid"]
+        assert "tags" not in payload.model_fields_set
+
+        await mcp.call_tool("constrained_tool", {"page": 1, "query": "valid", "tags": ["valid"]})
+        payload = mock_session_manager.run.call_args.args[0]
+        assert payload.tags == ["valid"]
+        assert "tags" in payload.model_fields_set
+
+    @pytest.mark.parametrize(
+        "arguments,message",
+        [
+            pytest.param({
+                "page": 0, "query": "valid"
+            }, "greater than or equal to 1", id="page-minimum"),
+            pytest.param({
+                "page": 2001, "query": "valid"
+            }, "less than or equal to 2000", id="page-maximum"),
+            pytest.param({
+                "page": 1, "query": "x"
+            }, "at least 2 characters", id="query-minimum"),
+            pytest.param({
+                "page": 1, "query": "x" * 101
+            }, "at most 100 characters", id="query-maximum"),
+            pytest.param({
+                "page": 1, "query": "valid", "tags": []
+            }, "at least 1 item", id="tags-minimum"),
+            pytest.param({
+                "page": 1, "query": "valid", "tags": ["tag"] * 6
+            }, "at most 5 items", id="tags-maximum"),
+        ])
+    async def test_registered_tool_enforces_pydantic_constraints(self, arguments, message):
+        """The MCP server should enforce every constraint it advertises."""
+        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
+        mock_function.input_schema = MockConstrainedSchema
+        mock_function.description = "Constrained tool"
+        mcp = FastMCP("test-server")
+        register_function_with_mcp(mcp, "constrained_tool", mock_session_manager, function=mock_function)
+
+        with pytest.raises(ToolError, match=message):
+            await mcp.call_tool("constrained_tool", arguments)
+
 
 class TestParameterSchemaValidation:
     """Test cases for validating parameter schemas after conversion."""
@@ -514,9 +608,8 @@ class TestParameterSchemaValidation:
         assert "optional_list" in sig.parameters
         assert sig.parameters["optional_str"].default == "default_value"
         assert sig.parameters["optional_int"].default == 42
-        # Fields with default_factory get the sentinel as the signature default
-        # The actual factory will be called by Pydantic at validation time
-        assert sig.parameters["optional_list"].default is _USE_PYDANTIC_DEFAULT
+        # Factory fields remain optional without a concrete signature default.
+        assert sig.parameters["optional_list"].default is Parameter.empty
 
     def test_optional_with_none_type(self):
         """Test optional parameters with None type (Union types)."""
@@ -557,10 +650,10 @@ class TestParameterSchemaValidation:
         assert sig is not None
 
         # Check that annotations are present
-        assert sig.parameters["required_str"].annotation is str
-        assert sig.parameters["required_int"].annotation is int
-        assert sig.parameters["optional_str"].annotation is str
-        assert sig.parameters["optional_int"].annotation is int
+        assert sig.parameters["required_str"].annotation.__origin__ is str
+        assert sig.parameters["required_int"].annotation.__origin__ is int
+        assert sig.parameters["optional_str"].annotation.__origin__ is str
+        assert sig.parameters["optional_int"].annotation.__origin__ is int
 
     def test_parameter_order_preserved(self):
         """Test that parameter order is preserved in wrapper."""
@@ -775,3 +868,194 @@ class TestResultTypeConversion:
             # Assert
             assert isinstance(result, str)
             assert result == expected_output
+
+
+class TestSanitizeParameterName:
+    """Test cases for _sanitize_parameter_name utility function."""
+
+    def test_valid_identifier_unchanged(self):
+        """Test that a valid Python identifier is returned unchanged."""
+        assert _sanitize_parameter_name("query") == "query"
+
+    def test_python_keyword_gets_trailing_underscore(self):
+        """Test that Python keywords get a trailing underscore appended."""
+        assert _sanitize_parameter_name("from") == "from_"
+        assert _sanitize_parameter_name("class") == "class_"
+        assert _sanitize_parameter_name("import") == "import_"
+        assert _sanitize_parameter_name("return") == "return_"
+        assert _sanitize_parameter_name("yield") == "yield_"
+        assert _sanitize_parameter_name("lambda") == "lambda_"
+
+    def test_hyphenated_name_replaced(self):
+        """Test that hyphens are replaced with underscores."""
+        assert _sanitize_parameter_name("cik-A") == "cik_A"
+        assert _sanitize_parameter_name("start-date") == "start_date"
+
+    def test_digit_prefix_gets_underscore(self):
+        """Test that names starting with a digit get a leading underscore."""
+        assert _sanitize_parameter_name("1field") == "_1field"
+
+    def test_special_characters_replaced(self):
+        """Test that special characters are replaced with underscores."""
+        assert _sanitize_parameter_name("field.name") == "field_name"
+        assert _sanitize_parameter_name("field@name") == "field_name"
+        assert _sanitize_parameter_name("field name") == "field_name"
+
+    def test_empty_string_gets_underscore(self):
+        """Test that an empty string gets a leading underscore."""
+        assert _sanitize_parameter_name("") == "_"
+
+    def test_already_valid_name_unchanged(self):
+        """Test that names that are already valid identifiers pass through."""
+        assert _sanitize_parameter_name("my_field") == "my_field"
+        assert _sanitize_parameter_name("_private") == "_private"
+        assert _sanitize_parameter_name("CamelCase") == "CamelCase"
+
+
+class TestBuildNameMapping:
+    """Test cases for _build_name_mapping utility function."""
+
+    def test_no_changes_when_names_are_valid(self):
+        """Test that valid identifiers map to themselves."""
+        result = _build_name_mapping(["name", "age", "email"])
+        assert result == {"name": "name", "age": "age", "email": "email"}
+
+    def test_mapping_for_keywords(self):
+        """Test mapping for Python keywords."""
+        result = _build_name_mapping(["from", "class", "query"])
+        assert result == {"from": "from_", "class": "class_", "query": "query"}
+
+    def test_mapping_for_hyphenated_names(self):
+        """Test mapping for hyphenated names."""
+        result = _build_name_mapping(["cik-A", "start-date", "name"])
+        assert result == {"cik-A": "cik_A", "start-date": "start_date", "name": "name"}
+
+    def test_mapping_mixed(self):
+        """Test mapping with a mix of valid and invalid names."""
+        result = _build_name_mapping(["from", "name", "cik-A"])
+        assert result == {"from": "from_", "name": "name", "cik-A": "cik_A"}
+
+    def test_collision_keyword_and_suffixed_name(self):
+        """Test collision when schema has both 'from' and 'from_'."""
+        result = _build_name_mapping(["from", "from_"])
+        # 'from_' is a valid identifier so it reserves 'from_' in first pass
+        # 'from' sanitizes to 'from_' which collides, so gets 'from_2'
+        assert result["from_"] == "from_"
+        assert result["from"] == "from_2"
+
+    def test_collision_hyphenated_and_underscored(self):
+        """Test collision when schema has both 'cik-A' and 'cik_A'."""
+        result = _build_name_mapping(["cik-A", "cik_A"])
+        # 'cik_A' is valid, reserves itself in first pass
+        # 'cik-A' sanitizes to 'cik_A' which collides, so gets 'cik_A2'
+        assert result["cik_A"] == "cik_A"
+        assert result["cik-A"] == "cik_A2"
+
+
+class TestParameterNameSanitization:
+    """Test that schemas with non-identifier field names produce valid wrappers."""
+
+    def test_wrapper_created_for_schema_with_keyword_fields(self):
+        """Test that create_function_wrapper succeeds with keyword field names."""
+        # Arrange
+        from pydantic import create_model
+        schema = create_model("DateRangeSchema", **{
+            "from": (str, ...), "class": (str, ...), "query": (str, ...)
+        })  # type: ignore[call-overload]
+
+        mock_session_manager = create_mock_session_manager()
+
+        # Act - this previously raised ValueError: 'from' is not a valid parameter name
+        wrapper = create_function_wrapper("date_tool", mock_session_manager, schema)
+
+        # Assert
+        assert callable(wrapper)
+        sig = getattr(wrapper, '__signature__', None)
+        assert sig is not None
+        assert "from_" in sig.parameters
+        assert "class_" in sig.parameters
+        assert "query" in sig.parameters
+
+    def test_wrapper_created_for_schema_with_hyphenated_fields(self):
+        """Test that create_function_wrapper succeeds with hyphenated field names."""
+        # Arrange
+        from pydantic import create_model
+        schema = create_model("SecFilingsSchema", **{
+            "cik-A": (str, ...), "name": (str, ...)
+        })  # type: ignore[call-overload]
+
+        mock_session_manager = create_mock_session_manager()
+
+        # Act
+        wrapper = create_function_wrapper("sec_tool", mock_session_manager, schema)
+
+        # Assert
+        assert callable(wrapper)
+        sig = getattr(wrapper, '__signature__', None)
+        assert sig is not None
+        assert "cik_A" in sig.parameters
+        assert "name" in sig.parameters
+
+    @pytest.mark.parametrize(
+        ("field", "advertised_name"),
+        [
+            pytest.param(Field(), "from", id="no-alias"),
+            pytest.param(Field(alias="fromDate"), "fromDate", id="alias"),
+            pytest.param(Field(validation_alias="fromDate"), "fromDate", id="validation-alias"),
+            pytest.param(
+                Field(validation_alias=AliasChoices("fromDate", "from_date")),
+                "fromDate",
+                id="alias-choices",
+            ),
+            pytest.param(
+                Field(alias="genericDate", validation_alias="fromDate", serialization_alias="outDate"),
+                "fromDate",
+                id="distinct-aliases",
+            ),
+        ],
+    )
+    async def test_registered_tool_preserves_aliases_for_sanitized_fields(self, field, advertised_name):
+        """Sanitized fields should retain their declared input alias behavior."""
+        from pydantic import create_model
+        schema = create_model("DateRangeSchema", **{
+            "from": (str, field), "query": (str, ...)
+        })  # type: ignore[call-overload]
+        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
+        mock_function.input_schema = schema
+        mock_function.description = "Date range tool"
+        mcp = FastMCP("test-server")
+
+        register_function_with_mcp(mcp, "date_tool", mock_session_manager, function=mock_function)
+        tools = await mcp.list_tools()
+
+        assert set(tools[0].inputSchema["properties"]) == {advertised_name, "query"}
+
+        await mcp.call_tool("date_tool", {advertised_name: "2026-01-01", "query": "test"})
+        payload = mock_session_manager.run.call_args.args[0]
+        assert getattr(payload, "from") == "2026-01-01"
+
+    async def test_wrapper_reverse_maps_kwargs_for_validation(self):
+        """Test that sanitized kwargs are reverse-mapped before Pydantic validation."""
+        # Arrange
+        from pydantic import create_model
+        schema = create_model("ToolSchema", **{
+            "from": (str, ...), "cik-A": (str, "default")
+        })  # type: ignore[call-overload]
+
+        mock_session_manager = create_mock_session_manager(result_value="ok")
+
+        wrapper = create_function_wrapper("tool", mock_session_manager, schema)
+
+        # Act - call with sanitized names (as MCP would pass them)
+        result = await wrapper(**{"from_": "2024-01-01", "cik_A": "ABC"})
+
+        # Assert
+        assert result == "ok"
+        # Verify session_manager.run() was called with properly mapped payload
+        mock_session_manager.run.assert_called_once()
+        call_args = mock_session_manager.run.call_args
+        payload = call_args[0][0]
+        # The Pydantic model should have the original field names
+        assert getattr(payload, "from") == "2024-01-01"
+        assert getattr(payload, "cik-A") == "ABC"

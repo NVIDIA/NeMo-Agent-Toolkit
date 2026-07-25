@@ -402,7 +402,7 @@ python -m spacy download en_core_web_lg
 The `jailbreak detection heuristics` input rail computes text perplexity with a local model, which requires PyTorch. Install the Hugging Face stack once per environment (the heuristics model is downloaded automatically on first use):
 
 ```bash
-uv pip install 'transformers[torch,accelerate]~=4.57'
+uv pip install 'transformers[torch,accelerate]>=5.0,<6.0'
 ```
 
 Then run the workflow:
@@ -482,7 +482,7 @@ Results can vary across runs because LLM outputs are non-deterministic. Running 
 Install Hugging Face support for local guard models:
 
 ```bash
-uv pip install 'transformers[torch,accelerate]~=4.57'
+uv pip install 'transformers[torch,accelerate]>=5.0,<6.0'
 ```
 
 To evaluate defense effectiveness, run red teaming against the defended workflow:
