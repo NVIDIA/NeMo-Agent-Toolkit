@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import datetime
 
 from nat.atif import Step
@@ -39,12 +40,13 @@ def _step_llm_latency(step: Step) -> float | None:
 
     Prefers the converter-written ``step.extra["invocation"]`` timing
     (``start_timestamp`` / ``end_timestamp`` in epoch seconds), which is what
-    NAT's ATOF-to-ATIF converter actually emits. Falls back to the legacy
+    the ATOF-to-ATIF converter actually emits. Falls back to the legacy
     ``step.extra["span_event_timestamp"]`` (ISO start) paired with
     ``step.timestamp`` (ISO end) for producers that emit that shape instead.
 
-    Returns ``None`` when neither timing source is present, so the caller can
-    skip the step rather than record a spurious zero.
+    Returns ``None`` when neither timing source is present, or when the
+    invocation timestamps are not finite, so the caller can skip the step
+    rather than record a spurious zero.
     """
     extra = step.extra or {}
     invocation = extra.get("invocation")
@@ -52,7 +54,12 @@ def _step_llm_latency(step: Step) -> float | None:
         start = invocation.get("start_timestamp")
         end = invocation.get("end_timestamp")
         if isinstance(start, (int, float)) and isinstance(end, (int, float)):
-            return max(0.0, float(end) - float(start))
+            try:
+                latency = float(end) - float(start)
+            except OverflowError:
+                latency = None
+            if latency is not None and math.isfinite(latency):
+                return max(0.0, latency)
     start_raw = extra.get("span_event_timestamp")
     start_ts = _iso_to_epoch(start_raw) if isinstance(start_raw, str) else None
     end_ts = _iso_to_epoch(step.timestamp)
@@ -65,8 +72,11 @@ class AverageLLMLatencyAtifEvaluator(AtifBaseEvaluator):
     """
     ATIF-native mean latency between LLM start and end for agent steps with metrics.
 
-    Uses step.timestamp as end time and step.extra.get("span_event_timestamp") as start time.
-    Steps without span_event_timestamp are skipped (see NEP-008 for ATIF profiling metadata).
+    Per step, prefers the ``step.extra["invocation"]`` start/end timestamps
+    written by the ATOF-to-ATIF converter, and falls back to
+    ``step.extra["span_event_timestamp"]`` (start) paired with ``step.timestamp``
+    (end). A step is skipped only when neither timing source is available
+    (see NEP-008 for ATIF profiling metadata).
     """
 
     def __init__(self, max_concurrency: int = 8):

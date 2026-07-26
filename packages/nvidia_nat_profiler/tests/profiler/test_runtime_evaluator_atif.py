@@ -120,10 +120,13 @@ async def test_evaluate_atif_item_multiple_latencies_averaged():
 
 
 async def test_evaluate_atif_item_uses_invocation_timing():
-    """Real ATOF-to-ATIF converter output records timing under
-    ``extra['invocation']`` (epoch start/end), not ``span_event_timestamp``.
-    The evaluator must use it, otherwise avg_llm_latency is always 0.0
-    (regression test for #2116)."""
+    """The evaluator uses ``extra['invocation']`` timing when available.
+
+    Real ATOF-to-ATIF converter output records timing under
+    ``extra['invocation']`` (epoch start/end), not ``span_event_timestamp``,
+    so without this the ``avg_llm_latency`` score is always 0.0 (regression
+    test for #2116).
+    """
     steps = [
         ATIFStep(
             step_id=1,
@@ -141,6 +144,38 @@ async def test_evaluate_atif_item_uses_invocation_timing():
     assert result.score == pytest.approx(3.5, abs=1e-4)
     assert result.reasoning["num_llm_calls"] == 1
     assert result.reasoning["latencies"] == pytest.approx([3.5], abs=1e-4)
+
+
+async def test_evaluate_atif_item_skips_non_finite_invocation_timing():
+    """Non-finite invocation timestamps are skipped, not scored.
+
+    Guards against ``NaN`` / ``inf`` (and overflowing) ``extra['invocation']``
+    values producing an invalid ``avg_llm_latency`` instead of being skipped.
+    """
+    steps = [
+        ATIFStep(
+            step_id=1,
+            source="agent",
+            timestamp="2024-01-01T12:00:05",
+            metrics=Metrics(prompt_tokens=1),
+            extra={"invocation": {"start_timestamp": float("nan"), "end_timestamp": 1.0}},
+        ),
+        ATIFStep(
+            step_id=2,
+            source="agent",
+            timestamp="2024-01-01T12:00:05",
+            metrics=Metrics(prompt_tokens=1),
+            extra={"invocation": {"start_timestamp": 1.0, "end_timestamp": float("inf")}},
+        ),
+    ]
+    sample = _make_sample("nonfinite", steps)
+    evaluator = AverageLLMLatencyAtifEvaluator()
+
+    result = await evaluator.evaluate_atif_item(sample)
+
+    assert result.score == 0.0
+    assert result.reasoning["num_llm_calls"] == 0
+    assert result.reasoning["latencies"] == []
 
 
 # --- evaluate_atif_item: edge cases (avoid false negatives) ---
