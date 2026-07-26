@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from nat.atif import Step
 from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.evaluator.atif_base_evaluator import AtifBaseEvaluator
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
@@ -31,6 +32,33 @@ def _iso_to_epoch(ts: str | None) -> float | None:
         return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
     except (ValueError, TypeError):
         return None
+
+
+def _step_llm_latency(step: Step) -> float | None:
+    """Return the LLM start-to-end latency (seconds) for one ATIF agent step.
+
+    Prefers the converter-written ``step.extra["invocation"]`` timing
+    (``start_timestamp`` / ``end_timestamp`` in epoch seconds), which is what
+    NAT's ATOF-to-ATIF converter actually emits. Falls back to the legacy
+    ``step.extra["span_event_timestamp"]`` (ISO start) paired with
+    ``step.timestamp`` (ISO end) for producers that emit that shape instead.
+
+    Returns ``None`` when neither timing source is present, so the caller can
+    skip the step rather than record a spurious zero.
+    """
+    extra = step.extra or {}
+    invocation = extra.get("invocation")
+    if isinstance(invocation, dict):
+        start = invocation.get("start_timestamp")
+        end = invocation.get("end_timestamp")
+        if isinstance(start, (int, float)) and isinstance(end, (int, float)):
+            return max(0.0, float(end) - float(start))
+    start_raw = extra.get("span_event_timestamp")
+    start_ts = _iso_to_epoch(start_raw) if isinstance(start_raw, str) else None
+    end_ts = _iso_to_epoch(step.timestamp)
+    if start_ts is not None and end_ts is not None:
+        return max(0.0, end_ts - start_ts)
+    return None
 
 
 class AverageLLMLatencyAtifEvaluator(AtifBaseEvaluator):
@@ -49,11 +77,9 @@ class AverageLLMLatencyAtifEvaluator(AtifBaseEvaluator):
         for step in sample.trajectory.steps:
             if step.source != "agent" or not step.metrics:
                 continue
-            end_ts = _iso_to_epoch(step.timestamp)
-            start_ts_raw = (step.extra or {}).get("span_event_timestamp")
-            start_ts = _iso_to_epoch(start_ts_raw) if isinstance(start_ts_raw, str) else None
-            if end_ts is not None and start_ts is not None:
-                latencies.append(max(0.0, end_ts - start_ts))
+            latency = _step_llm_latency(step)
+            if latency is not None:
+                latencies.append(latency)
 
         avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
         reasoning: dict = {

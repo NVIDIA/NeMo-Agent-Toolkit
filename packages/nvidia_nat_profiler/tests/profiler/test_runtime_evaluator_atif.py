@@ -119,6 +119,30 @@ async def test_evaluate_atif_item_multiple_latencies_averaged():
     assert result.reasoning["latencies"] == pytest.approx([2.0, 4.0], abs=1e-4)
 
 
+async def test_evaluate_atif_item_uses_invocation_timing():
+    """Real ATOF-to-ATIF converter output records timing under
+    ``extra['invocation']`` (epoch start/end), not ``span_event_timestamp``.
+    The evaluator must use it, otherwise avg_llm_latency is always 0.0
+    (regression test for #2116)."""
+    steps = [
+        ATIFStep(
+            step_id=1,
+            source="agent",
+            timestamp="2024-01-01T12:00:05",
+            metrics=Metrics(prompt_tokens=10, completion_tokens=20),
+            extra={"invocation": {"start_timestamp": 1000.0, "end_timestamp": 1003.5}},
+        ),
+    ]
+    sample = _make_sample("inv-1", steps)
+    evaluator = AverageLLMLatencyAtifEvaluator()
+
+    result = await evaluator.evaluate_atif_item(sample)
+
+    assert result.score == pytest.approx(3.5, abs=1e-4)
+    assert result.reasoning["num_llm_calls"] == 1
+    assert result.reasoning["latencies"] == pytest.approx([3.5], abs=1e-4)
+
+
 # --- evaluate_atif_item: edge cases (avoid false negatives) ---
 
 
