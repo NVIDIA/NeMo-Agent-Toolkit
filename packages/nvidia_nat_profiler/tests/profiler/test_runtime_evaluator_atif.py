@@ -120,12 +120,13 @@ async def test_evaluate_atif_item_multiple_latencies_averaged():
 
 
 async def test_evaluate_atif_item_uses_invocation_timing():
-    """The evaluator uses ``extra['invocation']`` timing when available.
+    """``extra['invocation']`` timing takes precedence over the legacy path.
 
     Real ATOF-to-ATIF converter output records timing under
     ``extra['invocation']`` (epoch start/end), not ``span_event_timestamp``,
     so without this the ``avg_llm_latency`` score is always 0.0 (regression
-    test for #2116).
+    test for #2116). A conflicting ``span_event_timestamp`` is present to
+    confirm ``invocation`` wins.
     """
     steps = [
         ATIFStep(
@@ -133,7 +134,12 @@ async def test_evaluate_atif_item_uses_invocation_timing():
             source="agent",
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=10, completion_tokens=20),
-            extra={"invocation": {"start_timestamp": 1000.0, "end_timestamp": 1003.5}},
+            # A conflicting legacy span_event_timestamp (which would imply 5.0s
+            # against step.timestamp) must be ignored in favour of invocation.
+            extra={
+                "invocation": {"start_timestamp": 1000.0, "end_timestamp": 1003.5},
+                "span_event_timestamp": "2024-01-01T12:00:00",
+            },
         ),
     ]
     sample = _make_sample("inv-1", steps)
@@ -166,6 +172,14 @@ async def test_evaluate_atif_item_skips_non_finite_invocation_timing():
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=1),
             extra={"invocation": {"start_timestamp": 1.0, "end_timestamp": float("inf")}},
+        ),
+        ATIFStep(
+            step_id=3,
+            source="agent",
+            timestamp="2024-01-01T12:00:05",
+            metrics=Metrics(prompt_tokens=1),
+            # An integer too large to convert to float raises OverflowError.
+            extra={"invocation": {"start_timestamp": 0, "end_timestamp": 10**400}},
         ),
     ]
     sample = _make_sample("nonfinite", steps)
