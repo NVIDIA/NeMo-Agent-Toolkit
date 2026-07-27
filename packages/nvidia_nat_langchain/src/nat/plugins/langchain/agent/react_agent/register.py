@@ -43,10 +43,14 @@ logger = logging.getLogger(__name__)
 
 _MODEL_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._/:@\- ]{0,254}$")
 
+# ChatRequest.model defaults to this sentinel when the caller did not request a
+# specific model; it must not be forwarded as a per-request model override.
+_UNKNOWN_MODEL_SENTINEL = "unknown-model"
+
 
 def _build_lc_config(max_tool_calls: int, model: str | None, *, supports_override: bool = True) -> dict:
     lc_config: dict = {"recursion_limit": (max_tool_calls + 1) * 2}
-    if model is not None:
+    if model is not None and model != _UNKNOWN_MODEL_SENTINEL:
         if not _MODEL_NAME_RE.match(model):
             raise ValueError(f"Invalid model name: {model!r}")
         if not supports_override:
