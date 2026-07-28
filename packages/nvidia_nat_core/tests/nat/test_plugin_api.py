@@ -21,6 +21,7 @@ from pathlib import Path
 from nat import plugin_api
 
 EXPECTED_PLUGIN_API_EXPORTS = {
+    "BinaryHumanPromptOption": ("nat.data_models.interactive", "BinaryHumanPromptOption"),
     "Builder": ("nat.builder.builder", "Builder"),
     "ComponentRef": ("nat.data_models.component_ref", "ComponentRef"),
     "Context": ("nat.builder.context", "Context"),
@@ -49,6 +50,12 @@ EXPECTED_PLUGIN_API_EXPORTS = {
     "HITLMiddleware": ("nat.middleware.hitl.hitl_middleware", "HITLMiddleware"),
     "HITLMiddlewareConfig": ("nat.middleware.hitl.hitl_middleware_config", "HITLMiddlewareConfig"),
     "HumanPrompt": ("nat.data_models.interactive", "HumanPrompt"),
+    "HumanPromptBinary": ("nat.data_models.interactive", "HumanPromptBinary"),
+    "HumanPromptCheckbox": ("nat.data_models.interactive", "HumanPromptCheckbox"),
+    "HumanPromptDropdown": ("nat.data_models.interactive", "HumanPromptDropdown"),
+    "HumanPromptNotification": ("nat.data_models.interactive", "HumanPromptNotification"),
+    "HumanPromptRadio": ("nat.data_models.interactive", "HumanPromptRadio"),
+    "HumanPromptText": ("nat.data_models.interactive", "HumanPromptText"),
     "HumanResponse": ("nat.data_models.interactive", "HumanResponse"),
     "HumanResponseBinary": ("nat.data_models.interactive", "HumanResponseBinary"),
     "HumanResponseCheckbox": ("nat.data_models.interactive", "HumanResponseCheckbox"),
@@ -74,6 +81,7 @@ EXPECTED_PLUGIN_API_EXPORTS = {
     "MemoryWriter": ("nat.memory.interfaces", "MemoryWriter"),
     "MiddlewareBaseConfig": ("nat.data_models.middleware", "MiddlewareBaseConfig"),
     "MiddlewareRef": ("nat.data_models.component_ref", "MiddlewareRef"),
+    "MultipleChoiceOption": ("nat.data_models.interactive", "MultipleChoiceOption"),
     "NoSuchKeyError": ("nat.data_models.object_store", "NoSuchKeyError"),
     "ObjectStore": ("nat.object_store.interfaces", "ObjectStore"),
     "ObjectStoreRef": ("nat.data_models.component_ref", "ObjectStoreRef"),
@@ -376,10 +384,12 @@ def test_plugin_authoring_docs_prefer_public_api_imports():
         "from nat.middleware.hitl import InteractionResponse",
         "from nat.builder.context import Context",
         "from nat.builder.context import ContextState",
+        "from nat.data_models.interactive import BinaryHumanPromptOption",
         "from nat.data_models.interactive import HumanPrompt",
         "from nat.data_models.interactive import HumanResponse",
         "from nat.data_models.interactive import InteractionPrompt",
         "from nat.data_models.interactive import InteractionResponse",
+        "from nat.data_models.interactive import MultipleChoiceOption",
         "from nat.middleware.middleware import FunctionMiddlewareContext",
         "from nat.middleware.middleware import InvocationAction",
         "from nat.middleware.middleware import InvocationContext",
@@ -538,3 +548,54 @@ def test_consumer_style_context_and_interactive_types():
     parsed = InteractionResponse.model_validate(response.model_dump())
     assert isinstance(parsed.content, HumanResponseText)
     assert parsed.content.text == "yes"
+
+
+def test_consumer_style_prompt_content_models():
+    """Construct interactive prompts using only ``nat.plugin_api`` imports.
+
+    Plugin authors do not only consume responses: HITL middleware hooks, user-input callbacks, and front-end
+    integrations also build the prompt side of an interaction (``InteractionPrompt.content``) from the concrete
+    prompt content models. The public surface must be sufficient to construct every prompt variant, including
+    the option models embedded by binary and multiple-choice prompts, without falling back to
+    ``nat.data_models.interactive``.
+    """
+    from nat.plugin_api import BinaryHumanPromptOption
+    from nat.plugin_api import HumanPromptBinary
+    from nat.plugin_api import HumanPromptCheckbox
+    from nat.plugin_api import HumanPromptDropdown
+    from nat.plugin_api import HumanPromptNotification
+    from nat.plugin_api import HumanPromptRadio
+    from nat.plugin_api import HumanPromptText
+    from nat.plugin_api import InteractionPrompt
+    from nat.plugin_api import MultipleChoiceOption
+
+    choices = [
+        MultipleChoiceOption(id="email", label="Email", value="email", description="Notify over email."),
+        MultipleChoiceOption(id="sms", label="SMS", value="sms", description="Notify over SMS."),
+    ]
+    prompts = [
+        HumanPromptText(text="Describe the change.", placeholder="Enter a description.", required=True),
+        HumanPromptNotification(text="The workflow resumed."),
+        HumanPromptBinary(
+            text="Continue the workflow?",
+            options=[
+                BinaryHumanPromptOption(id="continue", label="Continue", value=True),
+                BinaryHumanPromptOption(id="cancel", label="Cancel", value=False),
+            ],
+        ),
+        HumanPromptRadio(text="Pick one channel.", options=choices),
+        HumanPromptCheckbox(text="Pick any channels.", options=choices),
+        HumanPromptDropdown(text="Pick a channel from the list.", options=choices),
+    ]
+
+    # Each concrete prompt model is a member of the ``HumanPrompt`` discriminated union, so it is accepted as
+    # typed ``InteractionPrompt.content`` and survives a serialization round trip as the same concrete type.
+    for index, content in enumerate(prompts):
+        prompt = InteractionPrompt(
+            id=f"interaction-{index}",
+            timestamp="2026-01-01T00:00:00Z",
+            content=content,
+        )
+        parsed = InteractionPrompt.model_validate(prompt.model_dump())
+        assert type(parsed.content) is type(content)
+        assert parsed.content.text == content.text
