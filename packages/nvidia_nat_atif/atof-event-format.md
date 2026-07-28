@@ -9,7 +9,7 @@ The canonical Agent Trajectory Observability Format (ATOF) specification is now
 maintained in NVIDIA NeMo Relay:
 
 <!-- markdown-link-check-disable -->
-- [ATOF Core Specification source](https://github.com/NVIDIA/NeMo-Relay/blob/main/docs/reference/atof-event-format.md)
+- [ATOF Core Specification source](https://github.com/NVIDIA/NeMo-Relay/blob/main/docs/reference/atof-event-format.mdx)
 - [Rendered ATOF Core Specification](https://docs.nvidia.com/nemo/relay/dev/reference/atof-event-format)
 <!-- markdown-link-check-enable -->
 
