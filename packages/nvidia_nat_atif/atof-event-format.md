@@ -10,7 +10,7 @@ maintained in NVIDIA NeMo Relay:
 
 <!-- markdown-link-check-disable -->
 - [ATOF Core Specification source](https://github.com/NVIDIA/NeMo-Relay/blob/main/docs/reference/atof-event-format.md)
-- [Rendered ATOF Core Specification](https://docs.nvidia.com/nemo/relay/reference/atof-event-format)
+- [Rendered ATOF Core Specification](https://docs.nvidia.com/nemo/relay/dev/reference/atof-event-format)
 <!-- markdown-link-check-enable -->
 
 NVIDIA NeMo Agent Toolkit continues to provide the Python consumer, test

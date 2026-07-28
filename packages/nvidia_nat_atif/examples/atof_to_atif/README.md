@@ -18,7 +18,7 @@ limitations under the License.
 # ATOF-to-ATIF Examples
 
 <!-- markdown-link-check-disable -->
-End-to-end examples exercising the ATOF v0.1 reference implementation. Six scenarios cover the two enrichment tiers, the `mark` event kind, and three real-world LLM payload shapes (OpenAI chat-completions, Anthropic Messages, Gemini `generateContent`) plus a heterogeneous orchestrator that mixes all three in a single stream. Refer to §1.1 of the [ATOF Core Specification](https://github.com/NVIDIA/NeMo-Relay/blob/main/docs/reference/atof-event-format.md#11-two-producer-enrichment-tiers) for tier definitions and §3 for event kinds.
+End-to-end examples exercising the ATOF v0.1 reference implementation. Six scenarios cover the two enrichment tiers, the `mark` event kind, and three real-world LLM payload shapes (OpenAI chat-completions, Anthropic Messages, Gemini `generateContent`) plus a heterogeneous orchestrator that mixes all three in a single stream. Refer to §1.1 of the [ATOF Core Specification](https://docs.nvidia.com/nemo/relay/dev/reference/atof-event-format#11-two-producer-enrichment-tiers) for tier definitions and §3 for event kinds.
 <!-- markdown-link-check-enable -->
 
 This README doubles as the ATOF → ATIF conversion reference: the mapping table, dispatch conventions, and known limitations live in the [Conversion reference](#conversion-reference) section at the bottom.
@@ -59,7 +59,7 @@ Converts to a rich ATIF trajectory with user / agent / observation steps, with `
 ### EXMP-03 — mark events (in-line guardrail)
 
 <!-- markdown-link-check-disable -->
-A short chat agent that fires a single in-line `mark` event mid-trajectory. The mark is `category: "guardrail"` (a first-class category in §4 of the [ATOF Core Specification](https://github.com/NVIDIA/NeMo-Relay/blob/main/docs/reference/atof-event-format.md#4-category-vocabulary)), parented under the agent scope, and fires AFTER the agent scope-start and BEFORE the LLM scope-start — riding alongside the agent's lifecycle rather than bracketing it. The mark records an input-safety policy check (`{"check": "input_safety", "passed": true, "policies": ["prompt_injection", "pii"]}`).
+A short chat agent that fires a single in-line `mark` event mid-trajectory. The mark is `category: "guardrail"` (a first-class category in §4 of the [ATOF Core Specification](https://docs.nvidia.com/nemo/relay/dev/reference/atof-event-format#4-category-vocabulary)), parented under the agent scope, and fires AFTER the agent scope-start and BEFORE the LLM scope-start — riding alongside the agent's lifecycle rather than bracketing it. The mark records an input-safety policy check (`{"check": "input_safety", "passed": true, "policies": ["prompt_injection", "pii"]}`).
 <!-- markdown-link-check-enable -->
 
 Because the mark's `data` shape doesn't match a role-extraction heuristic, the converter takes the JSON-blob fall-through arm at [`atof_to_atif_converter.py`](../../src/nat/atof/scripts/atof_to_atif_converter.py) lines 622-651: the mark surfaces as a `source: "system"` step whose `message` is the compact-JSON serialization of the mark's `data`. The single LLM turn produces the user / agent pair. Phoenix's native ATIF helper renders pre-LLM `source: "system"` steps inline as `llm.input_messages` on the LLM span. Trailing system steps after the only LLM call have nowhere to attach and are not surfaced in the UI — input-side guardrails are also more common in production (rejected prompts skip the LLM cost), so this position is doubly justified. The Phoenix view shows the workflow span with the `input_safety_check` guardrail folded into the LLM span's `llm.input_messages` alongside the user message, demonstrating that marks are in-line lifecycle checkpoints, not session brackets.
@@ -370,7 +370,7 @@ Both return a Pydantic-validated `nat.atif.trajectory.Trajectory` (the Toolkit-s
 ## See also
 
 <!-- markdown-link-check-disable -->
-- [ATOF Core Specification](https://github.com/NVIDIA/NeMo-Relay/blob/main/docs/reference/atof-event-format.md) — canonical ATOF v0.1 wire format, categories, and event kinds
+- [ATOF Core Specification](https://docs.nvidia.com/nemo/relay/dev/reference/atof-event-format) — canonical ATOF v0.1 wire format, categories, and event kinds
 <!-- markdown-link-check-enable -->
 - [`../../src/nat/atof/scripts/atof_to_atif_converter.py`](../../src/nat/atof/scripts/atof_to_atif_converter.py) — reference converter implementation
 - [`../../src/nat/atof/schemas.py`](../../src/nat/atof/schemas.py) — JSON Schema registry and `register_schema` helper
