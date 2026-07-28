@@ -21,7 +21,9 @@ from abc import abstractmethod
 from collections.abc import AsyncGenerator
 from collections.abc import Awaitable
 from collections.abc import Callable
+from collections.abc import Mapping
 from collections.abc import Sequence
+from types import MappingProxyType
 
 from pydantic import BaseModel
 
@@ -815,6 +817,23 @@ class FunctionGroup:
         Returns the middleware configured for this function group.
         """
         return self._middleware
+
+    @property
+    def filter_fn(self) -> Callable[[Sequence[str]], Awaitable[Sequence[str]]] | None:
+        """
+        Returns the group-level filter function configured for this function group, or `None` if no
+        group-level filter function has been set.
+        """
+        return self._filter_fn
+
+    @property
+    def per_function_filter_fns(self) -> Mapping[str, Callable[[str], Awaitable[bool]]]:
+        """
+        Returns a read-only view of the per-function filter functions configured for this function group,
+        keyed by function name. The view cannot be modified directly, but it reflects filter functions
+        added to the group later.
+        """
+        return MappingProxyType(self._per_function_filter_fn)
 
     def configure_middleware(self, middleware: Sequence[Middleware] | None = None) -> None:
         """

@@ -315,6 +315,66 @@ async def test_function_group_set_per_function_filter_fn():
         group.set_per_function_filter_fn("nonexistent", exclude_func1)
 
 
+def test_function_group_filter_fn_property():
+    """Test the filter_fn read-only property."""
+    config = FunctionGroupTestConfig()
+
+    # A group constructed without a filter function reports None
+    group = FunctionGroup(config=config)
+    assert group.filter_fn is None
+
+    async def group_filter(names: Sequence[str]) -> Sequence[str]:
+        return list(names)
+
+    # A group constructed with a filter function reports the configured callback
+    group_with_filter = FunctionGroup(config=config, filter_fn=group_filter)
+    assert group_with_filter.filter_fn is group_filter
+
+    # A filter function set after construction is reflected by the property
+    group.set_filter_fn(group_filter)
+    assert group.filter_fn is group_filter
+
+
+def test_function_group_per_function_filter_fns_property():
+    """Test the per_function_filter_fns read-only property."""
+    config = FunctionGroupTestConfig()
+    group = FunctionGroup(config=config)
+
+    async def test_fn(x: str) -> str:
+        return x
+
+    async def filter_func1(name: str) -> bool:
+        return False
+
+    async def filter_func2(name: str) -> bool:
+        return True
+
+    # A group without per-function filter functions reports an empty mapping
+    assert group.per_function_filter_fns == {}
+
+    group.add_function("func1", test_fn, filter_fn=filter_func1)
+    group.add_function("func2", test_fn)
+
+    # Only functions added with a filter function appear in the mapping
+    assert group.per_function_filter_fns == {"func1": filter_func1}
+    assert group.per_function_filter_fns["func1"] is filter_func1
+
+    # The mapping view is read-only
+    filters_view = group.per_function_filter_fns
+    with pytest.raises(TypeError):
+        filters_view["func2"] = filter_func2  # type: ignore[index]
+
+    with pytest.raises(TypeError):
+        del filters_view["func1"]  # type: ignore[attr-defined]
+
+    # The view reflects filter functions added to the group later
+    group.set_per_function_filter_fn("func2", filter_func2)
+    assert filters_view == {"func1": filter_func1, "func2": filter_func2}
+
+    group.add_function("func3", test_fn, filter_fn=filter_func1)
+    assert filters_view["func3"] is filter_func1
+
+
 @pytest.mark.asyncio
 async def test_function_group_config_validation_errors():
     """Test error cases for include/exclude configuration validation."""
