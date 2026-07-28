@@ -23,6 +23,7 @@ from nat import plugin_api
 EXPECTED_PLUGIN_API_EXPORTS = {
     "Builder": ("nat.builder.builder", "Builder"),
     "ComponentRef": ("nat.data_models.component_ref", "ComponentRef"),
+    "Config": ("nat.data_models.config", "Config"),
     "Context": ("nat.builder.context", "Context"),
     "ContextState": ("nat.builder.context", "ContextState"),
     "DatasetLoaderInfo": ("nat.builder.dataset_loader", "DatasetLoaderInfo"),
@@ -36,6 +37,7 @@ EXPECTED_PLUGIN_API_EXPORTS = {
     "EvalDatasetBaseConfig": ("nat.data_models.dataset_handler", "EvalDatasetBaseConfig"),
     "EvaluatorBaseConfig": ("nat.data_models.evaluator", "EvaluatorBaseConfig"),
     "EvaluatorInfo": ("nat.builder.evaluator", "EvaluatorInfo"),
+    "ExporterManager": ("nat.observability.exporter_manager", "ExporterManager"),
     "Function": ("nat.builder.function", "Function"),
     "FunctionBaseConfig": ("nat.data_models.function", "FunctionBaseConfig"),
     "FunctionGroup": ("nat.builder.function", "FunctionGroup"),
@@ -80,14 +82,19 @@ EXPECTED_PLUGIN_API_EXPORTS = {
     "ObjectStoreItem": ("nat.object_store.models", "ObjectStoreItem"),
     "ObjectStoreBaseConfig": ("nat.data_models.object_store", "ObjectStoreBaseConfig"),
     "OptionalSecretStr": ("nat.data_models.common", "OptionalSecretStr"),
+    "PluginTypes": ("nat.runtime.loader", "PluginTypes"),
     "Retriever": ("nat.retriever.interface", "Retriever"),
     "RetrieverBaseConfig": ("nat.data_models.retriever", "RetrieverBaseConfig"),
     "RetrieverOutput": ("nat.retriever.models", "RetrieverOutput"),
     "RetrieverProviderInfo": ("nat.builder.retriever", "RetrieverProviderInfo"),
     "RetrieverRef": ("nat.data_models.component_ref", "RetrieverRef"),
+    "Runner": ("nat.runtime.runner", "Runner"),
     "SerializableSecretStr": ("nat.data_models.common", "SerializableSecretStr"),
     "TelemetryExporterBaseConfig": ("nat.data_models.telemetry_exporter", "TelemetryExporterBaseConfig"),
+    "WorkflowBuilder": ("nat.builder.workflow_builder", "WorkflowBuilder"),
+    "discover_and_register_plugins": ("nat.runtime.loader", "discover_and_register_plugins"),
     "get_secret_value": ("nat.data_models.common", "get_secret_value"),
+    "load_config": ("nat.runtime.loader", "load_config"),
     "register_dataset_loader": ("nat.cli.register_workflow", "register_dataset_loader"),
     "register_embedder_client": ("nat.cli.register_workflow", "register_embedder_client"),
     "register_embedder_provider": ("nat.cli.register_workflow", "register_embedder_provider"),
@@ -538,3 +545,63 @@ def test_consumer_style_context_and_interactive_types():
     parsed = InteractionResponse.model_validate(response.model_dump())
     assert isinstance(parsed.content, HumanResponseText)
     assert parsed.content.text == "yes"
+
+
+async def test_consumer_style_config_build_and_run(tmp_path):
+    """Exercise the configuration, build, and run surface using only ``nat.plugin_api`` imports.
+
+    Plugins that drive workflow execution (front ends, execution instrumentation, test harnesses) load a
+    validated ``Config``, build it with ``WorkflowBuilder``, read the built workflow's entry function, and
+    drive a run with ``Runner``. The public surface must be sufficient for that flow without falling back
+    to implementation modules.
+    """
+    from nat.plugin_api import Builder
+    from nat.plugin_api import Config
+    from nat.plugin_api import ContextState
+    from nat.plugin_api import ExporterManager
+    from nat.plugin_api import Function
+    from nat.plugin_api import FunctionBaseConfig
+    from nat.plugin_api import PluginTypes
+    from nat.plugin_api import Runner
+    from nat.plugin_api import WorkflowBuilder
+    from nat.plugin_api import discover_and_register_plugins
+    from nat.plugin_api import load_config
+    from nat.plugin_api import register_function
+
+    class _ConsumerTestRunConfig(FunctionBaseConfig, name="_consumer_test_plugin_api_run"):
+        suffix: str = "!"
+
+    @register_function(config_type=_ConsumerTestRunConfig)
+    async def _consumer_test_run_fn(config: _ConsumerTestRunConfig, builder: Builder):
+
+        async def _run(text: str) -> str:
+            return f"{text}{config.suffix}"
+
+        yield _run
+
+    # Entry-point discovery is idempotent; harnesses that execute workflows outside the CLI call it directly.
+    discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
+
+    config_file = tmp_path / "workflow.yaml"
+    config_file.write_text("workflow:\n  _type: _consumer_test_plugin_api_run\n", encoding="utf-8")
+
+    config = load_config(config_file)
+    assert isinstance(config, Config)
+
+    async with WorkflowBuilder.from_config(config=config) as workflow_builder:
+        workflow = await workflow_builder.build()
+
+        # The built workflow exposes its entry function through the public read-only property.
+        assert isinstance(workflow.entry_fn, Function)
+        assert isinstance(workflow.entry_fn.config, _ConsumerTestRunConfig)
+
+        # Source the exporter manager from the built workflow (mirroring how the workflow drives its
+        # own runs) so any configured telemetry exporters are preserved.
+        exporter_manager = workflow.exporter_manager
+        assert isinstance(exporter_manager, ExporterManager)
+
+        async with Runner(input_message="ping",
+                          entry_fn=workflow.entry_fn,
+                          context_state=ContextState.get(),
+                          exporter_manager=exporter_manager) as runner:
+            assert await runner.result(to_type=str) == "ping!"

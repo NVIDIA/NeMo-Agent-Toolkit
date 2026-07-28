@@ -30,6 +30,11 @@ without notice; plugin authors must not depend on them:
 
 ``test_builder_stable_surface_is_explicit`` pins the full method partition, so any new method added to ``Builder``
 must be explicitly categorized as stable or deferred.
+
+``WorkflowBuilder`` is re-exported for plugins that programmatically load a configuration, build it, and drive runs
+(for example front ends, execution instrumentation, and test harnesses). The ``Builder`` method partition above
+applies to it as well; its builder-lifecycle entry points (``from_config``, ``populate_builder``, and ``build``) are
+the intended public usage.
 """
 
 from nat.builder.builder import Builder
@@ -45,6 +50,7 @@ from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
 from nat.builder.retriever import RetrieverProviderInfo
+from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_dataset_loader
 from nat.cli.register_workflow import register_embedder_client
 from nat.cli.register_workflow import register_embedder_provider
@@ -76,6 +82,7 @@ from nat.data_models.component_ref import MemoryRef
 from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.config import Config
 from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
@@ -115,15 +122,21 @@ from nat.middleware.middleware import InvocationAction
 from nat.middleware.middleware import InvocationContext
 from nat.object_store.interfaces import ObjectStore
 from nat.object_store.models import ObjectStoreItem
+from nat.observability.exporter_manager import ExporterManager
 from nat.retriever.interface import Retriever
 from nat.retriever.models import Document
 from nat.retriever.models import RetrieverOutput
+from nat.runtime.loader import PluginTypes
+from nat.runtime.loader import discover_and_register_plugins
+from nat.runtime.loader import load_config
+from nat.runtime.runner import Runner
 
 # Public contract: keep this list exact and update docs/source/extend/plugin-api.md plus
 # packages/nvidia_nat_core/tests/nat/test_plugin_api.py whenever symbols are added or removed.
 __all__ = [
     "Builder",
     "ComponentRef",
+    "Config",
     "Context",
     "ContextState",
     "DatasetLoaderInfo",
@@ -137,6 +150,7 @@ __all__ = [
     "EvalDatasetBaseConfig",
     "EvaluatorBaseConfig",
     "EvaluatorInfo",
+    "ExporterManager",
     "Function",
     "FunctionBaseConfig",
     "FunctionGroup",
@@ -181,14 +195,19 @@ __all__ = [
     "ObjectStoreItem",
     "ObjectStoreBaseConfig",
     "OptionalSecretStr",
+    "PluginTypes",
     "Retriever",
     "RetrieverBaseConfig",
     "RetrieverOutput",
     "RetrieverProviderInfo",
     "RetrieverRef",
+    "Runner",
     "SerializableSecretStr",
     "TelemetryExporterBaseConfig",
+    "WorkflowBuilder",
+    "discover_and_register_plugins",
     "get_secret_value",
+    "load_config",
     "register_dataset_loader",
     "register_embedder_client",
     "register_embedder_provider",

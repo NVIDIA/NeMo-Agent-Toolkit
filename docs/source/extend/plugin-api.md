@@ -54,6 +54,10 @@ The following `nat.plugin_api` exports are intended for plugin authors:
 - Runtime context access through `Context` and `ContextState`, for reading invocation-scoped state
   such as `workflow_run_id`, `user_id`, and the active function, and for prompting users through
   `Context.get().user_interaction_manager`.
+- Configuration, build, and run access for plugins that programmatically drive workflows: `Config`,
+  `load_config`, `PluginTypes`, `discover_and_register_plugins`, `WorkflowBuilder`, `Runner`, and
+  `ExporterManager`. The workflow object returned by `WorkflowBuilder.build` exposes its entry function
+  through the read-only `entry_fn` property.
 - Component reference types, such as `FunctionRef`, `FunctionGroupRef`, `LLMRef`, `EmbedderRef`, `RetrieverRef`,
   `MemoryRef`, `ObjectStoreRef`, and `MiddlewareRef`.
 - Framework wrapper identifiers, including `LLMFrameworkEnum`.
@@ -82,7 +86,7 @@ the current promotion decision for the major plugin-authoring surfaces.
 | --- | --- | --- |
 | Functions | Stable public | Core external plugin unit. Third-party tool and workflow packages need `register_function`, `FunctionBaseConfig`, `FunctionInfo`, and `Builder`. |
 | Function groups | Stable public | Best fit for providers exposing multiple related tools. Supports external packages that share clients and resources and expose `group__function` names. |
-| Builder type and common component access | Stable public | Registered build functions receive a builder. Authors need a stable builder type without depending on `WorkflowBuilder`. Only the builder methods categorized as stable in `packages/nvidia_nat_core/tests/nat/test_plugin_api.py` are part of the facade contract; deferred subsystem methods and concrete builders remain implementation details. |
+| Builder type and common component access | Stable public | Registered build functions receive a builder. Authors need a stable builder type without depending on `WorkflowBuilder`. Only the builder methods categorized as stable in `packages/nvidia_nat_core/tests/nat/test_plugin_api.py` are part of the facade contract; deferred subsystem methods remain implementation details. `WorkflowBuilder` itself is exported separately as a provisional build-and-run surface (see the "Workflow build and run" row below). |
 | Configuration bases | Stable public except where a component row below is provisional or deferred | Public decorators require corresponding configuration base classes for typed YAML and discovery contracts. A component's configuration base follows that component's support tier. |
 | Provider info objects | Stable public | LLM, embedder, retriever, dataset, and evaluator registrations yield these helper objects. |
 | Component refs | Stable public | External configurations need stable references to configured functions, LLMs, embedders, retrievers, memory, object stores, and middleware. |
@@ -98,7 +102,9 @@ the current promotion decision for the major plugin-authoring surfaces.
 | Middleware registration and function middleware | Stable public, trusted plugin | Basic middleware registration and function middleware support caching, policy, auth injection, redaction, and tracing. Middleware can observe or alter calls, so plugins must be trusted. |
 | Dynamic middleware and runtime introspection | Provisional public, trusted plugin | Dynamic middleware reaches deeper into runtime call interception and inventory metadata. The facade exposes the current dynamic middleware types, but inventory and unregister details remain subsystem-specific until the contract is promoted deliberately. |
 | HITL middleware | Provisional public, trusted plugin | HITL middleware is an abstract extension point for human-in-the-loop function interception. The facade exposes `HITLMiddleware`, `HITLMiddlewareConfig`, `InvocationAction`, and the interactive data models `HumanPrompt`, `InteractionPrompt`, `InteractionResponse`, and `HumanResponse` with its concrete response models so that concrete subclass authors and user-input integrations can import the full authoring and interactive-model surface from `nat.plugin_api`. |
-| Runtime context access | Provisional public | Middleware, HITL, and telemetry integrations read invocation-scoped state (for example `workflow_run_id`, `user_id`, and the active function) and prompt users through `Context.get().user_interaction_manager`. The facade exposes `Context` and `ContextState`; deeper runtime wiring such as intermediate-step manager internals and exporter management remains subsystem-specific until promoted deliberately. |
+| Runtime context access | Provisional public | Middleware, HITL, and telemetry integrations read invocation-scoped state (for example `workflow_run_id`, `user_id`, and the active function) and prompt users through `Context.get().user_interaction_manager`. The facade exposes `Context` and `ContextState`; deeper runtime wiring such as intermediate-step manager internals remains subsystem-specific until promoted deliberately. |
+| Configuration loading and plugin discovery | Provisional public | Plugins that load workflows programmatically need the validated configuration object and entry-point discovery. The facade exposes `Config`, `load_config`, `PluginTypes`, and `discover_and_register_plugins`. YAML tooling and schema-validation helpers remain subsystem-specific until promoted deliberately. |
+| Workflow build and run | Provisional public | Front ends, execution instrumentation, and test harnesses build a configured workflow and drive runs, so the facade exposes `WorkflowBuilder`, `Runner`, and `ExporterManager`, and the built workflow exposes its entry function through the read-only `entry_fn` property. Callers that construct a `Runner` directly should source the exporter manager from the built workflow's read-only `exporter_manager` property so configured telemetry exporters are preserved. Session management and the remaining workflow internals stay subsystem-specific until promoted deliberately. |
 | Telemetry registration | Provisional public, trusted plugin | The facade currently exposes telemetry exporter registration and configuration. Exporter implementation APIs, including raw exporters, span exporters, processors, and intermediate-step models, remain subsystem-specific and may evolve until they are promoted deliberately. Telemetry plugins can observe sensitive workflow data and must be trusted. |
 | Tool wrapper registration | Provisional public | The facade exposes `register_tool_wrapper` for framework integrations. Wrapper callables depend on framework-native tool types and currently return framework-specific objects, so keep this provisional until the wrapper callable contract is promoted deliberately. |
 | Auth provider | Deferred | Authentication provider authoring is still experimental and depends on subsystem APIs such as `AuthProviderBase`, `AuthProviderBaseConfig`, `AuthenticationRef`, and `register_auth_provider`. Keep it out of the stable facade until the auth compatibility and trust contract is promoted deliberately. |
@@ -125,8 +131,10 @@ as stable API contracts. Prefer `nat.plugin_api` over direct imports from module
 - `nat.builder.function_info`
 - `nat.builder.workflow_builder`
 
-Concrete builders such as `WorkflowBuilder` are runtime implementation details. Plugin builders should type against
-`Builder`, and plugin tests should use the utilities in `nvidia-nat-test` where possible.
+Registered build callables should still type against `Builder`. `WorkflowBuilder` is exported through `nat.plugin_api`
+as a provisional surface for plugins that programmatically build workflows; import it from the facade rather than from
+`nat.builder.workflow_builder`, and prefer its documented lifecycle entry points (`from_config`, `populate_builder`, and
+`build`). Plugin tests should use the utilities in `nvidia-nat-test` where possible.
 
 ## Function Group Contract
 

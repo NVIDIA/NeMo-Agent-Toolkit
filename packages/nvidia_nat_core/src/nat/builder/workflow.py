@@ -80,6 +80,16 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         self._saved_context = contextvars.copy_context()
 
     @property
+    def entry_fn(self) -> Function[InputT, StreamingOutputT, SingleOutputT]:
+        """The entry ``Function`` this workflow dispatches each run to.
+
+        Read-only. Callers that drive runs themselves (for example through ``Runner``) or introspect the
+        workflow's input and output contracts should use this property instead of reaching into private
+        attributes.
+        """
+        return self._entry_fn
+
+    @property
     def has_streaming_output(self) -> bool:
 
         return self._entry_fn.has_streaming_output
