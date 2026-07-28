@@ -12,6 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Automatic retry helpers that wrap callables with exponential back-off.
+
+The ``retries`` budget used throughout this module counts *total attempts*:
+the initial call plus any retries. Values below 1 are normalized to 1, so a
+wrapped callable always executes at least once.
+"""
 import asyncio
 import copy
 import functools
@@ -186,11 +192,24 @@ def _retry_decorator(
 
     If both `retry_codes` and `retry_on_messages` are None, all exceptions are retried.
 
+    retries:
+        Total number of attempts (the initial call counts toward the budget).
+        Values below 1 behave as 1, so the wrapped callable always executes
+        at least once.
+
     instance_context_aware:
         If True, the decorator will check for a retry context flag on the first
         argument (assumed to be 'self'). If the flag is set, retries are skipped
         to prevent retry storms in nested method calls.
     """
+
+    # ``retries`` counts total attempts. A non-positive budget would make the
+    # ``range()`` in every wrapper below empty and silently skip the wrapped
+    # callable, so normalize it to a minimum of one attempt. This runs once per
+    # decorator factory call (not per wrapped method), so the log is not noisy.
+    if retries < 1:
+        logger.debug("retries=%d is below 1; normalizing to 1 total attempt", retries)
+    total_attempts = max(1, retries)
 
     def decorate(fn: Callable[..., T]) -> Callable[..., T]:
         use_shallow_copy = shallow_copy
@@ -254,7 +273,7 @@ def _retry_decorator(
                 delay = base_delay
                 last_exception = None
 
-                for attempt in range(retries):
+                for attempt in range(total_attempts):
                     # Copy args based on configuration
                     if use_shallow_copy:
                         call_args, call_kwargs = _shallow_copy_args(args, kw)
@@ -274,7 +293,7 @@ def _retry_decorator(
                         _run_gc_if_needed(attempt, gc_frequency)
 
                         if not _want_retry(exc, code_patterns=retry_codes,
-                                           msg_substrings=retry_on_messages) or attempt == retries - 1:
+                                           msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
                             raise
 
                         await asyncio.sleep(delay)
@@ -293,7 +312,7 @@ def _retry_decorator(
                 delay = base_delay
                 last_exception = None
 
-                for attempt in range(retries):
+                for attempt in range(total_attempts):
                     if use_shallow_copy:
                         call_args, call_kwargs = _shallow_copy_args(args, kw)
                     else:
@@ -313,7 +332,7 @@ def _retry_decorator(
                         _run_gc_if_needed(attempt, gc_frequency)
 
                         if not _want_retry(exc, code_patterns=retry_codes,
-                                           msg_substrings=retry_on_messages) or attempt == retries - 1:
+                                           msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
                             raise
 
                         await asyncio.sleep(delay)
@@ -331,7 +350,7 @@ def _retry_decorator(
                 delay = base_delay
                 last_exception = None
 
-                for attempt in range(retries):
+                for attempt in range(total_attempts):
                     if use_shallow_copy:
                         call_args, call_kwargs = _shallow_copy_args(args, kw)
                     else:
@@ -350,7 +369,7 @@ def _retry_decorator(
                         _run_gc_if_needed(attempt, gc_frequency)
 
                         if not _want_retry(exc, code_patterns=retry_codes,
-                                           msg_substrings=retry_on_messages) or attempt == retries - 1:
+                                           msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
                             raise
 
                         time.sleep(delay)
@@ -367,7 +386,7 @@ def _retry_decorator(
                 delay = base_delay
                 last_exception = None
 
-                for attempt in range(retries):
+                for attempt in range(total_attempts):
                     if use_shallow_copy:
                         call_args, call_kwargs = _shallow_copy_args(args, kw)
                     else:
@@ -385,7 +404,7 @@ def _retry_decorator(
                         _run_gc_if_needed(attempt, gc_frequency)
 
                         if not _want_retry(exc, code_patterns=retry_codes,
-                                           msg_substrings=retry_on_messages) or attempt == retries - 1:
+                                           msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
                             raise
 
                         time.sleep(delay)
@@ -424,6 +443,13 @@ def patch_with_retry(
 ) -> Any:
     """
     Patch *obj* instance-locally so **every public method** retries on failure.
+
+    Retry budget
+    ------------
+    retries
+        Total number of attempts per call (the initial call counts toward the
+        budget).  Values below 1 behave as 1, so the patched method always
+        executes at least once.
 
     Extra filters
     -------------
