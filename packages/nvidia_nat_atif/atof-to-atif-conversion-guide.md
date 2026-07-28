@@ -715,8 +715,9 @@ a `_PayloadFactory` subclass for the provider, add it to the
 
 ## 9. References
 
-- **ATOF wire-format spec**: `[atof-event-format.md](../../../../atif-alignment/rfc/atof-event-format.md)` (in the
-`atif-alignment` repo)
+<!-- markdown-link-check-disable -->
+- **ATOF wire-format specification**: [ATOF Core Specification](https://github.com/NVIDIA/NeMo-Relay/blob/main/docs/reference/atof-event-format.md)
+<!-- markdown-link-check-enable -->
 - **ATIF v1.7 trajectory model**: see [Harbor RFC 0001: Trajectory Format](https://github.com/harbor-framework/harbor/blob/main/rfcs/0001-trajectory-format.md)
 and NeMo Agent Toolkit ATIF docs; canonical models in `nat.atif`
 (Trajectory, Step, ToolCall, Observation)
