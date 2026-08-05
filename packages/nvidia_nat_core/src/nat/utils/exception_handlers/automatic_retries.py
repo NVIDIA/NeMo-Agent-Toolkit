@@ -444,12 +444,10 @@ def patch_with_retry(
     """
     Patch *obj* instance-locally so **every public method** retries on failure.
 
-    Retry budget
-    ------------
-    retries
-        Total number of attempts per call (the initial call counts toward the
-        budget).  Values below 1 behave as 1, so the patched method always
-        executes at least once.
+    Args:
+        `retries`: Total number of attempts per call (the initial call counts
+            toward the budget). Values below 1 behave as 1, so the patched
+            method always executes at least once.
 
     Extra filters
     -------------
