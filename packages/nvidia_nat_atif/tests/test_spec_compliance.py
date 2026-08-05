@@ -14,7 +14,7 @@
 # limitations under the License.
 """Spec-compliance tests for the ATOF Pydantic models.
 
-Every test pins a specific behavior claimed by ``atof-event-format.md`` so
+Every test pins a specific behavior claimed by the ATOF Core Specification so
 that a regression in the Pydantic model or the I/O layer is caught
 immediately. Tests are grouped by spec section (§2 envelope, §2.1
 attributes, §3 event kinds, §4 category, §1/§5 wire + stream semantics).
