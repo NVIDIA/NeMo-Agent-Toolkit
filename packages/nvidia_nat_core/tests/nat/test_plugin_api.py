@@ -386,6 +386,12 @@ def test_plugin_authoring_docs_prefer_public_api_imports():
         "from nat.builder.context import ContextState",
         "from nat.data_models.interactive import BinaryHumanPromptOption",
         "from nat.data_models.interactive import HumanPrompt",
+        "from nat.data_models.interactive import HumanPromptBinary",
+        "from nat.data_models.interactive import HumanPromptCheckbox",
+        "from nat.data_models.interactive import HumanPromptDropdown",
+        "from nat.data_models.interactive import HumanPromptNotification",
+        "from nat.data_models.interactive import HumanPromptRadio",
+        "from nat.data_models.interactive import HumanPromptText",
         "from nat.data_models.interactive import HumanResponse",
         "from nat.data_models.interactive import InteractionPrompt",
         "from nat.data_models.interactive import InteractionResponse",
@@ -599,3 +605,4 @@ def test_consumer_style_prompt_content_models():
         parsed = InteractionPrompt.model_validate(prompt.model_dump())
         assert type(parsed.content) is type(content)
         assert parsed.content.text == content.text
+        assert parsed.content.model_dump() == content.model_dump()
