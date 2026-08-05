@@ -19,7 +19,7 @@ models define the two event kinds (``ScopeEvent``, ``MarkEvent``), the
 behavioral flag enum (``Flags``), and the canonical ``category``
 vocabulary (``Category``).
 
-See ``atof-event-format.md`` for the core wire format. For payload
+Refer to the ATOF Core Specification for the core wire format. For payload
 extraction, see :mod:`nat.atof.extractors` (schema-map-driven LLM
 extractors for OpenAI, Anthropic, and Gemini). For the open question
 of how producers should *declare* their schemas to consumers (a future
