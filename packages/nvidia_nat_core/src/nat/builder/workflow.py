@@ -86,6 +86,10 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         Read-only. Callers that drive runs themselves (for example through ``Runner``) or introspect the
         workflow's input and output contracts should use this property instead of reaching into private
         attributes.
+
+        Returns:
+            Function[InputT, StreamingOutputT, SingleOutputT]: The entry function this workflow dispatches
+                each run to.
         """
         return self._entry_fn
 

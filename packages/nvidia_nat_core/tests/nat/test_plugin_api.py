@@ -547,7 +547,7 @@ def test_consumer_style_context_and_interactive_types():
     assert parsed.content.text == "yes"
 
 
-async def test_consumer_style_config_build_and_run(tmp_path):
+async def test_consumer_style_config_build_and_run(tmp_path: Path):
     """Exercise the configuration, build, and run surface using only ``nat.plugin_api`` imports.
 
     Plugins that drive workflow execution (front ends, execution instrumentation, test harnesses) load a
