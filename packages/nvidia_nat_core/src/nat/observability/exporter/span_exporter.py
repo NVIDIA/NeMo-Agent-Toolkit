@@ -198,6 +198,8 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
                 event.payload.framework.value if event.payload.framework else "unknown",
             f"{self._span_prefix}.conversation.id":
                 self._context_state.conversation_id.get() or "unknown",
+            f"{self._span_prefix}.user.id":
+                self._context_state.user_id.get() or "unknown",
             f"{self._span_prefix}.workflow.run_id":
                 self._context_state.workflow_run_id.get() or "unknown",
             f"{self._span_prefix}.workflow.trace_id": (f"{_attr_trace_id:032x}" if _attr_trace_id else "unknown"),
@@ -222,6 +224,14 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
             conversation_id = self._context_state.conversation_id.get()
             if conversation_id:
                 sub_span.set_attribute("session.id", conversation_id)
+        except (AttributeError, LookupError):
+            pass
+
+        # Enable user attribution by setting user.id from user_id (used by Langfuse and OTLP backends)
+        try:
+            user_id = self._context_state.user_id.get()
+            if user_id:
+                sub_span.set_attribute("user.id", user_id)
         except (AttributeError, LookupError):
             pass
 
