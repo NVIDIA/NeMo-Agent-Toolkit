@@ -13,18 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
 from inspect import Parameter
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
+from pydantic import AliasChoices
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
+from pydantic.json_schema import PydanticJsonSchemaWarning
 
 from nat.builder.function import Function
 from nat.builder.workflow import Workflow
-from nat.plugins.mcp.server.tool_converter import _USE_PYDANTIC_DEFAULT
 from nat.plugins.mcp.server.tool_converter import _build_name_mapping
 from nat.plugins.mcp.server.tool_converter import _sanitize_parameter_name
 from nat.plugins.mcp.server.tool_converter import create_function_wrapper
@@ -77,6 +82,20 @@ class MockOptionalTypesSchema(BaseModel):
     optional_str_none: str | None = None
     optional_int_none: int | None = None
     optional_list_none: list[float] | None = None
+
+
+class MockConstrainedSchema(BaseModel):
+    """Schema with constraints that must be advertised to MCP clients."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    page: int = Field(ge=1, le=2000, description="Page number")
+    query: str = Field(min_length=2, max_length=100, description="Search query")
+    tags: list[str] = Field(default_factory=lambda data: [data["query"]],
+                            min_length=1,
+                            max_length=5,
+                            validate_default=True,
+                            description="Tags to include")
 
 
 def create_mock_workflow_with_observability():
@@ -168,9 +187,8 @@ class TestIsFieldOptional:
 
         # Assert
         assert is_optional is True
-        # When default_factory is used, we return the sentinel
-        # This allows Pydantic to apply the factory at validation time
-        assert default_value is _USE_PYDANTIC_DEFAULT
+        # Factory fields remain optional without a concrete signature default.
+        assert default_value is Parameter.empty
 
     def test_optional_field_with_none_default(self):
         """Test optional field with None as default (Union types)."""
@@ -230,7 +248,8 @@ class TestIsFieldOptional:
             field = MockMixedRequiredOptionalSchema.model_fields[field_name]
             is_optional, default_value = is_field_optional(field)
             assert is_optional is True, f"Field {field_name} should be optional"
-            assert default_value != Parameter.empty, f"Field {field_name} should have a default"
+            if field.default_factory is None:
+                assert default_value != Parameter.empty, f"Field {field_name} should have a default"
 
 
 class TestCreateFunctionWrapper:
@@ -436,6 +455,79 @@ class TestRegisterFunctionWithMcp:
                                                     None)  # memory_profiler defaults to None
         mock_mcp.tool.assert_called_once_with(name=function_name, description="Workflow description")
 
+    async def test_registered_tool_preserves_pydantic_schema_without_warnings(self):
+        """The MCP schema should preserve field metadata and serializable defaults."""
+        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
+        mock_function.input_schema = MockConstrainedSchema
+        mock_function.description = "Constrained tool"
+        mcp = FastMCP("test-server")
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            register_function_with_mcp(mcp, "constrained_tool", mock_session_manager, function=mock_function)
+            tools = await mcp.list_tools()
+
+        assert not [warning for warning in caught if issubclass(warning.category, PydanticJsonSchemaWarning)]
+        assert len(tools) == 1
+
+        input_schema = tools[0].inputSchema
+        assert input_schema["required"] == ["page", "query"]
+        assert input_schema["properties"]["page"]["description"] == "Page number"
+        assert input_schema["properties"]["query"]["description"] == "Search query"
+        assert input_schema["properties"]["tags"]["description"] == "Tags to include"
+        assert input_schema["properties"]["page"]["minimum"] == 1
+        assert input_schema["properties"]["page"]["maximum"] == 2000
+        assert input_schema["properties"]["query"]["minLength"] == 2
+        assert input_schema["properties"]["query"]["maxLength"] == 100
+        assert input_schema["properties"]["tags"]["minItems"] == 1
+        assert input_schema["properties"]["tags"]["maxItems"] == 5
+        assert "default" not in input_schema["properties"]["tags"]
+
+        await mcp.call_tool("constrained_tool", {"page": 1, "query": "valid"})
+        payload = mock_session_manager.run.call_args.args[0]
+        assert payload.tags == ["valid"]
+        assert "tags" not in payload.model_fields_set
+
+        await mcp.call_tool("constrained_tool", {"page": 1, "query": "valid", "tags": ["valid"]})
+        payload = mock_session_manager.run.call_args.args[0]
+        assert payload.tags == ["valid"]
+        assert "tags" in payload.model_fields_set
+
+    @pytest.mark.parametrize(
+        "arguments,message",
+        [
+            pytest.param({
+                "page": 0, "query": "valid"
+            }, "greater than or equal to 1", id="page-minimum"),
+            pytest.param({
+                "page": 2001, "query": "valid"
+            }, "less than or equal to 2000", id="page-maximum"),
+            pytest.param({
+                "page": 1, "query": "x"
+            }, "at least 2 characters", id="query-minimum"),
+            pytest.param({
+                "page": 1, "query": "x" * 101
+            }, "at most 100 characters", id="query-maximum"),
+            pytest.param({
+                "page": 1, "query": "valid", "tags": []
+            }, "at least 1 item", id="tags-minimum"),
+            pytest.param({
+                "page": 1, "query": "valid", "tags": ["tag"] * 6
+            }, "at most 5 items", id="tags-maximum"),
+        ])
+    async def test_registered_tool_enforces_pydantic_constraints(self, arguments, message):
+        """The MCP server should enforce every constraint it advertises."""
+        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
+        mock_function.input_schema = MockConstrainedSchema
+        mock_function.description = "Constrained tool"
+        mcp = FastMCP("test-server")
+        register_function_with_mcp(mcp, "constrained_tool", mock_session_manager, function=mock_function)
+
+        with pytest.raises(ToolError, match=message):
+            await mcp.call_tool("constrained_tool", arguments)
+
 
 class TestParameterSchemaValidation:
     """Test cases for validating parameter schemas after conversion."""
@@ -516,9 +608,8 @@ class TestParameterSchemaValidation:
         assert "optional_list" in sig.parameters
         assert sig.parameters["optional_str"].default == "default_value"
         assert sig.parameters["optional_int"].default == 42
-        # Fields with default_factory get the sentinel as the signature default
-        # The actual factory will be called by Pydantic at validation time
-        assert sig.parameters["optional_list"].default is _USE_PYDANTIC_DEFAULT
+        # Factory fields remain optional without a concrete signature default.
+        assert sig.parameters["optional_list"].default is Parameter.empty
 
     def test_optional_with_none_type(self):
         """Test optional parameters with None type (Union types)."""
@@ -559,10 +650,10 @@ class TestParameterSchemaValidation:
         assert sig is not None
 
         # Check that annotations are present
-        assert sig.parameters["required_str"].annotation is str
-        assert sig.parameters["required_int"].annotation is int
-        assert sig.parameters["optional_str"].annotation is str
-        assert sig.parameters["optional_int"].annotation is int
+        assert sig.parameters["required_str"].annotation.__origin__ is str
+        assert sig.parameters["required_int"].annotation.__origin__ is int
+        assert sig.parameters["optional_str"].annotation.__origin__ is str
+        assert sig.parameters["optional_int"].annotation.__origin__ is int
 
     def test_parameter_order_preserved(self):
         """Test that parameter order is preserved in wrapper."""
@@ -904,6 +995,45 @@ class TestParameterNameSanitization:
         assert sig is not None
         assert "cik_A" in sig.parameters
         assert "name" in sig.parameters
+
+    @pytest.mark.parametrize(
+        ("field", "advertised_name"),
+        [
+            pytest.param(Field(), "from", id="no-alias"),
+            pytest.param(Field(alias="fromDate"), "fromDate", id="alias"),
+            pytest.param(Field(validation_alias="fromDate"), "fromDate", id="validation-alias"),
+            pytest.param(
+                Field(validation_alias=AliasChoices("fromDate", "from_date")),
+                "fromDate",
+                id="alias-choices",
+            ),
+            pytest.param(
+                Field(alias="genericDate", validation_alias="fromDate", serialization_alias="outDate"),
+                "fromDate",
+                id="distinct-aliases",
+            ),
+        ],
+    )
+    async def test_registered_tool_preserves_aliases_for_sanitized_fields(self, field, advertised_name):
+        """Sanitized fields should retain their declared input alias behavior."""
+        from pydantic import create_model
+        schema = create_model("DateRangeSchema", **{
+            "from": (str, field), "query": (str, ...)
+        })  # type: ignore[call-overload]
+        mock_session_manager = create_mock_session_manager()
+        mock_function = MagicMock(spec=Function)
+        mock_function.input_schema = schema
+        mock_function.description = "Date range tool"
+        mcp = FastMCP("test-server")
+
+        register_function_with_mcp(mcp, "date_tool", mock_session_manager, function=mock_function)
+        tools = await mcp.list_tools()
+
+        assert set(tools[0].inputSchema["properties"]) == {advertised_name, "query"}
+
+        await mcp.call_tool("date_tool", {advertised_name: "2026-01-01", "query": "test"})
+        payload = mock_session_manager.run.call_args.args[0]
+        assert getattr(payload, "from") == "2026-01-01"
 
     async def test_wrapper_reverse_maps_kwargs_for_validation(self):
         """Test that sanitized kwargs are reverse-mapped before Pydantic validation."""

@@ -20,9 +20,11 @@ import re
 from inspect import Parameter
 from inspect import Signature
 from typing import TYPE_CHECKING
+from typing import Annotated
 from typing import Any
 
 from pydantic import BaseModel
+from pydantic import Field
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
@@ -36,8 +38,29 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Sentinel: marks "optional; let Pydantic supply default/factory"
 _USE_PYDANTIC_DEFAULT = object()
+
+
+def _use_pydantic_default() -> object:
+    """Mark an omitted `FastMCP` argument for removal before model validation."""
+    return _USE_PYDANTIC_DEFAULT
+
+
+def _build_mcp_field_annotation(field: FieldInfo) -> Any:
+    """Build a field annotation for `FastMCP`'s intermediate argument model.
+
+    `FastMCP` materializes default-factory values before calling the wrapper. Use
+    a private marker factory in that intermediate model so the declared schema
+    remains responsible for applying its original factory and tracking whether
+    the caller supplied the field.
+    """
+    field_metadata: list[Any] = [field]
+    if field.default_factory is not None:
+        # The type-agnostic marker need not satisfy the field type. The wrapper
+        # removes it before the declared schema validates the original factory's value.
+        field_metadata.append(Field(default_factory=_use_pydantic_default, validate_default=False))
+
+    return Annotated[(field.annotation or Any, *field_metadata)]
 
 
 def _sanitize_parameter_name(name: str) -> str:
@@ -109,9 +132,11 @@ def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
     """Determine if a Pydantic field is optional and extract its default value for MCP signatures.
 
     For MCP tool signatures, we need to distinguish:
+
     - Required fields: marked with Parameter.empty
     - Optional with concrete default: use that default
-    - Optional with factory: use sentinel so Pydantic can apply the factory later
+    - Optional with factory: omit the signature default; the annotated field uses
+      an internal marker so the declared schema can apply its factory later
 
     Args:
         field: The Pydantic FieldInfo to check
@@ -120,7 +145,7 @@ def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
         A tuple of (is_optional, default_value):
         - (False, Parameter.empty) for required fields
         - (True, actual_default) for optional fields with explicit defaults
-        - (True, _USE_PYDANTIC_DEFAULT) for optional fields with default_factory
+        - (True, Parameter.empty) for optional fields with default_factory
     """
     if field.is_required():
         return False, Parameter.empty
@@ -129,12 +154,14 @@ def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
     if field.default is not PydanticUndefined:
         return True, field.default
 
-    # Factory case: mark optional in signature but don't fabricate a value
+    # Factory case: the generated field annotation carries an internal marker factory.
+    # Leaving the signature default empty avoids exposing a non-serializable
+    # sentinel in the generated JSON schema.
     if field.default_factory is not None:
-        return True, _USE_PYDANTIC_DEFAULT
+        return True, Parameter.empty
 
     # Rare corner case: non-required yet no default surfaced
-    return True, _USE_PYDANTIC_DEFAULT
+    return True, Parameter.empty
 
 
 def create_function_wrapper(
@@ -177,20 +204,29 @@ def create_function_wrapper(
         # Extract parameter information from the input schema
         param_fields = schema.model_fields
 
-        # Build collision-safe name mapping and derive reverse alias map
+        # Build collision-safe name mapping and derive the keys FastMCP may
+        # emit for each declared schema field.
         name_map = _build_name_mapping(list(param_fields.keys()))
-        alias_map = {safe: orig for orig, safe in name_map.items() if orig != safe}
+        argument_name_map = {safe: orig for orig, safe in name_map.items() if orig != safe}
 
         parameters = []
         for name, field in param_fields.items():
-            # Get the field type and convert to appropriate Python type
-            field_type = field.annotation
+            # Retain the Pydantic field metadata so FastMCP preserves its
+            # constraints, descriptions, and optionality.
+            # Look up the collision-safe parameter name
+            safe_name = name_map[name]
+
+            field_type = _build_mcp_field_annotation(field)
+            if safe_name != name:
+                # Only synthesize the original JSON name when the declared
+                # field has no input alias semantics of its own.
+                if field.validation_alias is None:
+                    field_type = Annotated[field_type, Field(alias=name)]
+                if isinstance(field.alias, str):
+                    argument_name_map[field.alias] = name
 
             # Check if field is optional and get its default value
             _is_optional, param_default = is_field_optional(field)
-
-            # Look up the collision-safe parameter name
-            safe_name = name_map[name]
 
             # Add the parameter to our list
             parameters.append(
@@ -220,6 +256,11 @@ def create_function_wrapper(
             if "ctx" in kwargs:
                 del kwargs["ctx"]
 
+            # FastMCP applies the wrapper field's factory to omitted arguments.
+            # Remove its marker so the declared schema can apply the original
+            # default factory and preserve model_fields_set semantics.
+            kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
+
             # Process the function call
             if ctx:
                 ctx.info("Calling function %s with args: %s", function_name, json.dumps(kwargs, default=str))
@@ -233,13 +274,11 @@ def create_function_wrapper(
                     query = kwargs.get("query", "")
                     payload = ChatRequest.from_string(query)
                 else:
-                    # Strip sentinel values so Pydantic can apply defaults/factories
-                    cleaned_kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
-                    # Reverse-map sanitized parameter names to original schema names
-                    if alias_map:
-                        cleaned_kwargs = {alias_map.get(k, k): v for k, v in cleaned_kwargs.items()}
+                    # Canonicalize sanitized names and aliases emitted by FastMCP.
+                    if argument_name_map:
+                        kwargs = {argument_name_map.get(k, k): v for k, v in kwargs.items()}
                     # Always validate with the declared schema
-                    payload = schema.model_validate(cleaned_kwargs)
+                    payload = schema.model_validate(kwargs, by_name=True)
 
                 # Use SessionManager.run() pattern - this automatically handles all observability
                 # The Runner created by session_manager.run() will:
