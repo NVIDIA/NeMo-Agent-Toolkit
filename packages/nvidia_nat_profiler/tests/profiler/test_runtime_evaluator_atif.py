@@ -137,7 +137,9 @@ async def test_evaluate_atif_item_uses_invocation_timing():
             # A conflicting legacy span_event_timestamp (which would imply 5.0s
             # against step.timestamp) must be ignored in favour of invocation.
             extra={
-                "invocation": {"start_timestamp": 1000.0, "end_timestamp": 1003.5},
+                "invocation": {
+                    "start_timestamp": 1000.0, "end_timestamp": 1003.5
+                },
                 "span_event_timestamp": "2024-01-01T12:00:00",
             },
         ),
@@ -164,14 +166,18 @@ async def test_evaluate_atif_item_skips_non_finite_invocation_timing():
             source="agent",
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=1),
-            extra={"invocation": {"start_timestamp": float("nan"), "end_timestamp": 1.0}},
+            extra={"invocation": {
+                "start_timestamp": float("nan"), "end_timestamp": 1.0
+            }},
         ),
         ATIFStep(
             step_id=2,
             source="agent",
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=1),
-            extra={"invocation": {"start_timestamp": 1.0, "end_timestamp": float("inf")}},
+            extra={"invocation": {
+                "start_timestamp": 1.0, "end_timestamp": float("inf")
+            }},
         ),
         ATIFStep(
             step_id=3,
@@ -179,7 +185,9 @@ async def test_evaluate_atif_item_skips_non_finite_invocation_timing():
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=1),
             # An integer too large to convert to float raises OverflowError.
-            extra={"invocation": {"start_timestamp": 0, "end_timestamp": 10**400}},
+            extra={"invocation": {
+                "start_timestamp": 0, "end_timestamp": 10**400
+            }},
         ),
     ]
     sample = _make_sample("nonfinite", steps)
