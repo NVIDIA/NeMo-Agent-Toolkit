@@ -1804,13 +1804,16 @@ def test_build_lc_config_ignores_unknown_model_sentinel():
     The sentinel is injected when a plain string input is converted to a `ChatRequest`, and
     must not become a per-request model override (regression from `#2036`).
     """
+    from nat.data_models.api_server import UNKNOWN_MODEL_SENTINEL
     from nat.data_models.api_server import ChatRequest
     from nat.plugins.langchain.agent.react_agent.register import _build_lc_config
     from nat.utils.type_converter import GlobalTypeConverter
 
     # react_agent converts a plain string input to a ChatRequest, then forwards message.model
     sentinel_model = GlobalTypeConverter.get().convert("what is 2 * 4?", to_type=ChatRequest).model
+    assert sentinel_model == UNKNOWN_MODEL_SENTINEL
     assert "configurable" not in _build_lc_config(5, sentinel_model)
+    assert "configurable" not in _build_lc_config(5, sentinel_model, supports_override=False)
     assert "configurable" not in _build_lc_config(5, None)
 
     # a genuine per-request model is still forwarded as an override
