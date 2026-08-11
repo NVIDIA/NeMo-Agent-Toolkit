@@ -37,6 +37,8 @@ from nat.utils.type_converter import GlobalTypeConverter
 
 FINISH_REASONS = frozenset({'stop', 'length', 'tool_calls', 'content_filter', 'function_call'})
 
+UNKNOWN_MODEL_SENTINEL = "unknown-model"
+
 
 class UserMessageContentRoleType(StrEnum):
     """
@@ -372,7 +374,7 @@ class ChatResponse(ResponseBaseModelOutput):
     model_config = ConfigDict(extra="allow")
     id: str
     object: str = "chat.completion"
-    model: str = "unknown-model"
+    model: str = UNKNOWN_MODEL_SENTINEL
     created: datetime.datetime
     choices: list[ChatResponseChoice]
     usage: Usage
@@ -398,7 +400,7 @@ class ChatResponse(ResponseBaseModelOutput):
         if object_ is None:
             object_ = "chat.completion"
         if model is None:
-            model = "unknown-model"
+            model = UNKNOWN_MODEL_SENTINEL
         if created is None:
             created = datetime.datetime.now(datetime.UTC)
 
@@ -427,7 +429,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
     id: str
     choices: list[ChatResponseChunkChoice]
     created: datetime.datetime
-    model: str = "unknown-model"
+    model: str = UNKNOWN_MODEL_SENTINEL
     object: str = "chat.completion.chunk"
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
@@ -452,7 +454,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
         if created is None:
             created = datetime.datetime.now(datetime.UTC)
         if model is None:
-            model = "unknown-model"
+            model = UNKNOWN_MODEL_SENTINEL
         if object_ is None:
             object_ = "chat.completion.chunk"
 
@@ -486,7 +488,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
         if created is None:
             created = datetime.datetime.now(datetime.UTC)
         if model is None:
-            model = "unknown-model"
+            model = UNKNOWN_MODEL_SENTINEL
 
         delta = ChoiceDelta(content=content, role=role) if content is not None or role is not None else ChoiceDelta()
 
@@ -952,7 +954,7 @@ GlobalTypeConverter.register_converter(_nat_chat_request_to_string)
 
 
 def _string_to_nat_chat_request(data: str) -> ChatRequest:
-    return ChatRequest.from_string(data, model="unknown-model")
+    return ChatRequest.from_string(data, model=UNKNOWN_MODEL_SENTINEL)
 
 
 GlobalTypeConverter.register_converter(_string_to_nat_chat_request)
