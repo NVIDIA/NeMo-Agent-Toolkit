@@ -25,8 +25,8 @@ class RetryMixin(BaseModel):
                                 exclude=True)
     num_retries: int = Field(default=5,
                              gt=0,
-                             description="Number of times to retry a method call that fails"
-                             " with a retryable error.",
+                             description="Maximum total number of attempts for a method call that fails"
+                             " with a retryable error, including the initial call and any retries.",
                              exclude=True)
     retry_on_status_codes: list[int | str] = Field(default_factory=lambda: [429, 500, 502, 503, 504],
                                                    description="List of HTTP status codes that should trigger a retry.",

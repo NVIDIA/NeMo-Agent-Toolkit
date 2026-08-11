@@ -21,7 +21,7 @@ from nat.llm.openai_llm import OpenAIModelConfig
 
 
 class TestRetryMixin:
-    """Tests for RetryMixin field validation."""
+    """Tests for `RetryMixin` field validation."""
 
     def test_defaults_are_valid(self):
         m = RetryMixin()
@@ -44,7 +44,7 @@ class TestRetryMixin:
 
 
 class TestRetryMixinProviderConfig:
-    """The constraint must hold for provider configs that inherit RetryMixin alongside other mixins."""
+    """The constraint must hold for provider configs that inherit `RetryMixin` alongside other mixins."""
 
     @pytest.mark.parametrize("budget", [0, -1])
     def test_provider_config_rejects_non_positive_retry_budget(self, budget: int):
