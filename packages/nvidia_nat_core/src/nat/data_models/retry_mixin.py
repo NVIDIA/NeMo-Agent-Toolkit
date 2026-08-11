@@ -24,6 +24,7 @@ class RetryMixin(BaseModel):
                                 " that fail with a retryable error.",
                                 exclude=True)
     num_retries: int = Field(default=5,
+                             gt=0,
                              description="Number of times to retry a method call that fails"
                              " with a retryable error.",
                              exclude=True)
