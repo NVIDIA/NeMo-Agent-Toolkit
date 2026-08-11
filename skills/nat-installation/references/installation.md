@@ -13,7 +13,14 @@ uv add "nvidia-nat[langchain]"
 For all framework integrations:
 
 ```bash
-uv add "nvidia-nat[all]"         # All extras
+uv add "nvidia-nat[most]"        # Most first-party integrations
+```
+
+The `langchain` extra includes the common LangChain provider integrations. Amazon Bedrock support is intentionally
+separate because its `boto3` requirements conflict with the `aioboto3` requirements used by the evaluation runtime:
+
+```bash
+uv add "nvidia-nat[langchain]" "nvidia-nat-langchain[aws]"
 ```
 
 ## Optional Extras
