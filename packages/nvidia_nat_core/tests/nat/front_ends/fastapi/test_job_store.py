@@ -697,6 +697,111 @@ def test_get_db_engine_creates_default_sqlite():
             os.environ["NAT_JOB_STORE_DB_URL"] = original_url
 
 
+def test_get_db_engine_forwards_engine_kwargs():
+    """Test get_db_engine forwards pool kwargs to the sync engine factory."""
+    from nat.front_ends.fastapi.async_jobs import get_db_engine
+
+    engine = get_db_engine("sqlite:///test.db", use_async=False, pool_pre_ping=True, pool_recycle=1800)
+
+    # SQLAlchemy exposes the resolved pool settings only as private attributes
+    assert engine.pool._pre_ping is True
+    assert engine.pool._recycle == 1800
+
+
+def test_get_db_engine_forwards_engine_kwargs_async():
+    """Test get_db_engine forwards pool kwargs to the async engine factory."""
+    from nat.front_ends.fastapi.async_jobs import get_db_engine
+
+    engine = get_db_engine("sqlite+aiosqlite:///test.db", use_async=True, pool_pre_ping=True, pool_recycle=900)
+
+    assert engine.pool._pre_ping is True
+    assert engine.pool._recycle == 900
+
+
+def test_get_db_engine_pooling_defaults_unchanged(monkeypatch: pytest.MonkeyPatch):
+    """Test get_db_engine leaves the SQLAlchemy pooling defaults alone when nothing is configured."""
+    from nat.front_ends.fastapi.async_jobs import get_db_engine
+
+    monkeypatch.delenv("NAT_JOB_STORE_POOL_PRE_PING", raising=False)
+    monkeypatch.delenv("NAT_JOB_STORE_POOL_RECYCLE", raising=False)
+
+    engine = get_db_engine("sqlite+aiosqlite:///test.db", use_async=True)
+
+    assert engine.pool._pre_ping is False
+    assert engine.pool._recycle == -1
+
+
+@pytest.mark.parametrize("env_value, expected",
+                         [("1", True), ("true", True), ("TRUE", True), ("yes", True), ("on", True), ("  on  ", True),
+                          ("0", False), ("false", False), ("no", False), ("off", False)])
+def test_get_db_engine_pool_pre_ping_from_env(monkeypatch: pytest.MonkeyPatch, env_value: str, expected: bool):
+    """Test get_db_engine reads pool_pre_ping from the environment."""
+    from nat.front_ends.fastapi.async_jobs import get_db_engine
+
+    monkeypatch.setenv("NAT_JOB_STORE_POOL_PRE_PING", env_value)
+
+    engine = get_db_engine("sqlite+aiosqlite:///test.db", use_async=True)
+
+    assert engine.pool._pre_ping is expected
+
+
+def test_get_db_engine_pool_recycle_from_env(monkeypatch: pytest.MonkeyPatch):
+    """Test get_db_engine reads pool_recycle from the environment."""
+    from nat.front_ends.fastapi.async_jobs import get_db_engine
+
+    monkeypatch.setenv("NAT_JOB_STORE_POOL_RECYCLE", "1800")
+
+    engine = get_db_engine("sqlite+aiosqlite:///test.db", use_async=True)
+
+    assert engine.pool._recycle == 1800
+
+
+def test_get_db_engine_explicit_kwargs_override_env(monkeypatch: pytest.MonkeyPatch):
+    """Test explicit keyword arguments take precedence over the environment."""
+    from nat.front_ends.fastapi.async_jobs import get_db_engine
+
+    monkeypatch.setenv("NAT_JOB_STORE_POOL_PRE_PING", "false")
+    monkeypatch.setenv("NAT_JOB_STORE_POOL_RECYCLE", "1800")
+
+    engine = get_db_engine("sqlite+aiosqlite:///test.db", use_async=True, pool_pre_ping=True, pool_recycle=300)
+
+    assert engine.pool._pre_ping is True
+    assert engine.pool._recycle == 300
+
+
+def test_get_db_engine_invalid_pool_pre_ping_raises(monkeypatch: pytest.MonkeyPatch):
+    """Test an unparseable pool_pre_ping value fails loudly instead of silently disabling pre-ping."""
+    from nat.front_ends.fastapi.async_jobs import get_db_engine
+
+    monkeypatch.setenv("NAT_JOB_STORE_POOL_PRE_PING", "treu")
+
+    with pytest.raises(ValueError, match="NAT_JOB_STORE_POOL_PRE_PING"):
+        get_db_engine("sqlite+aiosqlite:///test.db", use_async=True)
+
+
+def test_get_db_engine_invalid_pool_recycle_raises(monkeypatch: pytest.MonkeyPatch):
+    """Test an unparseable pool_recycle value fails loudly instead of silently using the default."""
+    from nat.front_ends.fastapi.async_jobs import get_db_engine
+
+    monkeypatch.setenv("NAT_JOB_STORE_POOL_RECYCLE", "30 minutes")
+
+    with pytest.raises(ValueError, match="NAT_JOB_STORE_POOL_RECYCLE"):
+        get_db_engine("sqlite+aiosqlite:///test.db", use_async=True)
+
+
+def test_get_db_engine_invalid_env_ignored_when_overridden(monkeypatch: pytest.MonkeyPatch):
+    """Test an unparseable environment value is not validated when the caller supplies the setting explicitly."""
+    from nat.front_ends.fastapi.async_jobs import get_db_engine
+
+    monkeypatch.setenv("NAT_JOB_STORE_POOL_PRE_PING", "treu")
+    monkeypatch.setenv("NAT_JOB_STORE_POOL_RECYCLE", "30 minutes")
+
+    engine = get_db_engine("sqlite+aiosqlite:///test.db", use_async=True, pool_pre_ping=True, pool_recycle=300)
+
+    assert engine.pool._pre_ping is True
+    assert engine.pool._recycle == 300
+
+
 def test_job_store_dask_client_property(dask_client: "DaskClient",
                                         db_engine: "AsyncEngine",
                                         dask_scheduler_address: str):

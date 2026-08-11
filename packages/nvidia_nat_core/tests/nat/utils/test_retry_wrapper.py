@@ -718,3 +718,101 @@ def test_retry_context_with_non_weakref_objects():
     # The patch should work on the list's methods
     assert isinstance(patched, list)
     assert patched == ["item1", "item2"]
+
+
+# ---------------------------------------------------------------------------
+# 5. Tests for minimal retry budgets (a budget below 1 must not skip the call,
+#    and the boundary budget of 1 keeps executing exactly once)
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("retries", [0, -1, 1])
+def test_minimal_budget_sync_executes_once(retries):
+    """A budget of 1 or below executes a plain sync function exactly once."""
+    call_count = 0
+
+    @ar._retry_decorator(retries=retries, base_delay=0)
+    def succeed():
+        nonlocal call_count
+        call_count += 1
+        return "sync-ok"
+
+    assert succeed() == "sync-ok"
+    assert call_count == 1
+
+
+@pytest.mark.parametrize("retries", [0, -1, 1])
+async def test_minimal_budget_async_executes_once(retries):
+    """A budget of 1 or below executes an async coroutine exactly once."""
+    call_count = 0
+
+    @ar._retry_decorator(retries=retries, base_delay=0)
+    async def succeed():
+        nonlocal call_count
+        call_count += 1
+        return "async-ok"
+
+    assert await succeed() == "async-ok"
+    assert call_count == 1
+
+
+@pytest.mark.parametrize("retries", [0, -1, 1])
+def test_minimal_budget_generator_executes_once(retries):
+    """A budget of 1 or below runs a sync generator exactly once."""
+    call_count = 0
+
+    @ar._retry_decorator(retries=retries, base_delay=0)
+    def gen():
+        nonlocal call_count
+        call_count += 1
+        yield from range(3)
+
+    assert list(gen()) == [0, 1, 2]
+    assert call_count == 1
+
+
+@pytest.mark.parametrize("retries", [0, -1, 1])
+async def test_minimal_budget_async_generator_executes_once(retries):
+    """A budget of 1 or below runs an async generator exactly once."""
+    call_count = 0
+
+    @ar._retry_decorator(retries=retries, base_delay=0)
+    async def agen():
+        nonlocal call_count
+        call_count += 1
+        for item in range(3):
+            yield item
+
+    assert [item async for item in agen()] == [0, 1, 2]
+    assert call_count == 1
+
+
+@pytest.mark.parametrize("retries", [0, -1, 1])
+def test_minimal_budget_failure_raises_after_single_attempt(retries):
+    """A budget of 1 or below makes exactly one attempt and surfaces the failure."""
+    call_count = 0
+
+    @ar._retry_decorator(retries=retries, base_delay=0, retry_on=(APIError, ), retry_codes=["5xx"])
+    def fail():
+        nonlocal call_count
+        call_count += 1
+        raise APIError(503, "Service unavailable")
+
+    with pytest.raises(APIError):
+        fail()
+    assert call_count == 1
+
+
+def test_patch_with_retry_zero_budget_still_calls_method():
+    """`patch_with_retry` with a zero budget still invokes the real method once."""
+    svc = Service()
+    svc = ar.patch_with_retry(
+        svc,
+        retries=0,
+        base_delay=0,
+        retry_codes=["4xx", "5xx", 429],
+    )
+
+    # `sync_method` fails on its first (and only) attempt, so the error must
+    # surface instead of the method silently never being called.
+    with pytest.raises(APIError):
+        svc.sync_method()
+    assert svc.calls_sync == 1
