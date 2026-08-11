@@ -620,7 +620,7 @@ def get_db_engine(db_url: str | None = None,
     use_async: bool, optional, default=True
         If True, use the async database engine. The JobStore class requires an async database engine, setting
         `use_async` to False is only useful for testing.
-    **engine_kwargs
+    engine_kwargs: dict[str, typing.Any]
         Additional keyword arguments forwarded to the SQLAlchemy engine factory, such as `pool_pre_ping` and
         `pool_recycle`. Refer to
         https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine
