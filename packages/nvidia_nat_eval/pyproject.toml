@@ -63,7 +63,7 @@ dependencies = [
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 full = [
-  "boto3>=1.35.0",
+  "boto3~=1.35",
   "datasets~=4.4",
   # Enables the `nat eval` CLI workflow runtime. Keep in `full` so base eval stays ATIF-only.
   "nvidia-nat-core == {version}",
@@ -72,7 +72,7 @@ full = [
   "tqdm~=4.67"
 ]
 test = [
-  "boto3>=1.35.0",
+  "boto3~=1.35",
   "datasets~=4.4",
   "nvidia-nat-core[async_endpoints] == {version}",
   "nvidia-nat-test == {version}",

@@ -110,10 +110,14 @@ class OutputUploader:
                     )) as s3_client:
                 with tqdm(total=len(file_entries), desc="Uploading files to S3") as pbar:
                     upload_tasks = [
-                        self._upload_file(s3_client, bucket, s3_key, local_path, pbar)
+                        asyncio.create_task(self._upload_file(s3_client, bucket, s3_key, local_path, pbar))
                         for local_path, s3_key in file_entries
                     ]
-                    await asyncio.gather(*upload_tasks)
+                    try:
+                        await asyncio.gather(*upload_tasks)
+                    except Exception:
+                        await asyncio.gather(*upload_tasks, return_exceptions=True)
+                        raise
 
         except NoCredentialsError as e:
             logger.error("AWS credentials not available: %s", e)

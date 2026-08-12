@@ -7256,8 +7256,8 @@ full = [
 
 [package.metadata]
 requires-dist = [
-    { name = "boto3", marker = "extra == 'full'", specifier = ">=1.35.0" },
-    { name = "boto3", marker = "extra == 'test'", specifier = ">=1.35.0" },
+    { name = "boto3", marker = "extra == 'full'", specifier = "~=1.35" },
+    { name = "boto3", marker = "extra == 'test'", specifier = "~=1.35" },
     { name = "datasets", marker = "extra == 'full'", specifier = "~=4.4" },
     { name = "datasets", marker = "extra == 'test'", specifier = "~=4.4" },
     { name = "nvidia-nat-atif", editable = "packages/nvidia_nat_atif" },

@@ -13,8 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import subprocess
 import sys
+from collections.abc import Sequence
+from importlib.machinery import ModuleSpec
+from types import ModuleType
 from unittest import mock
 
 import pytest
@@ -92,14 +96,53 @@ async def test_upload_directory_upload_failure(output_config):
     mock_client.close.assert_called_once_with()
 
 
+async def test_upload_directory_waits_for_pending_upload_before_closing(output_config):
+    """The S3 client remains open until sibling uploads finish after one fails."""
+    pending_path = output_config.dir / "pending.txt"
+    pending_path.write_text("pending content")
+
+    uploader = OutputUploader(output_config)
+    mock_client = mock.Mock()
+    pending_started = asyncio.Event()
+    release_pending = asyncio.Event()
+    pending_completed = asyncio.Event()
+
+    async def mock_to_thread(_upload_file, local_path, _bucket, _s3_key):
+        if local_path == str(pending_path):
+            pending_started.set()
+            await release_pending.wait()
+            await asyncio.sleep(0.01)
+            pending_completed.set()
+            return
+
+        await pending_started.wait()
+        release_pending.set()
+        raise RuntimeError("Upload failed")
+
+    def close_client():
+        assert pending_completed.is_set()
+
+    mock_client.close.side_effect = close_client
+    with (mock.patch("boto3.client", return_value=mock_client),
+          mock.patch("nat.plugins.eval.utils.output_uploader.asyncio.to_thread", side_effect=mock_to_thread)):
+        with pytest.raises(RuntimeError, match="Upload failed"):
+            await uploader.upload_directory()
+
+    mock_client.close.assert_called_once_with()
+
+
 async def test_upload_directory_missing_boto3_has_install_hint(monkeypatch, output_config):
     """S3 upload should fail with install guidance when optional S3 dependencies are missing."""
 
     class BlockBoto3:
 
-        def find_spec(self, fullname, path=None, target=None):  # noqa: ANN001
+        def find_spec(self,
+                      fullname: str,
+                      path: Sequence[str] | None = None,
+                      target: ModuleType | None = None) -> ModuleSpec | None:
             if fullname == "boto3" or fullname.startswith("boto3."):
                 raise ModuleNotFoundError("No module named 'boto3'")
+            return None
 
     monkeypatch.setitem(sys.modules, "boto3", None)
     monkeypatch.setattr(sys, "meta_path", [BlockBoto3(), *sys.meta_path])

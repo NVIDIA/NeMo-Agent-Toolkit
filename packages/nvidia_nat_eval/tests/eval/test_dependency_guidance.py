@@ -36,7 +36,7 @@ def test_full_extra_uses_boto3_without_aioboto3():
             pyproject_file)["tool"]["setuptools_dynamic_dependencies"]["optional-dependencies"]
 
     for extra in ("full", "test"):
-        assert "boto3>=1.35.0" in optional_dependencies[extra]
+        assert "boto3~=1.35" in optional_dependencies[extra]
         assert not any(dependency.startswith("aioboto3") for dependency in optional_dependencies[extra])
 
 
