@@ -31,7 +31,13 @@ class WikiSearchToolConfig(FunctionBaseConfig, name="wiki_search"):
 # Wiki search
 @register_function(config_type=WikiSearchToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def wiki_search(tool_config: WikiSearchToolConfig, builder: Builder):
+    import wikipedia
     from langchain_community.document_loaders import WikipediaLoader
+
+    # Wikipedia's API rejects requests without a User-Agent header (returns a non-JSON 403),
+    # and the `wikipedia` package (used internally by WikipediaLoader) doesn't set one by
+    # default. See https://foundation.wikimedia.org/wiki/Policy:User-Agent_policy
+    wikipedia.set_user_agent("NeMoAgentToolkit/1.0 (https://github.com/NVIDIA/NeMo-Agent-Toolkit)")
 
     async def _wiki_search(question: str) -> str:
         # Search the web and get the requested amount of results
