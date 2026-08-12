@@ -42,7 +42,6 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[eval]` or `nvidia-nat-eval[full]` - Full evaluation runtime dependencies for config-driven `nat eval` workflows
 - `nvidia-nat-eval` - Evaluation package for ATIF-native and standalone custom evaluator workflows
 - `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/), [LangGraph](https://www.langchain.com/langgraph)
-- `nvidia-nat-langchain[aws]` - [Amazon Bedrock](https://aws.amazon.com/bedrock/) integration for LangChain. Install this provider-specific extra explicitly when needed; it is not included in `nvidia-nat[langchain]` because its `boto3` requirements conflict with the `aioboto3` requirements used by `nvidia-nat[eval]`.
 - `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
 - `nvidia-nat[mcp]` or `nvidia-nat-mcp` - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - `nvidia-nat[mem0ai]` or `nvidia-nat-mem0ai` - [Mem0](https://mem0.ai/)

@@ -18,6 +18,7 @@ import logging
 import os
 import subprocess
 import sys
+from contextlib import closing
 from pathlib import Path
 
 from tqdm import tqdm
@@ -33,12 +34,12 @@ S3_UPLOAD_INSTALL_HINT = ("S3 output upload requires optional dependencies that 
 
 def _load_s3_upload_dependencies():
     try:
-        import aioboto3
+        import boto3
         from botocore.exceptions import NoCredentialsError
     except ImportError as import_error:  # pragma: no cover - guarded optional dependency path
         raise ModuleNotFoundError(S3_UPLOAD_INSTALL_HINT) from import_error
 
-    return aioboto3, NoCredentialsError
+    return boto3, NoCredentialsError
 
 
 class OutputUploader:
@@ -58,7 +59,7 @@ class OutputUploader:
 
     async def _upload_file(self, s3_client, bucket, s3_key, local_path, pbar):
         try:
-            await s3_client.upload_file(str(local_path), bucket, s3_key)
+            await asyncio.to_thread(s3_client.upload_file, str(local_path), bucket, s3_key)
             logger.info("Uploaded %s to s3://%s/%s", local_path, bucket, s3_key)
             pbar.update(1)
         except Exception as e:
@@ -73,7 +74,7 @@ class OutputUploader:
             logger.info("No S3 config provided; skipping upload.")
             return
 
-        aioboto3, NoCredentialsError = _load_s3_upload_dependencies()
+        boto3, NoCredentialsError = _load_s3_upload_dependencies()
 
         local_dir = self.output_config.dir
         bucket = self.s3_config.bucket
@@ -90,7 +91,6 @@ class OutputUploader:
                 s3_key = str(s3_path).replace("\\", "/")  # Normalize for S3
                 file_entries.append((local_path, s3_key))
 
-        session = aioboto3.Session()
         try:
             if self.s3_config.endpoint_url:
                 region_name = None
@@ -100,13 +100,14 @@ class OutputUploader:
                 endpoint_url = None
             else:
                 raise ValueError("No endpoint_url or region_name provided in the config: eval.general.output.s3")
-            async with session.client(
-                    "s3",
-                    endpoint_url=endpoint_url,
-                    region_name=region_name,
-                    aws_access_key_id=get_secret_value(self.s3_config.access_key),
-                    aws_secret_access_key=get_secret_value(self.s3_config.secret_key),
-            ) as s3_client:
+            with closing(
+                    boto3.client(
+                        "s3",
+                        endpoint_url=endpoint_url,
+                        region_name=region_name,
+                        aws_access_key_id=get_secret_value(self.s3_config.access_key),
+                        aws_secret_access_key=get_secret_value(self.s3_config.secret_key),
+                    )) as s3_client:
                 with tqdm(total=len(file_entries), desc="Uploading files to S3") as pbar:
                     upload_tasks = [
                         self._upload_file(s3_client, bucket, s3_key, local_path, pbar)
