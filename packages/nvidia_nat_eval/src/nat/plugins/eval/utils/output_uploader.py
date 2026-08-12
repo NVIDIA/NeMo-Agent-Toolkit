@@ -18,6 +18,7 @@ import logging
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from pathlib import Path
 
@@ -57,9 +58,9 @@ class OutputUploader:
     def s3_config(self):
         return self.output_config.s3
 
-    async def _upload_file(self, s3_client, bucket, s3_key, local_path, pbar):
+    async def _upload_file(self, loop, pool, s3_client, bucket, s3_key, local_path, pbar):
         try:
-            await asyncio.to_thread(s3_client.upload_file, str(local_path), bucket, s3_key)
+            await loop.run_in_executor(pool, s3_client.upload_file, str(local_path), bucket, s3_key)
             logger.info("Uploaded %s to s3://%s/%s", local_path, bucket, s3_key)
             pbar.update(1)
         except Exception as e:
@@ -108,16 +109,19 @@ class OutputUploader:
                         aws_access_key_id=get_secret_value(self.s3_config.access_key),
                         aws_secret_access_key=get_secret_value(self.s3_config.secret_key),
                     )) as s3_client:
-                with tqdm(total=len(file_entries), desc="Uploading files to S3") as pbar:
-                    upload_tasks = [
-                        asyncio.create_task(self._upload_file(s3_client, bucket, s3_key, local_path, pbar))
-                        for local_path, s3_key in file_entries
-                    ]
-                    try:
-                        await asyncio.gather(*upload_tasks)
-                    except Exception:
-                        await asyncio.gather(*upload_tasks, return_exceptions=True)
-                        raise
+                with ThreadPoolExecutor() as pool:
+                    loop = asyncio.get_running_loop()
+                    with tqdm(total=len(file_entries), desc="Uploading files to S3") as pbar:
+                        upload_tasks = [
+                            asyncio.create_task(
+                                self._upload_file(loop, pool, s3_client, bucket, s3_key, local_path, pbar))
+                            for local_path, s3_key in file_entries
+                        ]
+                        try:
+                            await asyncio.gather(*upload_tasks)
+                        except BaseException:
+                            await asyncio.gather(*upload_tasks, return_exceptions=True)
+                            raise
 
         except NoCredentialsError as e:
             logger.error("AWS credentials not available: %s", e)

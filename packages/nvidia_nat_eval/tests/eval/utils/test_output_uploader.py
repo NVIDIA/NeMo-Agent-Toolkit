@@ -16,6 +16,8 @@
 import asyncio
 import subprocess
 import sys
+import threading
+import time
 from collections.abc import Sequence
 from importlib.machinery import ModuleSpec
 from types import ModuleType
@@ -49,9 +51,7 @@ async def test_upload_directory_success(output_config):
     uploader = OutputUploader(output_config)
 
     mock_client = mock.Mock()
-    with (mock.patch("boto3.client", return_value=mock_client) as mock_boto3_client,
-          mock.patch("nat.plugins.eval.utils.output_uploader.asyncio.to_thread", new_callable=mock.AsyncMock) as
-          mock_to_thread):
+    with mock.patch("boto3.client", return_value=mock_client) as mock_boto3_client:
         await uploader.upload_directory()
 
     expected_key = "my-remote/output.txt"
@@ -64,10 +64,7 @@ async def test_upload_directory_success(output_config):
         aws_access_key_id=output_config.s3.access_key.get_secret_value(),
         aws_secret_access_key=output_config.s3.secret_key.get_secret_value(),
     )
-    mock_to_thread.assert_awaited_once_with(mock_client.upload_file,
-                                            str(local_path),
-                                            output_config.s3.bucket,
-                                            expected_key)
+    mock_client.upload_file.assert_called_once_with(str(local_path), output_config.s3.bucket, expected_key)
     mock_client.close.assert_called_once_with()
 
 
@@ -96,37 +93,40 @@ async def test_upload_directory_upload_failure(output_config):
     mock_client.close.assert_called_once_with()
 
 
-async def test_upload_directory_waits_for_pending_upload_before_closing(output_config):
-    """The S3 client remains open until sibling uploads finish after one fails."""
+async def test_upload_directory_waits_for_cancelled_uploads_before_closing(output_config):
+    """The S3 client remains open until cancelled upload workers finish."""
     pending_path = output_config.dir / "pending.txt"
     pending_path.write_text("pending content")
 
     uploader = OutputUploader(output_config)
     mock_client = mock.Mock()
-    pending_started = asyncio.Event()
-    release_pending = asyncio.Event()
-    pending_completed = asyncio.Event()
+    upload_count = 2
+    started_count = 0
+    started_lock = threading.Lock()
+    all_started = threading.Event()
+    completed_paths = set()
 
-    async def mock_to_thread(_upload_file, local_path, _bucket, _s3_key):
-        if local_path == str(pending_path):
-            pending_started.set()
-            await release_pending.wait()
-            await asyncio.sleep(0.01)
-            pending_completed.set()
-            return
-
-        await pending_started.wait()
-        release_pending.set()
-        raise RuntimeError("Upload failed")
+    def upload_file(local_path, _bucket, _s3_key):
+        nonlocal started_count
+        with started_lock:
+            started_count += 1
+            if started_count == upload_count:
+                all_started.set()
+        time.sleep(0.05)
+        completed_paths.add(local_path)
 
     def close_client():
-        assert pending_completed.is_set()
+        assert completed_paths == {str(output_config.dir / "output.txt"), str(pending_path)}
 
+    mock_client.upload_file.side_effect = upload_file
     mock_client.close.side_effect = close_client
-    with (mock.patch("boto3.client", return_value=mock_client),
-          mock.patch("nat.plugins.eval.utils.output_uploader.asyncio.to_thread", side_effect=mock_to_thread)):
-        with pytest.raises(RuntimeError, match="Upload failed"):
-            await uploader.upload_directory()
+    with mock.patch("boto3.client", return_value=mock_client):
+        upload_task = asyncio.create_task(uploader.upload_directory())
+        while not all_started.is_set():
+            await asyncio.sleep(0)
+        upload_task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await upload_task
 
     mock_client.close.assert_called_once_with()
 
