@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from importlib.metadata import version
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
@@ -37,7 +39,8 @@ async def wiki_search(tool_config: WikiSearchToolConfig, builder: Builder):
     # Wikipedia's API rejects requests without a User-Agent header (returns a non-JSON 403),
     # and the `wikipedia` package (used internally by WikipediaLoader) doesn't set one by
     # default. See https://foundation.wikimedia.org/wiki/Policy:User-Agent_policy
-    wikipedia.set_user_agent("NeMoAgentToolkit/1.0 (https://github.com/NVIDIA/NeMo-Agent-Toolkit)")
+    wikipedia.set_user_agent(
+        f"NeMoAgentToolkit/{version('nvidia-nat-langchain')} (https://github.com/NVIDIA/NeMo-Agent-Toolkit)")
 
     async def _wiki_search(question: str) -> str:
         # Search the web and get the requested amount of results

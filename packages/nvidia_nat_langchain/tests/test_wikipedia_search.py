@@ -19,14 +19,15 @@ from unittest.mock import patch
 
 import pytest
 
+from nat.plugins.langchain.tools.wikipedia_search import WikiSearchToolConfig
 
-@pytest.fixture
-def tool_config():
-    from nat.plugins.langchain.tools.wikipedia_search import WikiSearchToolConfig
+
+@pytest.fixture(name="tool_config")
+def tool_config_fixture() -> WikiSearchToolConfig:
     return WikiSearchToolConfig(max_results=2)
 
 
-async def test_sets_wikipedia_user_agent(tool_config):
+async def test_sets_wikipedia_user_agent(tool_config: WikiSearchToolConfig):
     # Wikipedia's API rejects requests without a User-Agent header (403, non-JSON body).
     # The `wikipedia` package used internally by WikipediaLoader doesn't set one by
     # default, so the tool must configure it explicitly on setup.
@@ -38,10 +39,11 @@ async def test_sets_wikipedia_user_agent(tool_config):
 
         mock_set_user_agent.assert_called_once()
         user_agent = mock_set_user_agent.call_args[0][0]
-        assert user_agent
+        assert user_agent.startswith("NeMoAgentToolkit/")
+        assert "https://github.com/NVIDIA/NeMo-Agent-Toolkit" in user_agent
 
 
-async def test_formats_search_results(tool_config):
+async def test_formats_search_results(tool_config: WikiSearchToolConfig):
     from nat.plugins.langchain.tools.wikipedia_search import wiki_search
 
     mock_doc = MagicMock()
@@ -58,5 +60,5 @@ async def test_formats_search_results(tool_config):
             result = await func_info.single_fn("aardvark")
 
         mock_loader_cls.assert_called_once_with(query="aardvark", load_max_docs=tool_config.max_results)
-        assert "https://en.wikipedia.org/wiki/Aardvark" in result
-        assert "The aardvark is a mammal." in result
+        assert result == ('<Document source="https://en.wikipedia.org/wiki/Aardvark" page=""/>\n'
+                          'The aardvark is a mammal.\n</Document>')
