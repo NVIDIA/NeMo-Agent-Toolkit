@@ -858,3 +858,44 @@ async def test_job_info_default_time_fields(db_engine: "AsyncEngine", dask_sched
     job = await job_store.get_job(job_id)
     assert job.status == JobStatus.RUNNING
     assert job.updated_at > initial_updated_at
+
+
+def test_submit_timeout_seconds_default(monkeypatch: pytest.MonkeyPatch):
+    """With no env override, the submit timeout falls back to the default."""
+    from nat.front_ends.fastapi.async_jobs.job_store import DEFAULT_SUBMIT_TIMEOUT_SECONDS
+    from nat.front_ends.fastapi.async_jobs.job_store import _submit_timeout_seconds
+
+    monkeypatch.delenv("NAT_JOB_STORE_SUBMIT_TIMEOUT", raising=False)
+
+    assert _submit_timeout_seconds() == DEFAULT_SUBMIT_TIMEOUT_SECONDS
+
+
+def test_submit_timeout_seconds_env_override(monkeypatch: pytest.MonkeyPatch):
+    """NAT_JOB_STORE_SUBMIT_TIMEOUT overrides the default (issue #2124)."""
+    from nat.front_ends.fastapi.async_jobs.job_store import _submit_timeout_seconds
+
+    monkeypatch.setenv("NAT_JOB_STORE_SUBMIT_TIMEOUT", "45")
+
+    assert _submit_timeout_seconds() == 45
+
+
+@pytest.mark.parametrize("bad_value", ["abc", "5 s", "", "1.5"])
+def test_submit_timeout_seconds_rejects_non_integer(monkeypatch: pytest.MonkeyPatch, bad_value: str):
+    """A non-integer override is rejected with a clear error."""
+    from nat.front_ends.fastapi.async_jobs.job_store import _submit_timeout_seconds
+
+    monkeypatch.setenv("NAT_JOB_STORE_SUBMIT_TIMEOUT", bad_value)
+
+    with pytest.raises(ValueError, match="NAT_JOB_STORE_SUBMIT_TIMEOUT"):
+        _submit_timeout_seconds()
+
+
+@pytest.mark.parametrize("bad_value", ["0", "-5"])
+def test_submit_timeout_seconds_rejects_non_positive(monkeypatch: pytest.MonkeyPatch, bad_value: str):
+    """A non-positive override is rejected."""
+    from nat.front_ends.fastapi.async_jobs.job_store import _submit_timeout_seconds
+
+    monkeypatch.setenv("NAT_JOB_STORE_SUBMIT_TIMEOUT", bad_value)
+
+    with pytest.raises(ValueError, match="positive"):
+        _submit_timeout_seconds()
