@@ -23,6 +23,11 @@ from nat import plugin_api
 EXPECTED_PLUGIN_API_EXPORTS = {
     "BinaryHumanPromptOption": ("nat.data_models.interactive", "BinaryHumanPromptOption"),
     "Builder": ("nat.builder.builder", "Builder"),
+    "CircuitBreakerMiddleware": ("nat.middleware.circuit_breaker.circuit_breaker_middleware",
+                                 "CircuitBreakerMiddleware"),
+    "CircuitBreakerMiddlewareConfig": ("nat.middleware.circuit_breaker.circuit_breaker_middleware_config",
+                                       "CircuitBreakerMiddlewareConfig"),
+    "CircuitBreakerState": ("nat.middleware.circuit_breaker.circuit_breaker_middleware", "CircuitBreakerState"),
     "ComponentRef": ("nat.data_models.component_ref", "ComponentRef"),
     "Context": ("nat.builder.context", "Context"),
     "ContextState": ("nat.builder.context", "ContextState"),

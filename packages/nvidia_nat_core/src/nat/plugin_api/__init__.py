@@ -113,6 +113,9 @@ from nat.memory.interfaces import MemoryManager
 from nat.memory.interfaces import MemoryReader
 from nat.memory.interfaces import MemoryWriter
 from nat.memory.models import MemoryItem
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerMiddleware
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerState
+from nat.middleware.circuit_breaker.circuit_breaker_middleware_config import CircuitBreakerMiddlewareConfig
 from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
 from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
 from nat.middleware.function_middleware import FunctionMiddleware
@@ -132,6 +135,9 @@ from nat.retriever.models import RetrieverOutput
 __all__ = [
     "BinaryHumanPromptOption",
     "Builder",
+    "CircuitBreakerMiddleware",
+    "CircuitBreakerMiddlewareConfig",
+    "CircuitBreakerState",
     "ComponentRef",
     "Context",
     "ContextState",
