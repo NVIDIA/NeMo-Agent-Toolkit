@@ -23,6 +23,13 @@ from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareCo
 
 class CircuitBreakerMiddlewareConfig(DynamicMiddlewareConfig, name="circuit_breaker"):
     """Configuration for circuit breaker middleware.
+
+    Attributes:
+        failure_threshold: Number of consecutive failures required to trip the circuit breaker.
+        cooldown_period: Time in seconds to wait in OPEN state before probing.
+        half_open_success_threshold: Consecutive successful probes required to recover to CLOSED.
+        probe_timeout: Optional timeout in seconds for probe calls in HALF_OPEN state.
+        circuit_breaker_message: Optional custom message returned when short-circuited.
     """
 
     failure_threshold: int = Field(
@@ -40,8 +47,8 @@ class CircuitBreakerMiddlewareConfig(DynamicMiddlewareConfig, name="circuit_brea
     half_open_success_threshold: int = Field(
         default=1,
         gt=0,
-        description=
-        "Number of consecutive successful probe calls in HALF_OPEN state required to recover to CLOSED state.",
+        description=(
+            "Number of consecutive successful probe calls in HALF_OPEN state required to recover to CLOSED state."),
     )
 
     probe_timeout: float | None = Field(

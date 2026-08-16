@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import logging
 import time
@@ -68,41 +69,91 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
     """
 
     def __init__(self, config: CircuitBreakerMiddlewareConfig, builder: Builder) -> None:
+        """Initialize CircuitBreakerMiddleware.
+
+        Args:
+            config: Circuit breaker configuration parameters.
+            builder: Workflow builder instance.
+        """
         super().__init__(config=config, builder=builder)
         self._cb_config: CircuitBreakerMiddlewareConfig = config
         self._states: dict[str, _ToolState] = {}
         self._lock: asyncio.Lock = asyncio.Lock()
 
     def _get_tool_state(self, target: str) -> _ToolState:
+        """Get or initialize state record for a given target name.
+
+        Args:
+            target: Identifier for the target function or tool.
+
+        Returns:
+            _ToolState: State record for the target.
+        """
         if target not in self._states:
             self._states[target] = _ToolState(last_state_change=time.monotonic())
         return self._states[target]
 
     def get_state(self, target: str) -> CircuitBreakerState:
-        """Return the current circuit breaker state for a specific target."""
+        """Return the current circuit breaker state for a specific target.
+
+        Args:
+            target: Identifier for the target function or tool.
+
+        Returns:
+            CircuitBreakerState: Current state of the target.
+        """
         if target in self._states:
             return self._states[target].state
         return CircuitBreakerState.CLOSED
 
     def get_failure_count(self, target: str) -> int:
-        """Return the consecutive failure count for a specific target."""
+        """Return the consecutive failure count for a specific target.
+
+        Args:
+            target: Identifier for the target function or tool.
+
+        Returns:
+            int: Number of consecutive failures.
+        """
         if target in self._states:
             return self._states[target].failure_count
         return 0
 
     def get_success_count(self, target: str) -> int:
-        """Return consecutive successes in HALF_OPEN state towards recovery for a target."""
+        """Return consecutive successes in HALF_OPEN state towards recovery for a target.
+
+        Args:
+            target: Identifier for the target function or tool.
+
+        Returns:
+            int: Number of consecutive probe successes.
+        """
         if target in self._states:
             return self._states[target].success_count
         return 0
 
     def get_last_state_change(self, target: str) -> float:
-        """Return the monotonic timestamp of the last state change for a specific target."""
+        """Return the monotonic timestamp of the last state change for a specific target.
+
+        Args:
+            target: Identifier for the target function or tool.
+
+        Returns:
+            float: Timestamp in seconds.
+        """
         if target in self._states:
             return self._states[target].last_state_change
         return 0.0
 
     def _get_short_circuit_message(self, target: str) -> str:
+        """Format the short-circuit message when OPEN or busy probing.
+
+        Args:
+            target: Identifier for the target function or tool.
+
+        Returns:
+            str: Explanatory error message.
+        """
         msg = f"Circuit breaker is OPEN for '{target}'. Tool is temporarily unavailable."
         if self._cb_config.circuit_breaker_message:
             msg = f"{msg} {self._cb_config.circuit_breaker_message}"
@@ -110,6 +161,9 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
 
     async def _before_invocation(self, target: str) -> bool:
         """Evaluate circuit breaker state and determine whether invocation can proceed.
+
+        Args:
+            target: Identifier for the target function or tool.
 
         Returns:
             bool: True if execution is admitted as a HALF_OPEN probe, False if normal CLOSED.
@@ -151,6 +205,12 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
             return False
 
     async def _after_invocation_success(self, target: str, *, is_probe: bool = False) -> None:
+        """Update circuit breaker state upon a successful execution.
+
+        Args:
+            target: Identifier for the target function or tool.
+            is_probe: Whether this execution was an admitted probe call in HALF_OPEN state.
+        """
         async with self._lock:
             state_record = self._get_tool_state(target)
             # Only admitted probe calls in HALF_OPEN modify probe success counters and recover to CLOSED
@@ -171,6 +231,12 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
                 state_record.failure_count = 0
 
     async def _after_invocation_failure(self, target: str, *, is_probe: bool = False) -> None:
+        """Update circuit breaker state upon a failed execution.
+
+        Args:
+            target: Identifier for the target function or tool.
+            is_probe: Whether this execution was an admitted probe call in HALF_OPEN state.
+        """
         async with self._lock:
             state_record = self._get_tool_state(target)
             now = time.monotonic()
@@ -194,6 +260,11 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
                     state_record.last_state_change = now
 
     async def _after_invocation_cancellation(self, target: str) -> None:
+        """Reset probing flag on cancellation without counting as failure.
+
+        Args:
+            target: Identifier for the target function or tool.
+        """
         async with self._lock:
             state_record = self._get_tool_state(target)
             state_record.half_open_probing = False
@@ -205,6 +276,21 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         context: FunctionMiddlewareContext,
         **kwargs: Any,
     ) -> Any:
+        """Wrap downstream invocation with circuit breaker monitoring and short-circuiting.
+
+        Args:
+            *args: Positional arguments for the intercepted function.
+            call_next: Callable to invoke next middleware or target function.
+            context: Static function metadata describing the tool being invoked.
+            **kwargs: Keyword arguments for the intercepted function.
+
+        Returns:
+            Any: The tool result.
+
+        Raises:
+            CircuitBreakerOpenError: If the circuit breaker is OPEN or busy probing.
+            Exception: Any exception raised by the downstream callable.
+        """
         # Target state is scoped to context.name as FunctionMiddlewareContext exposes no component-level namespace.
         # This is a known limitation if different components expose identically named functions.
         target = context.name
@@ -239,6 +325,21 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         context: FunctionMiddlewareContext,
         **kwargs: Any,
     ) -> AsyncIterator[Any]:
+        """Wrap downstream streaming call with circuit breaker monitoring and short-circuiting.
+
+        Args:
+            *args: Positional arguments for the intercepted function.
+            call_next: Callable to invoke next middleware or target stream.
+            context: Static function metadata describing the tool being invoked.
+            **kwargs: Keyword arguments for the intercepted function.
+
+        Yields:
+            Any: Stream chunks from downstream execution.
+
+        Raises:
+            CircuitBreakerOpenError: If the circuit breaker is OPEN or busy probing.
+            Exception: Any exception raised by the downstream stream.
+        """
         # Target state is scoped to context.name as FunctionMiddlewareContext exposes no component-level namespace.
         # This is a known limitation if different components expose identically named functions.
         target = context.name
@@ -248,19 +349,18 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         try:
             if is_probe and self._cb_config.probe_timeout is not None:
                 # Wrap only each downstream __anext__ in timeout so consumer delays during yield do not trigger timeouts
-                stream_iter = super().function_middleware_stream(
-                    *args,
-                    call_next=call_next,
-                    context=context,
-                    **kwargs,
-                ).__aiter__()
-                while True:
-                    try:
-                        async with asyncio.timeout(self._cb_config.probe_timeout):
-                            chunk = await stream_iter.__anext__()
-                    except StopAsyncIteration:
-                        break
-                    yield chunk
+                async with contextlib.aclosing(super().function_middleware_stream(*args,
+                                                                                  call_next=call_next,
+                                                                                  context=context,
+                                                                                  **kwargs)) as stream:
+                    stream_iter = stream.__aiter__()
+                    while True:
+                        try:
+                            async with asyncio.timeout(self._cb_config.probe_timeout):
+                                chunk = await stream_iter.__anext__()
+                        except StopAsyncIteration:
+                            break
+                        yield chunk
             else:
                 async for chunk in super().function_middleware_stream(
                         *args,
@@ -281,7 +381,7 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
             handled = True
             await self._after_invocation_success(target, is_probe=is_probe)
         finally:
-            # Finalize abandoned generators where no explicit handler ran (e.g. GeneratorExit on early break)
+            # Finalize abandoned generators where no explicit handler ran during generator finalization (via aclose())
             if is_probe and not handled:
                 await self._after_invocation_cancellation(target)
 
