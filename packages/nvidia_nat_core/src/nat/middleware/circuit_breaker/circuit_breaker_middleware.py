@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import logging
 import time
 from collections.abc import AsyncIterator
@@ -36,6 +37,10 @@ from nat.middleware.middleware import FunctionMiddlewareContext
 logger = logging.getLogger(__name__)
 
 
+class CircuitBreakerOpenError(RuntimeError):
+    """Raised when a call is short-circuited because the circuit breaker is OPEN."""
+
+
 class CircuitBreakerState(StrEnum):
     """Possible states for the circuit breaker."""
 
@@ -44,123 +49,154 @@ class CircuitBreakerState(StrEnum):
     HALF_OPEN = "HALF_OPEN"
 
 
-class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
-    """Middleware that implements the Circuit Breaker pattern for intercepted calls.
+@dataclasses.dataclass
+class _ToolState:
+    """Internal state record tracking failures, successes, and probing status per target."""
 
-    Monitors execution failures and short-circuits calls when downstream services/functions fail
-    repeatedly, transitioning through CLOSED, OPEN, and HALF_OPEN states.
+    state: CircuitBreakerState = CircuitBreakerState.CLOSED
+    failure_count: int = 0
+    success_count: int = 0
+    last_state_change: float = dataclasses.field(default_factory=time.monotonic)
+    half_open_probing: bool = False
+
+
+class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
+    """Middleware implementing the Circuit Breaker pattern with per-target isolation.
+
+    Monitors execution failures and short-circuits calls when downstream functions fail
+    repeatedly, transitioning through CLOSED, OPEN, and HALF_OPEN states per target.
     """
 
     def __init__(self, config: CircuitBreakerMiddlewareConfig, builder: Builder) -> None:
         super().__init__(config=config, builder=builder)
         self._cb_config: CircuitBreakerMiddlewareConfig = config
-        self._state: CircuitBreakerState = CircuitBreakerState.CLOSED
-        self._failure_count: int = 0
-        self._success_count: int = 0
-        self._last_state_change: float = time.monotonic()
-        self._half_open_probing: bool = False
+        self._states: dict[str, _ToolState] = {}
         self._lock: asyncio.Lock = asyncio.Lock()
 
-    @property
-    def state(self) -> CircuitBreakerState:
-        """Return the current circuit breaker state."""
-        return self._state
+    def _get_tool_state(self, target: str) -> _ToolState:
+        if target not in self._states:
+            self._states[target] = _ToolState(last_state_change=time.monotonic())
+        return self._states[target]
 
-    @property
-    def failure_count(self) -> int:
-        """Return the current consecutive failure count."""
-        return self._failure_count
+    def get_state(self, target: str) -> CircuitBreakerState:
+        """Return the current circuit breaker state for a specific target."""
+        if target in self._states:
+            return self._states[target].state
+        return CircuitBreakerState.CLOSED
 
-    @property
-    def success_count(self) -> int:
-        """Return the current consecutive success count in HALF_OPEN state."""
-        return self._success_count
+    def get_failure_count(self, target: str) -> int:
+        """Return the consecutive failure count for a specific target."""
+        if target in self._states:
+            return self._states[target].failure_count
+        return 0
 
-    @property
-    def last_state_change(self) -> float:
-        """Return the monotonic timestamp of the last state change."""
-        return self._last_state_change
+    def get_success_count(self, target: str) -> int:
+        """Return consecutive successes in HALF_OPEN state towards recovery for a target."""
+        if target in self._states:
+            return self._states[target].success_count
+        return 0
 
-    async def _before_invocation(self, context_name: str) -> bool:
-        """Check state and determine whether call should proceed or be short-circuited."""
-        async with self._lock:
-            now = time.monotonic()
-            if self._state == CircuitBreakerState.OPEN:
-                if (now - self._last_state_change) >= self._cb_config.cooldown_period:
-                    logger.info(
-                        "Circuit breaker for '%s' cooldown period (%ss) elapsed. "
-                        "Transitioning from OPEN to HALF_OPEN.",
-                        context_name,
-                        self._cb_config.cooldown_period,
-                    )
-                    self._state = CircuitBreakerState.HALF_OPEN
-                    self._last_state_change = now
-                    self._success_count = 0
-                    self._half_open_probing = True
-                    return True
-                return False
+    def get_last_state_change(self, target: str) -> float:
+        """Return the monotonic timestamp of the last state change for a specific target."""
+        if target in self._states:
+            return self._states[target].last_state_change
+        return 0.0
 
-            if self._state == CircuitBreakerState.HALF_OPEN:
-                if self._half_open_probing:
-                    return False
-                self._half_open_probing = True
-                return True
-
-            return True
-
-    async def _after_invocation_success(self, context_name: str) -> None:
-        """Handle successful execution state update."""
-        async with self._lock:
-            if self._state == CircuitBreakerState.CLOSED:
-                self._failure_count = 0
-            elif self._state == CircuitBreakerState.HALF_OPEN:
-                self._success_count += 1
-                self._half_open_probing = False
-                if self._success_count >= self._cb_config.half_open_success_threshold:
-                    logger.info(
-                        "Circuit breaker for '%s' recovered (%d successes). "
-                        "Transitioning from HALF_OPEN to CLOSED.",
-                        context_name,
-                        self._success_count,
-                    )
-                    self._state = CircuitBreakerState.CLOSED
-                    self._failure_count = 0
-                    self._success_count = 0
-                    self._last_state_change = time.monotonic()
-
-    async def _after_invocation_failure(self, context_name: str) -> None:
-        """Handle failed execution state update."""
-        async with self._lock:
-            now = time.monotonic()
-            if self._state == CircuitBreakerState.CLOSED:
-                self._failure_count += 1
-                if self._failure_count >= self._cb_config.failure_threshold:
-                    logger.warning(
-                        "Circuit breaker for '%s' tripped! "
-                        "Transitioning from CLOSED to OPEN after %d consecutive failures.",
-                        context_name,
-                        self._failure_count,
-                    )
-                    self._state = CircuitBreakerState.OPEN
-                    self._last_state_change = now
-            elif self._state == CircuitBreakerState.HALF_OPEN:
-                logger.warning(
-                    "Circuit breaker for '%s' probe failed! Retripping from HALF_OPEN to OPEN.",
-                    context_name,
-                )
-
-                self._state = CircuitBreakerState.OPEN
-                self._last_state_change = now
-                self._half_open_probing = False
-                self._failure_count = self._cb_config.failure_threshold
-                self._success_count = 0
-
-    def _get_short_circuit_message(self, context_name: str) -> str:
-        """Format the short-circuit message when OPEN or blocked in HALF_OPEN."""
-        msg = f"Circuit breaker is OPEN for '{context_name}'. Tool is temporarily unavailable."
+    def _get_short_circuit_message(self, target: str) -> str:
+        msg = f"Circuit breaker is OPEN for '{target}'. Tool is temporarily unavailable."
         if self._cb_config.circuit_breaker_message:
             msg = f"{msg} {self._cb_config.circuit_breaker_message}"
         return msg
+
+    async def _before_invocation(self, target: str) -> bool:
+        """Evaluate circuit breaker state and determine whether invocation can proceed.
+
+        Returns:
+            bool: True if execution is admitted as a HALF_OPEN probe, False if normal CLOSED.
+
+        Raises:
+            CircuitBreakerOpenError: If the circuit breaker is OPEN or busy probing in HALF_OPEN.
+        """
+        async with self._lock:
+            state_record = self._get_tool_state(target)
+            now = time.monotonic()
+
+            if state_record.state == CircuitBreakerState.OPEN:
+                if (now - state_record.last_state_change) >= self._cb_config.cooldown_period:
+                    logger.info(
+                        "Circuit breaker for '%s' cooldown period (%ss) elapsed. Transitioning to HALF_OPEN.",
+                        target,
+                        self._cb_config.cooldown_period,
+                    )
+                    state_record.state = CircuitBreakerState.HALF_OPEN
+                    state_record.last_state_change = now
+                    state_record.success_count = 0
+                    state_record.half_open_probing = True
+                    return True
+
+                logger.warning("Circuit breaker for '%s' is OPEN. Short-circuiting call.", target)
+                raise CircuitBreakerOpenError(self._get_short_circuit_message(target))
+
+            if state_record.state == CircuitBreakerState.HALF_OPEN:
+                if state_record.half_open_probing:
+                    logger.warning(
+                        "Circuit breaker for '%s' is HALF_OPEN and probing. Short-circuiting concurrent call.",
+                        target,
+                    )
+                    raise CircuitBreakerOpenError(self._get_short_circuit_message(target))
+
+                state_record.half_open_probing = True
+                return True
+
+            return False
+
+    async def _after_invocation_success(self, target: str, *, is_probe: bool = False) -> None:
+        async with self._lock:
+            state_record = self._get_tool_state(target)
+            # Only admitted probe calls in HALF_OPEN modify probe success counters and recover to CLOSED
+            if is_probe:
+                state_record.success_count += 1
+                state_record.half_open_probing = False
+                if state_record.success_count >= self._cb_config.half_open_success_threshold:
+                    logger.info(
+                        "Circuit breaker for '%s' recovered (%d successes). Transitioning to CLOSED.",
+                        target,
+                        state_record.success_count,
+                    )
+                    state_record.state = CircuitBreakerState.CLOSED
+                    state_record.failure_count = 0
+                    state_record.success_count = 0
+                    state_record.last_state_change = time.monotonic()
+            elif state_record.state == CircuitBreakerState.CLOSED:
+                state_record.failure_count = 0
+
+    async def _after_invocation_failure(self, target: str, *, is_probe: bool = False) -> None:
+        async with self._lock:
+            state_record = self._get_tool_state(target)
+            now = time.monotonic()
+            # Only admitted probe calls in HALF_OPEN retrip the breaker back to OPEN
+            if is_probe:
+                logger.warning("Circuit breaker probe for '%s' failed! Retripping to OPEN.", target)
+                state_record.state = CircuitBreakerState.OPEN
+                state_record.last_state_change = now
+                state_record.half_open_probing = False
+                state_record.failure_count = self._cb_config.failure_threshold
+                state_record.success_count = 0
+            elif state_record.state == CircuitBreakerState.CLOSED:
+                state_record.failure_count += 1
+                if state_record.failure_count >= self._cb_config.failure_threshold:
+                    logger.warning(
+                        "Circuit breaker for '%s' tripped! Transitioning to OPEN after %d consecutive failures.",
+                        target,
+                        state_record.failure_count,
+                    )
+                    state_record.state = CircuitBreakerState.OPEN
+                    state_record.last_state_change = now
+
+    async def _after_invocation_cancellation(self, target: str) -> None:
+        async with self._lock:
+            state_record = self._get_tool_state(target)
+            state_record.half_open_probing = False
 
     async def function_middleware_invoke(
         self,
@@ -169,19 +205,31 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         context: FunctionMiddlewareContext,
         **kwargs: Any,
     ) -> Any:
-        """Wrap downstream invocation with circuit breaker monitoring and short-circuiting."""
-        should_execute = await self._before_invocation(context.name)
-        if not should_execute:
-            logger.warning("Circuit breaker for '%s' is active. Short-circuiting call.", context.name)
-            return self._get_short_circuit_message(context.name)
+        # Target state is scoped to context.name as FunctionMiddlewareContext exposes no component-level namespace.
+        # This is a known limitation if different components expose identically named functions.
+        target = context.name
+        is_probe = await self._before_invocation(target)
 
         try:
-            result = await super().function_middleware_invoke(*args, call_next=call_next, context=context, **kwargs)
+            if is_probe and self._cb_config.probe_timeout is not None:
+                coro = super().function_middleware_invoke(*args, call_next=call_next, context=context, **kwargs)
+                result = await asyncio.wait_for(coro, timeout=self._cb_config.probe_timeout)
+            else:
+                result = await super().function_middleware_invoke(
+                    *args,
+                    call_next=call_next,
+                    context=context,
+                    **kwargs,
+                )
+        except asyncio.CancelledError:
+            # Cancellation must not count as a failure
+            await self._after_invocation_cancellation(target)
+            raise
         except Exception:
-            await self._after_invocation_failure(context.name)
+            await self._after_invocation_failure(target, is_probe=is_probe)
             raise
         else:
-            await self._after_invocation_success(context.name)
+            await self._after_invocation_success(target, is_probe=is_probe)
             return result
 
     async def function_middleware_stream(
@@ -191,22 +239,51 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         context: FunctionMiddlewareContext,
         **kwargs: Any,
     ) -> AsyncIterator[Any]:
-        """Wrap downstream streaming call with circuit breaker monitoring and short-circuiting."""
-        should_execute = await self._before_invocation(context.name)
-        if not should_execute:
-            logger.warning("Circuit breaker for '%s' is active. Short-circuiting stream.", context.name)
-            yield self._get_short_circuit_message(context.name)
-            return
+        # Target state is scoped to context.name as FunctionMiddlewareContext exposes no component-level namespace.
+        # This is a known limitation if different components expose identically named functions.
+        target = context.name
+        is_probe = await self._before_invocation(target)
 
+        handled = False
         try:
-            async for chunk in super().function_middleware_stream(*args, call_next=call_next, context=context,
-                                                                  **kwargs):
-                yield chunk
+            if is_probe and self._cb_config.probe_timeout is not None:
+                # Wrap only each downstream __anext__ in timeout so consumer delays during yield do not trigger timeouts
+                stream_iter = super().function_middleware_stream(
+                    *args,
+                    call_next=call_next,
+                    context=context,
+                    **kwargs,
+                ).__aiter__()
+                while True:
+                    try:
+                        async with asyncio.timeout(self._cb_config.probe_timeout):
+                            chunk = await stream_iter.__anext__()
+                    except StopAsyncIteration:
+                        break
+                    yield chunk
+            else:
+                async for chunk in super().function_middleware_stream(
+                        *args,
+                        call_next=call_next,
+                        context=context,
+                        **kwargs,
+                ):
+                    yield chunk
+        except asyncio.CancelledError:
+            handled = True
+            await self._after_invocation_cancellation(target)
+            raise
         except Exception:
-            await self._after_invocation_failure(context.name)
+            handled = True
+            await self._after_invocation_failure(target, is_probe=is_probe)
             raise
         else:
-            await self._after_invocation_success(context.name)
+            handled = True
+            await self._after_invocation_success(target, is_probe=is_probe)
+        finally:
+            # Finalize abandoned generators where no explicit handler ran (e.g. GeneratorExit on early break)
+            if is_probe and not handled:
+                await self._after_invocation_cancellation(target)
 
 
-__all__ = ["CircuitBreakerMiddleware", "CircuitBreakerState"]
+__all__ = ["CircuitBreakerMiddleware", "CircuitBreakerOpenError", "CircuitBreakerState"]

@@ -44,6 +44,12 @@ class CircuitBreakerMiddlewareConfig(DynamicMiddlewareConfig, name="circuit_brea
         "Number of consecutive successful probe calls in HALF_OPEN state required to recover to CLOSED state.",
     )
 
+    probe_timeout: float | None = Field(
+        default=None,
+        gt=0,
+        description="Optional timeout in seconds for probe calls in HALF_OPEN state.",
+    )
+
     circuit_breaker_message: str | None = Field(
         default=None,
         description=("Optional custom message returned when calls are "

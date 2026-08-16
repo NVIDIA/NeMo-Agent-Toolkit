@@ -27,6 +27,7 @@ EXPECTED_PLUGIN_API_EXPORTS = {
                                  "CircuitBreakerMiddleware"),
     "CircuitBreakerMiddlewareConfig": ("nat.middleware.circuit_breaker.circuit_breaker_middleware_config",
                                        "CircuitBreakerMiddlewareConfig"),
+    "CircuitBreakerOpenError": ("nat.middleware.circuit_breaker.circuit_breaker_middleware", "CircuitBreakerOpenError"),
     "CircuitBreakerState": ("nat.middleware.circuit_breaker.circuit_breaker_middleware", "CircuitBreakerState"),
     "ComponentRef": ("nat.data_models.component_ref", "ComponentRef"),
     "Context": ("nat.builder.context", "Context"),

@@ -15,7 +15,13 @@
 """Circuit breaker middleware package."""
 
 from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerMiddleware
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerOpenError
 from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerState
 from nat.middleware.circuit_breaker.circuit_breaker_middleware_config import CircuitBreakerMiddlewareConfig
 
-__all__ = ["CircuitBreakerMiddleware", "CircuitBreakerMiddlewareConfig", "CircuitBreakerState"]
+__all__ = [
+    "CircuitBreakerMiddleware",
+    "CircuitBreakerMiddlewareConfig",
+    "CircuitBreakerOpenError",
+    "CircuitBreakerState",
+]

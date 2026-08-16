@@ -404,6 +404,48 @@ Timeout middleware extends `DynamicFunctionMiddleware`, enabling interception of
 - **Streaming**: Enforces the time limit across the entire stream duration, not per-chunk
 - **Error handling**: Raises `TimeoutError` with the configured `timeout_message`
 
+### Circuit Breaker Middleware
+
+The circuit breaker middleware (`_type: circuit_breaker`) implements the Circuit Breaker pattern to protect workflows from cascading failures by isolating failing functions and external services.
+
+#### States
+
+The circuit breaker operates as a state machine with three states:
+
+- **CLOSED** (Normal Operation): Function calls pass through normally. Consecutive downstream exceptions increment the failure counter. When `failure_threshold` is reached, the circuit breaker trips to `OPEN`.
+- **OPEN** (Failing / Short-Circuiting): Function calls are short-circuited immediately without executing the downstream function, raising `CircuitBreakerOpenError`. When `cooldown_period` elapses, the circuit breaker transitions to `HALF_OPEN`.
+- **HALF_OPEN** (Probing): Allows limited probe calls to test if the downstream service has recovered. Concurrent calls while a probe is in flight are short-circuited. If `probe_timeout` is configured, probe calls time out after the specified duration. The circuit breaker recovers to `CLOSED` after `half_open_success_threshold` consecutive successful probes, or re-trips to `OPEN` on failure or timeout.
+
+#### Configuration
+
+```yaml
+middleware:
+  tool_circuit_breaker:
+    _type: circuit_breaker
+    failure_threshold: 3
+    cooldown_period: 60.0
+    half_open_success_threshold: 1
+    probe_timeout: 5.0
+    circuit_breaker_message: "The downstream service is temporarily unavailable. Please retry later."
+```
+
+#### Parameters
+
+- **`failure_threshold`** (`int`, default=`3`): Number of consecutive failures required to trip the circuit breaker into `OPEN` state (must be greater than zero).
+- **`cooldown_period`** (`float`, default=`60.0`): Time in seconds to wait in `OPEN` state before transitioning to `HALF_OPEN` to probe availability (must be greater than zero).
+- **`half_open_success_threshold`** (`int`, default=`1`): Number of consecutive successful probe calls in `HALF_OPEN` state required to recover to `CLOSED` state (must be greater than zero).
+- **`probe_timeout`** (`float | None`, default=`None`): Optional timeout in seconds for probe calls in `HALF_OPEN` state (must be greater than zero if set).
+- **`circuit_breaker_message`** (`str | None`, default=`None`): Optional custom message appended to the error message when calls are short-circuited while the circuit breaker is `OPEN`.
+
+Circuit breaker middleware extends `DynamicFunctionMiddleware`, enabling dynamic component interception as well as targeting specific workflow functions.
+
+#### Behavior
+
+- **Single invocations**: Intercepts downstream execution, short-circuiting calls and raising `CircuitBreakerOpenError` when `OPEN`.
+- **Streaming**: Intercepts streaming generators, enforcing state tracking and timeout per-stream.
+- **Cancellation safety**: Task cancellations (`asyncio.CancelledError`) during `HALF_OPEN` release probe status without counting as a failure or modifying the circuit breaker state.
+- **Target isolation**: Circuit breaker state is tracked independently per tool or target function.
+
 ### HITL Middleware
 
 The HITL (Human-in-the-Loop) middleware (`HITLMiddleware`) is an abstract base class for intercept patterns that require a human decision before or after a function call. It integrates directly with the `UserInteractionManager` to display any configured `HumanPrompt` at two points in the function lifecycle: before the call (`pre_invoke`) and after it returns (`post_invoke`). Each phase delegates the handling of the human response to two abstract methods that subclasses must implement, leaving the decision logic entirely to the implementer.

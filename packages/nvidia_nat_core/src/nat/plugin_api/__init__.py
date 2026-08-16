@@ -114,6 +114,7 @@ from nat.memory.interfaces import MemoryReader
 from nat.memory.interfaces import MemoryWriter
 from nat.memory.models import MemoryItem
 from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerMiddleware
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerOpenError
 from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerState
 from nat.middleware.circuit_breaker.circuit_breaker_middleware_config import CircuitBreakerMiddlewareConfig
 from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
@@ -137,6 +138,7 @@ __all__ = [
     "Builder",
     "CircuitBreakerMiddleware",
     "CircuitBreakerMiddlewareConfig",
+    "CircuitBreakerOpenError",
     "CircuitBreakerState",
     "ComponentRef",
     "Context",

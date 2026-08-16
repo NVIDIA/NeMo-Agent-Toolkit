@@ -45,7 +45,8 @@ The following `nat.plugin_api` exports are intended for plugin authors:
 - Registration return helpers, including `LLMProviderInfo`, `EmbedderProviderInfo`, `RetrieverProviderInfo`,
   `EvaluatorInfo`, and `DatasetLoaderInfo`.
 - Small implementation contracts needed by registered components, including `FunctionMiddleware`,
-  `DynamicFunctionMiddleware`, `HITLMiddleware`, `HITLMiddlewareConfig`, `InvocationAction`,
+  `DynamicFunctionMiddleware`, `CircuitBreakerMiddleware`, `CircuitBreakerMiddlewareConfig`,
+  `CircuitBreakerOpenError`, `CircuitBreakerState`, `HITLMiddleware`, `HITLMiddlewareConfig`, `InvocationAction`,
   `MemoryEditor`, `ObjectStore`, `Retriever`, `Document`, `RetrieverOutput`, and their associated context
   or value models. The interactive data models that HITL middleware hooks and user-input callbacks produce
   and receive are also included: `HumanPrompt`, `InteractionPrompt`, `InteractionResponse`, the
