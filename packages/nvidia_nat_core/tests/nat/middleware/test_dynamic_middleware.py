@@ -20,6 +20,7 @@ from unittest.mock import Mock
 import pytest
 
 from nat.authentication.interfaces import AuthProviderBase
+from nat.builder.builder import Builder
 from nat.builder.function import Function
 from nat.builder.function import FunctionInfo
 from nat.builder.function import LambdaFunction
@@ -30,6 +31,7 @@ from nat.data_models.function import FunctionBaseConfig
 from nat.memory.interfaces import MemoryEditor
 from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
 from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
+from nat.middleware.middleware import InvocationContext
 from nat.middleware.utils.workflow_inventory import DiscoveredComponent
 from nat.middleware.utils.workflow_inventory import DiscoveredFunction
 from nat.object_store.interfaces import ObjectStore
@@ -583,13 +585,13 @@ async def test_patch_add_function_group_skips_patch_when_no_workflow_functions_c
 
 
 class _CountingDynamicMiddleware(DynamicFunctionMiddleware):
-    """Records how many times its pre_invoke hook actually executes."""
+    """Records how many times its `pre_invoke` hook actually executes."""
 
-    def __init__(self, config, builder):
+    def __init__(self, config: DynamicMiddlewareConfig, builder: Builder):
         super().__init__(config=config, builder=builder)
         self.pre_invoke_calls: list[bool] = []
 
-    async def pre_invoke(self, context):
+    async def pre_invoke(self, context: InvocationContext) -> None:
         self.pre_invoke_calls.append(True)
 
 
