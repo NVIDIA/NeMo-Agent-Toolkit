@@ -504,6 +504,10 @@ def test_process_function_end_without_output(step_adaptor_default, make_intermed
 
 
 def test_get_thought_description_falls_back_to_default():
+    """
+    `_get_thought_description` should return the default text when metadata is missing, empty, or has an
+    empty `thought_description` value.
+    """
     result = StepAdaptor._get_thought_description(None, "Running function: foo", "...")
     assert result == "Running function: foo..."
 
@@ -515,6 +519,9 @@ def test_get_thought_description_falls_back_to_default():
 
 
 def test_get_thought_description_uses_custom_value():
+    """
+    `_get_thought_description` should return the configured `thought_description` (plus suffix) when present.
+    """
     result = StepAdaptor._get_thought_description({"thought_description": "Searching the web"},
                                                   "Running function: foo",
                                                   "...")
@@ -597,6 +604,10 @@ def test_function_end_uses_custom_thought_description_from_start_event(step_adap
 
 
 def test_function_end_omits_thought_text_for_root_workflow_function(step_adaptor_default, make_intermediate_step):
+    """
+    The top-level workflow function's parent is the synthetic "root" node; FUNCTION_END should not get a
+    thought_text for it either, mirroring the FUNCTION_START behavior.
+    """
     step = make_intermediate_step(
         event_type=IntermediateStepType.FUNCTION_END,
         data_output="Function Output Data",
