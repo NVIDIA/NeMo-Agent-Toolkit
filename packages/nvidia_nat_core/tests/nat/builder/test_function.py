@@ -134,6 +134,29 @@ async def test_thought_description_absent_when_not_configured():
     assert start_steps[-1].metadata is None
 
 
+async def test_thought_description_included_in_function_start_metadata_for_streaming():
+    """
+    Same as `test_thought_description_included_in_function_start_metadata`, but for the `astream` path:
+    a function configured with `thought_description` should attach it as metadata on the FUNCTION_START
+    step it emits when invoked via streaming rather than `ainvoke`.
+    """
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_stream_function_with_thought",
+                                            config=LambdaStreamFnConfig(thought_description="Searching the web"))
+
+        captured_steps: list[IntermediateStep] = []
+        Context.get().intermediate_step_manager.subscribe(captured_steps.append)
+
+        results = [result async for result in fn_obj.astream("test", to_type=str)]
+        assert results == ["test!"]
+
+    start_steps = [s for s in captured_steps if s.event_type == IntermediateStepType.FUNCTION_START]
+
+    assert start_steps, "Expected at least one FUNCTION_START step to have been emitted"
+    assert start_steps[-1].metadata == {"thought_description": "Searching the web"}
+
+
 async def test_direct_create_with_class():
 
     class ClassFnConfig(FunctionBaseConfig, name="test_class"):

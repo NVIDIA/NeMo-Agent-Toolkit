@@ -85,6 +85,7 @@ def make_intermediate_step():
                    UUID=None,
                    metadata=None,
                    ancestry_parent_id="abc"):
+        """Build a single IntermediateStep with the given event type, data, metadata, and ancestry."""
         payload = IntermediateStepPayload(
             event_type=event_type,
             name=name or "test_step",
