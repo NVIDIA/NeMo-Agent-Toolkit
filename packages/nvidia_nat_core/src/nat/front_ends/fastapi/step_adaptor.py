@@ -15,6 +15,7 @@
 
 import html
 import logging
+import typing
 from functools import reduce
 from textwrap import dedent
 
@@ -38,6 +39,17 @@ class StepAdaptor:
 
         self._history: list[IntermediateStep] = []
         self.config = config
+
+    @staticmethod
+    def _get_thought_description(metadata: dict[str, typing.Any] | None, default: str, suffix: str = "") -> str:
+        """
+        Returns the user-configured `thought_description` from step metadata if present, otherwise falls back to
+        `default`. `suffix` is appended in either case (e.g. "..." while running, "... completed" once finished).
+        """
+        if not metadata or not metadata.get("thought_description"):
+            return default + suffix
+
+        return metadata["thought_description"] + suffix
 
     def _step_matches_filter(self, step: IntermediateStep, config: StepAdaptorConfig) -> bool:
         """
@@ -203,10 +215,16 @@ class StepAdaptor:
             ```
             """).strip("\n").format(input_value=escaped_input, format_input_type=format_input_type)
 
+            # Omit thought_text for the top-level workflow function; its parent is the synthetic "root" node.
+            thought_text = None
+            if ancestry.parent_id != "root":
+                thought_text = self._get_thought_description(step.metadata, f"Running function: {step.name}", "...")
+
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Start: {step.name}",
                                              payload=payload_str,
-                                             parent_id=ancestry.parent_id)
+                                             parent_id=ancestry.parent_id,
+                                             thought_text=thought_text)
             return event
 
         if step.event_type == IntermediateStepType.FUNCTION_END:
@@ -256,10 +274,19 @@ class StepAdaptor:
                                     output_value=escaped_output,
                                     format_output_type=format_output_type)
 
+            # Omit thought_text for the top-level workflow function; its parent is the synthetic "root" node.
+            thought_text = None
+            if ancestry.parent_id != "root":
+                start_metadata = start_step.metadata if start_step else None
+                thought_text = self._get_thought_description(start_metadata,
+                                                             f"Running function: {step.name}",
+                                                             "... completed")
+
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Complete: {step.name}",
                                              payload=payload_str,
-                                             parent_id=ancestry.parent_id)
+                                             parent_id=ancestry.parent_id,
+                                             thought_text=thought_text)
             return event
 
         return None
