@@ -25,7 +25,9 @@ from nat.data_models.interactive import HumanPromptModelType
 from nat.data_models.interactive import HumanPromptText
 from nat.data_models.interactive import HumanResponseText
 from nat.data_models.interactive import InteractionPrompt
+from nat.data_models.interactive import InteractionStatus
 from nat.data_models.interactive import _HumanPromptOAuthConsent
+from nat.utils import providers
 
 # ------------------------------------------------------------------------------
 # Tests for Interactive Data Models
@@ -119,6 +121,56 @@ async def test_prompt_user_input_text():
     finally:
         # Always reset the token so as not to affect other tests.
         state.user_input_callback.reset(token)
+
+
+async def test_prompt_user_input_uses_installed_providers():
+    """
+    prompt_user_input stamps the outgoing InteractionPrompt and the returned
+    InteractionResponse with the id and timestamp from the installed providers.
+    """
+    fixed_id = "12345678-1234-4321-8765-123456789abc"
+    # prompt_user_input reads the time provider once for the prompt and once for the response, so an advancing
+    # provider proves each timestamp comes from its own current_time() call rather than being copied.
+    times = iter([1700000000.5, 1700000003.5])
+    # time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(...)) for the two epoch times above.
+    expected_prompt_timestamp = "2023-11-14T22:13:20Z"
+    expected_response_timestamp = "2023-11-14T22:13:23Z"
+
+    captured_prompts: list[InteractionPrompt] = []
+
+    async def dummy_text_callback(interaction_prompt: InteractionPrompt) -> HumanResponseText:
+        captured_prompts.append(interaction_prompt)
+        return HumanResponseText(text="dummy answer")
+
+    state = ContextState.get()
+    token = state.user_input_callback.set(dummy_text_callback)
+    previous_id_provider = providers.set_id_provider(lambda: fixed_id)
+    previous_time_provider = providers.set_time_provider(lambda: next(times))
+
+    try:
+        manager = UserInteractionManager(context_state=state)
+        prompt_content = HumanPromptText(text="What is your favorite color?", placeholder="Enter color")
+        response = await manager.prompt_user_input(prompt_content)
+    finally:
+        # Always restore the providers and reset the token so as not to affect other tests.
+        providers.set_id_provider(previous_id_provider)
+        providers.set_time_provider(previous_time_provider)
+        state.user_input_callback.reset(token)
+
+    # The prompt handed to the callback carries the provider-generated id and timestamp.
+    assert len(captured_prompts) == 1
+    prompt = captured_prompts[0]
+    assert prompt.id == fixed_id
+    assert prompt.timestamp == expected_prompt_timestamp
+    assert prompt.status == InteractionStatus.IN_PROGRESS
+    assert prompt.content == prompt_content
+
+    # The response reuses the prompt id and stamps its own timestamp from the time provider.
+    assert response.id == fixed_id
+    assert response.timestamp == expected_response_timestamp
+    assert response.status == InteractionStatus.COMPLETED
+    assert isinstance(response.content, HumanResponseText)
+    assert response.content.text == "dummy answer"
 
 
 # ------------------------------------------------------------------------------

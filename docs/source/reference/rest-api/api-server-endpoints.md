@@ -122,6 +122,12 @@ The following CLI flags are available to configure the asynchronous generate end
 * `--max_concurrent_jobs`: Maximum number of Dask workers to create for running async jobs. The name of this parameter is misleading as the actual number of concurrent async jobs is: `max_running_async_jobs * dask_threads_per_worker`. Default is 10. This is only used when `scheduler_address` is not set.
 * `--scheduler_address`: The address of an existing Dask scheduler to connect to. If not set, a local Dask cluster will be created.
 
+### Database Connection Pooling
+Deployments backed by a network-attached database, such as a managed PostgreSQL instance, can have idle pooled connections closed by the database server or by intervening infrastructure. The client is not notified, so the next request to check out a stale connection fails before the pool replaces it. The following environment variables configure the [SQLAlchemy connection pool](https://docs.sqlalchemy.org/en/20/core/pooling.html) used for job history and metadata. They apply to every process that inherits them, which covers the API server workers and the workers of a local Dask cluster created at start time. Workers belonging to a Dask scheduler you run separately need these variables set in their own environment:
+* `NAT_JOB_STORE_POOL_PRE_PING`: When set to `1`, `true`, `yes`, or `on`, each pooled connection is tested with a lightweight query before use, and stale connections are transparently replaced. Set to `0`, `false`, `no`, or `off` to disable. Unset by default, which leaves the SQLAlchemy default of disabled.
+* `NAT_JOB_STORE_POOL_RECYCLE`: The maximum age in seconds of a pooled connection before it is discarded and reopened. Set this below the idle timeout enforced by your database or network infrastructure. Unset by default, which leaves the SQLAlchemy default of `-1`, meaning connections are never recycled.
+
+Setting `NAT_JOB_STORE_POOL_PRE_PING` to `true` is the usual remedy when the first asynchronous job submitted after an idle period fails with a closed connection error. Explicit `pool_pre_ping` and `pool_recycle` keyword arguments passed to `get_db_engine` take precedence over these variables.
 
 ### Endpoint Details
 
