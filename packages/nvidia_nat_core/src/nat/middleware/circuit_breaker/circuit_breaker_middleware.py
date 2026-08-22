@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class CircuitBreakerOpenError(RuntimeError):
-    """Raised when a call is short-circuited because the circuit breaker is OPEN."""
+    """Raised when a call is short-circuited because the circuit breaker is ``OPEN``."""
 
 
 class CircuitBreakerState(StrEnum):
@@ -65,7 +65,7 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
     """Middleware implementing the Circuit Breaker pattern with per-target isolation.
 
     Monitors execution failures and short-circuits calls when downstream functions fail
-    repeatedly, transitioning through CLOSED, OPEN, and HALF_OPEN states per target.
+    repeatedly, transitioning through ``CLOSED``, ``OPEN``, and ``HALF_OPEN`` states per target.
     """
 
     def __init__(self, config: CircuitBreakerMiddlewareConfig, builder: Builder) -> None:
@@ -81,19 +81,19 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         self._lock: asyncio.Lock = asyncio.Lock()
 
     def _get_tool_state(self, target: str) -> _ToolState:
-        """Get or initialize state record for a given target name.
+        """Get or initialize state record for a given target name under lock.
 
         Args:
             target: Identifier for the target function or tool.
 
         Returns:
-            _ToolState: State record for the target.
+            ``_ToolState``: State record for the target.
         """
         if target not in self._states:
             self._states[target] = _ToolState(last_state_change=time.monotonic())
         return self._states[target]
 
-    def get_state(self, target: str) -> CircuitBreakerState:
+    async def get_state(self, target: str) -> CircuitBreakerState:
         """Return the current circuit breaker state for a specific target.
 
         Args:
@@ -102,11 +102,12 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         Returns:
             CircuitBreakerState: Current state of the target.
         """
-        if target in self._states:
-            return self._states[target].state
-        return CircuitBreakerState.CLOSED
+        async with self._lock:
+            if target in self._states:
+                return self._states[target].state
+            return CircuitBreakerState.CLOSED
 
-    def get_failure_count(self, target: str) -> int:
+    async def get_failure_count(self, target: str) -> int:
         """Return the consecutive failure count for a specific target.
 
         Args:
@@ -115,12 +116,13 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         Returns:
             int: Number of consecutive failures.
         """
-        if target in self._states:
-            return self._states[target].failure_count
-        return 0
+        async with self._lock:
+            if target in self._states:
+                return self._states[target].failure_count
+            return 0
 
-    def get_success_count(self, target: str) -> int:
-        """Return consecutive successes in HALF_OPEN state towards recovery for a target.
+    async def get_success_count(self, target: str) -> int:
+        """Return consecutive successes in ``HALF_OPEN`` state towards recovery for a target.
 
         Args:
             target: Identifier for the target function or tool.
@@ -128,11 +130,12 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         Returns:
             int: Number of consecutive probe successes.
         """
-        if target in self._states:
-            return self._states[target].success_count
-        return 0
+        async with self._lock:
+            if target in self._states:
+                return self._states[target].success_count
+            return 0
 
-    def get_last_state_change(self, target: str) -> float:
+    async def get_last_state_change(self, target: str) -> float:
         """Return the monotonic timestamp of the last state change for a specific target.
 
         Args:
@@ -141,12 +144,27 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         Returns:
             float: Timestamp in seconds.
         """
-        if target in self._states:
-            return self._states[target].last_state_change
-        return 0.0
+        async with self._lock:
+            if target in self._states:
+                return self._states[target].last_state_change
+            return 0.0
+
+    async def is_half_open_probing(self, target: str) -> bool:
+        """Return whether a probe execution is actively in-flight for a target in ``HALF_OPEN`` state.
+
+        Args:
+            target: Identifier for the target function or tool.
+
+        Returns:
+            bool: True if a probe call is in-flight in ``HALF_OPEN`` state.
+        """
+        async with self._lock:
+            if target in self._states:
+                return self._states[target].half_open_probing
+            return False
 
     def _get_short_circuit_message(self, target: str) -> str:
-        """Format the short-circuit message when OPEN or busy probing.
+        """Format the short-circuit message when ``OPEN`` or busy probing.
 
         Args:
             target: Identifier for the target function or tool.
@@ -166,10 +184,10 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
             target: Identifier for the target function or tool.
 
         Returns:
-            bool: True if execution is admitted as a HALF_OPEN probe, False if normal CLOSED.
+            bool: True if execution is admitted as a ``HALF_OPEN`` probe, False if normal ``CLOSED``.
 
         Raises:
-            CircuitBreakerOpenError: If the circuit breaker is OPEN or busy probing in HALF_OPEN.
+            CircuitBreakerOpenError: If the circuit breaker is ``OPEN`` or busy probing in ``HALF_OPEN``.
         """
         async with self._lock:
             state_record = self._get_tool_state(target)
@@ -209,7 +227,7 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
 
         Args:
             target: Identifier for the target function or tool.
-            is_probe: Whether this execution was an admitted probe call in HALF_OPEN state.
+            is_probe: Whether this execution was an admitted probe call in ``HALF_OPEN`` state.
         """
         async with self._lock:
             state_record = self._get_tool_state(target)
@@ -235,7 +253,7 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
 
         Args:
             target: Identifier for the target function or tool.
-            is_probe: Whether this execution was an admitted probe call in HALF_OPEN state.
+            is_probe: Whether this execution was an admitted probe call in ``HALF_OPEN`` state.
         """
         async with self._lock:
             state_record = self._get_tool_state(target)
@@ -279,16 +297,16 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         """Wrap downstream invocation with circuit breaker monitoring and short-circuiting.
 
         Args:
-            *args: Positional arguments for the intercepted function.
+            args: Positional arguments for the intercepted function.
             call_next: Callable to invoke next middleware or target function.
             context: Static function metadata describing the tool being invoked.
-            **kwargs: Keyword arguments for the intercepted function.
+            kwargs: Keyword arguments for the intercepted function.
 
         Returns:
             Any: The tool result.
 
         Raises:
-            CircuitBreakerOpenError: If the circuit breaker is OPEN or busy probing.
+            CircuitBreakerOpenError: If the circuit breaker is ``OPEN`` or busy probing.
             Exception: Any exception raised by the downstream callable.
         """
         # Target state is scoped to context.name as FunctionMiddlewareContext exposes no component-level namespace.
@@ -328,16 +346,16 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         """Wrap downstream streaming call with circuit breaker monitoring and short-circuiting.
 
         Args:
-            *args: Positional arguments for the intercepted function.
+            args: Positional arguments for the intercepted function.
             call_next: Callable to invoke next middleware or target stream.
             context: Static function metadata describing the tool being invoked.
-            **kwargs: Keyword arguments for the intercepted function.
+            kwargs: Keyword arguments for the intercepted function.
 
         Yields:
             Any: Stream chunks from downstream execution.
 
         Raises:
-            CircuitBreakerOpenError: If the circuit breaker is OPEN or busy probing.
+            CircuitBreakerOpenError: If the circuit breaker is ``OPEN`` or busy probing.
             Exception: Any exception raised by the downstream stream.
         """
         # Target state is scoped to context.name as FunctionMiddlewareContext exposes no component-level namespace.
@@ -349,10 +367,12 @@ class CircuitBreakerMiddleware(DynamicFunctionMiddleware):
         try:
             if is_probe and self._cb_config.probe_timeout is not None:
                 # Wrap only each downstream __anext__ in timeout so consumer delays during yield do not trigger timeouts
-                async with contextlib.aclosing(super().function_middleware_stream(*args,
-                                                                                  call_next=call_next,
-                                                                                  context=context,
-                                                                                  **kwargs)) as stream:
+                async with contextlib.aclosing(super().function_middleware_stream(
+                        *args,
+                        call_next=call_next,
+                        context=context,
+                        **kwargs,
+                )) as stream:
                     stream_iter = stream.__aiter__()
                     while True:
                         try:

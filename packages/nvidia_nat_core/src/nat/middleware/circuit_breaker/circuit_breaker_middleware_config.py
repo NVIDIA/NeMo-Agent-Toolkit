@@ -26,9 +26,9 @@ class CircuitBreakerMiddlewareConfig(DynamicMiddlewareConfig, name="circuit_brea
 
     Attributes:
         failure_threshold: Number of consecutive failures required to trip the circuit breaker.
-        cooldown_period: Time in seconds to wait in OPEN state before probing.
-        half_open_success_threshold: Consecutive successful probes required to recover to CLOSED.
-        probe_timeout: Optional timeout in seconds for probe calls in HALF_OPEN state.
+        cooldown_period: Time in seconds to wait in ``OPEN`` state before probing.
+        half_open_success_threshold: Consecutive successful probes required to recover to ``CLOSED``.
+        probe_timeout: Optional timeout in seconds for probe calls in ``HALF_OPEN`` state.
         circuit_breaker_message: Optional custom message returned when short-circuited.
     """
 

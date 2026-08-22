@@ -165,7 +165,7 @@ class TestCircuitBreakerMiddlewareInvoke:
     ) -> None:
         """Verify successful call in CLOSED state returns result and resets failure count."""
         middleware = _make_middleware(mock_builder, failure_threshold=3)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
 
         async def success_fn(*args: Any, **kwargs: Any) -> str:
             """Simulate successful downstream execution."""
@@ -174,8 +174,8 @@ class TestCircuitBreakerMiddlewareInvoke:
         call_next = AsyncMock(side_effect=success_fn)
         res = await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
         assert res == "ok"
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
-        assert middleware.get_failure_count("test_tool") == 0
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_failure_count("test_tool") == 0
         call_next.assert_called_once()
 
     async def test_closed_to_open_transition(
@@ -194,18 +194,18 @@ class TestCircuitBreakerMiddlewareInvoke:
 
         with pytest.raises(RuntimeError, match="Backend service down"):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
-        assert middleware.get_failure_count("test_tool") == 1
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_failure_count("test_tool") == 1
 
         with pytest.raises(RuntimeError, match="Backend service down"):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
-        assert middleware.get_failure_count("test_tool") == 2
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_failure_count("test_tool") == 2
 
         with pytest.raises(RuntimeError, match="Backend service down"):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
-        assert middleware.get_failure_count("test_tool") == 3
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_failure_count("test_tool") == 3
         assert call_next.call_count == 3
 
     async def test_short_circuit_raises_circuit_breaker_open_error(
@@ -224,7 +224,7 @@ class TestCircuitBreakerMiddlewareInvoke:
         call_next = AsyncMock(side_effect=RuntimeError("Failure"))
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         call_next.reset_mock()
         match_pattern = re.escape("Circuit breaker is OPEN for 'test_tool'.") + ".*" + re.escape("Please retry later.")
@@ -248,7 +248,7 @@ class TestCircuitBreakerMiddlewareInvoke:
         call_next = AsyncMock(side_effect=RuntimeError("Failure"))
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         with pytest.raises(CircuitBreakerOpenError) as exc_info:
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
@@ -270,7 +270,7 @@ class TestCircuitBreakerMiddlewareInvoke:
         call_next = AsyncMock(side_effect=RuntimeError("Failure"))
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         await asyncio.sleep(0.15)
 
@@ -279,8 +279,8 @@ class TestCircuitBreakerMiddlewareInvoke:
 
         res = await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
         assert res == "recovered_result"
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
-        assert middleware.get_failure_count("test_tool") == 0
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_failure_count("test_tool") == 0
 
     async def test_half_open_multiple_success_threshold(
         self,
@@ -298,7 +298,7 @@ class TestCircuitBreakerMiddlewareInvoke:
         call_next = AsyncMock(side_effect=RuntimeError("Failure"))
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         await asyncio.sleep(0.15)
 
@@ -307,15 +307,15 @@ class TestCircuitBreakerMiddlewareInvoke:
 
         res1 = await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
         assert res1 == "probe_1_ok"
-        assert middleware.get_state("test_tool") == CircuitBreakerState.HALF_OPEN
-        assert middleware.get_success_count("test_tool") == 1
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.HALF_OPEN
+        assert await middleware.get_success_count("test_tool") == 1
 
         call_next.return_value = "probe_2_ok"
         res2 = await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
         assert res2 == "probe_2_ok"
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
-        assert middleware.get_success_count("test_tool") == 0
-        assert middleware.get_failure_count("test_tool") == 0
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_success_count("test_tool") == 0
+        assert await middleware.get_failure_count("test_tool") == 0
 
     async def test_half_open_failed_probe_retrips(
         self,
@@ -328,15 +328,15 @@ class TestCircuitBreakerMiddlewareInvoke:
         call_next = AsyncMock(side_effect=RuntimeError("Failure"))
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         await asyncio.sleep(0.15)
 
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
 
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
-        assert middleware.get_failure_count("test_tool") == 1
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_failure_count("test_tool") == 1
 
     async def test_half_open_probe_timeout(
         self,
@@ -354,7 +354,7 @@ class TestCircuitBreakerMiddlewareInvoke:
         call_next = AsyncMock(side_effect=RuntimeError("Initial failure"))
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         await asyncio.sleep(0.15)
 
@@ -368,8 +368,8 @@ class TestCircuitBreakerMiddlewareInvoke:
         with pytest.raises(TimeoutError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
 
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
-        assert middleware._get_tool_state("test_tool").half_open_probing is False
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.is_half_open_probing("test_tool") is False
 
     async def test_probe_timeout_none_waits_for_completion(
         self,
@@ -387,7 +387,7 @@ class TestCircuitBreakerMiddlewareInvoke:
         call_next = AsyncMock(side_effect=RuntimeError("Initial failure"))
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         await asyncio.sleep(0.15)
 
@@ -399,7 +399,7 @@ class TestCircuitBreakerMiddlewareInvoke:
         call_next.side_effect = slow_successful_probe
         res = await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
         assert res == "slow_success"
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
 
     async def test_half_open_cancellation_does_not_trip_or_increment_failures(
         self,
@@ -414,7 +414,7 @@ class TestCircuitBreakerMiddlewareInvoke:
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         await asyncio.sleep(0.15)
 
@@ -435,14 +435,14 @@ class TestCircuitBreakerMiddlewareInvoke:
         with pytest.raises(asyncio.CancelledError):
             await task
 
-        assert middleware.get_state("test_tool") == CircuitBreakerState.HALF_OPEN
-        assert middleware._get_tool_state("test_tool").half_open_probing is False
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.HALF_OPEN
+        assert await middleware.is_half_open_probing("test_tool") is False
 
         call_next.side_effect = None
         call_next.return_value = "recovered_after_cancellation"
         res = await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
         assert res == "recovered_after_cancellation"
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
 
     async def test_half_open_concurrency_safety(
         self,
@@ -455,7 +455,7 @@ class TestCircuitBreakerMiddlewareInvoke:
         call_next = AsyncMock(side_effect=RuntimeError("Initial failure"))
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         await asyncio.sleep(0.15)
 
@@ -480,7 +480,7 @@ class TestCircuitBreakerMiddlewareInvoke:
         probe_release.set()
         res_probe = await task
         assert res_probe == "probe_success"
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
 
     async def test_tool_target_isolation(self, mock_builder: Mock) -> None:
         """Verify failure and recovery states are tracked independently per target function."""
@@ -496,12 +496,28 @@ class TestCircuitBreakerMiddlewareInvoke:
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next_a, context=ctx_a)
 
-        assert middleware.get_state("tool_a") == CircuitBreakerState.OPEN
-        assert middleware.get_state("tool_b") == CircuitBreakerState.CLOSED
+        assert await middleware.get_state("tool_a") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("tool_b") == CircuitBreakerState.CLOSED
 
         res_b = await middleware.function_middleware_invoke("input", call_next=call_next_b, context=ctx_b)
         assert res_b == "tool_b ok"
-        assert middleware.get_state("tool_b") == CircuitBreakerState.CLOSED
+        assert await middleware.get_state("tool_b") == CircuitBreakerState.CLOSED
+
+    async def test_get_last_state_change(
+        self,
+        mock_builder: Mock,
+        function_context: FunctionMiddlewareContext,
+    ) -> None:
+        """Verify get_last_state_change returns monotonic timestamp for tracked targets."""
+        middleware = _make_middleware(mock_builder, failure_threshold=1)
+        assert await middleware.get_last_state_change("unseen_tool") == 0.0
+
+        call_next = AsyncMock(side_effect=RuntimeError("Failure"))
+        with pytest.raises(RuntimeError):
+            await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
+
+        timestamp = await middleware.get_last_state_change("test_tool")
+        assert timestamp > 0.0
 
 
 class TestCircuitBreakerMiddlewareStream:
@@ -528,7 +544,7 @@ class TestCircuitBreakerMiddlewareStream:
             chunks.append(chunk)
 
         assert chunks == ["chunk1", "chunk2"]
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
 
     async def test_streaming_failure_trips_breaker(
         self,
@@ -550,7 +566,7 @@ class TestCircuitBreakerMiddlewareStream:
                                                                  context=function_context):
                 pass
 
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         with pytest.raises(CircuitBreakerOpenError):
             async for _ in middleware.function_middleware_stream("input", call_next=call_next,
@@ -573,7 +589,7 @@ class TestCircuitBreakerMiddlewareStream:
         call_next = Mock(side_effect=RuntimeError("Initial failure"))
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         await asyncio.sleep(0.15)
 
@@ -590,8 +606,8 @@ class TestCircuitBreakerMiddlewareStream:
                                                                  context=function_context):
                 pass
 
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
-        assert middleware._get_tool_state("test_tool").half_open_probing is False
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.is_half_open_probing("test_tool") is False
 
     async def test_streaming_probe_timeout_does_not_trigger_on_consumer_delay(
         self,
@@ -609,7 +625,7 @@ class TestCircuitBreakerMiddlewareStream:
         call_next = Mock(side_effect=RuntimeError("Initial failure"))
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         await asyncio.sleep(0.15)
 
@@ -627,7 +643,7 @@ class TestCircuitBreakerMiddlewareStream:
             await asyncio.sleep(0.15)
 
         assert chunks == ["chunk1", "chunk2"]
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
 
     async def test_streaming_early_break_resets_probing_and_admits_next_call(
         self,
@@ -640,7 +656,7 @@ class TestCircuitBreakerMiddlewareStream:
         call_next = Mock(side_effect=RuntimeError("Initial failure"))
         with pytest.raises(RuntimeError):
             await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
-        assert middleware.get_state("test_tool") == CircuitBreakerState.OPEN
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.OPEN
 
         await asyncio.sleep(0.15)
 
@@ -661,9 +677,9 @@ class TestCircuitBreakerMiddlewareStream:
                 assert chunk == "chunk_0"
                 break
 
-        assert middleware._get_tool_state("test_tool").half_open_probing is False
+        assert await middleware.is_half_open_probing("test_tool") is False
 
         call_next = AsyncMock(return_value="probe_success")
         res = await middleware.function_middleware_invoke("input", call_next=call_next, context=function_context)
         assert res == "probe_success"
-        assert middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
+        assert await middleware.get_state("test_tool") == CircuitBreakerState.CLOSED
