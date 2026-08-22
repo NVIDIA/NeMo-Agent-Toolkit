@@ -17,6 +17,8 @@
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
+from fastmcp import FastMCP
+from fastmcp.server.context import Context
 from pydantic import create_model
 
 from nat.plugins.fastmcp.server.tool_converter import _build_name_mapping
@@ -164,9 +166,30 @@ class TestParameterNameSanitization:
 
     def test_wrapper_declares_context_for_injection(self):
         """FastMCP injects request context only when a Context parameter is annotated."""
-        from mcp.server.fastmcp.utilities.context_injection import find_context_parameter
+        from fastmcp.server.dependencies import find_kwarg_by_type
 
         schema = create_model("Schema", **{"query": (str, ...)})  # type: ignore[call-overload]
         wrapper = create_function_wrapper("tool", _mock_session_manager(), schema)
 
-        assert find_context_parameter(wrapper) == "ctx"
+        assert find_kwarg_by_type(wrapper, Context) == "ctx"
+
+    async def test_registered_per_user_tool_excludes_ctx_from_client_schema(self):
+        """Registered tools expose workflow args but not the injected Context param."""
+        from fastmcp.server.dependencies import find_kwarg_by_type
+
+        schema = create_model("ToolSchema", **{"message": (str, ...)})  # type: ignore[call-overload]
+        mock_sm = _mock_session_manager()
+        mock_sm.is_workflow_per_user = True
+        mock_sm.get_workflow_input_schema = MagicMock(return_value=schema)
+        mock_sm.config = MagicMock(workflow=MagicMock(description="Per-user workflow"))
+
+        mcp = FastMCP("test-server")
+        from nat.plugins.fastmcp.server.tool_converter import register_function_with_mcp
+
+        register_function_with_mcp(mcp, "per_user_tool", mock_sm)
+        tools = await mcp.list_tools()
+
+        assert len(tools) == 1
+        assert set(tools[0].parameters["properties"]) == {"message"}
+        tool = await mcp.get_tool("per_user_tool")
+        assert find_kwarg_by_type(tool.fn, Context) == "ctx"

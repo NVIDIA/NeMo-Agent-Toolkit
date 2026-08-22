@@ -22,12 +22,12 @@ from inspect import Parameter
 from inspect import Signature
 from typing import Any
 
-from mcp.server.fastmcp.server import Context
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 from fastmcp import FastMCP
+from fastmcp.server.context import Context
 from nat.builder.function import Function  # type: ignore[reportMissingImports]
 from nat.builder.function_base import FunctionBase  # type: ignore[reportMissingImports]
 from nat.runtime.session import SessionManager  # type: ignore[reportMissingImports]
@@ -187,6 +187,12 @@ def _is_chat_request_schema(schema: Any) -> bool:
     return schema_name == "ChatRequest" or "ChatRequest" in schema_qualname
 
 
+def _append_context_parameter(signature: Signature) -> Signature:
+    """Append the FastMCP Context parameter used for request injection."""
+    ctx_param = Parameter("ctx", Parameter.KEYWORD_ONLY, default=None, annotation=Context | None)
+    return signature.replace(parameters=[*signature.parameters.values(), ctx_param])
+
+
 async def _run_through_session_manager(session_manager: "SessionManager", payload: Any, ctx: Any | None = None) -> Any:
     """Execute a payload through SessionManager, including per-user workflows."""
     if session_manager.is_workflow_per_user:
@@ -249,7 +255,7 @@ def create_function_wrapper(
             return json.dumps(result, default=str)
         return str(result)
 
-    wrapper_func.__signature__ = signature  # type: ignore[attr-defined]
+    wrapper_func.__signature__ = _append_context_parameter(signature)  # type: ignore[attr-defined]
     annotations = _build_annotations_from_schema(input_schema)
     annotations["ctx"] = Context | None
     annotations["return"] = Any

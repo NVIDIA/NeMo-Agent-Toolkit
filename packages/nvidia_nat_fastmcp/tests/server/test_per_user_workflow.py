@@ -18,7 +18,10 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
+from mcp.server.lowlevel.server import request_ctx
 from pydantic import BaseModel
+from starlette.requests import Request
+from starlette.testclient import TestClient
 
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
@@ -237,3 +240,67 @@ class TestPerUserRequestIdentity:
 
         assert result == "ok"
         session_manager.session.assert_called_once_with(user_id="bob", http_connection=request)
+
+
+class TestPerUserToolStreamableHttp:
+    """Per-user tool calls over streamable-http must receive injected request context."""
+
+    async def test_call_tool_resolves_user_from_bearer_token(self, per_user_config, monkeypatch):
+        from nat.plugins.fastmcp.server import tool_converter
+
+        worker = FastMCPFrontEndPluginWorker(per_user_config)
+
+        async with WorkflowBuilder.from_config(config=per_user_config) as builder:
+            session_manager = await SessionManager.create(config=per_user_config, shared_builder=builder)
+            mcp = await worker.create_mcp_server()
+            tool_converter.register_function_with_mcp(mcp, "per_user_fastmcp_test_workflow", session_manager)
+
+            session = MagicMock()
+            runner = MagicMock()
+            runner.result = AsyncMock(return_value="ok")
+            session.run.return_value.__aenter__ = AsyncMock(return_value=runner)
+            session.run.return_value.__aexit__ = AsyncMock(return_value=False)
+
+            captured: dict[str, object] = {}
+            session_cm = MagicMock()
+            session_cm.__aenter__ = AsyncMock(return_value=session)
+            session_cm.__aexit__ = AsyncMock(return_value=False)
+
+            def _capture_session(user_id=None, http_connection=None):
+                captured["user_id"] = user_id
+                captured["http_connection"] = http_connection
+                return session_cm
+
+            monkeypatch.setattr(session_manager, "session", _capture_session)
+
+            user_info = MagicMock()
+            user_info.get_user_id.return_value = "bob"
+            monkeypatch.setattr(
+                "nat.runtime.user_manager.UserManager.extract_user_from_connection",
+                MagicMock(return_value=user_info),
+            )
+            monkeypatch.setattr("nat.builder.context.Context.get", lambda: SimpleNamespace(user_id=None))
+
+            request = Request({
+                "type": "http",
+                "http_version": "1.1",
+                "method": "POST",
+                "scheme": "http",
+                "path": "/mcp",
+                "raw_path": b"/mcp",
+                "query_string": b"",
+                "headers": [(b"authorization", b"Bearer test-token")],
+                "client": ("127.0.0.1", 1234),
+                "server": ("testserver", 80),
+                "root_path": "",
+            })
+
+            with TestClient(mcp.http_app(transport="streamable-http")):
+                token = request_ctx.set(SimpleNamespace(request=request, session=MagicMock()))
+                try:
+                    await mcp.call_tool("per_user_fastmcp_test_workflow", {"message": "hello"})
+                finally:
+                    request_ctx.reset(token)
+
+            assert captured["user_id"] == "bob"
+            assert captured["http_connection"] is request
