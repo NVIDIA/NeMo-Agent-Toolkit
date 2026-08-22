@@ -291,6 +291,18 @@ class TestCreateFunctionWrapper:
         assert "name" in sig.parameters
         assert "age" in sig.parameters
 
+    def test_create_wrapper_declares_context_for_injection(self):
+        """FastMCP injects request context only when a Context parameter is annotated."""
+        from mcp.server.fastmcp.utilities.context_injection import find_context_parameter
+
+        mock_session_manager = create_mock_session_manager()
+        wrapper = create_function_wrapper("regular_function", mock_session_manager, MockRegularSchema)
+
+        assert find_context_parameter(wrapper) == "ctx"
+        sig = getattr(wrapper, "__signature__", None)
+        assert sig is not None
+        assert "ctx" not in sig.parameters
+
     def test_create_wrapper_for_workflow(self):
         """Test creating wrapper for workflow function."""
         # Arrange

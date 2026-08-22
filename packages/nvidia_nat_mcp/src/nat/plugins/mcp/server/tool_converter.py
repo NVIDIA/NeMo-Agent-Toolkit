@@ -29,6 +29,7 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.server import Context
 from nat.builder.function import Function
 from nat.builder.function_base import FunctionBase
 
@@ -271,24 +272,18 @@ def create_function_wrapper(
                 ))
 
     # Create the function signature WITHOUT the ctx parameter
-    # We'll handle this in the wrapper function internally
+    # ctx is declared on the wrapper for FastMCP injection but omitted from __signature__
+    # so it is excluded from the client-facing tool schema.
     sig = Signature(parameters=parameters, return_annotation=str)
 
     # Define the actual wrapper function that accepts ctx but doesn't expose it
     def create_wrapper():
 
-        async def wrapper_with_ctx(**kwargs):
+        async def wrapper_with_ctx(ctx: Context | None = None, **kwargs):
             """Internal wrapper that will be called by MCP.
 
             Uses SessionManager.run() which creates a Runner that automatically handles observability.
             """
-            # MCP will add a ctx parameter, extract it
-            ctx = kwargs.get("ctx")
-
-            # Remove ctx if present
-            if "ctx" in kwargs:
-                del kwargs["ctx"]
-
             # FastMCP applies the wrapper field's factory to omitted arguments.
             # Remove its marker so the declared schema can apply the original
             # default factory and preserve model_fields_set semantics.

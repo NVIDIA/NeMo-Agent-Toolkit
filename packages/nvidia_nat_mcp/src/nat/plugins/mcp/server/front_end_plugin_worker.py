@@ -65,24 +65,41 @@ class MCPFrontEndPluginWorkerBase(ABC):
         self._session_managers: list[SessionManager] = []
 
     def _track_session_manager(self, session_manager: SessionManager) -> SessionManager:
+        """Track a session manager so ``cleanup()`` can shut it down."""
         self._session_managers.append(session_manager)
         return session_manager
 
     def _is_primary_workflow_per_user(self) -> bool:
+        """Return True when the configured workflow is registered as per-user."""
         from nat.cli.type_registry import GlobalTypeRegistry
 
         workflow_registration = GlobalTypeRegistry.get().get_function(type(self.full_config.workflow))
         return workflow_registration.is_per_user
 
     def _resolve_workflow_tool_name(self) -> str:
+        """Return the MCP tool name for the configured workflow entry point."""
         workflow_config = self.full_config.workflow
         alias = getattr(workflow_config, "workflow_alias", None)
         return alias if alias else workflow_config.type
 
     async def cleanup(self) -> None:
-        for session_manager in self._session_managers:
-            await session_manager.shutdown()
-        self._session_managers.clear()
+        """Shut down all tracked session managers.
+
+        Attempts shutdown for every manager even when an individual call fails.
+        Clears the tracked list before re-raising the first shutdown error.
+        """
+        errors: list[BaseException] = []
+        try:
+            for session_manager in self._session_managers:
+                try:
+                    await session_manager.shutdown()
+                except Exception as exc:
+                    logger.exception("Failed to shut down SessionManager during MCP worker cleanup")
+                    errors.append(exc)
+        finally:
+            self._session_managers.clear()
+        if errors:
+            raise errors[0]
 
     def _setup_health_endpoint(self, mcp: FastMCP):
         """Set up the HTTP health endpoint that exercises MCP ping handler."""

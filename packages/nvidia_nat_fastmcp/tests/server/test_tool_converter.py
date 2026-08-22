@@ -161,3 +161,12 @@ class TestParameterNameSanitization:
         wrapper = create_function_wrapper("tool", _mock_session_manager(), schema)
 
         assert "from_" in wrapper.__annotations__
+
+    def test_wrapper_declares_context_for_injection(self):
+        """FastMCP injects request context only when a Context parameter is annotated."""
+        from mcp.server.fastmcp.utilities.context_injection import find_context_parameter
+
+        schema = create_model("Schema", **{"query": (str, ...)})  # type: ignore[call-overload]
+        wrapper = create_function_wrapper("tool", _mock_session_manager(), schema)
+
+        assert find_context_parameter(wrapper) == "ctx"

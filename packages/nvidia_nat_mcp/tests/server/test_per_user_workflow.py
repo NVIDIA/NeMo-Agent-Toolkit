@@ -43,11 +43,11 @@ class _Output(BaseModel):
 
 
 class PerUserMCPWorkflowConfig(FunctionBaseConfig, name="per_user_mcp_test_workflow"):
-    pass
+    """Per-user workflow config for MCP front-end tests."""
 
 
 class SharedMCPWorkflowConfig(FunctionBaseConfig, name="shared_mcp_test_workflow"):
-    pass
+    """Shared workflow config for MCP front-end tests."""
 
 
 @pytest.fixture(name="registered_workflows", scope="module")
@@ -159,6 +159,25 @@ class TestPerUserWorkflowStartup:
             tool_converter.register_function_with_mcp(mcp, "per_user_mcp_test_workflow", session_manager)
 
             get_schema.assert_called_once()
+
+
+class TestWorkerCleanup:
+    """Worker cleanup must shut down every manager and clear tracking."""
+
+    async def test_cleanup_shuts_down_all_managers_after_shutdown_failure(self, per_user_config):
+        worker = MCPFrontEndPluginWorker(per_user_config)
+        failing = MagicMock()
+        failing.shutdown = AsyncMock(side_effect=RuntimeError("boom"))
+        succeeding = MagicMock()
+        succeeding.shutdown = AsyncMock()
+        worker._session_managers = [failing, succeeding]
+
+        with pytest.raises(RuntimeError, match="boom"):
+            await worker.cleanup()
+
+        failing.shutdown.assert_awaited_once()
+        succeeding.shutdown.assert_awaited_once()
+        assert worker._session_managers == []
 
 
 class TestPerUserRequestIdentity:

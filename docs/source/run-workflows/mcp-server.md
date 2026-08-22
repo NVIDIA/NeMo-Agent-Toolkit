@@ -97,9 +97,9 @@ The `base_path` feature requires the `streamable-http` transport. SSE transport 
 
 A per-user workflow can be served over MCP. Each user gets their own workflow instance, built on first use. [MCP authentication](../components/auth/mcp-auth/index.md) prescribes pairing `per_user_mcp_client` with a per-user workflow, such as `per_user_react_agent`.
 
-The user is taken from the Bearer token on the MCP request, or from runtime context when it is already set. Configure [`server_auth`](../components/auth/mcp-auth/index.md) when serving a per-user workflow over MCP. Without it there is no user to build for, and tool calls fail with an error saying the user ID could not be determined.
+The user is taken from the Bearer token on the MCP request when [`server_auth`](#authentication) is configured, or from runtime context when it is already set. Per-user workflows require authenticated streamable-http requests so the server can derive a user ID. Without that, tool calls fail with an error saying the user ID could not be determined.
 
-The `/debug/tools/list` route for a per-user workflow shows the registered workflow tool and its input schema, but the functions inside the workflow belong to each user's instance rather than to a shared one.
+The `/debug/tools/list` route returns an empty tool list for a per-user workflow because no shared workflow instance exists at startup. Use `nat mcp client tool list` to inspect the registered MCP tool and its input schema.
 
 ## Displaying MCP Tools published by an MCP server
 
@@ -401,9 +401,15 @@ This is useful for health checks and monitoring.
 
 ## Security Considerations
 
-### Authentication Limitations
-- The `nat mcp serve` command currently starts an MCP server without built-in authentication. Server-side authentication is planned for a future release.
-- NeMo Agent Toolkit workflows can still connect to protected third-party MCP servers through the MCP client auth provider. Refer to [MCP Authentication](../components/auth/mcp-auth/index.md) for more information.
+### Authentication
+
+MCP servers using the **streamable-http** transport can validate OAuth2 bearer tokens when `server_auth` is configured in the front-end config. Validation uses JWKS or OIDC discovery for JWT access tokens, or token introspection for opaque access tokens. Refer to [MCP Authentication](../components/auth/mcp-auth/index.md) and the protected examples under `examples/MCP/`.
+
+The **SSE** transport does not apply `server_auth`. Use streamable-http when the MCP server must authenticate callers.
+
+Per-user workflows require authenticated requests so the server can derive a user ID from the Bearer token. See [Per-User Workflows](#per-user-workflows).
+
+NeMo Agent Toolkit workflows can still connect to protected third-party MCP servers through the MCP client auth provider.
 
 ### Local Development
 For local development, you can use `localhost` or `127.0.0.1` as the host (default). This limits access to your local machine only.

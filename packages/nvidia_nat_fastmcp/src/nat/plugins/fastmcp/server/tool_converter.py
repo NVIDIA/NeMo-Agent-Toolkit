@@ -22,6 +22,7 @@ from inspect import Parameter
 from inspect import Signature
 from typing import Any
 
+from mcp.server.fastmcp.server import Context
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
@@ -226,8 +227,7 @@ def create_function_wrapper(
     """
     signature, alias_map = _build_signature_from_schema(input_schema)
 
-    async def wrapper_func(**kwargs: Any) -> Any:
-        ctx = kwargs.pop("ctx", None)
+    async def wrapper_func(ctx: Context | None = None, **kwargs: Any) -> Any:
         if _is_chat_request_schema(input_schema):
             from nat.data_models.api_server import ChatRequest  # type: ignore[reportMissingImports]
 
@@ -250,7 +250,10 @@ def create_function_wrapper(
         return str(result)
 
     wrapper_func.__signature__ = signature  # type: ignore[attr-defined]
-    wrapper_func.__annotations__ = _build_annotations_from_schema(input_schema)
+    annotations = _build_annotations_from_schema(input_schema)
+    annotations["ctx"] = Context | None
+    annotations["return"] = Any
+    wrapper_func.__annotations__ = annotations
     wrapper_func.__name__ = function_name
     wrapper_func.__doc__ = "Auto-generated wrapper for a NeMo Agent Toolkit workflow."
     return wrapper_func
