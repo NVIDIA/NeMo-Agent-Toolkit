@@ -120,6 +120,7 @@ def create_mock_session_manager(workflow=None, result_value="result"):
         result_value: The value to return from runner.result()
     """
     mock_session_manager = MagicMock(spec=SessionManager)
+    mock_session_manager.is_workflow_per_user = False
 
     if workflow is None:
         workflow = create_mock_workflow_with_observability()
@@ -407,6 +408,7 @@ class TestRegisterFunctionWithMcp:
         mock_function = MagicMock(spec=Function)
         mock_function.input_schema = "function_schema"
         mock_session_manager = MagicMock(spec=SessionManager)
+        mock_session_manager.is_workflow_per_user = False
         mock_session_manager.workflow = mock_workflow
         function_name = "test_function"
 
@@ -436,6 +438,7 @@ class TestRegisterFunctionWithMcp:
         mock_workflow = MagicMock(spec=Workflow)
         mock_workflow.input_schema = "workflow_schema"
         mock_session_manager = MagicMock(spec=SessionManager)
+        mock_session_manager.is_workflow_per_user = False
         mock_session_manager.workflow = mock_workflow
         function_name = "test_workflow"
 
@@ -699,6 +702,7 @@ class TestIntegrationScenarios:
         # Arrange
         mock_workflow = create_mock_workflow_with_observability()
         mock_session_manager = MagicMock(spec=SessionManager)
+        mock_session_manager.is_workflow_per_user = False
         mock_session_manager.workflow = mock_workflow
 
         # Create mock runner that raises an error

@@ -150,6 +150,14 @@ general:
 
 With this configuration, the MCP server is accessible at `http://localhost:9902/api/v1/mcp`.
 
+### Per-User Workflows
+
+A per-user workflow can be served over FastMCP. Each user gets their own workflow instance, built on first use. [MCP authentication](../components/auth/mcp-auth/index.md) prescribes pairing `per_user_mcp_client` with a per-user workflow, such as `per_user_react_agent`.
+
+The user is taken from the Bearer token on the MCP request, or from runtime context when it is already set. Configure [`server_auth`](../components/auth/mcp-auth/index.md) when serving a per-user workflow over FastMCP. Without it there is no user to build for, and tool calls fail with an error saying the user ID could not be determined.
+
+The `/debug/tools/list` route for a per-user workflow shows the registered workflow tool and its input schema, but the functions inside the workflow belong to each user's instance rather than to a shared one.
+
 ## Inspecting and Running MCP Tools Published by a FastMCP Server
 
 Use `nat mcp client` to inspect and run tools exposed by an MCP server using the FastMCP server runtime.

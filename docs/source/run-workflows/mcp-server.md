@@ -93,6 +93,14 @@ The `base_path` must start with a forward slash (`/`) and must not end with a fo
 The `base_path` feature requires the `streamable-http` transport. SSE transport does not support custom base paths.
 :::
 
+### Per-User Workflows
+
+A per-user workflow can be served over MCP. Each user gets their own workflow instance, built on first use. [MCP authentication](../components/auth/mcp-auth/index.md) prescribes pairing `per_user_mcp_client` with a per-user workflow, such as `per_user_react_agent`.
+
+The user is taken from the Bearer token on the MCP request, or from runtime context when it is already set. Configure [`server_auth`](../components/auth/mcp-auth/index.md) when serving a per-user workflow over MCP. Without it there is no user to build for, and tool calls fail with an error saying the user ID could not be determined.
+
+The `/debug/tools/list` route for a per-user workflow shows the registered workflow tool and its input schema, but the functions inside the workflow belong to each user's instance rather than to a shared one.
+
 ## Displaying MCP Tools published by an MCP server
 
 To list the tools published by the MCP server you can use the `nat mcp client tool list` command. This command acts as an MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).

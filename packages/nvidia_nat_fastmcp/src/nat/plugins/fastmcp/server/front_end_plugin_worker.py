@@ -52,6 +52,27 @@ class FastMCPFrontEndPluginWorkerBase(ABC):
         """
         self.full_config = config
         self.front_end_config: FastMCPFrontEndConfig = config.general.front_end
+        self._session_managers: list[SessionManager] = []
+
+    def _track_session_manager(self, session_manager: SessionManager) -> SessionManager:
+        self._session_managers.append(session_manager)
+        return session_manager
+
+    def _is_primary_workflow_per_user(self) -> bool:
+        from nat.cli.type_registry import GlobalTypeRegistry
+
+        workflow_registration = GlobalTypeRegistry.get().get_function(type(self.full_config.workflow))
+        return workflow_registration.is_per_user
+
+    def _resolve_workflow_tool_name(self) -> str:
+        workflow_config = self.full_config.workflow
+        alias = getattr(workflow_config, "workflow_alias", None)
+        return alias if alias else workflow_config.type
+
+    async def cleanup(self) -> None:
+        for session_manager in self._session_managers:
+            await session_manager.shutdown()
+        self._session_managers.clear()
 
     def _setup_health_endpoint(self, mcp: FastMCP):
         """Set up the HTTP health endpoint that exercises FastMCP ping handler."""
@@ -106,14 +127,27 @@ class FastMCPFrontEndPluginWorkerBase(ABC):
         ...
 
     async def _default_add_routes(self, mcp: FastMCP, builder: WorkflowBuilder) -> None:
-        """Default implementation for adding routes to FastMCP."""
+        """Default route registration for FastMCP.
+
+        Creates session managers via SessionManager.create (shared or per-user),
+        registers workflow tools, and exposes debug endpoints for introspection.
+        """
         from nat.plugins.fastmcp.server.tool_converter import register_function_with_mcp
 
         # Set up the health endpoint
         self._setup_health_endpoint(mcp)
 
-        # Build the default workflow
-        workflow = await builder.build()
+        if self._is_primary_workflow_per_user():
+            session_manager = self._track_session_manager(await SessionManager.create(config=self.full_config,
+                                                                                      shared_builder=builder))
+            tool_name = self._resolve_workflow_tool_name()
+            register_function_with_mcp(mcp, tool_name, session_manager, function=None)
+            self._setup_debug_endpoints(mcp, {})
+            return
+
+        primary_session_manager = self._track_session_manager(await SessionManager.create(config=self.full_config,
+                                                                                          shared_builder=builder))
+        workflow = primary_session_manager.workflow
 
         # Get all functions from the workflow
         functions = await self._get_all_functions(workflow)
@@ -136,14 +170,11 @@ class FastMCPFrontEndPluginWorkerBase(ABC):
         for function_name, function in functions.items():
             if isinstance(function, Workflow):
                 logger.info("Function %s is a Workflow, using directly", function_name)
-                session_managers[function_name] = await SessionManager.create(config=self.full_config,
-                                                                              shared_builder=builder,
-                                                                              entry_function=None)
+                session_managers[function_name] = primary_session_manager
             else:
                 logger.info("Function %s is a regular function, building entry workflow", function_name)
-                session_managers[function_name] = await SessionManager.create(config=self.full_config,
-                                                                              shared_builder=builder,
-                                                                              entry_function=function_name)
+                session_managers[function_name] = self._track_session_manager(await SessionManager.create(
+                    config=self.full_config, shared_builder=builder, entry_function=function_name))
 
         # Register each function with FastMCP, passing SessionManager for observability
         for function_name, session_manager in session_managers.items():
@@ -152,8 +183,7 @@ class FastMCPFrontEndPluginWorkerBase(ABC):
         if not session_managers:
             raise RuntimeError("No functions found in workflow. Please check your configuration.")
 
-        # After registration, expose debug endpoints for tool/schema inspection
-        debug_functions = {name: sm.workflow for name, sm in session_managers.items()}
+        debug_functions = {name: sm.workflow for name, sm in session_managers.items() if not sm.is_workflow_per_user}
         self._setup_debug_endpoints(mcp, debug_functions)
 
     async def _get_all_functions(self, workflow: Workflow) -> dict[str, Function]:

@@ -28,6 +28,7 @@ from nat.runtime.session import SessionManager
 def _mock_session_manager(result_value="result"):
     """Create a mock SessionManager for testing."""
     mock_sm = MagicMock(spec=SessionManager)
+    mock_sm.is_workflow_per_user = False
     mock_runner = MagicMock()
     mock_runner.__aenter__ = AsyncMock(return_value=mock_runner)
     mock_runner.__aexit__ = AsyncMock(return_value=None)
