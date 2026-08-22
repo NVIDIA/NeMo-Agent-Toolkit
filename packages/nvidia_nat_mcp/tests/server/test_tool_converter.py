@@ -305,7 +305,7 @@ class TestCreateFunctionWrapper:
         assert INJECTED_CONTEXT_PARAM not in sig.parameters
 
     def test_create_wrapper_rejects_schema_field_named_ctx(self):
-        """A workflow field named ctx collides with MCP context injection."""
+        """A workflow field named `ctx` collides with MCP context injection."""
         from pydantic import create_model
 
         schema = create_model("CtxSchema", **{"ctx": (str, ...)})  # type: ignore[call-overload]

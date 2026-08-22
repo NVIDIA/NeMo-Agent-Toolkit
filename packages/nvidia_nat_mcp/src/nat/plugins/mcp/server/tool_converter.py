@@ -133,7 +133,7 @@ def _build_name_mapping(field_names: list[str]) -> dict[str, str]:
 
 
 def _validate_input_schema_for_context_injection(schema: type[BaseModel], name_map: dict[str, str]) -> None:
-    """Reject schemas whose fields collide with the injected Context parameter."""
+    """Reject schemas whose fields collide with the injected `Context` parameter."""
     if INJECTED_CONTEXT_PARAM in name_map.values():
         raise ValueError(
             f"Workflow input schema cannot declare a field that maps to reserved MCP parameter "

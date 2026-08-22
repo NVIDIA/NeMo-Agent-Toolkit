@@ -202,7 +202,7 @@ def _schema_wrapper_parameter_names(input_schema: Any) -> set[str]:
 
 
 def _validate_input_schema_for_context_injection(input_schema: Any) -> None:
-    """Reject schemas whose fields collide with the injected Context parameter."""
+    """Reject schemas whose fields collide with the injected `Context` parameter."""
     schema_params = _schema_wrapper_parameter_names(input_schema)
     if INJECTED_CONTEXT_PARAM in schema_params:
         raise ValueError(
@@ -215,7 +215,7 @@ def _validate_input_schema_for_context_injection(input_schema: Any) -> None:
 
 
 def _append_context_parameter(signature: Signature) -> Signature:
-    """Append the FastMCP Context parameter used for request injection."""
+    """Append the FastMCP `Context` parameter used for request injection."""
     param_names = {param.name for param in signature.parameters.values()}
     if INJECTED_CONTEXT_PARAM in param_names:
         raise ValueError(

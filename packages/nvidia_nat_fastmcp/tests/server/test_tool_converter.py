@@ -176,7 +176,7 @@ class TestParameterNameSanitization:
         assert find_kwarg_by_type(wrapper, Context) == INJECTED_CONTEXT_PARAM
 
     def test_create_wrapper_rejects_schema_field_named_ctx(self):
-        """A workflow field named ctx collides with MCP context injection."""
+        """A workflow field named `ctx` collides with MCP context injection."""
         schema = create_model("CtxSchema", **{"ctx": (str, ...)})  # type: ignore[call-overload]
 
         with pytest.raises(ValueError, match="cannot declare a field named 'ctx'"):
