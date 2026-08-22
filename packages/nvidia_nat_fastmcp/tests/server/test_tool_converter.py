@@ -17,10 +17,12 @@
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
+import pytest
 from fastmcp import FastMCP
 from fastmcp.server.context import Context
 from pydantic import create_model
 
+from nat.plugins.fastmcp.server.tool_converter import INJECTED_CONTEXT_PARAM
 from nat.plugins.fastmcp.server.tool_converter import _build_name_mapping
 from nat.plugins.fastmcp.server.tool_converter import _sanitize_parameter_name
 from nat.plugins.fastmcp.server.tool_converter import create_function_wrapper
@@ -171,7 +173,14 @@ class TestParameterNameSanitization:
         schema = create_model("Schema", **{"query": (str, ...)})  # type: ignore[call-overload]
         wrapper = create_function_wrapper("tool", _mock_session_manager(), schema)
 
-        assert find_kwarg_by_type(wrapper, Context) == "ctx"
+        assert find_kwarg_by_type(wrapper, Context) == INJECTED_CONTEXT_PARAM
+
+    def test_create_wrapper_rejects_schema_field_named_ctx(self):
+        """A workflow field named ctx collides with MCP context injection."""
+        schema = create_model("CtxSchema", **{"ctx": (str, ...)})  # type: ignore[call-overload]
+
+        with pytest.raises(ValueError, match="cannot declare a field named 'ctx'"):
+            create_function_wrapper("tool", _mock_session_manager(), schema)
 
     async def test_registered_per_user_tool_excludes_ctx_from_client_schema(self):
         """Registered tools expose workflow args but not the injected Context param."""
@@ -192,4 +201,4 @@ class TestParameterNameSanitization:
         assert len(tools) == 1
         assert set(tools[0].parameters["properties"]) == {"message"}
         tool = await mcp.get_tool("per_user_tool")
-        assert find_kwarg_by_type(tool.fn, Context) == "ctx"
+        assert find_kwarg_by_type(tool.fn, Context) == INJECTED_CONTEXT_PARAM

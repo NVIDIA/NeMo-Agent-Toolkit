@@ -30,6 +30,7 @@ from pydantic.json_schema import PydanticJsonSchemaWarning
 
 from nat.builder.function import Function
 from nat.builder.workflow import Workflow
+from nat.plugins.mcp.server.tool_converter import INJECTED_CONTEXT_PARAM
 from nat.plugins.mcp.server.tool_converter import _build_name_mapping
 from nat.plugins.mcp.server.tool_converter import _sanitize_parameter_name
 from nat.plugins.mcp.server.tool_converter import create_function_wrapper
@@ -298,10 +299,19 @@ class TestCreateFunctionWrapper:
         mock_session_manager = create_mock_session_manager()
         wrapper = create_function_wrapper("regular_function", mock_session_manager, MockRegularSchema)
 
-        assert find_context_parameter(wrapper) == "ctx"
+        assert find_context_parameter(wrapper) == INJECTED_CONTEXT_PARAM
         sig = getattr(wrapper, "__signature__", None)
         assert sig is not None
-        assert "ctx" not in sig.parameters
+        assert INJECTED_CONTEXT_PARAM not in sig.parameters
+
+    def test_create_wrapper_rejects_schema_field_named_ctx(self):
+        """A workflow field named ctx collides with MCP context injection."""
+        from pydantic import create_model
+
+        schema = create_model("CtxSchema", **{"ctx": (str, ...)})  # type: ignore[call-overload]
+
+        with pytest.raises(ValueError, match="cannot declare a field named 'ctx'"):
+            create_function_wrapper("tool", create_mock_session_manager(), schema)
 
     def test_create_wrapper_for_workflow(self):
         """Test creating wrapper for workflow function."""

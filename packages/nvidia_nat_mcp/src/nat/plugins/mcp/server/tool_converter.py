@@ -39,6 +39,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Reserved wrapper parameter for MCP request Context injection.
+INJECTED_CONTEXT_PARAM = "_nat_mcp_context"
+
 _USE_PYDANTIC_DEFAULT = object()
 
 
@@ -127,6 +130,18 @@ def _build_name_mapping(field_names: list[str]) -> dict[str, str]:
         used.add(candidate)
 
     return name_map
+
+
+def _validate_input_schema_for_context_injection(schema: type[BaseModel], name_map: dict[str, str]) -> None:
+    """Reject schemas whose fields collide with the injected Context parameter."""
+    if INJECTED_CONTEXT_PARAM in name_map.values():
+        raise ValueError(
+            f"Workflow input schema cannot declare a field that maps to reserved MCP parameter "
+            f"{INJECTED_CONTEXT_PARAM!r}.", )
+    if "ctx" in schema.model_fields:
+        raise ValueError(
+            "Workflow input schema cannot declare a field named 'ctx'; that name is reserved for "
+            "MCP request context injection.", )
 
 
 def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
@@ -242,6 +257,7 @@ def create_function_wrapper(
         # emit for each declared schema field.
         name_map = _build_name_mapping(list(param_fields.keys()))
         argument_name_map = {safe: orig for orig, safe in name_map.items() if orig != safe}
+        _validate_input_schema_for_context_injection(schema, name_map)
 
         parameters = []
         for name, field in param_fields.items():
@@ -271,15 +287,15 @@ def create_function_wrapper(
                     annotation=field_type,
                 ))
 
-    # Create the function signature WITHOUT the ctx parameter
-    # ctx is declared on the wrapper for FastMCP injection but omitted from __signature__
+    # Create the function signature WITHOUT the injected Context parameter
+    # Context is declared on the wrapper for FastMCP injection but omitted from __signature__
     # so it is excluded from the client-facing tool schema.
     sig = Signature(parameters=parameters, return_annotation=str)
 
-    # Define the actual wrapper function that accepts ctx but doesn't expose it
+    # Define the actual wrapper function that accepts injected context but doesn't expose it
     def create_wrapper():
 
-        async def wrapper_with_ctx(ctx: Context | None = None, **kwargs):
+        async def wrapper_with_ctx(_nat_mcp_context: Context | None = None, **kwargs):
             """Internal wrapper that will be called by MCP.
 
             Uses SessionManager.run() which creates a Runner that automatically handles observability.
@@ -290,9 +306,11 @@ def create_function_wrapper(
             kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
 
             # Process the function call
-            if ctx:
-                ctx.info("Calling function %s with args: %s", function_name, json.dumps(kwargs, default=str))
-                await ctx.report_progress(0, 100)
+            if _nat_mcp_context:
+                _nat_mcp_context.info("Calling function %s with args: %s",
+                                      function_name,
+                                      json.dumps(kwargs, default=str))
+                await _nat_mcp_context.report_progress(0, 100)
 
             try:
                 # Prepare input payload
@@ -317,12 +335,12 @@ def create_function_wrapper(
                 # 5. Stop the exporter manager
                 result = await _run_through_session_manager(session_manager,
                                                             payload,
-                                                            ctx=ctx,
+                                                            ctx=_nat_mcp_context,
                                                             memory_profiler=memory_profiler)
 
                 # Report completion
-                if ctx:
-                    await ctx.report_progress(100, 100)
+                if _nat_mcp_context:
+                    await _nat_mcp_context.report_progress(100, 100)
 
                 # Handle different result types for proper formatting
                 if isinstance(result, str):
@@ -331,8 +349,8 @@ def create_function_wrapper(
                     return json.dumps(result, default=str)
                 return str(result)
             except Exception as e:
-                if ctx:
-                    ctx.error("Error calling function %s: %s", function_name, str(e))
+                if _nat_mcp_context:
+                    _nat_mcp_context.error("Error calling function %s: %s", function_name, str(e))
 
                 raise
 
@@ -341,7 +359,7 @@ def create_function_wrapper(
     # Create the wrapper function
     wrapper = create_wrapper()
 
-    # Set the signature on the wrapper function (WITHOUT ctx)
+    # Set the signature on the wrapper function (WITHOUT injected context)
     wrapper.__signature__ = sig  # type: ignore
     wrapper.__name__ = function_name
 
