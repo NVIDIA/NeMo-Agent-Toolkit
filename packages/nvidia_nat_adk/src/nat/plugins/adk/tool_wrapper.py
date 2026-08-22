@@ -130,8 +130,10 @@ def google_adk_tool_wrapper(
             # Set signature only if input_schema is provided
             params: list[inspect.Parameter] = []
             if input_schema is not None:
-                annotations = getattr(input_schema, "__annotations__", {}) or {}
-                for param_name, param_annotation in annotations.items():
+                # Use model_fields to get resolved annotations (works with PEP 563)
+                model_fields = getattr(input_schema, "model_fields", {}) or {}
+                for param_name, field_info in model_fields.items():
+                    param_annotation = field_info.annotation
                     params.append(
                         inspect.Parameter(
                             param_name,
