@@ -80,7 +80,7 @@ To install these first-party plugin libraries, you can use the full distribution
 | macOS | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested |
 | [Windows (WSL2)](#windows-wsl2) | x86_64 | 3.11, 3.12, 3.13 | ✅ Tested |
 | [Windows (WSL2)](#windows-wsl2) | aarch64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
-| Windows | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
+| Windows | x86_64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
 | Windows | aarch64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
 
 ## Software Prerequisites
