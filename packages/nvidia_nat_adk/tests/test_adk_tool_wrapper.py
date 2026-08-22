@@ -270,7 +270,6 @@ async def test_callable_ainvoke_functionality():
 
 
 @patch('google.adk.tools.function_tool.FunctionTool')
-@pytest.mark.asyncio
 async def test_google_adk_tool_wrapper_pep563_annotations(mock_function_tool):
     """Regression test for GitHub issue #2161.
 
