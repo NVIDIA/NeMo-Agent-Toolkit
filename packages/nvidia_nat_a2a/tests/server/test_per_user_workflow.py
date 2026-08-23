@@ -50,10 +50,14 @@ class _Output(BaseModel):
 
 
 class PerUserWorkflowConfig(FunctionBaseConfig, name="per_user_a2a_test_workflow"):
+    """Configure the per-user A2A test workflow."""
+
     pass
 
 
 class SharedWorkflowConfig(FunctionBaseConfig, name="shared_a2a_test_workflow"):
+    """Configure the shared A2A test workflow."""
+
     pass
 
 

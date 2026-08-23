@@ -61,7 +61,7 @@ def fixture_mock_workflow_with_functions() -> MagicMock:
 
 @pytest.fixture(name="mock_session_manager")
 def fixture_mock_session_manager(a2a_server_config) -> MagicMock:
-    """Mock SessionManager for A2A server testing."""
+    """Mock `SessionManager` for A2A server testing."""
     session_manager = MagicMock()
     session_manager.config = a2a_server_config
     return session_manager

@@ -12,6 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Call context construction for the A2A server.
+
+Bridges the user identity that NeMo Agent Toolkit middleware resolves into the
+`ServerCallContext` the A2A server hands to per-user workflows.
+"""
 
 import logging
 
@@ -50,6 +55,16 @@ class NATCallContextBuilder(DefaultCallContextBuilder):
     """
 
     def build(self, request: Request) -> ServerCallContext:
+        """Build the call context, attaching the authenticated user when there is one.
+
+        Args:
+            request: The incoming Starlette request.
+
+        Returns:
+            The call context, with `user` set only for a request that
+            `OAuth2ValidationMiddleware` has already verified and whose credential
+            resolves to a user identity.
+        """
         context = super().build(request)
 
         # Only trust a request OAuth2ValidationMiddleware has already verified.
@@ -61,7 +76,7 @@ class NATCallContextBuilder(DefaultCallContextBuilder):
         except ValueError:
             # A credential that cannot be resolved leaves the context unauthenticated
             # rather than failing the request here.
-            logger.warning("Could not resolve a user identity from an authenticated request", exc_info=True)
+            logger.exception("Could not resolve a user identity from an authenticated request")
             return context
 
         if user_info is None:

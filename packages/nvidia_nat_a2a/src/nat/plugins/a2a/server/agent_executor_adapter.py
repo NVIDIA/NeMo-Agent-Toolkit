@@ -103,7 +103,6 @@ class NATWorkflowAgentExecutor(AgentExecutor):
         try:
             # Run the NAT workflow using SessionManager for proper concurrency handling
             # Each message gets its own independent session (stateless)
-            # TODO: Add support for user input callbacks in later phases
             async with self.session_manager.session(user_id=self._resolve_user_id(context)) as session:
                 async with session.run(query) as runner:
                     # Get the result as a string

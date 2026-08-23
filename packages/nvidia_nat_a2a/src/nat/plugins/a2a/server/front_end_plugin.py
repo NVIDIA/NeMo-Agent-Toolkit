@@ -46,21 +46,22 @@ class A2AFrontEndPlugin(FrontEndBase[A2AFrontEndConfig]):
             # Create worker instance
             worker = self._get_worker_instance()
 
-            # Builds the shared workflow, or none at all when it is per-user
-            session_manager = await worker.create_session_manager(builder)
-            workflow = None if session_manager.is_workflow_per_user else session_manager.workflow
-
-            # Build agent card from configuration and workflow functions
-            agent_card = await worker.create_agent_card(workflow)
-
-            # Create agent executor adapter
-            agent_executor = worker.create_agent_executor(session_manager)
-
-            # Create A2A server
-            a2a_server = worker.create_a2a_server(agent_card, agent_executor)
-
-            # Start the server with proper cleanup
+            # Setup runs inside the try so a failure after create_session_manager still
+            # reaches cleanup, which is what shuts the per-user session reaper down.
             try:
+                # Builds the shared workflow, or none at all when it is per-user
+                session_manager = await worker.create_session_manager(builder)
+                workflow = None if session_manager.is_workflow_per_user else session_manager.workflow
+
+                # Build agent card from configuration and workflow functions
+                agent_card = await worker.create_agent_card(workflow)
+
+                # Create agent executor adapter
+                agent_executor = worker.create_agent_executor(session_manager)
+
+                # Create A2A server
+                a2a_server = worker.create_a2a_server(agent_card, agent_executor)
+
                 logger.info(
                     "Starting A2A server '%s' at http://%s:%s",
                     self.front_end_config.name,
