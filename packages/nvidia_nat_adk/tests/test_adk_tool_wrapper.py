@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import inspect
 from typing import Any
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -329,10 +328,9 @@ async def test_google_adk_tool_wrapper_pep563_annotations(mock_function_tool):
 
     # All parameters must carry real type objects, not strings.
     for param in sig.parameters.values():
-        assert not isinstance(param.annotation, str), (
-            f"Parameter '{param.name}' has a string annotation '{param.annotation}'; "
-            "expected a resolved type object."
-        )
+        assert not isinstance(param.annotation,
+                              str), (f"Parameter '{param.name}' has a string annotation '{param.annotation}'; "
+                                     "expected a resolved type object.")
 
     assert sig.parameters["text"].annotation is str
     assert sig.parameters["count"].annotation is int
