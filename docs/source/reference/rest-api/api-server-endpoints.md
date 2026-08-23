@@ -42,6 +42,7 @@ Legacy paths are registered by default for backward compatibility unless explici
 | Chat (non-streaming) | `/v1/chat` | `/chat` |
 | Chat (streaming) | `/v1/chat/stream` | `/chat/stream` |
 | OpenAI v1 Completions | `/v1/chat/completions` | (none) |
+| Health Check | `/health` | (none) |
 
 ### Configuring Legacy Routes
 
@@ -64,6 +65,49 @@ general:
 Setting `disable_legacy_routes` to `true` removes the legacy paths entirely. Set `legacy_path`
 or `legacy_openai_api_path` to `null` on individual endpoints to disable specific legacy routes
 while keeping others.
+
+## Health Check Endpoint
+
+The NeMo Agent Toolkit server exposes a health check endpoint for liveness and readiness probes.
+This endpoint is useful for Kubernetes-style health checks, Docker health checks, reverse proxies,
+and process supervisors. It does not execute any workflow and does not require API credentials.
+
+- **Route:** `/health`
+- **Method:** GET
+- **Description:** Returns the health status of the server. Intended for liveness/readiness probes.
+- **Response:** HTTP 200 with `{"status": "healthy"}` when the server is running normally.
+
+### HTTP Request Example:
+
+```bash
+curl --request GET \
+  --url http://localhost:8000/health
+```
+
+### HTTP Response Example:
+
+```json
+{
+  "status": "healthy"
+}
+```
+
+### Use Cases
+
+- **Kubernetes liveness/readiness probes**: Configure `livenessProbe` and `readinessProbe` to
+  check `GET /health` for container health management.
+- **Docker health checks**: Use `HEALTHCHECK CMD curl -f http://localhost:8000/health || exit 1`
+  in your Dockerfile.
+- **Reverse proxy health checks**: Configure load balancers (NGINX, HAProxy, etc.) to route
+  traffic only to healthy instances.
+- **Process supervisors**: Monitor server uptime without sending actual workflow requests.
+
+:::{note}
+The health check endpoint is always available when using `nat serve` with the FastAPI front-end.
+It is separate from the MCP and FastMCP server health endpoints, which are documented in their
+respective guides.
+:::
+
 
 ### HTTP Interactive Extensions
 
