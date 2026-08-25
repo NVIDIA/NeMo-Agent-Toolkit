@@ -12,11 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Circuit breaker middleware package."""
 
-# flake8: noqa
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerMiddleware
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerOpenError
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerState
+from nat.middleware.circuit_breaker.circuit_breaker_middleware_config import CircuitBreakerMiddlewareConfig
 
-from nat.middleware.cache import register as register_cache
-from nat.middleware.circuit_breaker import register as register_circuit_breaker
-from nat.middleware.dynamic import register as register_dynamic
-from nat.middleware.logging import register as register_logging
-from nat.middleware.timeout import register as register_timeout
+__all__ = [
+    "CircuitBreakerMiddleware",
+    "CircuitBreakerMiddlewareConfig",
+    "CircuitBreakerOpenError",
+    "CircuitBreakerState",
+]
