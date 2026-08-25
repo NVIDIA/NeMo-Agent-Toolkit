@@ -374,6 +374,98 @@ def test_multiple_instances_dont_interfere():
     assert svc2.inner_calls == 3
 
 
+class ConcurrentService:
+    """Service whose async method lets a test control task interleaving explicitly."""
+
+    def __init__(self):
+        self.calls_b = 0
+        self.a_started = asyncio.Event()
+        self.b_done = asyncio.Event()
+
+    async def call_a(self):
+        """Hold the retry context open across an await point.
+
+        Simulates an in-flight request on a client instance shared with a
+        concurrent caller."""
+        self.a_started.set()
+        await self.b_done.wait()
+        return "a-ok"
+
+    async def call_b(self):
+        """Fails once with a retryable error, then succeeds."""
+        self.calls_b += 1
+        if self.calls_b == 1:
+            raise APIError(429, "Too Many Requests")
+        return "b-ok"
+
+
+async def test_concurrent_calls_on_shared_instance_retry_independently():
+    """Two concurrent requests sharing one patched instance must not share retry context.
+
+    Request A stays mid-attempt (past its first await point) while request B
+    starts, fails once, and must still be retried on its own budget."""
+    svc = ConcurrentService()
+    svc = ar.patch_with_retry(svc, retries=3, base_delay=0, retry_codes=["4xx"])
+
+    async def call_b_once_a_is_in_flight():
+        await svc.a_started.wait()
+        result = await svc.call_b()
+        svc.b_done.set()
+        return result
+
+    result_a, result_b = await asyncio.gather(svc.call_a(), call_b_once_a_is_in_flight())
+
+    assert result_a == "a-ok"
+    assert result_b == "b-ok"
+    assert svc.calls_b == 2  # failed once, retried, succeeded
+
+
+class SpawningService:
+    """Service whose method spawns a child task calling a wrapped sibling method."""
+
+    def __init__(self):
+        self.child_calls = 0
+        self.spawned_task = None
+
+    async def call_child(self):
+        """Fail once with a retryable error, then succeed."""
+        self.child_calls += 1
+        if self.child_calls == 1:
+            raise APIError(429, "Too Many Requests")
+        return "child-ok"
+
+    async def call_parent(self):
+        """Spawn a child task calling a wrapped sibling method, without awaiting it.
+
+        The task is awaited by the caller, after this call (and the retry
+        context it opened) has already returned, so a failure in the child
+        can only be explained by the child's own retry budget, never by this
+        method's."""
+        self.spawned_task = asyncio.create_task(self.call_child())
+        return "parent-ok"
+
+
+async def test_child_task_created_inside_retry_context_still_retries():
+    """A task spawned via asyncio.create_task() from inside a retry-wrapped call
+    must not inherit the parent's already-retrying entry for the same instance.
+
+    contextvars.ContextVar copies the parent's value into the child task at
+    creation time, so without an owner check the child's own wrapped call on the
+    same instance would see itself as nested and skip its own retries. The child
+    task is awaited only after call_parent has returned, so its retry behavior
+    cannot be explained by call_parent's own retry loop catching the failure."""
+    svc = SpawningService()
+    svc = ar.patch_with_retry(svc, retries=3, base_delay=0, retry_codes=["4xx"])
+
+    result = await svc.call_parent()
+    assert result == "parent-ok"
+
+    child_result = await svc.spawned_task
+
+    assert child_result == "child-ok"
+    assert svc.child_calls == 2  # failed once, retried, succeeded
+
+
 def test_exception_propagation_in_nested_calls():
     """Test that exceptions still propagate correctly in nested calls."""
     svc = NestedService()
