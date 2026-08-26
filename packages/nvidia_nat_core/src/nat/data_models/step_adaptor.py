@@ -46,6 +46,16 @@ class StepAdaptorConfig(BaseModel):
     """
     mode: StepAdaptorMode = StepAdaptorMode.DEFAULT
     custom_event_types: list[IntermediateStepType] = Field(default_factory=list)
+    max_input_length: int = Field(
+        default=4000,
+        description=("Maximum character length for input fields in intermediate step payloads. "
+                     "Exceeding text will be truncated."),
+    )
+    max_output_length: int = Field(
+        default=4000,
+        description=("Maximum character length for output fields in intermediate step payloads. "
+                     "Exceeding text will be truncated."),
+    )
 
     @model_validator(mode="after")
     def check_custom_event_types(self) -> "StepAdaptorConfig":

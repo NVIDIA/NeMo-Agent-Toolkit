@@ -525,3 +525,73 @@ def test_function_events_in_custom_mode(step_adaptor_custom, make_intermediate_s
     # Steps should still be added to history
     assert step_adaptor_custom._history[-2] is step_start
     assert step_adaptor_custom._history[-1] is step_end
+
+
+def test_truncate_text_helper(default_config):
+    adaptor = StepAdaptor(config=default_config)
+
+    assert adaptor._truncate_text(None, 10) == ""
+    assert adaptor._truncate_text("", 10) == ""
+    assert adaptor._truncate_text("hello", 10) == "hello"
+    assert adaptor._truncate_text("hello world", 11) == "hello world"
+
+    truncated = adaptor._truncate_text("hello world", 5)
+    assert truncated == "hello\n... [truncated 6 characters]"
+
+
+def test_tool_truncation(make_intermediate_step):
+    config = StepAdaptorConfig(max_input_length=20, max_output_length=25)
+    adaptor = StepAdaptor(config=config)
+
+    long_input = "A" * 100
+    long_output = "B" * 100
+
+    step_start = make_intermediate_step(
+        event_type=IntermediateStepType.TOOL_START,
+        data_input=long_input,
+        UUID="tool-trunc-uuid",
+    )
+    result_start = adaptor.process(step_start)
+    assert result_start is not None
+    assert f"{'A' * 20}\n... [truncated 80 characters]" in result_start.payload
+
+    step_end = make_intermediate_step(
+        event_type=IntermediateStepType.TOOL_END,
+        data_input=long_input,
+        data_output=long_output,
+        UUID="tool-trunc-uuid",
+    )
+    result_end = adaptor.process(step_end)
+    assert result_end is not None
+    assert f"{'A' * 20}\n... [truncated 80 characters]" in result_end.payload
+    assert f"{'B' * 25}\n... [truncated 75 characters]" in result_end.payload
+
+
+def test_function_truncation(make_intermediate_step):
+    config = StepAdaptorConfig(max_input_length=15, max_output_length=30)
+    adaptor = StepAdaptor(config=config)
+
+    long_input = "X" * 50
+    long_output = "Y" * 80
+    uuid = "func-trunc-uuid"
+
+    step_start = make_intermediate_step(
+        event_type=IntermediateStepType.FUNCTION_START,
+        data_input=long_input,
+        name="long_fn",
+        UUID=uuid,
+    )
+    result_start = adaptor.process(step_start)
+    assert result_start is not None
+    assert f"{'X' * 15}\n... [truncated 35 characters]" in result_start.payload
+
+    step_end = make_intermediate_step(
+        event_type=IntermediateStepType.FUNCTION_END,
+        data_output=long_output,
+        name="long_fn",
+        UUID=uuid,
+    )
+    result_end = adaptor.process(step_end)
+    assert result_end is not None
+    assert f"{'X' * 15}\n... [truncated 35 characters]" in result_end.payload
+    assert f"{'Y' * 30}\n... [truncated 50 characters]" in result_end.payload

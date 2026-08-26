@@ -39,6 +39,16 @@ class StepAdaptor:
         self._history: list[IntermediateStep] = []
         self.config = config
 
+    def _truncate_text(self, text: str | None, max_len: int) -> str:
+        """
+        Truncate text if it exceeds max_len, appending a truncation notice.
+        """
+        if not text:
+            return ""
+        if len(text) <= max_len:
+            return text
+        return f"{text[:max_len]}\n... [truncated {len(text) - max_len} characters]"
+
     def _step_matches_filter(self, step: IntermediateStep, config: StepAdaptorConfig) -> bool:
         """
         Returns True if this intermediate step should be included (based on the config.mode).
@@ -136,9 +146,13 @@ class StepAdaptor:
             return None
 
         input_str = str(start_step.data.input)
+        if input_str:
+            input_str = self._truncate_text(input_str, self.config.max_input_length)
 
         if step.event_type == IntermediateStepType.TOOL_END:
             output_str = str(step.data.output)
+            if output_str:
+                output_str = self._truncate_text(output_str, self.config.max_output_length)
 
         if not input_str and not output_str:
             return None
@@ -192,6 +206,7 @@ class StepAdaptor:
             if not input_str:
                 return None
 
+            input_str = self._truncate_text(input_str, self.config.max_input_length)
             escaped_input = html.escape(input_str, quote=False)
             format_input_type = "json" if is_valid_json(escaped_input) else "python"
 
@@ -225,6 +240,7 @@ class StepAdaptor:
             if not output_str:
                 return None
 
+            output_str = self._truncate_text(output_str, self.config.max_output_length)
             escaped_output = html.escape(output_str, quote=False)
             format_output_type = "json" if is_valid_json(escaped_output) else "python"
 
@@ -237,6 +253,7 @@ class StepAdaptor:
                     input_str = str(start_step.data)
 
                 if input_str:
+                    input_str = self._truncate_text(input_str, self.config.max_input_length)
                     escaped_input = html.escape(input_str, quote=False)
                     format_input_type = "json" if is_valid_json(escaped_input) else "python"
                     input_payload = dedent("""
