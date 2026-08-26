@@ -85,6 +85,31 @@ uv pip install -e examples/getting_started/simple_calculator
 nat serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 
+## Health Check Endpoint
+- **Route:** `/health`
+- **Method:** GET
+- **Description:** A liveness/readiness probe for the running server. It is registered automatically
+  whenever you start `nat serve`, returns immediately without executing a workflow, and requires no
+  model or API credentials. This makes it suitable for reverse proxies, process supervisors, Docker
+  health checks, and Kubernetes-style readiness/liveness probes.
+- **HTTP Request Example:**
+  ```bash
+  curl -s http://localhost:8000/health
+  ```
+- **HTTP Response Example:**
+  ```json
+  {"status":"healthy"}
+  ```
+
+:::{note}
+This endpoint checks the FastAPI server started by `nat serve` (default port `8000`). The MCP and
+FastMCP servers expose their own separate `/health` routes on their own default ports — see
+[Verifying MCP Server Health](../../run-workflows/mcp-server.md#verifying-mcp-server-health)
+(default port `9901`) and
+[Verifying FastMCP Server Health](../../run-workflows/fastmcp-server.md#verifying-fastmcp-server-health)
+(default port `9902`).
+:::
+
 ## Generate Non-Streaming Transaction
 - **Route:** `/v1/workflow` (legacy: `/generate`)
 - **Description:** A non-streaming transaction that waits until all workflow data is available before sending the
