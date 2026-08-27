@@ -19,6 +19,9 @@ limitations under the License.
 NeMo Agent Toolkit supports python code execution in a remote sandbox environment through use of the `code_execution` function. This function sends a string of python code to a remote code execution server where code is executed, and the result, status, and any errors are returned
 
 ## Usage
+
+The local sandbox requires Docker 28 or later. Follow the [Docker installation instructions](https://docs.docker.com/get-started/get-docker/) to install a supported version, and start Docker before continuing.
+
 Currently NeMo Agent Toolkit supports code execution through the included `local_sandbox` (a locally run code execution docker container) and via a remote [Piston Server](https://github.com/engineer-man/piston). In order to utilize `code_execution` as part of your workflow this server must be running and accepting requests.
 
 To start the `local_sandbox` you must have Docker Compose installed. If Docker Compose is not installed, install Docker Compose by following the [Docker Compose installation instructions](https://docs.docker.com/compose/install/). Once Docker Compose is installed and running, navigate to the `local_sandbox` directory and start the services with Docker Compose.

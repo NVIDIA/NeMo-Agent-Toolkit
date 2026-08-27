@@ -30,6 +30,8 @@ The Code Execution Sandbox provides:
 
 ## Quick Start
 
+The local sandbox requires Docker 28 or later. Follow the [Docker installation instructions](https://docs.docker.com/get-started/get-docker/) to install a supported version, and start Docker before continuing.
+
 ### Step 1: Start the Sandbox Server
 
 Navigate to the local sandbox directory and start the server:
