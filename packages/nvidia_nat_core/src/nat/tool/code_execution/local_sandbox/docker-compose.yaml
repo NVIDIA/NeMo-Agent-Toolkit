@@ -5,7 +5,7 @@ services:
     image: ${SANDBOX_NAME:-local-sandbox}
     container_name: local-sandbox
     volumes:
-      - ${OUTPUT_DATA_PATH:-.}:/workspace
+      - ${OUTPUT_DATA_PATH:-./sandbox}:/workspace
     networks:
       - sandbox-internal
     healthcheck:
