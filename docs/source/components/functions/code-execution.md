@@ -21,12 +21,12 @@ NeMo Agent Toolkit supports python code execution in a remote sandbox environmen
 ## Usage
 Currently NeMo Agent Toolkit supports code execution through the included `local_sandbox` (a locally run code execution docker container) and via a remote [Piston Server](https://github.com/engineer-man/piston). In order to utilize `code_execution` as part of your workflow this server must be running and accepting requests.
 
-To start the `local_sandbox`you must have docker installed. If docker is not installed on your machine, follow the appropriate instructions [here](https://docs.docker.com/get-started/get-docker/) to install docker on your machine. Once docker is installed and running, navigate to the `local_sandbox` directory and run the `start_local_sandbox.sh` script.
+To start the `local_sandbox`you must have docker installed. If docker is not installed on your machine, follow the appropriate instructions [here](https://docs.docker.com/get-started/get-docker/) to install docker on your machine. Once docker is installed and running, navigate to the `local_sandbox` directory and start the services with Docker Compose.
 
 ```bash
 # from the root of the repository
 $ cd packages/nvidia_nat_core/src/nat/tool/code_execution/local_sandbox
-$ source start_local_sandbox.sh
+$ docker compose up
 ```
 It will take a bit of time for the container to build and initialize, but once you see the following, the server is ready:
 ```bash
