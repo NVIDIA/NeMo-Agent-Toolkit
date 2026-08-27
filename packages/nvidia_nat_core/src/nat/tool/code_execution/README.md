@@ -145,11 +145,10 @@ The sandbox returns JSON responses with the following structure:
 ## Security Considerations
 
 - **Isolated execution**: All code runs in Docker containers
-- **Resource limits**: Memory and CPU limits prevent resource exhaustion
 - **Network isolation**: Containers have limited network access
 - **File system isolation**: Mounted volumes provide controlled file access
 - **Process isolation**: Each execution runs in a separate process
 
-The included `docker-compose.yaml` file sets up the sandbox server behind an nginx proxy, this is intended to be used for local development and testing. For production deployments, consider additional security measures such as authentication, authorization, and network policies.
+The included `docker-compose.yaml` file sets up the sandbox server behind an nginx proxy, this is intended to be used for local development and testing. For production deployments, consider additional security measures such as resource limits,authentication, authorization, and network policies.
 
 Although Docker containers provide a level of isolation, executing untrusted code in a container still carries risk. Refer to the [Docker Engine security documentation](https://docs.docker.com/engine/security/) for more information.
