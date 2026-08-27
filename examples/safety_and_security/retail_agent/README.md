@@ -288,6 +288,27 @@ middleware:
       should be flagged as incorrect.
 ```
 
+**Configuration Example (Content Safety Guard):**
+
+```yaml
+middleware:
+  content_safety_guard_tools:
+    _type: content_safety_guard
+    llm_name: guard_llm
+    target_function_or_group: retail_tools__get_product_info
+    target_location: output
+    target_field: $.reviews[*].review
+    target_field_resolution_strategy: all
+    action: redirection
+    max_content_length: 32000
+```
+
+The content safety guard allows content only when the guard model returns a recognized `Safe` verdict. It handles
+`Unsafe`, `Controversial`, malformed, and unrecognized verdicts according to the configured action. Content longer
+than `max_content_length` and guard-model failures stop protected execution instead of allowing unchecked content.
+Oversized content is not truncated because truncation could omit content that the guard must evaluate. The
+`partial_compliance` action remains a monitoring mode that logs classified violations while allowing content.
+
 **Configuration Example (Pre-Tool Verifier):**
 
 ```yaml

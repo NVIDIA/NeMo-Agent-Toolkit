@@ -350,6 +350,180 @@ class TestContentSafetyGuardInvoke:
             mock_logger.warning.assert_called()
             assert result == "harmful content"
 
+    async def test_qwen_guard_controversial_response(self, mock_builder, middleware_context):
+        """Test that a Qwen Guard controversial verdict is refused."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = "Safety: Controversial\nCategories: None"
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        async def mock_next(_value):
+            return "synthetic content"
+
+        with pytest.raises(ValueError, match="Content blocked by safety policy"):
+            await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
+
+    async def test_qwen_guard_safe_response(self, mock_builder, middleware_context):
+        """Test that an exact Qwen Guard safe verdict is allowed."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = "Safety: Safe\nCategories: None"
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        async def mock_next(_value):
+            return "synthetic content"
+
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
+
+        assert result == "synthetic content"
+
+    async def test_json_guard_safe_response(self, mock_builder, middleware_context):
+        """Test that an exact JSON safe verdict is allowed."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = '{"user_safety": "safe", "safety_categories": []}'
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        async def mock_next(_value):
+            return "synthetic content"
+
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
+
+        assert result == "synthetic content"
+
+    @pytest.mark.parametrize(
+        "response_text",
+        [
+            '{"User Safety": "safe", "Safety": "unsafe"}',
+            '{"Safety": "unsafe", "Safety": "safe"}',
+            "Safety: Safe\nSafety: Unsafe",
+        ],
+        ids=["conflicting-json-fields", "duplicate-json-field", "conflicting-text-verdicts"],
+    )
+    async def test_conflicting_guard_verdicts_refuse(self, mock_builder, middleware_context, response_text):
+        """Test that duplicate or conflicting verdicts are treated as malformed."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = response_text
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        async def mock_next(_value):
+            return "synthetic content"
+
+        with pytest.raises(ValueError, match="Content blocked by safety policy"):
+            await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
+
+    async def test_unrecognized_guard_response_refuses(self, mock_builder, middleware_context):
+        """Test that an unrecognized guard verdict is treated as unsafe."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = "Safety: Undetermined\nCategories: None"
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        async def mock_next(_value):
+            return "synthetic content"
+
+        with pytest.raises(ValueError, match="Content blocked by safety policy"):
+            await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
+
+    @pytest.mark.parametrize(
+        "response_text",
+        ["Safety: Not Safe", "No valid verdict; safe handling unavailable"],
+        ids=["negated-safe", "safe-in-explanation"],
+    )
+    async def test_malformed_guard_response_with_safe_word_refuses(self,
+                                                                   mock_builder,
+                                                                   middleware_context,
+                                                                   response_text):
+        """Test that a Safe keyword outside an exact verdict does not allow content."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = response_text
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        async def mock_next(_value):
+            return "synthetic content"
+
+        with pytest.raises(ValueError, match="Content blocked by safety policy"):
+            await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
+
+    @pytest.mark.parametrize(
+        "guard_error",
+        [RuntimeError("synthetic guard unavailable"), ValueError("synthetic guard context limit exceeded")],
+        ids=["provider-unavailable", "context-limit"],
+    )
+    async def test_guard_model_error_propagates(self, mock_builder, middleware_context, guard_error):
+        """Test that guard model failures stop protected execution."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=guard_error)
+        middleware._llm = mock_llm
+
+        async def mock_next(_value):
+            return "synthetic content"
+
+        with pytest.raises(type(guard_error)) as exc_info:
+            await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
+        assert exc_info.value is guard_error
+
+    async def test_content_at_max_length_reaches_guard(self, mock_builder, middleware_context):
+        """Test that content exactly at the configured limit is analyzed."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal", max_content_length=17)
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = "Safe"
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        async def mock_next(_value):
+            return "synthetic content"
+
+        result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
+
+        assert result == "synthetic content"
+        mock_llm.ainvoke.assert_awaited_once()
+
+    async def test_oversized_content_stops_before_guard(self, mock_builder, middleware_context):
+        """Test that oversized content stops execution without invoking the guard model."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal", max_content_length=16)
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        async def mock_next(_value):
+            return "synthetic content"
+
+        with pytest.raises(ValueError, match=r"input length 17 exceeds configured max_content_length=16"):
+            await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
+
+        mock_builder.get_llm.assert_not_called()
+
     async def test_plain_safe_response(self, mock_builder, middleware_context):
         """Test parsing plain "Safe" response."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
@@ -609,3 +783,42 @@ class TestContentSafetyGuardStreaming:
 
         assert chunks == ["chunk1", "chunk2"]
         assert not hasattr(middleware, '_llm') or middleware._llm is None
+
+    async def test_streaming_guard_error_propagates(self, mock_builder, middleware_context):
+        """Test that a streaming guard failure stops protected execution."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        guard_error = RuntimeError("synthetic guard unavailable")
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=guard_error)
+        middleware._llm = mock_llm
+
+        async def mock_stream(_value):
+            yield "synthetic "
+            yield "content"
+
+        with pytest.raises(RuntimeError) as exc_info:
+            async for _ in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
+                pass
+
+        assert exc_info.value is guard_error
+
+    async def test_streaming_oversized_content_releases_no_chunks(self, mock_builder, middleware_context):
+        """Test that oversized buffered content is blocked before guard invocation or chunk release."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal", max_content_length=16)
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        async def mock_stream(_value):
+            yield "synthetic "
+            yield "content"
+
+        chunks = []
+        with pytest.raises(ValueError, match=r"input length 17 exceeds configured max_content_length=16"):
+            async for chunk in middleware.function_middleware_stream({},
+                                                                     call_next=mock_stream,
+                                                                     context=middleware_context):
+                chunks.append(chunk)
+
+        assert chunks == []
+        mock_builder.get_llm.assert_not_called()
