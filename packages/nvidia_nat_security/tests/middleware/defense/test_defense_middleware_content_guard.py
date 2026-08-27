@@ -766,6 +766,31 @@ class TestContentSafetyGuardStreaming:
             assert chunks == ["harmful ", "content"]
             mock_logger.warning.assert_called()
 
+    async def test_streaming_partial_compliance_stops_at_content_limit(self, mock_builder, middleware_context):
+        """Test that partial compliance stops before releasing the first over-limit chunk."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm",
+                                                    action="partial_compliance",
+                                                    max_content_length=5)
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        produced_chunks = []
+
+        async def mock_stream(_value):
+            for chunk in ("1234", "5", "6", "not requested"):
+                produced_chunks.append(chunk)
+                yield chunk
+
+        released_chunks = []
+        with pytest.raises(ValueError, match=r"input length 6 exceeds configured max_content_length=5"):
+            async for chunk in middleware.function_middleware_stream({},
+                                                                     call_next=mock_stream,
+                                                                     context=middleware_context):
+                released_chunks.append(chunk)
+
+        assert produced_chunks == ["1234", "5", "6"]
+        assert released_chunks == ["1234", "5"]
+        mock_builder.get_llm.assert_not_called()
+
     async def test_streaming_skips_when_not_targeted(self, mock_builder, middleware_context):
         """Test streaming skips when function not targeted."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm",

@@ -415,17 +415,23 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         try:
             buffer_chunks = self.config.action in ("refusal", "redirection")
             accumulated_chunks: list[Any] = []
+            serialized_chunks: list[str] = []
+            accumulated_length = 0
 
             async for chunk in call_next(value, *args[1:], **kwargs):
-                if buffer_chunks:
-                    accumulated_chunks.append(chunk)
-                else:
+                serialized_chunk = chunk if isinstance(chunk, str) else str(chunk)
+                accumulated_length += len(serialized_chunk)
+                if accumulated_length > self.config.max_content_length:
+                    raise ValueError(f"Content Safety Guard input length {accumulated_length} exceeds configured "
+                                     f"max_content_length={self.config.max_content_length}")
+
+                accumulated_chunks.append(chunk)
+                serialized_chunks.append(serialized_chunk)
+                if not buffer_chunks:
                     # partial_compliance: stream through, but still accumulate for analysis/logging
                     yield chunk
-                    accumulated_chunks.append(chunk)
 
-            # Join chunks efficiently (only convert to string if needed)
-            full_output = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
+            full_output = "".join(serialized_chunks)
 
             processed_output = await self._process_content_safety_detection(full_output, context, original_input=value)
 
