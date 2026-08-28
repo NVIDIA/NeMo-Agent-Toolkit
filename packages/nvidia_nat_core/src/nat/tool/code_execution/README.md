@@ -22,7 +22,7 @@ A secure, containerized Python code execution environment that allows safe execu
 ## Overview
 
 The Code Execution Sandbox provides:
-- **Secure code execution** in isolated Docker containers
+- **Isolated code execution** in isolated Docker containers
 - **Multiple input formats** including raw code, dictionary format, and markdown
 - **Dependency management** with pre-installed libraries
 - **Flexible configuration** with customizable timeouts and output limits
@@ -30,31 +30,33 @@ The Code Execution Sandbox provides:
 
 ## Quick Start
 
+The local sandbox requires Docker 28 or later. Follow the [Docker installation instructions](https://docs.docker.com/get-started/get-docker/) to install a supported version, and start Docker before continuing.
+
 ### Step 1: Start the Sandbox Server
 
 Navigate to the local sandbox directory and start the server:
 
 ```bash
 cd packages/nvidia_nat_core/src/nat/tool/code_execution/local_sandbox
-./start_local_sandbox.sh
+docker compose up
 ```
 
-The script will:
-- Build the Docker image if it doesn't exist
+Docker Compose will:
 - Start the sandbox server on port 6000
+- Start an nginx proxy, allowing the sandbox to be isolated
 - Mount your working directory for file operations
 
 #### Advanced Usage:
 ```bash
-# Custom container name
-./start_local_sandbox.sh my-sandbox
+# Custom image name
+SANDBOX_NAME=my-sandbox docker compose up
 
 # Custom output directory
-./start_local_sandbox.sh my-sandbox /path/to/output
+OUTPUT_DATA_PATH=/path/to/output docker compose up
 
 # Using environment variable
 export OUTPUT_DATA_PATH=/path/to/output
-./start_local_sandbox.sh
+docker compose up
 ```
 
 ### Step 2: Test the Installation
@@ -145,7 +147,10 @@ The sandbox returns JSON responses with the following structure:
 ## Security Considerations
 
 - **Isolated execution**: All code runs in Docker containers
-- **Resource limits**: Memory and CPU limits prevent resource exhaustion
 - **Network isolation**: Containers have limited network access
 - **File system isolation**: Mounted volumes provide controlled file access
 - **Process isolation**: Each execution runs in a separate process
+
+The included `docker-compose.yaml` file sets up the sandbox server behind an nginx proxy, this is intended to be used for local development and testing. For production deployments, consider additional security measures such as resource limits,authentication, authorization, and network policies.
+
+Although Docker containers provide a level of isolation, executing untrusted code in a container still carries risk. Refer to the [Docker Engine security documentation](https://docs.docker.com/engine/security/) for more information.
