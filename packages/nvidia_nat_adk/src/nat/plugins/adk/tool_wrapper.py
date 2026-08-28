@@ -77,6 +77,8 @@ def google_adk_tool_wrapper(
             return inspect.Parameter.empty
         default_factory = getattr(field, "default_factory", None)
         if default_factory is not None:
+            if getattr(field, "default_factory_takes_validated_data", False):
+                return None
             try:
                 return default_factory()
             except TypeError:
@@ -154,8 +156,13 @@ def google_adk_tool_wrapper(
                 if model_fields is not None:
                     field_items = ((n, f.annotation, _field_default(f)) for n, f in model_fields.items())
                 else:
-                    field_items = ((n, a, inspect.Parameter.empty)
-                                   for n, a in getattr(input_schema, "__annotations__", {}).items())
+                    legacy_fields = getattr(input_schema, "__fields__", None)
+                    if legacy_fields is not None:
+                        field_items = ((n, getattr(f, "outer_type_", f.annotation), _field_default(f))
+                                       for n, f in legacy_fields.items())
+                    else:
+                        field_items = ((n, a, getattr(input_schema, n, inspect.Parameter.empty))
+                                       for n, a in getattr(input_schema, "__annotations__", {}).items())
                 for param_name, param_annotation, default in field_items:
                     params.append(
                         inspect.Parameter(
