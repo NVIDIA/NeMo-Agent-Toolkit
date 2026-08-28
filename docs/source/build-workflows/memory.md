@@ -146,16 +146,13 @@ The automatic memory wrapper agent supports several configuration parameters:
 
 User ID is automatically extracted at runtime for memory isolation via:
 1. `SessionManager.session(user_id=...)` - For production with custom auth middleware (recommended)
-2. `X-User-ID` HTTP header - Illustrative/testing only; assumes a trusted upstream proxy authenticates the request
-   and injects this header
+2. `X-User-ID` HTTP header - Illustrative/testing only; assumes a trusted upstream proxy authenticates the request and injects this header
 3. Console front end `user_id` - Defaults to `"nat_run_user_id"` for `nat run`
 
 Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
 For `nat run`, pass `--conversation_id` when testing independent memory conversations from the CLI.
 
-Never treat a client-supplied `X-User-ID` header as authentication. The header fallback is illustrative only and is
-safe in production only when a trusted upstream proxy removes any client-supplied value and injects the authenticated
-identity.
+> Never treat a client-supplied `X-User-ID` header as authentication.
 
 For detailed configuration and usage examples, refer to the `examples/agents/auto_memory_wrapper/README.md` guide.
 
