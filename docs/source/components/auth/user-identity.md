@@ -38,7 +38,7 @@ The following table lists all credential types that can be resolved into a user 
 
 | **Source** | **Transport** | **How it arrives** |
 |---|---|---|
-| Session cookie | HTTP / WebSocket | `nat-session` cookie or `?session=` query parameter |
+| Session cookie | HTTP / WebSocket | `nat-session` cookie (preferred) or legacy `?session=` query parameter |
 | JWT Bearer token | HTTP / WebSocket | `Authorization: Bearer <jwt>` header |
 | API key (Bearer) | HTTP / WebSocket | `Authorization: Bearer <opaque-key>` header |
 | API key (header) | HTTP / WebSocket | `X-API-Key: <key>` header |
@@ -52,6 +52,12 @@ Each request or connection should include exactly one credential. The server det
 For WebSocket connections, credentials can be provided either at connect time (via headers or cookies) or after the connection is established by sending an `auth_message`. When an `auth_message` is used, the resolved `user_id` is persisted for the duration of the session and applied to all subsequent workflow requests on that connection.
 
 If no credential is found, the request proceeds without a user identity (anonymous).
+
+### Reconnecting WebSocket Conversations
+
+The `conversation_id` groups messages for routing; it is not proof that a connection owns a conversation. To resume an active workflow, a reconnecting WebSocket must resolve to the same `user_id` that started the workflow and include its `conversation_id` query parameter. A different identity, or an anonymous connection, cannot restore the workflow or receive its pending Human-in-the-Loop prompt.
+
+Cookie and header credentials are resolved when the WebSocket connects. Clients that use an `auth_message` must send it before expecting conversation restoration; the server attempts restoration only after the identity message succeeds. Prefer cookies or headers for connect-time credentials. Credentials in URLs can be retained in request logs, monitoring systems, and intermediary logs.
 
 :::{note}
 For per-user workflows, a valid identity is required. If no credential can be resolved, the server returns an error instructing the client to provide a valid `Authorization` header or send an `auth_message`.
