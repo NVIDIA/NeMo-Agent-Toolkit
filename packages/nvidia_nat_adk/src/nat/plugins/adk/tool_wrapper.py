@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Tool Wrapper file"""
-
 import logging
 import types
 from collections.abc import AsyncIterator
@@ -56,7 +55,7 @@ def resolve_type(t: Any) -> Any:
 def google_adk_tool_wrapper(
     name: str,
     fn: Function,
-    _builder: Builder,  # pylint: disable=W0613
+    _builder: Builder  # pylint: disable=W0613
 ) -> Any:  # Changed from Callable[..., Any] to Any to allow FunctionTool return
     """Wrap a NAT `Function` as a Google ADK `FunctionTool`.
 
@@ -152,9 +151,8 @@ def google_adk_tool_wrapper(
                 if model_fields is not None:
                     field_items = ((n, f.annotation, _field_default(f)) for n, f in model_fields.items())
                 else:
-                    field_items = (
-                        (n, a, inspect.Parameter.empty) for n, a in getattr(input_schema, "__annotations__", {}).items()
-                    )
+                    field_items = ((n, a, inspect.Parameter.empty)
+                                   for n, a in getattr(input_schema, "__annotations__", {}).items())
                 for param_name, param_annotation, default in field_items:
                     params.append(
                         inspect.Parameter(
@@ -162,8 +160,7 @@ def google_adk_tool_wrapper(
                             inspect.Parameter.POSITIONAL_OR_KEYWORD,
                             annotation=resolve_type(param_annotation),
                             default=default,
-                        )
-                    )
+                        ))
             params.sort(key=lambda param: param.default is not inspect.Parameter.empty)
             setattr(func_to_wrap, "__signature__", inspect.Signature(parameters=params))
 
