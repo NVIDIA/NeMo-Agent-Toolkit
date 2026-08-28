@@ -62,7 +62,7 @@ async def test_branch_validation_encodes_valid_path_component_characters():
 
 @pytest.mark.parametrize("branch", [".", "feature/../other", "a..b"])
 async def test_branch_path_syntax_is_rejected_before_git_validation(branch: str, monkeypatch: pytest.MonkeyPatch):
-    import nat.tool.github_tools as github_tools
+    from nat.tool import github_tools
 
     async def fail_if_called(*_args, **_kwargs):
         raise AssertionError("git validation must not run for invalid path syntax")
