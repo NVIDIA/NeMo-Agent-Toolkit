@@ -53,18 +53,18 @@ Each of the built-in `add_memory`, `get_memory`, and `delete_memory` tools requi
 - Use `user_id` for a fixed, single-user memory namespace.
 - Use `user_id_resolver` for a multi-user application. Its value is the import path of a trusted, zero-argument Python callable that returns the current authenticated user's stable ID. The callable can be synchronous or asynchronous and is invoked for every memory operation.
 
-For example, application code can obtain a principal that authentication middleware has already verified:
+For example, application code can obtain a user that authentication middleware has already verified:
 
 ```python
 # my_application/auth.py
-from my_application.request_context import get_authenticated_principal
+from my_application.request_context import get_authenticated_user
 
 
 def resolve_memory_user_id() -> str:
-    principal = get_authenticated_principal()
-    if principal is None:
-        raise RuntimeError("An authenticated principal is required")
-    return principal.stable_user_id
+    user = get_authenticated_user()
+    if user is None:
+        raise RuntimeError("An authenticated user is required")
+    return user.user_id
 ```
 
 Reference that callable from each memory tool:
@@ -84,11 +84,6 @@ functions:
     memory: user_memory
     user_id_resolver: my_application.auth.resolve_memory_user_id
 ```
-
-The resolver is part of the application's trusted computing base. It must derive the ID from authenticated state and
-enforce any required authorization. Do not return an identity supplied by the LLM or copy an unverified request header,
-JWT claim, API key, or cookie value directly. NVIDIA NeMo Agent Toolkit invokes the resolver but does not authenticate
-the value it returns.
 
 ## Automatic Memory Wrapper Agent
 
