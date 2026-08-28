@@ -19,6 +19,10 @@ limitations under the License.
 
 This documentation presumes familiarity with the NeMo Agent Toolkit [memory module](../../build-workflows/memory.md), [plugin architecture](../plugins.md), the concept of "function registration" using `@register_function`, and how we define [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) and workflow configurations in the NeMo Agent Toolkit config described in the [Creating a New Tool and Workflow](../../get-started/tutorials/create-a-new-workflow.md) tutorial.
 
+For applications that expose the built-in memory tools to multiple authenticated users, see
+[Authenticating Memory Tool Users](../../build-workflows/memory.md#authenticating-memory-tool-users). Configure a trusted
+`user_id_resolver`.
+
 ## Key Memory Module Components
 
 * **Memory Data Models**

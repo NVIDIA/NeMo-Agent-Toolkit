@@ -21,10 +21,9 @@ from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.memory.models import MemoryItem
-
-from .common import AddMemoryInput
-from .common import MemoryToolConfigBase
-from .common import resolve_memory_user_id
+from nat.tool.memory_tools.common import AddMemoryInput
+from nat.tool.memory_tools.common import MemoryToolConfigBase
+from nat.tool.memory_tools.common import resolve_memory_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -47,12 +46,12 @@ async def add_memory_tool(config: AddToolConfig, builder: Builder):
     # First, retrieve the memory client
     memory_editor = await builder.get_memory_client(config.memory)
 
-    async def _arun(memory_input: AddMemoryInput) -> str:
+    async def _arun(item: AddMemoryInput) -> str:
         """
         Asynchronous execution of addition of memories.
 
         Args:
-            memory_input (AddMemoryInput): The memory item to add. Must include:
+            item (AddMemoryInput): The memory item to add. May include:
                 - conversation: List of dicts with "role" and "content" keys
                 - metadata: Dict of metadata (can be empty)
                 - tags: Optional list of tags
@@ -62,18 +61,18 @@ async def add_memory_tool(config: AddToolConfig, builder: Builder):
         if available, otherwise an error will be raised.
         """
         try:
-            item = MemoryItem(user_id=resolve_memory_user_id(config.user_id), **memory_input.model_dump())
+            memory_item = MemoryItem(**item.model_dump(), user_id=await resolve_memory_user_id(config))
 
             # If conversation is not provided but memory is, create a conversation
-            if not item.conversation and item.memory:
-                item.conversation = [{"role": "user", "content": item.memory}]
-            elif not item.conversation:
+            if not memory_item.conversation and memory_item.memory:
+                memory_item.conversation = [{"role": "user", "content": memory_item.memory}]
+            elif not memory_item.conversation:
                 raise ToolException("Either conversation or memory must be provided")
 
-            await memory_editor.add_items([item])
+            await memory_editor.add_items([memory_item])
             return "Memory added successfully. You can continue. Please respond to the user."
 
         except Exception as e:
             raise ToolException(f"Error adding memory: {e}") from e
 
-    yield FunctionInfo.from_fn(_arun, description=config.description)
+    yield FunctionInfo.from_fn(_arun, description=config.description, input_schema=AddMemoryInput)

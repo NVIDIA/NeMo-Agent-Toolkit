@@ -57,7 +57,7 @@ async def get_memory_tool(config: GetToolConfig, builder: Builder):
             memories = await memory_editor.search(
                 query=search_input.query,
                 top_k=search_input.top_k,
-                user_id=resolve_memory_user_id(config.user_id),
+                user_id=await resolve_memory_user_id(config),
             )
 
             memory_str = f"Memories as a JSON: \n{json.dumps([mem.model_dump(mode='json') for mem in memories])}"

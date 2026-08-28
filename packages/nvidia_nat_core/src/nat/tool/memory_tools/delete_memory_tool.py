@@ -54,7 +54,7 @@ async def delete_memory_tool(config: DeleteToolConfig, builder: Builder):
         try:
             del delete_input
 
-            await memory_editor.remove_items(user_id=resolve_memory_user_id(config.user_id))
+            await memory_editor.remove_items(user_id=await resolve_memory_user_id(config))
 
             return "Memories deleted!"
 

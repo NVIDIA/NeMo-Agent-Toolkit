@@ -47,6 +47,50 @@ The NeMo Agent Toolkit includes four memory module providers, all of which are a
 Additional memory backends are available as community plugins:
 * [Synap](https://maximem.ai) — managed memory layer with user and customer scoping, provided by the [`maximem-synap-nemo-agent-toolkit`](https://pypi.org/project/maximem-synap-nemo-agent-toolkit/) plugin. See `examples/memory/synap/` for usage. ([Open source integration package](https://github.com/maximem-ai/maximem_synap_sdk/tree/main/packages/integrations))
 
+## Authenticating Memory Tool Users
+
+Each of the built-in `add_memory`, `get_memory`, and `delete_memory` tools require configuring an identity source:
+
+- Use `user_id` for a fixed, single-user memory namespace.
+- Use `user_id_resolver` for a multi-user application. Its value is the import path of a trusted, zero-argument Python callable that returns the current authenticated user's stable ID. The callable can be synchronous or asynchronous and is invoked for every memory operation.
+
+For example, application code can obtain a principal that authentication middleware has already verified:
+
+```python
+# my_application/auth.py
+from my_application.request_context import get_authenticated_principal
+
+
+def resolve_memory_user_id() -> str:
+    principal = get_authenticated_principal()
+    if principal is None:
+        raise RuntimeError("An authenticated principal is required")
+    return principal.stable_user_id
+```
+
+Reference that callable from each memory tool:
+
+```yaml
+functions:
+  add_memory:
+    _type: add_memory
+    memory: user_memory
+    user_id_resolver: my_application.auth.resolve_memory_user_id
+  get_memory:
+    _type: get_memory
+    memory: user_memory
+    user_id_resolver: my_application.auth.resolve_memory_user_id
+  delete_memory:
+    _type: delete_memory
+    memory: user_memory
+    user_id_resolver: my_application.auth.resolve_memory_user_id
+```
+
+The resolver is part of the application's trusted computing base. It must derive the ID from authenticated state and
+enforce any required authorization. Do not return an identity supplied by the LLM or copy an unverified request header,
+JWT claim, API key, or cookie value directly. NVIDIA NeMo Agent Toolkit invokes the resolver but does not authenticate
+the value it returns.
+
 ## Automatic Memory Wrapper Agent
 
 The NeMo Agent Toolkit provides an [`auto_memory_agent`](../components/agents/auto-memory-wrapper/index.md) wrapper that adds automatic memory capture and retrieval to any agent without requiring the LLM to invoke memory tools explicitly.
