@@ -191,7 +191,7 @@ Respond ONLY with valid JSON in this exact format:
             json_str = self._extract_json_from_response(response_text)
             result = json.loads(json_str)
 
-            threat_detected = result["threat_detected"]
+            threat_detected = bool(result["threat_detected"])
             confidence = float(result["confidence"])
 
             return OutputVerificationResult(threat_detected=threat_detected,
