@@ -76,7 +76,7 @@ class WebQueryToolConfig(FunctionBaseConfig, name="webpage_query"):
     webpage_url: str
     description: str
     chunk_size: int = 1024
-    embedder_name: EmbedderRef = "nvidia/nv-embedqa-e5-v5"
+    embedder_name: EmbedderRef = "nvidia/nemotron-3-embed-1b"
 ```
 
 Along with renaming the class and changing the `name`, the only other configuration attribute that needs to change is replacing `webpage_url` with a glob pattern. The resulting new tool configuration object will look like:
@@ -85,7 +85,7 @@ class TextFileIngestFunctionConfig(FunctionBaseConfig, name="text_file_ingest"):
     ingest_glob: str
     description: str
     chunk_size: int = 1024
-    embedder_name: EmbedderRef = "nvidia/nv-embedqa-e5-v5"
+    embedder_name: EmbedderRef = "nvidia/nemotron-3-embed-1b"
 ```
 
 :::{note}

@@ -52,7 +52,7 @@ docker pull nvcr.io/nim/nvidia/nemotron-3-nano:latest
 
 Download the container for the embedding Model:
 ```bash
-docker pull nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
+docker pull nvcr.io/nim/nvidia/nemotron-3-embed-1b:latest
 ```
 
 
@@ -90,7 +90,7 @@ docker run -it --rm \
     -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" \
     -u $(id -u) \
     -p 8001:8000 \
-    nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
+    nvcr.io/nim/nvidia/nemotron-3-embed-1b:latest
 ```
 
 ### NeMo Agent Toolkit Configuration
@@ -118,7 +118,7 @@ embedders:
   nv-embedqa-e5-v5:
     _type: nim
     base_url: "http://localhost:8001/v1"
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
 
 workflow:
   _type: react_agent

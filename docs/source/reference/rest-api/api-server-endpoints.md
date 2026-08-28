@@ -203,7 +203,7 @@ Setting `NAT_JOB_STORE_POOL_PRE_PING` to `true` is the usual remedy when the fir
     "id": "ba5191e6-b818-4206-ac14-863112e597fe",
     "parent_id": "5db32854-d9b2-4e75-9001-543da6a55dd0",
     "type": "markdown",
-    "name": "meta/llama-3.1-70b-instruct",
+    "name": "nvidia/nemotron-3-super-120b-a12b",
     "payload": "**Input:**\n```python\n[SystemMessage(content='\\nAnswer the following questions as best you can. You
                 may ask the human to use the following tools:\\n\\ncalculator_multiply: This is a mathematical tool used to multiply
                 two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.. . Arguments
@@ -259,7 +259,7 @@ Setting `NAT_JOB_STORE_POOL_PRE_PING` to `true` is the usual remedy when the fir
     ```
 - **HTTP Intermediate Step Stream Example:**
   ```json
-  "intermediate_data": {"id":"dda55b33-edd1-4dde-b938-182676a42a19","parent_id":"8282eb42-01dd-4db6-9fd5-915ed4a2a032","type":"LLM_END","name":"meta/llama-3.1-70b-instruct","payload":"{\"event_type\":\"LLM_END\",\"event_timestamp\":1744051441.449566,\"span_event_timestamp\":1744051440.5072863,\"framework\":\"langchain\",\"name\":\"meta/llama-3.1-70b-instruct\",\"tags\":null,\"metadata\":{\"chat_responses\":[{\"text\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"generation_info\":null,\"type\":\"ChatGenerationChunk\",\"message\":{\"content\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"additional_kwargs\":{},\"response_metadata\":{\"finish_reason\":\"stop\",\"model_name\":\"meta/llama-3.1-70b-instruct\"},\"type\":\"AIMessageChunk\",\"name\":null,\"id\":\"run-dda55b33-edd1-4dde-b938-182676a42a19\"}}],\"chat_inputs\":null,\"tool_inputs\":null,\"tool_outputs\":null,\"tool_info\":null},\"data\":{\"input\":\"First number 8 is less than the second number 11\",\"output\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"chunk\":null},\"usage_info\":{\"token_usage\":{\"prompt_tokens\":37109,\"completion_tokens\":902,\"total_tokens\":38011},\"num_llm_calls\":0,\"seconds_between_calls\":0},\"UUID\":\"dda55b33-edd1-4dde-b938-182676a42a19\"}"}
+  "intermediate_data": {"id":"dda55b33-edd1-4dde-b938-182676a42a19","parent_id":"8282eb42-01dd-4db6-9fd5-915ed4a2a032","type":"LLM_END","name":"nvidia/nemotron-3-super-120b-a12b","payload":"{\"event_type\":\"LLM_END\",\"event_timestamp\":1744051441.449566,\"span_event_timestamp\":1744051440.5072863,\"framework\":\"langchain\",\"name\":\"nvidia/nemotron-3-super-120b-a12b\",\"tags\":null,\"metadata\":{\"chat_responses\":[{\"text\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"generation_info\":null,\"type\":\"ChatGenerationChunk\",\"message\":{\"content\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"additional_kwargs\":{},\"response_metadata\":{\"finish_reason\":\"stop\",\"model_name\":\"nvidia/nemotron-3-super-120b-a12b\"},\"type\":\"AIMessageChunk\",\"name\":null,\"id\":\"run-dda55b33-edd1-4dde-b938-182676a42a19\"}}],\"chat_inputs\":null,\"tool_inputs\":null,\"tool_outputs\":null,\"tool_info\":null},\"data\":{\"input\":\"First number 8 is less than the second number 11\",\"output\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"chunk\":null},\"usage_info\":{\"token_usage\":{\"prompt_tokens\":37109,\"completion_tokens\":902,\"total_tokens\":38011},\"num_llm_calls\":0,\"seconds_between_calls\":0},\"UUID\":\"dda55b33-edd1-4dde-b938-182676a42a19\"}"}
   ```
 - **HTTP Response Example:**
   ```json
@@ -347,7 +347,7 @@ Setting `NAT_JOB_STORE_POOL_PRE_PING` to `true` is the usual remedy when the fir
     "id": "9ed4bce7-191c-41cb-be08-7a72d30166cc",
     "parent_id": "136edafb-797b-42cd-bd11-29153359b193",
     "type": "markdown",
-    "name": "meta/llama-3.1-70b-instruct",
+    "name": "nvidia/nemotron-3-super-120b-a12b",
     "payload": "**Input:**\n```python\n[SystemMessage(content='\\nAnswer the following questions as best you can. You
                 may ask the human to use the following tools:\\n\\ncalculator_multiply: This is a mathematical tool used to multiply
                 two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.. . Arguments

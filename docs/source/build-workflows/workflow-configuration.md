@@ -50,13 +50,13 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
 
 embedders:
   nv-embedqa-e5-v5:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
 
 workflow:
   _type: react_agent
@@ -76,7 +76,7 @@ The `functions` section contains the tools used in the workflow, in our example 
 This section contains the models used in the workflow. The `_type` value refers to the API hosting the model, in this case `nim` refers to an NIM model hosted on [`build.nvidia.com`](https://build.nvidia.com).
 
 <!-- path-check-skip-next-line -->
-The `model_name` value then needs to match a model hosted by the API, in our example we are using the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model.
+The `model_name` value needs to match a model hosted by the API. In this example, we use the [`nvidia/nemotron-3-super-120b-a12b`](https://build.nvidia.com/nvidia/nemotron-3-super-120b-a12b) model.
 
 Each type of API supports specific attributes. For `nim` these are defined in the {py:class}`~nat.llm.nim_llm.NIMModelConfig` class.
 
@@ -84,7 +84,7 @@ See the [LLMs](./llms/index.md) documentation for more information.
 
 ### `embedders`
 <!-- path-check-skip-next-line -->
-This section follows a the same structure as the `llms` section and serves as a way to separate the embedding models from the LLM models. In our example, we are using the [`nvidia/nv-embedqa-e5-v5`](https://build.nvidia.com/nvidia/nv-embedqa-e5-v5) model.
+This section follows a the same structure as the `llms` section and serves as a way to separate the embedding models from the LLM models. In our example, we are using the [`nvidia/nemotron-3-embed-1b`](https://build.nvidia.com/nvidia/nemotron-3-embed-1b) model.
 
 See the [Embedders](./embedders.md) documentation for more information.
 
@@ -159,7 +159,7 @@ NeMo Agent Toolkit supports configuration inheritance to reduce duplication acro
 # base-config.yml
 llms:
   nim_llm:
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     max_tokens: 1024
 ```

@@ -34,7 +34,7 @@ llms:
   # Uses vLLM or any OpenAI-compatible endpoint
   training_llm:
     _type: nim
-    model_name: meta/llama-3.1-8b-instruct
+    model_name: nvidia/nemotron-3-nano-30b-a3b
 
 functions:
   # === Trained player functions (uses LLM) ===
@@ -134,7 +134,7 @@ trainer_adapters:
     datastore_host: ${DATASTORE_HOST}
     # Namespace to run training, and store datasets and models
     namespace: nat-dpo-test
-    customization_config: meta/llama-3.1-8b-instruct@v1.0.0+A100
+    customization_config: nvidia/nemotron-3-nano-30b-a3b@v1.0.0+A100
     dataset_output_dir: .tmp/output/datasets  # Files saved here
     hyperparameters:
       training_type: dpo
@@ -144,7 +144,7 @@ trainer_adapters:
     use_full_message_history: false
     deploy_on_completion: true
     deployment_config:
-      image_name: nvcr.io/nim/meta/llama-3.1-8b-instruct
+      image_name: nvcr.io/nim/nvidia/nemotron-3-nano-30b-a3b
       image_tag: latest
       gpu: 2
       deployment_name: nat_dpo_tic_tac_toe_model
@@ -166,5 +166,4 @@ finetuning:
   trajectory_builder: dpo_builder
   trainer_adapter: nemo_customizer_trainer_adapter
   output_dir: ./.tmp/nat/finetuning/dpo_tic_tac_toe
-
 

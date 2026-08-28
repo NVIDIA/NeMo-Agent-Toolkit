@@ -22,7 +22,7 @@ llms:
       reasoning_budget: 1024
   judge:
     _type: nim
-    model: nvidia/nvidia-nemotron-nano-9b-v2
+    model: nvidia/nemotron-3-nano-30b-a3b
     max_tokens: 16384
 
 workflow:

@@ -118,7 +118,7 @@ Before getting started, it's possible to run this simple workflow and many other
      # Tell NeMo Agent Toolkit which LLM to use for the agent
      nim_llm:
        _type: nim
-       model_name: meta/llama-3.1-70b-instruct
+       model_name: nvidia/nemotron-3-super-120b-a12b
        temperature: 0.0
 
    workflow:

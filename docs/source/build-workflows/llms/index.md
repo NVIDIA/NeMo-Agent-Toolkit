@@ -42,13 +42,13 @@ The LLM configuration is defined in the `llms` section of the workflow configura
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
   openai_llm:
     _type: openai
     model_name: gpt-4o-mini
   aws_bedrock_llm:
     _type: aws_bedrock
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     region_name: us-east-1
   azure_openai_llm:
     _type: azure_openai

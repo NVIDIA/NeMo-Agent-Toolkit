@@ -103,7 +103,7 @@ curl -X GET "https://your-nmp-host/v1/customization/configs" \
 ```
 
 Common configurations:
-- `meta/llama-3.1-8b-instruct@v1.0.0+A100` - Llama 3.1 8B on A100 GPUs
+- `nvidia/nemotron-3-nano-30b-a3b@v1.0.0+A100` - Llama 3.1 8B on A100 GPUs
 - `meta/llama-3.2-1b-instruct@v1.0.0+A100` - Llama 3.2 1B on A100 GPUs
 
 ### 4. LLM Inference Endpoint
@@ -426,7 +426,7 @@ trainer_adapters:
     create_namespace_if_missing: true
 
     # === Model Configuration ===
-    customization_config: meta/llama-3.1-8b-instruct@v1.0.0+A100
+    customization_config: nvidia/nemotron-3-nano-30b-a3b@v1.0.0+A100
 
     # === Training Hyperparameters ===
     hyperparameters:
@@ -447,7 +447,7 @@ trainer_adapters:
     # === Deployment (Optional) ===
     deploy_on_completion: true
     deployment_config:
-      image_name: nvcr.io/nim/meta/llama-3.1-8b-instruct
+      image_name: nvcr.io/nim/nvidia/nemotron-3-nano-30b-a3b
       image_tag: latest
       gpu: 2
       deployment_name: nat_dpo_tic_tac_toe_model
