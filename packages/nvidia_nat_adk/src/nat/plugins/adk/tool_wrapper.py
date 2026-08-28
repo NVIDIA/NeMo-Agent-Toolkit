@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Tool Wrapper file"""
+
 import logging
 import types
 from collections.abc import AsyncIterator
@@ -55,7 +56,7 @@ def resolve_type(t: Any) -> Any:
 def google_adk_tool_wrapper(
     name: str,
     fn: Function,
-    _builder: Builder  # pylint: disable=W0613
+    _builder: Builder,  # pylint: disable=W0613
 ) -> Any:  # Changed from Callable[..., Any] to Any to allow FunctionTool return
     """Wrap a NAT `Function` as a Google ADK `FunctionTool`.
 
@@ -67,6 +68,18 @@ def google_adk_tool_wrapper(
         A Google ADK `FunctionTool` wrapping the NAT `Function`.
     """
     import inspect
+
+    def _field_default(field: Any) -> Any:
+        """Return a Pydantic field's default for an inspect signature."""
+        is_required = getattr(field, "is_required", None)
+        if is_required is not None and is_required():
+            return inspect.Parameter.empty
+        if getattr(field, "required", False):
+            return inspect.Parameter.empty
+        default_factory = getattr(field, "default_factory", None)
+        if default_factory is not None:
+            return default_factory()
+        return getattr(field, "default", inspect.Parameter.empty)
 
     async def callable_ainvoke(*args: Any, **kwargs: Any) -> Any:
         """Async function to invoke the NAT function.
@@ -137,16 +150,21 @@ def google_adk_tool_wrapper(
             if input_schema is not None:
                 model_fields = getattr(input_schema, "model_fields", None)
                 if model_fields is not None:
-                    field_items = ((n, f.annotation) for n, f in model_fields.items())
+                    field_items = ((n, f.annotation, _field_default(f)) for n, f in model_fields.items())
                 else:
-                    field_items = getattr(input_schema, "__annotations__", {}).items()
-                for param_name, param_annotation in field_items:
+                    field_items = (
+                        (n, a, inspect.Parameter.empty) for n, a in getattr(input_schema, "__annotations__", {}).items()
+                    )
+                for param_name, param_annotation, default in field_items:
                     params.append(
                         inspect.Parameter(
                             param_name,
                             inspect.Parameter.POSITIONAL_OR_KEYWORD,
                             annotation=resolve_type(param_annotation),
-                        ))
+                            default=default,
+                        )
+                    )
+            params.sort(key=lambda param: param.default is not inspect.Parameter.empty)
             setattr(func_to_wrap, "__signature__", inspect.Signature(parameters=params))
 
             return func_to_wrap

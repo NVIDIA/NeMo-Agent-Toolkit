@@ -32,6 +32,11 @@ class DummyInput(BaseModel):
     value: int
 
 
+class OptionalInput(BaseModel):
+    optional_value: int = 42
+    required_value: str
+
+
 class DummyOutput(BaseModel):
     result: int
 
@@ -59,7 +64,7 @@ class DummyFunction:
 
     def __init__(self):
         self.description = "Dummy ADK function"
-        self.config = type('Config', (), {'type': 'dummy_adk_func'})
+        self.config = type("Config", (), {"type": "dummy_adk_func"})
         self.has_single_output = True
         self.has_streaming_output = False
         self.input_schema = DummyInput
@@ -76,7 +81,7 @@ class DummyNestedFunction:
 
     def __init__(self):
         self.description = "Nested ADK function"
-        self.config = type('Config', (), {'type': 'nested_adk_func'})
+        self.config = type("Config", (), {"type": "nested_adk_func"})
         self.has_single_output = True
         self.has_streaming_output = False
         self.input_schema = OuterModel
@@ -93,7 +98,7 @@ class DummyStreamingFunction:
 
     def __init__(self):
         self.description = "Streaming ADK function"
-        self.config = type('Config', (), {'type': 'streaming_adk_func'})
+        self.config = type("Config", (), {"type": "streaming_adk_func"})
         self.has_single_output = False
         self.has_streaming_output = True
         self.input_schema = DummyInput
@@ -148,7 +153,7 @@ def test_resolve_type():
     assert resolved is str
 
 
-@patch('google.adk.tools.function_tool.FunctionTool')
+@patch("google.adk.tools.function_tool.FunctionTool")
 @pytest.mark.asyncio
 async def test_google_adk_tool_wrapper_simple_function(mock_function_tool):
     """Test the ADK tool wrapper with a simple function."""
@@ -160,18 +165,18 @@ async def test_google_adk_tool_wrapper_simple_function(mock_function_tool):
     mock_function_tool.return_value = mock_tool_instance
 
     # Call the wrapper
-    result = google_adk_tool_wrapper('dummy_adk_func', dummy_fn, mock_builder)
+    result = google_adk_tool_wrapper("dummy_adk_func", dummy_fn, mock_builder)
 
     # Verify FunctionTool was called
     assert mock_function_tool.called
     assert result == mock_tool_instance
     # Verify the callable was created with correct metadata
     call_args = mock_function_tool.call_args[0][0]
-    assert call_args.__name__ == 'dummy_adk_func'
+    assert call_args.__name__ == "dummy_adk_func"
     assert call_args.__doc__ == "Dummy ADK function"
 
 
-@patch('google.adk.tools.function_tool.FunctionTool')
+@patch("google.adk.tools.function_tool.FunctionTool")
 @pytest.mark.asyncio
 async def test_google_adk_tool_wrapper_nested_function(mock_function_tool):
     """Test the ADK tool wrapper with nested BaseModel input."""
@@ -182,7 +187,7 @@ async def test_google_adk_tool_wrapper_nested_function(mock_function_tool):
     mock_function_tool.return_value = mock_tool_instance
 
     # Call the wrapper
-    result = google_adk_tool_wrapper('nested_adk_func', dummy_fn, mock_builder)
+    result = google_adk_tool_wrapper("nested_adk_func", dummy_fn, mock_builder)
 
     # Verify FunctionTool was called
     assert mock_function_tool.called
@@ -190,11 +195,35 @@ async def test_google_adk_tool_wrapper_nested_function(mock_function_tool):
 
     # Verify the callable was created with correct metadata
     call_args = mock_function_tool.call_args[0][0]
-    assert call_args.__name__ == 'nested_adk_func'
+    assert call_args.__name__ == "nested_adk_func"
     assert call_args.__doc__ == "Nested ADK function"
 
 
-@patch('google.adk.tools.function_tool.FunctionTool')
+@patch("google.adk.tools.function_tool.FunctionTool")
+def test_google_adk_tool_wrapper_preserves_field_defaults(mock_function_tool):
+    """Optional input fields must remain optional in the ADK signature."""
+    import inspect
+
+    class OptionalFunction:
+        description = "Optional ADK function"
+        has_single_output = True
+        has_streaming_output = False
+        input_schema = OptionalInput
+
+        async def acall_invoke(self, *_args, **_kwargs):
+            return None
+
+    google_adk_tool_wrapper("optional_adk_func", OptionalFunction(), MagicMock())
+
+    callable_tool = mock_function_tool.call_args[0][0]
+    signature = inspect.signature(callable_tool)
+
+    assert list(signature.parameters) == ["required_value", "optional_value"]
+    assert signature.parameters["required_value"].default is inspect.Parameter.empty
+    assert signature.parameters["optional_value"].default == 42
+
+
+@patch("google.adk.tools.function_tool.FunctionTool")
 @pytest.mark.asyncio
 async def test_google_adk_tool_wrapper_streaming_function(mock_function_tool):
     """Test the ADK tool wrapper with streaming function."""
@@ -205,7 +234,7 @@ async def test_google_adk_tool_wrapper_streaming_function(mock_function_tool):
     mock_function_tool.return_value = mock_tool_instance
 
     # Call the wrapper
-    result = google_adk_tool_wrapper('streaming_adk_func', dummy_fn, mock_builder)
+    result = google_adk_tool_wrapper("streaming_adk_func", dummy_fn, mock_builder)
 
     # Verify FunctionTool was called
     assert mock_function_tool.called
@@ -213,7 +242,7 @@ async def test_google_adk_tool_wrapper_streaming_function(mock_function_tool):
 
     # Verify the callable was created for streaming
     call_args = mock_function_tool.call_args[0][0]
-    assert call_args.__name__ == 'streaming_adk_func'
+    assert call_args.__name__ == "streaming_adk_func"
     assert call_args.__doc__ == "Streaming ADK function"
 
 
@@ -223,11 +252,11 @@ async def test_callable_ainvoke_functionality():
     dummy_fn = DummyFunction()
 
     # Test the actual callable functionality
-    with patch('google.adk.tools.function_tool.FunctionTool') as mock_function_tool:
+    with patch("google.adk.tools.function_tool.FunctionTool") as mock_function_tool:
         mock_tool_instance = MagicMock()
         mock_function_tool.return_value = mock_tool_instance
 
-        google_adk_tool_wrapper('dummy_adk_func', dummy_fn, None)
+        google_adk_tool_wrapper("dummy_adk_func", dummy_fn, None)
 
         # Get the callable that was passed to FunctionTool
         callable_func = mock_function_tool.call_args[0][0]
@@ -242,11 +271,11 @@ async def test_callable_ainvoke_functionality():
     dummy_fn = DummyStreamingFunction()
 
     # Test the actual streaming callable functionality
-    with patch('google.adk.tools.function_tool.FunctionTool') as mock_function_tool:
+    with patch("google.adk.tools.function_tool.FunctionTool") as mock_function_tool:
         mock_tool_instance = MagicMock()
         mock_function_tool.return_value = mock_tool_instance
 
-        google_adk_tool_wrapper('streaming_adk_func', dummy_fn, None)
+        google_adk_tool_wrapper("streaming_adk_func", dummy_fn, None)
 
         # Get the callable that was passed to FunctionTool
         callable_func = mock_function_tool.call_args[0][0]
@@ -268,7 +297,7 @@ async def test_callable_ainvoke_functionality():
 # ----------------------------
 
 
-@patch('google.adk.tools.function_tool.FunctionTool')
+@patch("google.adk.tools.function_tool.FunctionTool")
 async def test_google_adk_tool_wrapper_pep563_annotations(mock_function_tool):
     """Regression test for GitHub issue #2161.
 
@@ -290,10 +319,7 @@ async def test_google_adk_tool_wrapper_pep563_annotations(mock_function_tool):
     sys.modules[pep563_module.__name__] = pep563_module
     try:
         exec(  # noqa: S102  (safe: controlled test-only string)
-            "from pydantic import BaseModel\n"
-            "class PEP563Input(BaseModel):\n"
-            "    text: str\n"
-            "    count: int\n",
+            "from pydantic import BaseModel\nclass PEP563Input(BaseModel):\n    text: str\n    count: int\n",
             pep563_module.__dict__,
         )
         PEP563Input = pep563_module.PEP563Input  # type: ignore[attr-defined]
@@ -328,9 +354,9 @@ async def test_google_adk_tool_wrapper_pep563_annotations(mock_function_tool):
 
     # All parameters must carry real type objects, not strings.
     for param in sig.parameters.values():
-        assert not isinstance(param.annotation,
-                              str), (f"Parameter '{param.name}' has a string annotation '{param.annotation}'; "
-                                     "expected a resolved type object.")
+        assert not isinstance(param.annotation, str), (
+            f"Parameter '{param.name}' has a string annotation '{param.annotation}'; expected a resolved type object."
+        )
 
     assert sig.parameters["text"].annotation is str
     assert sig.parameters["count"].annotation is int
