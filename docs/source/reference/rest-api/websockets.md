@@ -46,7 +46,6 @@ to the client.
     - Purpose: Used for tracking, referencing, and updating messages.
 - `conversation_id`: A unique identifier used to associate all messages and interactions with a specific conversation session.
     - Purpose: Groups-related messages within the same conversation/chat feed.
-    - Security: This routing identifier is not an ownership credential. Resuming an active conversation also requires the same resolved user identity that started it.
 - `parent_id`: Links a message to its originating message.
     -   Optional: Used for responses, updates, or continuations of earlier messages.
 - `content`: Stores the main data of the message.
@@ -66,18 +65,16 @@ to the client.
 
 ## Reconnecting an Active Conversation
 
-To resume an active workflow, reconnect with the workflow's `conversation_id` query parameter and an identity credential that resolves to the same user who started it. The server restores state only when both values match. A connection with another identity, or no identity, starts without the existing workflow state and does not receive its pending Human-in-the-Loop prompt.
+To resume an active workflow, reconnect with the workflow's `conversation_id` query parameter and an identity credential that resolves to the same user who started it. The server restores state only when both values match. A connection with another identity, or no identity, does not receive the existing workflow state or its pending Human-in-the-Loop prompt.
 
-The server accepts the following identity credentials for reconnection:
+The server accepts the following identity credentials:
 
-- A `nat-session` cookie.
+- A `nat-session` cookie or `?session=` query parameter.
 - A JWT Bearer token.
 - An API key supplied as a Bearer token or `X-API-Key` header.
 - HTTP Basic credentials.
 
-Cookies and authentication headers establish identity during the WebSocket upgrade. Browser clients should use a same-origin `nat-session` cookie, which the browser sends automatically. Do not put session credentials in the WebSocket URL because URLs can be retained in request logs, monitoring systems, and intermediary logs.
-
-Clients that cannot send credentials during the upgrade may send an identity-bearing `auth_message` containing a JWT, API key, or Basic credentials after connecting. Send that message before expecting restoration; a successful `auth_response_message` precedes the restored workflow state. The non-credential `oauth_mode_preference` message does not establish identity.
+Clients can also send a JWT, API key, or Basic credentials through an `auth_message`. Send the message before expecting restoration; restoration occurs after authentication succeeds.
 
 ## Auth Message
 This message allows clients to authenticate over a WebSocket connection when header-based or
