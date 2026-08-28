@@ -26,14 +26,15 @@ general:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.7
-    max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
 
 embedders:
-  nv-embedqa-e5-v5:
+  nemotron-3-embed-1b:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
 
 memory:
   redis_memory:
@@ -42,7 +43,7 @@ memory:
     db: 0
     port: 6379
     key_prefix: nat
-    embedder: nv-embedqa-e5-v5
+    embedder: nemotron-3-embed-1b
 
 functions:
   get_memory:
@@ -64,7 +65,7 @@ functions:
 
 
 workflow:
-  _type: react_agent
+  _type: tool_calling_agent
   tool_names: [memory_add, get_memory]
   description: "A chat agent that can make memories and also recall memories"
   llm_name: nim_llm
