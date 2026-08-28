@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from typing import Any
+from typing import ClassVar
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -267,7 +268,7 @@ def test_google_adk_tool_wrapper_supports_legacy_and_annotation_fields(mock_func
         default_factory = None
 
     class LegacyInput:
-        __fields__ = {
+        __fields__: ClassVar[dict[str, object]] = {
             "required_value": type("RequiredField", (), {"annotation": str, "outer_type_": str, "required": True})(),
             "optional_value": LegacyField(),
         }
