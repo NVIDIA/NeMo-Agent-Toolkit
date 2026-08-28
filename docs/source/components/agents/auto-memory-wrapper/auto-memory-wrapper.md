@@ -197,7 +197,7 @@ async def handle_request(request):
     return result
 ```
 
-### Illustrative X-User-ID Header
+### Testing: X-User-ID Header
 
 This header is not authentication. The following example is illustrative only and assumes that a trusted upstream
 proxy has removed any client-supplied `X-User-ID` value, authenticated the request, and injected the header before
