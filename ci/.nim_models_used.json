@@ -11,11 +11,11 @@
     },
     {
       "model": "meta/llama-3.3-70b-instruct",
-      "num_configs": 27
+      "num_configs": 26
     },
     {
       "model": "nvidia/nemotron-3-super-120b-a12b",
-      "num_configs": 16
+      "num_configs": 17
     },
     {
       "model": "meta/llama-3.1-8b-instruct",
@@ -53,7 +53,11 @@
   "embedders": [
     {
       "model": "nvidia/nv-embedqa-e5-v5",
-      "num_configs": 23
+      "num_configs": 22
+    },
+    {
+      "model": "nvidia/nemotron-3-embed-1b",
+      "num_configs": 1
     },
     {
       "model": "nvidia/llama-nemotron-embed-1b-v2",
