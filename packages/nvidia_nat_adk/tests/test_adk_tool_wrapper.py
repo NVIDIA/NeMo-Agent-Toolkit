@@ -195,7 +195,7 @@ async def test_google_adk_tool_wrapper_nested_function(mock_function_tool):
 
     # Verify the callable was created with correct metadata
     call_args = mock_function_tool.call_args[0][0]
-    assert call_args.__name__ == "nested_adk_func"
+    assert call_args.__name__ == 'nested_adk_func'
     assert call_args.__doc__ == "Nested ADK function"
 
 
@@ -242,7 +242,7 @@ async def test_google_adk_tool_wrapper_streaming_function(mock_function_tool):
 
     # Verify the callable was created for streaming
     call_args = mock_function_tool.call_args[0][0]
-    assert call_args.__name__ == "streaming_adk_func"
+    assert call_args.__name__ == 'streaming_adk_func'
     assert call_args.__doc__ == "Streaming ADK function"
 
 
