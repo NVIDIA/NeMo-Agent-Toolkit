@@ -21,6 +21,21 @@ The NeMo Agent Toolkit Memory subsystem is designed to store and retrieve a user
 
 The memory module is designed to be extensible, allowing developers to create custom memory back-ends, providers in NeMo Agent Toolkit terminology.
 
+## User Identity for Memory Tools
+
+The built-in `add_memory`, `get_memory`, and `delete_memory` tools bind every operation to an identity that the LLM
+cannot supply. Set an optional `user_id` in the tool configuration for a fixed service or single-user identity. When
+it is omitted, the tool reads `Context.user_id` for the current invocation. If neither is available, the operation
+fails rather than accessing an unscoped memory namespace.
+
+```yaml
+functions:
+  get_memory:
+    _type: get_memory
+    memory: user_memory
+    user_id: service_user  # Optional; otherwise use the current Context.user_id
+```
+
 ## Included Memory Modules
 The NeMo Agent Toolkit includes four memory module providers, all of which are available as plugins:
 * [Mem0](https://mem0.ai/) which is provided by the [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) plugin.
@@ -93,11 +108,16 @@ The automatic memory wrapper agent supports several configuration parameters:
 
 User ID is automatically extracted at runtime for memory isolation via:
 1. `SessionManager.session(user_id=...)` - For production with custom auth middleware (recommended)
-2. `X-User-ID` HTTP header - For testing without middleware
+2. `X-User-ID` HTTP header - Illustrative/testing only; assumes a trusted upstream proxy authenticates the request
+   and injects this header
 3. Console front end `user_id` - Defaults to `"nat_run_user_id"` for `nat run`
 
 Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
 For `nat run`, pass `--conversation_id` when testing independent memory conversations from the CLI.
+
+Never treat a client-supplied `X-User-ID` header as authentication. The header fallback is illustrative only and is
+safe in production only when a trusted upstream proxy removes any client-supplied value and injects the authenticated
+identity.
 
 For detailed configuration and usage examples, refer to the `examples/agents/auto_memory_wrapper/README.md` guide.
 

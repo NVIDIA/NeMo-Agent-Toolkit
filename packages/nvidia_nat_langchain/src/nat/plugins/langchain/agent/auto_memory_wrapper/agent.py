@@ -74,7 +74,8 @@ class AutoMemoryWrapperGraph:
         Priority order:
         1. Context.user_id - For authenticated sessions (set via SessionManager.session())
         2. user_manager.get_id() - Legacy/custom context compatibility
-        3. X-User-ID HTTP header - For testing/simple auth without middleware
+        3. X-User-ID HTTP header - Illustrative/testing only; assumes a trusted upstream proxy
+           has authenticated the request and injected the header
         4. "default_user" - Fallback for development/testing without authentication
 
         Returns:
@@ -100,7 +101,8 @@ class AutoMemoryWrapperGraph:
             except Exception as e:
                 logger.debug(f"Failed to get user_id from user_manager: {e}")
 
-        # Priority 3: Extract from X-User-ID HTTP header (temporary workaround for testing)
+        # Priority 3: Extract an identity header injected by a trusted upstream proxy. This is illustrative/testing
+        # support only; an application must not accept a client-supplied X-User-ID header as authentication.
         metadata = getattr(self._context, "metadata", None)
         headers = getattr(metadata, "headers", None) if metadata else None
         if headers:

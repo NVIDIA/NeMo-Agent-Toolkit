@@ -49,19 +49,20 @@ functions:
   get_memory:
     _type: get_memory
     memory: redis_memory
+    user_id: redis
     description: |
       Always call this tool before calling any other tools, even if the user does not mention to use it.
       The question should be about user preferences which will help you format your response.
       For example: "How does the user like responses formatted?".
-      Use "redis" for the user_id
 
   memory_add:
     _type: add_memory
     memory: redis_memory
+    user_id: redis
     description: |
       Add any facts about user preferences to long term memory. Always use this if users mention a preference.
       The input to this tool should be a string that describes the user's preference, not the question or answer.
-      Use "redis" for the user_id. Be sure to include any relevant tags for the memory as a list of strings. Also include key value pairs for metadata
+      Include any relevant tags for the memory as a list of strings and key-value pairs for metadata.
 
 
 workflow:
@@ -76,14 +77,13 @@ workflow:
 
     IMPORTANT MEMORY TOOL REQUIREMENTS:
     1. You MUST use get_memory tool with the exact JSON format below
-    2. You MUST include ALL required parameters (query, top_k, user_id)
+    2. You MUST include ALL required parameters (query, top_k)
     3. The input MUST be a valid JSON object with no extra text or formatting
 
     For get_memory tool, you MUST use this exact format:
     {{
         "query": "your search query here",
-        "top_k": 5,
-        "user_id": "redis"
+        "top_k": 5
     }}
 
     For memory_add tool, you MUST use this exact format:
@@ -98,7 +98,6 @@ workflow:
                 "content": "Hello Alex! I've noted you are looking for a trip to New York."
             }}
         ],
-        "user_id": "redis",
         "metadata": {{
             "key_value_pairs": {{
                 "type": "travel",

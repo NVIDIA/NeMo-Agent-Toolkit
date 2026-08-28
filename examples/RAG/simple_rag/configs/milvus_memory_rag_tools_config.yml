@@ -44,12 +44,14 @@ functions:
   add_memory:
     _type: add_memory
     memory: saas_memory
+    user_id: user_12
     description: |
       Add any facts about user preferences to long term memory. Always use this if users mention a preference.
       The input to this tool should be a string that describes the user's preference, not the question or answer.
   get_memory:
     _type: get_memory
     memory: saas_memory
+    user_id: user_12
     description: |
       Always call this tool before calling any other tools, even if the user does not mention to use it.
       The question should be about user preferences which will help you format your response.

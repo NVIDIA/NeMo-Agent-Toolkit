@@ -190,12 +190,14 @@ functions:
   add_memory:
     _type: add_memory
     memory: saas_memory
+    user_id: user_12
     description: |
       Add any facts about user preferences to long term memory. Always use this if users mention a preference.
       The input to this tool should be a string that describes the user's preference, not the question or answer.
   get_memory:
     _type: get_memory
     memory: saas_memory
+    user_id: user_12
     description: |
       Always call this tool before calling any other tools, even if the user does not mention to use it.
       The question should be about user preferences which will help you format your response.
@@ -214,6 +216,8 @@ Explanation:
 
 - We define a memory entry named `saas_memory` with `_type: mem0_memory`, using the [Mem0](https://mem0.ai/) provider included in the [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) plugin.
 - Then we define two tools (functions in NeMo Agent Toolkit terminology) that reference `saas_memory`: `add_memory` and `get_memory`.
+- The optional `user_id` is a fixed identity for these tools. If it is omitted, the tools use the current invocation's
+  `Context.user_id` and fail if no identity is available. The LLM does not provide this value.
 - Finally, the `agent_memory` workflow references these two tool names.
 
 ### Automatic Memory with the Auto-Memory Wrapper
