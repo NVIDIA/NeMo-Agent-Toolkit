@@ -19,6 +19,7 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
+from pydantic import Field
 
 from nat.plugins.adk.tool_wrapper import google_adk_tool_wrapper
 from nat.plugins.adk.tool_wrapper import resolve_type
@@ -221,6 +222,34 @@ def test_google_adk_tool_wrapper_preserves_field_defaults(mock_function_tool):
     assert list(signature.parameters) == ["required_value", "optional_value"]
     assert signature.parameters["required_value"].default is inspect.Parameter.empty
     assert signature.parameters["optional_value"].default == 42
+
+
+@patch('google.adk.tools.function_tool.FunctionTool')
+def test_google_adk_tool_wrapper_handles_data_aware_default_factory(mock_function_tool):
+    """A default factory requiring validated data must not break signature creation."""
+    import inspect
+
+    class FactoryInput(BaseModel):
+        required_value: str
+        generated: list[str] = Field(default_factory=list)
+        derived: str = Field(default_factory=lambda data: data["required_value"])
+
+    class FactoryFunction:
+        description = "Factory ADK function"
+        has_single_output = True
+        has_streaming_output = False
+        input_schema = FactoryInput
+
+        async def acall_invoke(self, *_args, **_kwargs):
+            return None
+
+    google_adk_tool_wrapper("factory_adk_func", FactoryFunction(), MagicMock())
+
+    signature = inspect.signature(mock_function_tool.call_args[0][0])
+
+    assert list(signature.parameters) == ["required_value", "generated", "derived"]
+    assert signature.parameters["generated"].default == []
+    assert signature.parameters["derived"].default is None
 
 
 @patch('google.adk.tools.function_tool.FunctionTool')
