@@ -54,6 +54,14 @@ class OutputVerifierMiddlewareConfig(DefenseMiddlewareConfig, name="output_verif
 
     threshold: float = Field(default=0.7, description="Confidence threshold for threat detection (0.0-1.0)")
 
+    fail_closed: bool = Field(
+        default=False,
+        description=(
+            "If True, treat an unavailable or invalid verifier result as a threat and apply the configured action. "
+            "If False (default), allow output through on verifier errors (fail-open). To block output, set action "
+            "to 'refusal'."),
+    )
+
     tool_description: str | None = Field(
         default=None, description="Description of what the tool/function does (optional, helps LLM verify correctness)")
 
@@ -162,6 +170,7 @@ Respond ONLY with valid JSON in this exact format:
         prompt = "\n".join(user_prompt_parts)
 
         response_text = None
+        confidence = None
         try:
             # Get the LLM (lazy loaded)
             llm = await self._get_llm()
@@ -182,8 +191,8 @@ Respond ONLY with valid JSON in this exact format:
             json_str = self._extract_json_from_response(response_text)
             result = json.loads(json_str)
 
-            threat_detected = result.get("threat_detected", False)
-            confidence = float(result.get("confidence", 0.0))
+            threat_detected = result["threat_detected"]
+            confidence = float(result["confidence"])
 
             return OutputVerificationResult(threat_detected=threat_detected,
                                             confidence=confidence,
@@ -199,13 +208,17 @@ Respond ONLY with valid JSON in this exact format:
                 "Output Verifier failed response length: %s",
                 len(response_text) if response_text else 0,
             )
-            return OutputVerificationResult(threat_detected=False,
-                                            confidence=0.0,
-                                            reason=f"Analysis failed: {e}",
-                                            correct_answer=None,
-                                            content_type=content_type,
-                                            should_refuse=False,
-                                            error=True)
+
+            if confidence is None:
+                confidence = 0.0  # Treat as high confidence threat if fail_closed
+
+            return OutputVerificationResult(threat_detected=self.config.fail_closed,
+                                                confidence=confidence,
+                                                reason=f"Analysis failed: {e}",
+                                                correct_answer=None,
+                                                content_type=content_type,
+                                                should_refuse=self.config.fail_closed,
+                                                error=True)
 
     async def _handle_threat(self,
                              content: Any,

@@ -62,6 +62,79 @@ def fixture_middleware_context():
 class TestOutputVerifierInvoke:
     """Test Output Verifier invoke behavior."""
 
+    async def test_missing_required_response_field_fails_open_by_default(self, mock_builder, middleware_context):
+        """Test incomplete verifier responses pass through when fail_closed is disabled."""
+        config = OutputVerifierMiddlewareConfig(llm_name="test_llm")
+        middleware = OutputVerifierMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = '{"confidence": 0.9}'
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        with patch('nat.plugins.security.middleware.defense.defense_middleware_output_verifier.logger'):
+            result = await middleware._analyze_content(42.0, TargetLocation.OUTPUT)
+
+        assert result.error
+        assert not result.threat_detected
+        assert not result.should_refuse
+
+    async def test_missing_required_response_field_fails_closed(self, mock_builder, middleware_context):
+        """Test incomplete verifier responses are treated as threats when fail_closed is enabled."""
+        config = OutputVerifierMiddlewareConfig(llm_name="test_llm", fail_closed=True)
+        middleware = OutputVerifierMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = '{"confidence": 0.9}'
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        with patch('nat.plugins.security.middleware.defense.defense_middleware_output_verifier.logger'):
+            result = await middleware._analyze_content(42.0, TargetLocation.OUTPUT)
+
+        assert result.error
+        assert result.threat_detected
+        assert result.should_refuse
+
+    async def test_verifier_exception_fails_closed(self, mock_builder, middleware_context):
+        """Test verifier exceptions are treated as threats when fail_closed is enabled."""
+        config = OutputVerifierMiddlewareConfig(llm_name="test_llm", fail_closed=True)
+        middleware = OutputVerifierMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("LLM unavailable"))
+        middleware._llm = mock_llm
+
+        with patch('nat.plugins.security.middleware.defense.defense_middleware_output_verifier.logger'):
+            result = await middleware._analyze_content(42.0, TargetLocation.OUTPUT)
+
+        assert result.error
+        assert result.threat_detected
+        assert result.should_refuse
+
+    async def test_fail_closed_respects_partial_compliance_action(self, mock_builder, middleware_context):
+        """Test partial_compliance logs a verifier failure but allows the output."""
+        config = OutputVerifierMiddlewareConfig(llm_name="test_llm", fail_closed=True, action="partial_compliance")
+        middleware = OutputVerifierMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = '{"confidence": 0.9}'
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        async def mock_next(_value):
+            return 42.0
+
+        with patch('nat.plugins.security.middleware.defense.defense_middleware_output_verifier.logger'):
+            result = await middleware.function_middleware_invoke(10.0,
+                                                                  call_next=mock_next,
+                                                                  context=middleware_context)
+
+        assert result == 42.0
+
     async def test_simple_output_no_target_field(self, mock_builder, middleware_context):
         """Test analyzing simple output without target_field."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm", target_field=None, action="partial_compliance")
