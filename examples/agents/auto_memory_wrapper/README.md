@@ -133,8 +133,7 @@ User ID is extracted at runtime for memory isolation. Configure it through the f
 ### User ID Extraction Priority
 
 1. **`SessionManager.session(user_id=...)`** - For production with custom auth middleware (recommended)
-2. **`X-User-ID` HTTP header** - Illustrative/testing only; assumes a trusted upstream proxy authenticates the request
-   and injects the header
+2. **`X-User-ID` HTTP header** - Illustrative/testing only; assumes a hypothetical trusted upstream proxy authenticates the request and injects the header
 3. **Console front end `user_id`** - Defaults to `"nat_run_user_id"` for `nat run`
 
 Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
@@ -164,11 +163,9 @@ async def handle_request(request):
     return result
 ```
 
-### Illustrative X-User-ID Header
+### Testing: X-User-ID Header
 
-This header is not authentication. The following example is illustrative only and assumes that a trusted upstream
-proxy has removed any client-supplied `X-User-ID` value, authenticated the request, and injected the header before
-forwarding it to the application. Do not accept this header directly from untrusted clients.
+For quick testing without custom middleware:
 
 ```bash
 curl -X POST http://localhost:8000/chat \
@@ -177,6 +174,9 @@ curl -X POST http://localhost:8000/chat \
   -H "conversation-id: test_conv_001" \
   -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
 ```
+
+This header is not authentication. The example is illustrative only do not accept this header directly from untrusted clients.
+
 
 ### Local Development: Console User and Conversation IDs
 
@@ -216,9 +216,9 @@ workflow:
 
 ## Important Notes
 
-1. **User ID is runtime/front-end scoped** - Set via `SessionManager.session(user_id=...)` or `nat run --user_id`.
-   `X-User-ID` is illustrative only and requires a trusted upstream proxy to inject it.
+1. **User ID is runtime/front-end scoped** - Set via `SessionManager.session(user_id=...)`, `X-User-ID`, or `nat run --user_id`
 2. **Memory backends are interchangeable** - Works with any implementation of `MemoryEditor` interface
+3. `X-User-ID` HTTP header - Illustrative/testing only; assumes a trusted upstream proxy authenticates the request and injects this header
 
 ## Examples
 
