@@ -129,9 +129,7 @@ class TestOutputVerifierInvoke:
             return 42.0
 
         with patch('nat.plugins.security.middleware.defense.defense_middleware_output_verifier.logger'):
-            result = await middleware.function_middleware_invoke(10.0,
-                                                                  call_next=mock_next,
-                                                                  context=middleware_context)
+            result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
 
         assert result == 42.0
 

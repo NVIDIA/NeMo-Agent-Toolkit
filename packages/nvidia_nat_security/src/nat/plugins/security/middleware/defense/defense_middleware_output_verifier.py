@@ -213,12 +213,12 @@ Respond ONLY with valid JSON in this exact format:
                 confidence = 0.0  # Treat as high confidence threat if fail_closed
 
             return OutputVerificationResult(threat_detected=self.config.fail_closed,
-                                                confidence=confidence,
-                                                reason=f"Analysis failed: {e}",
-                                                correct_answer=None,
-                                                content_type=content_type,
-                                                should_refuse=self.config.fail_closed,
-                                                error=True)
+                                            confidence=confidence,
+                                            reason=f"Analysis failed: {e}",
+                                            correct_answer=None,
+                                            content_type=content_type,
+                                            should_refuse=self.config.fail_closed,
+                                            error=True)
 
     async def _handle_threat(self,
                              content: Any,
