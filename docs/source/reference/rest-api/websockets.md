@@ -79,7 +79,7 @@ Clients can also send a JWT, API key, or Basic credentials through an `auth_mess
 ## Auth Message
 This message allows clients to authenticate over a WebSocket connection when header-based or
 cookie-based authentication is not feasible (e.g., browser WebSocket APIs that do not support custom headers).
-The server resolves the credentials to a user identity and associates it with the current session.
+The server validates the credentials, resolves a user identity, and associates it with the current session.
 The server responds with an `auth_response_message` in both cases — with `status: "success"` and the resolved
 `user_id` on success, or `status: "error"` with structured error details on failure.
 
