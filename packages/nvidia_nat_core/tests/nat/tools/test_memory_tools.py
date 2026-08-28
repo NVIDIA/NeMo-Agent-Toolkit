@@ -44,9 +44,15 @@ class _Builder:
 @pytest.mark.parametrize(
     "input_type, input_value",
     [
-        (AddMemoryInput, {"memory": "hello", "user_id": "attacker"}),
-        (GetMemoryInput, {"query": "hello", "top_k": 1, "user_id": "attacker"}),
-        (DeleteMemoryInput, {"user_id": "attacker"}),
+        (AddMemoryInput, {
+            "memory": "hello", "user_id": "attacker"
+        }),
+        (GetMemoryInput, {
+            "query": "hello", "top_k": 1, "user_id": "attacker"
+        }),
+        (DeleteMemoryInput, {
+            "user_id": "attacker"
+        }),
     ],
 )
 def test_memory_tool_inputs_reject_llm_supplied_user_id(input_type, input_value):

@@ -28,7 +28,6 @@ from pydantic import model_validator
 from nat.data_models.component_ref import MemoryRef
 from nat.data_models.function import FunctionBaseConfig
 
-
 UserIdResolver = Callable[[], str | Awaitable[str]]
 
 
