@@ -193,6 +193,17 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, LanggraphWrapperO
         return ChatResponseChunk.from_string(text)
 
 
+def split_graph_path(graph: str) -> tuple[str, str]:
+    """Split a graph reference into its module path and graph name."""
+    module_path, separator, name = graph.rpartition(":")
+    if not separator or not module_path or not name:
+        raise ValueError(
+            f"Graph definition path '{graph}' must contain a non-empty module path and graph name "
+            "separated by a colon (e.g., '/path/to/module.py:graph_name').")
+
+    return module_path, name
+
+
 @register_function(config_type=LanggraphWrapperConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def register(config: LanggraphWrapperConfig, b: Builder):
 
@@ -227,14 +238,7 @@ async def register(config: LanggraphWrapperConfig, b: Builder):
                     f"Env '{config.env}' is not a valid type. At the moment, we only support strings and dictionaries.")
 
         # Now process the graph.
-        # Check that config.graph contains exactly one colon
-        if config.graph.count(":") != 1:
-            raise ValueError(
-                f"Graph definition path '{config.graph}' must contain exactly one colon to split module and name "
-                f"(e.g., '/path/to/module.py:graph_name'). Found {config.graph.count(':')}.")
-
-        # Split the graph path into module and name
-        module_path, name = config.graph.rsplit(":", 1)
+        module_path, name = split_graph_path(config.graph)
 
         unique_module_name = f"langgraph_workflow_{uuid.uuid4().hex[:8]}"
 
