@@ -411,14 +411,27 @@ class FunctionInfo:
             if (single_fn_desc.output_type != single_to_stream_fn_desc.input_type):
                 raise ValueError("single_to_stream_fn must have the same input type as the output from single_fn")
 
-            async def _converted_stream_fn(
-                    message: single_fn_desc.input_type) -> AsyncGenerator[single_to_stream_fn_desc.output_type]:
-                value = await single_fn(message)
+            if (single_fn_desc.arg_count == 0):
 
-                async for m in single_to_stream_fn(value):
-                    yield m
+                async def _converted_stream_fn_empty() -> AsyncGenerator[single_to_stream_fn_desc.output_type]:
+                    no_args_fn = typing.cast(Callable[[], Awaitable[typing.Any]], single_fn)
+                    value = await no_args_fn()
 
-            final_stream_fn = _converted_stream_fn
+                    async for m in single_to_stream_fn(value):
+                        yield m
+
+                final_stream_fn = _converted_stream_fn_empty
+
+            else:
+
+                async def _converted_stream_fn(
+                        message: single_fn_desc.input_type) -> AsyncGenerator[single_to_stream_fn_desc.output_type]:
+                    value = await single_fn(message)
+
+                    async for m in single_to_stream_fn(value):
+                        yield m
+
+                final_stream_fn = _converted_stream_fn
 
         if (stream_to_single_fn is not None):
 
@@ -442,11 +455,21 @@ class FunctionInfo:
                 raise ValueError("stream_to_single_fn must take an async generator with "
                                  "the same input type as the output from stream_fn")
 
-            async def _converted_single_fn(message: stream_fn_desc.input_type) -> stream_to_single_fn_desc.output_type:
+            if (stream_fn_desc.arg_count == 0):
 
-                return await stream_to_single_fn(stream_fn(message))
+                async def _converted_single_fn_empty() -> stream_to_single_fn_desc.output_type:
+                    no_args_fn = typing.cast(Callable[[], AsyncGenerator[typing.Any]], stream_fn)
+                    return await stream_to_single_fn(no_args_fn())
 
-            final_single_fn = _converted_single_fn
+                final_single_fn = _converted_single_fn_empty
+
+            else:
+
+                async def _converted_single_fn(
+                        message: stream_fn_desc.input_type) -> stream_to_single_fn_desc.output_type:
+                    return await stream_to_single_fn(stream_fn(message))
+
+                final_single_fn = _converted_single_fn
 
         # Check the input/output of the functions to make sure they are all BaseModels
         if (final_single_fn is not None):
@@ -635,18 +658,33 @@ class FunctionInfo:
                         break
 
                 if (stream_arg):
-                    single_input_type = sig.parameters[list(sig.parameters.keys())[0]].annotation
                     single_output_type = stream_arg.single_output_type
 
-                    async def _stream_to_single_output(message: single_input_type) -> single_output_type:
-                        values = []
+                    if (len(sig.parameters) == 0):
 
-                        async for m in stream_fn(message):
-                            values.append(m)
+                        async def _stream_to_single_output_empty() -> single_output_type:
+                            values = []
 
-                        return stream_arg.convert(values)
+                            no_args_stream_fn = typing.cast(Callable[[], AsyncGenerator[typing.Any]], stream_fn)
+                            async for m in no_args_stream_fn():
+                                values.append(m)
 
-                    single_fn = _stream_to_single_output
+                            return stream_arg.convert(values)
+
+                        single_fn = _stream_to_single_output_empty
+
+                    else:
+                        single_input_type = sig.parameters[list(sig.parameters.keys())[0]].annotation
+
+                        async def _stream_to_single_output(message: single_input_type) -> single_output_type:
+                            values = []
+
+                            async for m in stream_fn(message):
+                                values.append(m)
+
+                            return stream_arg.convert(values)
+
+                        single_fn = _stream_to_single_output
 
         elif (inspect.iscoroutinefunction(fn)):
             single_fn = fn
