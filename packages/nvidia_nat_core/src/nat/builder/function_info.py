@@ -453,7 +453,22 @@ class FunctionInfo:
 
             final_single_fn_desc = FunctionDescriptor.from_function(final_single_fn)
 
-            if (final_single_fn_desc.arg_count > 1):
+            if (final_single_fn_desc.arg_count == 0):
+                input_schema = input_schema or create_model("EmptyInputSchema")
+
+                saved_final_single_fn = final_single_fn
+
+                async def _convert_input_pydantic_empty(
+                        value: input_schema) -> final_single_fn_desc.output_type:
+                    no_args_fn = typing.cast(Callable[[], Awaitable[typing.Any]], saved_final_single_fn)
+                    return await no_args_fn()
+
+                final_single_fn = _convert_input_pydantic_empty
+
+                # Reset the descriptor
+                final_single_fn_desc = FunctionDescriptor.from_function(final_single_fn)
+
+            elif (final_single_fn_desc.arg_count > 1):
                 if (input_schema is not None):
                     logger.warning("Using provided input_schema for multi-argument function")
                 else:
@@ -495,7 +510,23 @@ class FunctionInfo:
 
             final_stream_fn_desc = FunctionDescriptor.from_function(final_stream_fn)
 
-            if (final_stream_fn_desc.arg_count > 1):
+            if (final_stream_fn_desc.arg_count == 0):
+                input_schema = input_schema or create_model("EmptyInputSchema")
+
+                saved_final_stream_fn = final_stream_fn
+
+                async def _convert_input_pydantic_empty_stream(
+                        value: input_schema) -> AsyncGenerator[final_stream_fn_desc.output_type]:
+                    no_args_fn = typing.cast(Callable[[], AsyncGenerator[typing.Any]], saved_final_stream_fn)
+                    async for m in no_args_fn():
+                        yield m
+
+                final_stream_fn = _convert_input_pydantic_empty_stream
+
+                # Reset the descriptor
+                final_stream_fn_desc = FunctionDescriptor.from_function(final_stream_fn)
+
+            elif (final_stream_fn_desc.arg_count > 1):
                 if (input_schema is not None):
                     logger.warning("Using provided input_schema for multi-argument function")
                 else:

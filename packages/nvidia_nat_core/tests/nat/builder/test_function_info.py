@@ -59,6 +59,14 @@ async def fn_int_to_str(param: int) -> str:
     return str(param)
 
 
+async def fn_no_args_to_str() -> str:
+    return "no args"
+
+
+async def fn_no_args_to_str_stream() -> AsyncGenerator[str]:
+    yield "no args stream"
+
+
 async def fn_int_annotated_to_str(param: typing.Annotated[int, ...]) -> str:
     return str(param)
 
@@ -831,6 +839,17 @@ async def test_create_and_from_fn_description():
 
     assert info_from_fn.description == "Test Description"
     assert info_create.description == "Test Description"
+
+
+async def test_create_and_from_fn_no_args():
+    single_info = FunctionInfo.from_fn(fn_no_args_to_str)
+    assert single_info.input_schema.model_fields == {}
+    assert await single_info.single_fn(single_info.input_schema()) == "no args"
+
+    stream_info = FunctionInfo.from_fn(fn_no_args_to_str_stream)
+    assert stream_info.input_schema.model_fields == {}
+    values = [value async for value in stream_info.stream_fn(stream_info.input_schema())]
+    assert values == ["no args stream"]
 
 
 async def test_create_and_from_fn_input_schema():
