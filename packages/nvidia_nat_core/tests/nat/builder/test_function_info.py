@@ -17,6 +17,7 @@ import inspect
 import typing
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
+from collections.abc import Sequence
 from types import NoneType
 
 import pytest
@@ -68,11 +69,20 @@ async def fn_no_args_to_str_stream() -> AsyncGenerator[str]:
     yield "no args stream"
 
 
-def collect_strings(values: list[str]) -> str:
+def collect_strings(values: Sequence[str]) -> str:
+    """Combine streamed strings into one result.
+
+    Args:
+        values: The streamed string values.
+
+    Returns:
+        The concatenated string.
+    """
     return "".join(values)
 
 
 async def fn_no_args_streaming() -> typing.Annotated[AsyncGenerator[str], Streaming(convert=collect_strings)]:
+    """Yield values from a zero-argument streaming function."""
     yield "streaming"
 
 

@@ -674,7 +674,7 @@ class FunctionInfo:
                         single_fn = _stream_to_single_output_empty
 
                     else:
-                        single_input_type = sig.parameters[list(sig.parameters.keys())[0]].annotation
+                        single_input_type = next(iter(sig.parameters.values())).annotation
 
                         async def _stream_to_single_output(message: single_input_type) -> single_output_type:
                             values = []
