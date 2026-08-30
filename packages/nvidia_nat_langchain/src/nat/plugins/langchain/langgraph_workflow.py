@@ -197,9 +197,8 @@ def split_graph_path(graph: str) -> tuple[str, str]:
     """Split a graph reference into its module path and graph name."""
     module_path, separator, name = graph.rpartition(":")
     if not separator or not module_path or not name:
-        raise ValueError(
-            f"Graph definition path '{graph}' must contain a non-empty module path and graph name "
-            "separated by a colon (e.g., '/path/to/module.py:graph_name').")
+        raise ValueError(f"Graph definition path '{graph}' must contain a non-empty module path and graph name "
+                         "separated by a colon (e.g., '/path/to/module.py:graph_name').")
 
     return module_path, name
 
