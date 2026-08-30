@@ -219,9 +219,12 @@ def _retry_decorator(
         at least once.
 
     instance_context_aware:
-        If True, the decorator will check for a retry context flag on the first
-        argument (assumed to be 'self'). If the flag is set, retries are skipped
-        to prevent retry storms in nested method calls.
+        If True, the decorator tracks retry state in the module-level
+        `_in_retry_context` ContextVar, keyed by the wrapped object and its
+        owning task or thread (see `_RetryContext`), rather than a flag on the
+        first argument. Nested calls within the same call chain then skip
+        their own retries, while concurrent callers sharing the same instance
+        retry independently.
     """
 
     # ``retries`` counts total attempts. A non-positive budget would make the
@@ -243,7 +246,7 @@ def _retry_decorator(
             Scoped to the (object, owning task/thread) pair via the module-level
             `_in_retry_context`, not to the patched instance alone."""
 
-            __slots__ = ("_key", "_enabled", "_token")
+            __slots__ = ("_enabled", "_key", "_token")
 
             def __init__(self, args: tuple[Any, ...]):
                 if use_context_aware and args:
@@ -269,8 +272,32 @@ def _retry_decorator(
                          _exc_type: type[BaseException] | None,
                          _exc: BaseException | None,
                          _tb: types.TracebackType | None) -> None:
-                if self._token is not None:
+                if self._token is None:
+                    return
+                try:
                     _in_retry_context.reset(self._token)
+                except ValueError:
+                    # The token was minted by __enter__ running in a different
+                    # Context than the one __exit__ is running in now. This is
+                    # reachable for _agen_with_retry: if a caller does not fully
+                    # drain the async generator (an early `break`, an exception
+                    # elsewhere, or the caller task being cancelled), CPython's
+                    # async-generator finalizer later resumes this generator's
+                    # `with` block to run GeneratorExit cleanup inside a freshly
+                    # created task that only holds a *copy* of the original
+                    # Context, not the Context object the token belongs to.
+                    # ContextVar.reset() requires that exact Context object, so
+                    # resetting is impossible there. It is also unnecessary: that
+                    # copied context is discarded the moment this cleanup task
+                    # finishes, so leaving its copy of _in_retry_context
+                    # unreset never leaks into any later call chain.
+                    logger.debug(
+                        "Retry context for key %s was entered in a different task's "
+                        "context than the one running cleanup now (likely async-generator "
+                        "finalization after the generator was not fully consumed); skipping "
+                        "the ContextVar reset.",
+                        self._key,
+                    )
 
         async def _call_with_retry_async(*args, **kw) -> T:
             with _RetryContext(args) as already_in_context:

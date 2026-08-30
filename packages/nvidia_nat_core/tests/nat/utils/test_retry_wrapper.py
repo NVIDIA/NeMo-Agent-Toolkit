@@ -877,6 +877,53 @@ async def test_minimal_budget_async_generator_executes_once(retries):
     assert call_count == 1
 
 
+class StreamingService:
+    """Service with a public async-generator method, the same shape as the
+    streaming methods (e.g. `astream`) that `patch_with_retry` wraps on real
+    LLM clients."""
+
+    async def stream(self):
+        yield 1
+        yield 2
+        yield 3
+
+
+async def test_agen_cleanup_from_a_different_task_does_not_raise():
+    """Closing a wrapped async generator from a task other than the one that
+    started iterating it must not raise out of the retry context's cleanup.
+
+    A caller that does not fully drain an `instance_context_aware`-wrapped
+    async generator (an early `break`, an exception elsewhere, or simply
+    letting it be garbage-collected) has its `GeneratorExit` cleanup driven by
+    asyncio's async-generator finalizer, which runs inside a freshly created
+    task holding only a *copy* of the original Context. `ContextVar.reset()`
+    requires the exact Context object the token was minted in, so without a
+    guard this raises `ValueError: ... was created in a different Context`
+    from inside asyncio's own finalizer machinery, where nothing in ordinary
+    calling code can catch it: it surfaces as an unhandled "Task exception was
+    never retrieved" error on the event loop instead."""
+    svc = StreamingService()
+    svc = ar.patch_with_retry(svc, retries=2, base_delay=0)
+
+    loop = asyncio.get_running_loop()
+    loop_exceptions = []
+    loop.set_exception_handler(lambda _loop, context: loop_exceptions.append(context))
+
+    agen = svc.stream()
+    assert await agen.__anext__() == 1
+
+    async def close_from_other_task():
+        await agen.aclose()
+
+    # asyncio.create_task() copies the current Context; even though the copy's
+    # values match, it is a distinct Context object from the one __enter__ ran
+    # in above, reproducing the same mismatch the async-generator finalizer
+    # hits in the wild.
+    await asyncio.create_task(close_from_other_task())
+
+    assert loop_exceptions == []
+
+
 @pytest.mark.parametrize("retries", [0, -1, 1])
 def test_minimal_budget_failure_raises_after_single_attempt(retries):
     """A budget of 1 or below makes exactly one attempt and surfaces the failure."""
