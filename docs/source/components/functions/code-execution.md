@@ -23,7 +23,7 @@ status, and any errors.
 ## Usage
 
 Code execution requires a running [Piston server](https://github.com/engineer-man/piston). Follow the Piston setup
-instructions or connect to an existing server, then configure the function with the server's API URL.
+instructions or connect to an existing server, then configure the function with the API URL of the server.
 
 The config object for the `code_execution` function is shown below:
 ```python
