@@ -72,6 +72,7 @@ class AutoMemoryWrapperGraph:
         Extract user_id from runtime context.
 
         Priority order:
+
         1. Context.user_id - For authenticated sessions (set via SessionManager.session())
         2. user_manager.get_id() - Legacy/custom context compatibility
         3. X-User-ID HTTP header - Illustrative/testing only; assumes a trusted upstream proxy
