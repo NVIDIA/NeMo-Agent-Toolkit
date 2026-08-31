@@ -89,7 +89,7 @@ general:
 
 Supported values are `session_cookie`, `jwt`, `api_key`, and `basic`. The `api_key` value covers both Bearer API keys and the `X-API-Key` header. An empty list rejects every supplied identity credential. When a client supplies a disabled credential method, the server returns an authentication error and does not restore workflow state.
 
-JWT signature and claim verification is optional. Define one or more named JWT authentication providers, then select them with `identity_authentication` in the FastAPI front-end configuration. Each selected provider verifies JWTs from its configured issuer before the server resolves the user identity:
+JWT signature and claim verification is optional. Define one or more named JWT authentication providers, then select them with `identity_authentication` in the FastAPI front-end configuration. Each selected provider verifies JWT tokens from its configured issuer before the server resolves the user identity:
 
 ```yaml
 authentication:
@@ -110,7 +110,7 @@ general:
       - corporate_jwt
 ```
 
-Each JWT provider requires `issuer_url`, `jwks_uri`, and `audience`. It can also require `scopes` and configure `timeout` and `leeway`. Add another named provider and select it in `identity_authentication` to accept JWTs from another issuer. The issuer claim selects the matching provider; an unknown issuer or a failed signature, time, audience, or scope check returns an authentication error and does not restore workflow state. If `identity_authentication` is omitted, JWTs retain the existing decode-only behavior. Configuring `identity_authentication` while excluding `jwt` from `accepted_identity_credentials` is invalid.
+Each JWT provider requires `issuer_url`, `jwks_uri`, and `audience`. It can also require `scopes` and configure `timeout` and `leeway`. Add another named provider and select it in `identity_authentication` to accept JWT tokens from another issuer. The issuer claim selects the matching provider; an unknown issuer or a failed signature, time, audience, or scope check returns an authentication error and does not restore workflow state. If `identity_authentication` is omitted, JWT tokens retain the existing decode-only behavior. Configuring `identity_authentication` while excluding `jwt` from `accepted_identity_credentials` is invalid.
 
 ## Auth Message
 This message allows clients to authenticate over a WebSocket connection when header-based or
