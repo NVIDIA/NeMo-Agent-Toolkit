@@ -210,15 +210,11 @@ general:
     identity_header: X-User-ID
 ```
 
-Use this setting only for local testing or behind an authenticating reverse proxy. It is secure only when all of the
-following are true:
+Use this setting only for local testing or behind an authenticating reverse proxy. It is secure only when all of the following are true:
 
 - Clients cannot connect to `nat serve` directly; only the trusted proxy can reach its listening port.
-- The proxy authenticates every request and overwrites `X-User-ID` with the authenticated principal. It must not
-  preserve, append, or forward a client-supplied value.
-- The backend Docker network and every container attached to it are trusted. Do not publish the `nat serve` port to the
-  host; publish only the proxy port.
-- External traffic is protected as appropriate, typically with TLS at the proxy.
+- The proxy authenticates every request and overwrites `X-User-ID` with the authenticated principal. It must not preserve, append, or forward a client-supplied value.
+- `nat serve` is network isolated in such a way that all incoming network traffic is from the proxy.
 
 When configured, the header is authoritative for HTTP and WebSocket requests. A missing, empty, or repeated header is
 rejected. Other connection credentials and WebSocket auth messages cannot replace it. The setting cannot be combined
