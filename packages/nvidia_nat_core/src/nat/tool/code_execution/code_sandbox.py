@@ -136,90 +136,6 @@ class Sandbox(abc.ABC):
             return {"process_status": "timeout", "stdout": "", "stderr": "Timed out\n"}
 
 
-class LocalSandbox(Sandbox):
-    """Locally hosted sandbox."""
-
-    def __init__(self, *, uri: HttpUrl):
-        super().__init__(uri=uri)
-
-    @override
-    def _get_execute_url(self, uri: HttpUrl) -> str:
-        return urljoin(str(uri), "execute")
-
-    @override
-    def _parse_request_output(self, output: requests.Response) -> dict[str, str]:
-        try:
-            output_json = output.json()
-            assert isinstance(output_json, dict)
-            return output_json
-        except (requests.exceptions.JSONDecodeError, AssertionError) as e:
-            logger.exception("Error parsing output: %s. %s", output.text, e)
-            return {'process_status': 'error', 'stdout': '', 'stderr': f'Unknown error: {e} \"{output.text}\"'}
-
-    @override
-    def _prepare_request(self,
-                         generated_code: str,
-                         timeout_seconds: float,
-                         language: str = "python",
-                         **kwargs) -> dict[str, Any]:
-        request = {
-            "generated_code": generated_code,
-            "timeout": timeout_seconds,
-            "language": language,
-        }
-        return request
-
-    @override
-    async def execute_code(
-        self,
-        generated_code: str,
-        timeout_seconds: float = 10.0,
-        language: str = "python",
-        max_output_characters: int = 1000,
-    ) -> dict[str, str]:
-        """Override execute_code to bypass the wrapper logic and send user code directly to our server."""
-
-        logger.debug("Raw input generated_code: %s", generated_code)
-
-        # The input appears to be a string representation of a dictionary
-        # We need to parse it and extract the actual code
-        try:
-            # Try to evaluate the string as a Python literal (dictionary)
-            import ast
-            parsed_dict = ast.literal_eval(generated_code)
-            if isinstance(parsed_dict, dict) and 'generated_code' in parsed_dict:
-                actual_code = parsed_dict['generated_code']
-                assert isinstance(actual_code, str)
-                logger.debug("Extracted code from dict: %s...", actual_code[:100])
-            else:
-                # If it's not a dict or doesn't have the expected key, use as-is
-                actual_code = generated_code
-                logger.debug("Using code as-is: %s...", actual_code[:100])
-        except (ValueError, SyntaxError):
-            # If parsing fails, use the input as-is
-            actual_code = generated_code
-            logger.debug("Failed to parse, using as-is: %s...", actual_code[:100])
-
-        # Clean the actual code more carefully to avoid removing backticks that are part of Python code
-        # remove all leading/trailing whitespace -- strip()
-        # remove all leading/trailing backticks -- strip("`")
-        # may potentially start with python, so just trim from the front.
-        POTENTIAL_PREFIXES = ["python"]
-        actual_code = actual_code.strip().strip("`")
-        for prefix in POTENTIAL_PREFIXES:
-            if actual_code.startswith(prefix):
-                actual_code = actual_code[len(prefix):]
-                break
-
-        # Send the user's code directly to our server without any wrapper logic
-        # Our server already handles stdout/stderr capture and error handling
-        request = self._prepare_request(actual_code, timeout_seconds, language)
-        try:
-            return self._send_request(request, timeout_seconds)
-        except requests.exceptions.Timeout:
-            return {"process_status": "timeout", "stdout": "", "stderr": "Timed out\n"}
-
-
 class PistonSandbox(Sandbox):
     """Piston sandbox (https://github.com/engineer-man/piston)"""
 
@@ -254,11 +170,9 @@ class PistonSandbox(Sandbox):
         }
 
 
-def get_sandbox(sandbox_type: str = "local", **kwargs):
+def get_sandbox(sandbox_type: str = "piston", **kwargs):
     """A helper function to make it easier to set sandbox through cmd."""
-    sandboxes = {
-        'local': LocalSandbox,
-        'piston': PistonSandbox,
-    }
-    sandbox_class = sandboxes[sandbox_type.lower()]
-    return sandbox_class(**kwargs)
+    if sandbox_type.lower().strip() != 'piston':
+        raise ValueError(f"Sandbox type {sandbox_type} not supported. Supported types: piston")
+
+    return PistonSandbox(**kwargs)
