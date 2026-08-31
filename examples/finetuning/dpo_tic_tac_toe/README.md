@@ -103,7 +103,7 @@ curl -X GET "https://your-nmp-host/v1/customization/configs" \
 ```
 
 Common configurations:
-- `nvidia/nemotron-3-nano-30b-a3b@v1.0.0+A100` - Llama 3.1 8B on A100 GPUs
+- `nvidia/nemotron-3.5-lightning-30b-a3b@v1.0.0+A100` - Nemotron 3.5 Lightning 30B A3B on A100 GPUs
 - `meta/llama-3.2-1b-instruct@v1.0.0+A100` - Llama 3.2 1B on A100 GPUs
 
 ### 4. LLM Inference Endpoint
@@ -295,7 +295,7 @@ The configuration is defined in `configs/config.yml`. Here's a complete referenc
 llms:
   training_llm:
     _type: openai
-    model_name: meta-llama/Llama-3.1-8B-Instruct
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     base_url: http://localhost:8000/v1
     # Or use a deployed NIM endpoint:
     # base_url: https://nim.example.com/v1
@@ -426,7 +426,7 @@ trainer_adapters:
     create_namespace_if_missing: true
 
     # === Model Configuration ===
-    customization_config: nvidia/nemotron-3-nano-30b-a3b@v1.0.0+A100
+    customization_config: nvidia/nemotron-3.5-lightning-30b-a3b@v1.0.0+A100
 
     # === Training Hyperparameters ===
     hyperparameters:
@@ -447,7 +447,7 @@ trainer_adapters:
     # === Deployment (Optional) ===
     deploy_on_completion: true
     deployment_config:
-      image_name: nvcr.io/nim/nvidia/nemotron-3-nano-30b-a3b
+      image_name: nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b
       image_tag: latest
       gpu: 2
       deployment_name: nat_dpo_tic_tac_toe_model
@@ -510,7 +510,7 @@ Using vLLM:
 
 ```bash
 python -m vllm.entrypoints.openai.api_server \
-    --model meta-llama/Llama-3.1-8B-Instruct \
+    --model nvidia/nemotron-3.5-lightning-30b-a3b \
     --port 8000
 ```
 
@@ -617,11 +617,11 @@ The `dpo_game_outcome` evaluator reports:
 
 First, collect the name of the deployed model from the output of the finetuning step.
 
-The ID of the deployed model will look something like: `default/meta-llama-3.1-8b-instruct-nat-dpo-all_weights@cust-XYZ`.
+The ID of the deployed model will look something like: `default/nvidia-nemotron-3.5-lightning-30b-a3b-nat-dpo-all_weights@cust-XYZ`.
 Export the name of the model, which is every thing before the `@` symbol:
 
 ```bash
-export CUSTOMIZER_LLM_MODEL_NAME="default/meta-llama-3.1-8b-instruct-nat-dpo-all_weights"
+export CUSTOMIZER_LLM_MODEL_NAME="default/nvidia-nemotron-3.5-lightning-30b-a3b-nat-dpo-all_weights"
 ```
 
 Then, in the same terminal, run evaluation:

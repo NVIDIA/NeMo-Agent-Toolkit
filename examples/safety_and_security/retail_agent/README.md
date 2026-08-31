@@ -397,7 +397,7 @@ nat run --config_file examples/safety_and_security/retail_agent/src/nat_retail_a
   --input "Email From: john@email.com\nContent: What garden trowels do you have?"
 ```
 
-> **Note**: This workflow is most reliable with 70B-class LLM models. Smaller models (for example, `nvidia/nemotron-3-nano-30b-a3b`) can fail tool-call validation or format tool inputs incorrectly, which causes workflow errors. Use the configured 70B model for stable runs.
+> **Note**: This workflow is most reliable with 70B-class LLM models. Smaller models (for example, `nvidia/nemotron-3.5-lightning-30b-a3b`) can fail tool-call validation or format tool inputs incorrectly, which causes workflow errors. Use the configured 70B model for stable runs.
 
 **Key Output:**
 

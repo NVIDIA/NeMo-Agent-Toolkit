@@ -26,7 +26,7 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: nvidia/nemotron-3-nano-30b-a3b
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     temperature: 0.0
     chat_template_kwargs:
       enable_thinking: false
