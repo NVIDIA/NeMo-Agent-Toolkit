@@ -327,7 +327,10 @@ workflow:
 
 ## Important Notes
 
-1. **User ID is runtime/front-end scoped** - Set via `SessionManager.session(user_id=...)`, `X-User-ID`, or `nat run --user_id`.
+1. **User ID is runtime/front-end scoped** - Set via `SessionManager.session(user_id=...)`, `X-User-ID`, or
+   `nat run --user_id`. When no runtime identity or header is available, the wrapper falls back to `"default_user"`.
+   Use this fallback for development and testing only. Production deployments must require an authenticated runtime
+   identity.
 2. **Memory backends are interchangeable** - Works with any implementation of `MemoryEditor` interface
 3. **No memory tools needed** - The wrapped agent does not need explicit memory tools configured
 4. **Transparent to inner agent** - The wrapped agent is unaware of memory operations
