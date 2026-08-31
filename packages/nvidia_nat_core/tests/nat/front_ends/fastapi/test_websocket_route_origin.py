@@ -13,9 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+
 import pytest
+from starlette.websockets import WebSocket
 
 from nat.front_ends.fastapi.routes.websocket import _is_origin_allowed
+from nat.front_ends.fastapi.routes.websocket import websocket_endpoint
+from nat.runtime.session import SESSION_COOKIE_NAME
 
 
 @pytest.mark.parametrize(
@@ -47,6 +53,31 @@ from nat.front_ends.fastapi.routes.websocket import _is_origin_allowed
         ("http://localhost:3000", [], r"http://localhost:\d+", True),
         # Both list and regex configured; list matches first
         ("http://localhost:3000", ["http://localhost:3000"], r"http://other\.com", True),
-    ])
+    ],
+)
 def test_is_origin_allowed(origin, allowed_origins, allow_origin_regex, expected):
     assert _is_origin_allowed(origin, allowed_origins, allow_origin_regex) is expected
+
+
+async def test_legacy_session_query_uses_configured_identity_policy():
+    websocket = MagicMock(spec=WebSocket)
+    websocket.query_params = {"session": "legacy-session"}
+    websocket.scope = {"headers": []}
+    websocket.headers.get.return_value = None
+    websocket.accept = AsyncMock()
+    websocket.send_json = AsyncMock()
+    websocket.close = AsyncMock()
+
+    worker = MagicMock()
+    worker.front_end_config.accepted_identity_credentials = []
+    worker.front_end_config.cors.allow_origins = []
+    worker.front_end_config.cors.allow_origin_regex = None
+    session_manager = MagicMock()
+
+    endpoint = websocket_endpoint(worker=worker, session_manager=session_manager, jwt_validators={})
+    await endpoint(websocket)
+
+    assert (b"cookie", f"{SESSION_COOKIE_NAME}=legacy-session".encode()) in websocket.scope["headers"]
+    websocket.send_json.assert_awaited_once()
+    websocket.close.assert_awaited_once_with(code=1008, reason="Identity credential was rejected")
+    worker.get_conversation_handler.assert_not_called()

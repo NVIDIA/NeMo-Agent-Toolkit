@@ -24,14 +24,14 @@ ENDPOINT_BASE_ALL_VALUES = {
     "description": "all values provided",
     "path": "/test",
     "websocket_path": "/ws",
-    "openai_api_path": "/openai"
+    "openai_api_path": "/openai",
 }
 
 ENDPOINT_BASE_REQUIRED_VALUES = {"method": "POST", "description": "only required values"}
 
-ENDPOINT_ALL_VALUES = ENDPOINT_BASE_ALL_VALUES | {'function_name': 'apples'}
+ENDPOINT_ALL_VALUES = ENDPOINT_BASE_ALL_VALUES | {"function_name": "apples"}
 
-ENDPOINT_REQUIRED_VALUES = ENDPOINT_BASE_REQUIRED_VALUES | {'function_name': 'oranges'}
+ENDPOINT_REQUIRED_VALUES = ENDPOINT_BASE_REQUIRED_VALUES | {"function_name": "oranges"}
 
 CORS_ALL_VALUES = {
     "allow_origins": ["http://example.com", "https://example.com"],
@@ -40,7 +40,7 @@ CORS_ALL_VALUES = {
     "allow_headers": ["Content-Type"],
     "allow_credentials": True,
     "expose_headers": ["X-Custom-Header"],
-    "max_age": 3600
+    "max_age": 3600,
 }
 
 CORS_REQUIRED_VALUES = {}
@@ -71,12 +71,12 @@ def _test_model_instantiation(model_class, model_kwargs):
     """
     model = model_class(**model_kwargs)
     assert model.model_fields_set == model_kwargs.keys()
-    for (key, expected_value) in model_kwargs.items():
+    for key, expected_value in model_kwargs.items():
         actual_value = getattr(model, key)
         if isinstance(actual_value, BaseModel) and isinstance(expected_value, dict):
             _test_model_instantiation(actual_value.__class__, expected_value)
         elif isinstance(actual_value, list) and isinstance(expected_value, list):
-            for (i, v) in enumerate(actual_value):
+            for i, v in enumerate(actual_value):
                 if isinstance(v, BaseModel) and isinstance(expected_value[i], dict):
                     _test_model_instantiation(v.__class__, expected_value[i])
                 else:
@@ -87,8 +87,11 @@ def _test_model_instantiation(model_class, model_kwargs):
     return model
 
 
-@pytest.mark.parametrize("endpoint_kwargs", [ENDPOINT_BASE_ALL_VALUES.copy(), ENDPOINT_BASE_REQUIRED_VALUES.copy()],
-                         ids=["all-values", "required-values"])
+@pytest.mark.parametrize(
+    "endpoint_kwargs",
+    [ENDPOINT_BASE_ALL_VALUES.copy(), ENDPOINT_BASE_REQUIRED_VALUES.copy()],
+    ids=["all-values", "required-values"],
+)
 def test_endpoint_base(endpoint_kwargs: dict):
     _test_model_instantiation(FastApiFrontEndConfig.EndpointBase, endpoint_kwargs)
 
@@ -98,8 +101,11 @@ def test_endpoint_base_invalid_method():
         FastApiFrontEndConfig.EndpointBase(method="INVALID", description="test")
 
 
-@pytest.mark.parametrize("endpoint_kwargs", [ENDPOINT_ALL_VALUES.copy(), ENDPOINT_REQUIRED_VALUES.copy()],
-                         ids=["all-values", "required-values"])
+@pytest.mark.parametrize(
+    "endpoint_kwargs",
+    [ENDPOINT_ALL_VALUES.copy(), ENDPOINT_REQUIRED_VALUES.copy()],
+    ids=["all-values", "required-values"],
+)
 def test_endpoint(endpoint_kwargs: dict):
     _test_model_instantiation(FastApiFrontEndConfig.Endpoint, endpoint_kwargs)
 
@@ -119,8 +125,10 @@ def test_cross_origin_resource_sharing(cors_kwargs: dict):
 
 
 @pytest.mark.parametrize(
-    "config_kwargs", [FAST_API_FRONT_END_CONFIG_ALL_VALUES.copy(), FAST_API_FRONT_END_CONFIG_REQUIRES_VALUES.copy()],
-    ids=["all-values", "required-values"])
+    "config_kwargs",
+    [FAST_API_FRONT_END_CONFIG_ALL_VALUES.copy(), FAST_API_FRONT_END_CONFIG_REQUIRES_VALUES.copy()],
+    ids=["all-values", "required-values"],
+)
 def test_fast_api_front_end_config(config_kwargs: dict):
     model = _test_model_instantiation(FastApiFrontEndConfig, config_kwargs)
 
@@ -139,5 +147,51 @@ def test_fast_api_front_end_config(config_kwargs: dict):
         assert isinstance(model.endpoints, list)
         assert isinstance(model.cors, FastApiFrontEndConfig.CrossOriginResourceSharing)
         assert isinstance(model.use_gunicorn, bool)
-        assert (isinstance(model.runner_class, str) or model.runner_class is None)
-        assert (isinstance(model.object_store, str) or model.object_store is None)
+        assert isinstance(model.runner_class, str) or model.runner_class is None
+        assert isinstance(model.object_store, str) or model.object_store is None
+
+
+def test_accepted_identity_credentials_default_preserves_all_methods():
+    config = FastApiFrontEndConfig()
+
+    assert config.accepted_identity_credentials is None
+
+
+def test_accepted_identity_credentials_accepts_supported_method_names():
+    config = FastApiFrontEndConfig(accepted_identity_credentials=["session_cookie", "jwt", "api_key", "basic"])
+
+    assert config.accepted_identity_credentials == ["session_cookie", "jwt", "api_key", "basic"]
+
+
+def test_accepted_identity_credentials_accepts_empty_list():
+    config = FastApiFrontEndConfig(accepted_identity_credentials=[])
+
+    assert config.accepted_identity_credentials == []
+
+
+def test_accepted_identity_credentials_rejects_unknown_method():
+    with pytest.raises(ValueError, match="accepted_identity_credentials"):
+        FastApiFrontEndConfig(accepted_identity_credentials=["unknown"])
+
+
+def test_identity_authentication_defaults_to_decode_only_behavior():
+    config = FastApiFrontEndConfig()
+
+    assert config.identity_authentication == []
+
+
+def test_identity_authentication_accepts_named_providers():
+    config = FastApiFrontEndConfig(
+        accepted_identity_credentials=["jwt"],
+        identity_authentication=["corporate_jwt", "partner_jwt"],
+    )
+
+    assert config.identity_authentication == ["corporate_jwt", "partner_jwt"]
+
+
+def test_identity_authentication_rejects_policy_that_disables_jwt():
+    with pytest.raises(ValueError, match="identity_authentication cannot be configured when jwt identity credentials"):
+        FastApiFrontEndConfig(
+            accepted_identity_credentials=["session_cookie"],
+            identity_authentication=["corporate_jwt"],
+        )

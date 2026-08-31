@@ -27,6 +27,7 @@ from pydantic import Field
 from pydantic import ValidationError
 from starlette.websockets import WebSocketDisconnect
 
+from nat.authentication.credential_validator.bearer_token_validator import BearerTokenValidator
 from nat.authentication.interfaces import FlowHandlerBase
 from nat.data_models.api_server import AuthMessageStatus
 from nat.data_models.api_server import ChatRequest
@@ -34,6 +35,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
+from nat.data_models.api_server import IdentityCredentialType
 from nat.data_models.api_server import OAuthModePreferencePayload
 from nat.data_models.api_server import ResponseObservabilityTrace
 from nat.data_models.api_server import ResponsePayloadOutput
@@ -63,6 +65,8 @@ from nat.front_ends.fastapi.message_validator import MessageValidator
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 from nat.runtime.session import SessionManager
+from nat.runtime.user_manager import IdentityCredentialNotAcceptedError
+from nat.runtime.user_manager import JwtVerificationError
 from nat.runtime.user_manager import UserManager
 
 if typing.TYPE_CHECKING:
@@ -82,18 +86,23 @@ class UserInteraction(BaseModel):
 
 
 class WebSocketMessageHandler:
-
     _HITL_TIMEOUT_GRACE_PERIOD_SECONDS: int = 5
 
-    def __init__(self,
-                 socket: WebSocket,
-                 session_manager: SessionManager,
-                 step_adaptor: StepAdaptor,
-                 worker: "FastApiFrontEndPluginWorker"):
+    def __init__(
+        self,
+        socket: WebSocket,
+        session_manager: SessionManager,
+        step_adaptor: StepAdaptor,
+        worker: "FastApiFrontEndPluginWorker",
+        accepted_identity_credentials: typing.Collection[IdentityCredentialType] | None = None,
+        jwt_validators: typing.Mapping[str, BearerTokenValidator] | None = None,
+    ):
         self._socket: WebSocket = socket
         self._session_manager: SessionManager = session_manager
         self._step_adaptor: StepAdaptor = step_adaptor
         self._worker: FastApiFrontEndPluginWorker = worker
+        self._accepted_identity_credentials = accepted_identity_credentials
+        self._jwt_validators = jwt_validators
 
         self._message_validator: MessageValidator = MessageValidator()
         self._running_workflow_task: asyncio.Task | None = None
@@ -104,6 +113,7 @@ class WebSocketMessageHandler:
         self._pending_observability_trace: ResponseObservabilityTrace | None = None
         self._user_id: str | None = None
         self._restoration_attempted: bool = False
+        self._connection_rejected: bool = False
 
         self._flow_handler: FlowHandlerBase | None = None
 
@@ -169,13 +179,33 @@ class WebSocketMessageHandler:
                 # Copy the original timeout so it is preserved for subsequent reconnections
                 prompt_content = prompt_content.model_copy(update={"timeout": time_remaining_in_seconds})
 
-            await self.create_websocket_message(data_model=prompt_content,
-                                                message_type=WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE,
-                                                status=WebSocketMessageStatus.IN_PROGRESS)
+            await self.create_websocket_message(
+                data_model=prompt_content,
+                message_type=WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE,
+                status=WebSocketMessageStatus.IN_PROGRESS,
+            )
 
     async def __aenter__(self) -> "WebSocketMessageHandler":
         await self._socket.accept()
-        user_info = UserManager.extract_user_from_connection(self._socket)
+        try:
+            user_info = await UserManager.extract_user_from_connection_with_verification(
+                self._socket,
+                accepted_identity_credentials=self._accepted_identity_credentials,
+                jwt_validators=self._jwt_validators,
+            )
+        except (IdentityCredentialNotAcceptedError, JwtVerificationError) as exc:
+            self._connection_rejected = True
+            response = WebSocketAuthResponseMessage(
+                status=AuthMessageStatus.ERROR,
+                payload=Error(
+                    code=ErrorTypes.USER_AUTH_ERROR,
+                    message="Authentication failed",
+                    details=str(exc),
+                ),
+            )
+            await self._socket.send_json(response.model_dump())
+            await self._socket.close(code=1008, reason="Identity credential was rejected")
+            return self
         if user_info is not None:
             self._user_id = user_info.get_user_id()
         await self._restore_execution_state()
@@ -213,25 +243,26 @@ class WebSocketMessageHandler:
         Preflight auth runs concurrently with the receive loop so connection-level messages
         (e.g. ``oauth_mode_preference``) are handled while a preflight OAuth flow awaits user login.
         """
+        if self._connection_rejected:
+            return
+
         preflight_task: asyncio.Task = asyncio.create_task(self._run_preflight_auth())
 
         try:
             while True:
-
                 try:
-
                     message: dict[str, Any] = await self._socket.receive_json()
 
                     validated_message: BaseModel = await self._message_validator.validate_message(message)
 
                     # Received a request to start a workflow
-                    if (isinstance(validated_message, WebSocketUserMessage)):
+                    if isinstance(validated_message, WebSocketUserMessage):
                         await self.process_workflow_request(validated_message)
 
-                    elif (isinstance(validated_message, WebSocketAuthMessage)):
+                    elif isinstance(validated_message, WebSocketAuthMessage):
                         await self._process_auth_message(validated_message)
 
-                    elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
+                    elif isinstance(validated_message, WebSocketUserInteractionResponseMessage):
                         user_content = await self._process_websocket_user_interaction_response_message(validated_message
                                                                                                        )
                         assert self._user_interaction is not None
@@ -277,13 +308,18 @@ class WebSocketMessageHandler:
         """Resolve user identity, or record a non-identity routing hint (OAuth mode)."""
         if isinstance(message.payload, OAuthModePreferencePayload):
             from nat.front_ends.fastapi.auth_flow_handlers import websocket_flow_handler
+
             if isinstance(self._flow_handler, websocket_flow_handler.WebSocketAuthenticationFlowHandler):
                 self._flow_handler.set_oauth_mode(message.payload.mode)
             return
 
         identity_resolved = False
         try:
-            user_info: UserInfo = UserManager._from_auth_payload(message.payload)
+            user_info: UserInfo = await UserManager.from_auth_payload_with_verification(
+                message.payload,
+                accepted_identity_credentials=self._accepted_identity_credentials,
+                jwt_validators=self._jwt_validators,
+            )
             self._user_id = user_info.get_user_id()
             identity_resolved = True
             response: WebSocketAuthResponseMessage = WebSocketAuthResponseMessage(
@@ -351,44 +387,54 @@ class WebSocketMessageHandler:
             def _done_callback(_task: asyncio.Task):
                 if self._running_workflow_task is _task:
                     self._running_workflow_task = None
-                if self._running_workflow_task is None and _user_id and _conversation_id and \
-                   self._worker.get_conversation_handler(_user_id, _conversation_id) is self:
+                if (self._running_workflow_task is None and _user_id and _conversation_id
+                        and self._worker.get_conversation_handler(_user_id, _conversation_id) is self):
                     self._worker.remove_conversation_handler(_user_id, _conversation_id)
 
             # Only the *_STREAM schemas stream; others aggregate a single result. Streaming a
             # non-streaming schema converts chunks to the single output schema and raises.
-            streaming = self._workflow_schema_type in (WorkflowSchemaType.CHAT_STREAM,
-                                                       WorkflowSchemaType.GENERATE_STREAM)
+            streaming = self._workflow_schema_type in (
+                WorkflowSchemaType.CHAT_STREAM,
+                WorkflowSchemaType.GENERATE_STREAM,
+            )
 
             self._running_workflow_task = asyncio.create_task(
-                self._run_workflow(payload=message_content,
-                                   user_message_id=self._message_parent_id,
-                                   conversation_id=self._conversation_id,
-                                   streaming=streaming,
-                                   result_type=self._schema_output_mapping[self._workflow_schema_type],
-                                   output_type=self._schema_output_mapping[self._workflow_schema_type]))
+                self._run_workflow(
+                    payload=message_content,
+                    user_message_id=self._message_parent_id,
+                    conversation_id=self._conversation_id,
+                    streaming=streaming,
+                    result_type=self._schema_output_mapping[self._workflow_schema_type],
+                    output_type=self._schema_output_mapping[self._workflow_schema_type],
+                ))
             self._running_workflow_task.add_done_callback(_done_callback)
 
         except ValueError as e:
             logger.exception("User message content not found: %s", str(e))
-            await self.create_websocket_message(data_model=Error(code=ErrorTypes.INVALID_USER_MESSAGE_CONTENT,
-                                                                 message="User message content could not be found",
-                                                                 details=str(e)),
-                                                message_type=WebSocketMessageType.ERROR_MESSAGE,
-                                                status=WebSocketMessageStatus.IN_PROGRESS)
+            await self.create_websocket_message(
+                data_model=Error(
+                    code=ErrorTypes.INVALID_USER_MESSAGE_CONTENT,
+                    message="User message content could not be found",
+                    details=str(e),
+                ),
+                message_type=WebSocketMessageType.ERROR_MESSAGE,
+                status=WebSocketMessageStatus.IN_PROGRESS,
+            )
 
         except RuntimeError as e:
             logger.exception("Internal workflow initialization error: %s", str(e))
-            await self.create_websocket_message(data_model=Error(code=ErrorTypes.WORKFLOW_ERROR,
-                                                                 message=type(e).__name__,
-                                                                 details=str(e)),
-                                                message_type=WebSocketMessageType.ERROR_MESSAGE,
-                                                status=WebSocketMessageStatus.IN_PROGRESS)
+            await self.create_websocket_message(
+                data_model=Error(code=ErrorTypes.WORKFLOW_ERROR, message=type(e).__name__, details=str(e)),
+                message_type=WebSocketMessageType.ERROR_MESSAGE,
+                status=WebSocketMessageStatus.IN_PROGRESS,
+            )
 
-    async def create_websocket_message(self,
-                                       data_model: BaseModel,
-                                       message_type: str | None = None,
-                                       status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS) -> None:
+    async def create_websocket_message(
+        self,
+        data_model: BaseModel,
+        message_type: str | None = None,
+        status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
+    ) -> None:
         """
         Creates a websocket message that will be ready for routing based on message type or data model.
 
@@ -405,8 +451,8 @@ class WebSocketMessageHandler:
 
             message_schema: type[BaseModel] = await self._message_validator.get_message_schema_by_type(message_type)
 
-            if hasattr(data_model, 'id'):
-                message_id: str = str(getattr(data_model, 'id'))
+            if hasattr(data_model, "id"):
+                message_id: str = str(getattr(data_model, "id"))
             else:
                 message_id = str(uuid.uuid4())
 
@@ -419,7 +465,8 @@ class WebSocketMessageHandler:
                     parent_id=self._message_parent_id,
                     conversation_id=self._conversation_id,
                     content=content,
-                    status=status)
+                    status=status,
+                )
 
             elif issubclass(message_schema, WebSocketSystemIntermediateStepMessage):
                 message = await self._message_validator.create_system_intermediate_step_message(
@@ -427,7 +474,8 @@ class WebSocketMessageHandler:
                     parent_id=await self._message_validator.get_intermediate_step_parent_id(data_model),
                     conversation_id=self._conversation_id,
                     content=content,
-                    status=status)
+                    status=status,
+                )
 
             elif issubclass(message_schema, WebSocketSystemInteractionMessage):
                 message = await self._message_validator.create_system_interaction_message(
@@ -435,14 +483,16 @@ class WebSocketMessageHandler:
                     parent_id=self._message_parent_id,
                     conversation_id=self._conversation_id,
                     content=content,
-                    status=status)
+                    status=status,
+                )
 
             elif issubclass(message_schema, WebSocketObservabilityTraceMessage):
                 message = await self._message_validator.create_observability_trace_message(
                     message_id=message_id,
                     parent_id=self._message_parent_id,
                     conversation_id=self._conversation_id,
-                    content=content)
+                    content=content,
+                )
 
             elif isinstance(content, Error):
                 raise ValidationError(f"Invalid input data creating websocket message. {data_model.model_dump_json()}")
@@ -450,7 +500,7 @@ class WebSocketMessageHandler:
             elif issubclass(message_schema, Error):
                 raise TypeError(f"Invalid message type: {message_type}")
 
-            elif (message is None):
+            elif message is None:
                 raise ValueError(
                     f"Message type could not be resolved by input data model: {data_model.model_dump_json()}")
 
@@ -459,10 +509,11 @@ class WebSocketMessageHandler:
             message = await self._message_validator.create_system_response_token_message(
                 message_type=WebSocketMessageType.ERROR_MESSAGE,
                 conversation_id=self._conversation_id,
-                content=Error(code=ErrorTypes.WORKFLOW_ERROR, message=type(e).__name__, details=str(e)))
+                content=Error(code=ErrorTypes.WORKFLOW_ERROR, message=type(e).__name__, details=str(e)),
+            )
 
         finally:
-            if (message is not None):
+            if message is not None:
                 await self._socket.send_json(message.model_dump())
 
     async def human_interaction_callback(self, prompt: InteractionPrompt) -> HumanResponse:
@@ -486,12 +537,13 @@ class WebSocketMessageHandler:
                                                  started_at=time.monotonic())
 
         try:
-            await self.create_websocket_message(data_model=prompt.content,
-                                                message_type=WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE,
-                                                status=WebSocketMessageStatus.IN_PROGRESS)
+            await self.create_websocket_message(
+                data_model=prompt.content,
+                message_type=WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE,
+                status=WebSocketMessageStatus.IN_PROGRESS,
+            )
 
-            if (isinstance(prompt.content, HumanPromptNotification)):
-
+            if isinstance(prompt.content, HumanPromptNotification):
                 return HumanResponseNotification()
 
             backend_timeout_in_seconds: int | None = (prompt.content.timeout + self._HITL_TIMEOUT_GRACE_PERIOD_SECONDS
@@ -512,31 +564,36 @@ class WebSocketMessageHandler:
             # Delete the future from the outstanding human prompts dictionary
             self._user_interaction = None
 
-    async def _run_workflow(self,
-                            payload: typing.Any,
-                            user_message_id: str | None = None,
-                            conversation_id: str | None = None,
-                            streaming: bool = True,
-                            result_type: type | None = None,
-                            output_type: type | None = None) -> None:
+    async def _run_workflow(
+        self,
+        payload: typing.Any,
+        user_message_id: str | None = None,
+        conversation_id: str | None = None,
+        streaming: bool = True,
+        result_type: type | None = None,
+        output_type: type | None = None,
+    ) -> None:
 
         _cancelled = False
         try:
             auth_callback = self._flow_handler.authenticate if self._flow_handler else None
-            async with self._session_manager.session(user_id=self._user_id,
-                                                     user_message_id=user_message_id,
-                                                     conversation_id=conversation_id,
-                                                     http_connection=self._socket,
-                                                     user_input_callback=self.human_interaction_callback,
-                                                     user_authentication_callback=auth_callback) as session:
+            async with self._session_manager.session(
+                    user_id=self._user_id,
+                    user_message_id=user_message_id,
+                    conversation_id=conversation_id,
+                    http_connection=self._socket,
+                    user_input_callback=self.human_interaction_callback,
+                    user_authentication_callback=auth_callback,
+            ) as session:
                 self._session_manager._context.metadata._request.payload = self._user_message_payload
-                async for value in generate_streaming_response(payload,
-                                                               session=session,
-                                                               streaming=streaming,
-                                                               step_adaptor=self._step_adaptor,
-                                                               result_type=result_type,
-                                                               output_type=output_type):
-
+                async for value in generate_streaming_response(
+                        payload,
+                        session=session,
+                        streaming=streaming,
+                        step_adaptor=self._step_adaptor,
+                        result_type=result_type,
+                        output_type=output_type,
+                ):
                     # Store observability trace to send after completion message
                     if isinstance(value, ResponseObservabilityTrace):
                         if self._pending_observability_trace is None:
@@ -554,23 +611,26 @@ class WebSocketMessageHandler:
 
         except Exception as e:
             logger.exception("Unhandled workflow error")
-            await self.create_websocket_message(data_model=Error(code=ErrorTypes.WORKFLOW_ERROR,
-                                                                 message=type(e).__name__,
-                                                                 details=str(e)),
-                                                message_type=WebSocketMessageType.ERROR_MESSAGE,
-                                                status=WebSocketMessageStatus.IN_PROGRESS)
+            await self.create_websocket_message(
+                data_model=Error(code=ErrorTypes.WORKFLOW_ERROR, message=type(e).__name__, details=str(e)),
+                message_type=WebSocketMessageType.ERROR_MESSAGE,
+                status=WebSocketMessageStatus.IN_PROGRESS,
+            )
 
         finally:
             try:
                 if not _cancelled:
-                    await self.create_websocket_message(data_model=SystemResponseContent(),
-                                                        message_type=WebSocketMessageType.RESPONSE_MESSAGE,
-                                                        status=WebSocketMessageStatus.COMPLETE)
+                    await self.create_websocket_message(
+                        data_model=SystemResponseContent(),
+                        message_type=WebSocketMessageType.RESPONSE_MESSAGE,
+                        status=WebSocketMessageStatus.COMPLETE,
+                    )
 
                     # Send observability trace after completion message
                     if self._pending_observability_trace is not None:
                         await self.create_websocket_message(
                             data_model=self._pending_observability_trace,
-                            message_type=WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE)
+                            message_type=WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE,
+                        )
             finally:
                 self._pending_observability_trace = None

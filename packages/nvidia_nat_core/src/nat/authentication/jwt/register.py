@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
+from nat.authentication.jwt.jwt_auth_provider_config import JwtAuthProviderConfig
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_auth_provider
 
-from nat.authentication.api_key import register as register_api_key
-from nat.authentication.http_basic_auth import register as register_http_basic_auth
-from nat.authentication.jwt import register as register_jwt
-from nat.authentication.oauth2 import register as register_oauth2
+
+@register_auth_provider(config_type=JwtAuthProviderConfig)
+async def jwt_auth_provider(config: JwtAuthProviderConfig, builder: Builder):
+    from nat.authentication.jwt.jwt_auth_provider import JwtAuthProvider
+
+    yield JwtAuthProvider(config)

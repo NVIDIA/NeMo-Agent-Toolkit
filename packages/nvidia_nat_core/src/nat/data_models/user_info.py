@@ -174,10 +174,14 @@ class UserInfo(BaseModel):
         return cls(api_key=SecretStr(api_key))
 
     @classmethod
-    def _from_jwt(cls, jwt_info: JwtUserInfo) -> "UserInfo":
+    def _from_jwt(cls, jwt_info: JwtUserInfo, *, issuer_scoped: bool = False) -> "UserInfo":
         identity: str | None = jwt_info.identity_claim
         if identity is None:
             raise ValueError("JWT contains no usable identity claim (sub, email, preferred_username)")
+        if issuer_scoped:
+            if not jwt_info.issuer:
+                raise ValueError("Verified JWT identity requires an issuer claim")
+            identity = f"{jwt_info.issuer}\x1f{identity}"
         instance: UserInfo = cls()
         object.__setattr__(instance, "_jwt", jwt_info)
         instance._set_user_id(identity)
