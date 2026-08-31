@@ -166,7 +166,7 @@ through the front end or session runtime, not the `auto_memory_agent` workflow b
 ### User ID Extraction Priority
 
 1. **`SessionManager.session(user_id=...)`** - For production with custom auth middleware (recommended)
-2. **`X-User-ID` HTTP header** - For testing without middleware
+2. **`X-User-ID` HTTP header** - Illustrative/testing only; assumes a hypothetical trusted upstream proxy authenticates the request and injects the header
 3. **Console front end `user_id`** - Defaults to `"nat_run_user_id"` for `nat run`
 
 Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
@@ -327,10 +327,14 @@ workflow:
 
 ## Important Notes
 
-1. **User ID is runtime/front-end scoped** - Set via `SessionManager.session(user_id=...)`, `X-User-ID`, or `nat run --user_id`
+1. **User ID is runtime/front-end scoped** - Set via `SessionManager.session(user_id=...)`, `X-User-ID`, or
+   `nat run --user_id`. When no runtime identity or header is available, the wrapper falls back to `"default_user"`.
+   Use this fallback for development and testing only. Production deployments must require an authenticated runtime
+   identity.
 2. **Memory backends are interchangeable** - Works with any implementation of `MemoryEditor` interface
 3. **No memory tools needed** - The wrapped agent does not need explicit memory tools configured
 4. **Transparent to inner agent** - The wrapped agent is unaware of memory operations
+5. **X-User-ID** - We used this header for illustrative purposes only. Do not rely on it for authentication in production.
 
 ---
 
