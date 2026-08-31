@@ -103,6 +103,7 @@ class WebSocketMessageHandler:
         self._user_interaction: UserInteraction | None = None
         self._pending_observability_trace: ResponseObservabilityTrace | None = None
         self._user_id: str | None = None
+        self._restoration_attempted: bool = False
 
         self._flow_handler: FlowHandlerBase | None = None
 
@@ -127,16 +128,20 @@ class WebSocketMessageHandler:
         self._workflow_schema_type = message.schema_type
         self._conversation_id = message.conversation_id
         self._user_message_payload: dict[str, Any] = message.model_dump()
-        if self._conversation_id:
-            self._worker.set_conversation_handler(self._conversation_id, self)
+        if self._user_id and self._conversation_id:
+            self._worker.set_conversation_handler(self._user_id, self._conversation_id, self)
 
     async def _restore_execution_state(self) -> None:
         """Restore execution state on reconnection by swapping handler state."""
+        if self._restoration_attempted or not self._user_id:
+            return
+
+        self._restoration_attempted = True
         conversation_id = self._socket.query_params.get("conversation_id")
         if not conversation_id:
             return
 
-        disconnected_handler = self._worker.get_conversation_handler(conversation_id)
+        disconnected_handler = self._worker.get_conversation_handler(self._user_id, conversation_id)
         if not disconnected_handler:
             return
 
@@ -170,6 +175,9 @@ class WebSocketMessageHandler:
 
     async def __aenter__(self) -> "WebSocketMessageHandler":
         await self._socket.accept()
+        user_info = UserManager.extract_user_from_connection(self._socket)
+        if user_info is not None:
+            self._user_id = user_info.get_user_id()
         await self._restore_execution_state()
         return self
 
@@ -273,9 +281,11 @@ class WebSocketMessageHandler:
                 self._flow_handler.set_oauth_mode(message.payload.mode)
             return
 
+        identity_resolved = False
         try:
             user_info: UserInfo = UserManager._from_auth_payload(message.payload)
             self._user_id = user_info.get_user_id()
+            identity_resolved = True
             response: WebSocketAuthResponseMessage = WebSocketAuthResponseMessage(
                 status=AuthMessageStatus.SUCCESS,
                 user_id=self._user_id,
@@ -290,6 +300,8 @@ class WebSocketMessageHandler:
                 ),
             )
         await self._socket.send_json(response.model_dump())
+        if identity_resolved:
+            await self._restore_execution_state()
 
     async def _process_websocket_user_interaction_response_message(
             self, user_content: WebSocketUserInteractionResponseMessage) -> TextContent:
@@ -334,13 +346,14 @@ class WebSocketMessageHandler:
                 self._running_workflow_task = None
 
             _conversation_id = self._conversation_id
+            _user_id = self._user_id
 
             def _done_callback(_task: asyncio.Task):
                 if self._running_workflow_task is _task:
                     self._running_workflow_task = None
-                if self._running_workflow_task is None and _conversation_id and \
-                   self._worker.get_conversation_handler(_conversation_id) is self:
-                    self._worker.remove_conversation_handler(_conversation_id)
+                if self._running_workflow_task is None and _user_id and _conversation_id and \
+                   self._worker.get_conversation_handler(_user_id, _conversation_id) is self:
+                    self._worker.remove_conversation_handler(_user_id, _conversation_id)
 
             # Only the *_STREAM schemas stream; others aggregate a single result. Streaming a
             # non-streaming schema converts chunks to the single output schema and raises.

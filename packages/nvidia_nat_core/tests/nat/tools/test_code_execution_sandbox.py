@@ -12,12 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-Test suite for Code Execution Sandbox using pytest.
-
-This module provides comprehensive testing for the code execution sandbox service,
-replacing the original bash script with a more maintainable Python implementation.
-"""
+"""Integration tests for Piston-backed code execution."""
 
 import subprocess
 import textwrap
@@ -60,18 +55,6 @@ CODE_BLOCKS = {
          """,
         "expected_output":
             "Sum of column A: 6"
-    },
-    "plotly_import": {
-        "code":
-            """
-         import plotly.graph_objects as go
-         print('Plotly imported successfully')
-         fig = go.Figure()
-         fig.add_trace(go.Scatter(x=[1, 2, 3], y=[4, 5, 6]))
-         print('Plot created successfully')
-         """,
-        "expected_output":
-            "Plot created successfully"
     },
     "file_operations": {
         "code":
@@ -187,11 +170,6 @@ CODE_BLOCKS = {
 }
 
 
-@pytest.fixture(name="local_sandbox_url", scope="session", autouse=True)
-def sandbox_url_fixture(local_sandbox_url: str) -> str:
-    return local_sandbox_url
-
-
 def _write_sandbox_workflow_config(tmp_path_factory: pytest.TempPathFactory, sandbox_url: str,
                                    sandbox_type: str) -> Path:
     config_path = tmp_path_factory.mktemp(f"{sandbox_type}_sandbox_workflow") / "config.yaml"
@@ -206,11 +184,6 @@ def _write_sandbox_workflow_config(tmp_path_factory: pytest.TempPathFactory, san
                 max_output_characters: 3000
             """).strip())
     return config_path
-
-
-@pytest.fixture(name="local_sandbox_workflow", scope="session")
-def local_sandbox_workflow_fixture(local_sandbox_url: str, tmp_path_factory: pytest.TempPathFactory) -> Path:
-    return _write_sandbox_workflow_config(tmp_path_factory, local_sandbox_url, sandbox_type="local")
 
 
 @pytest.fixture(name="piston_sandbox_workflow", scope="session")
@@ -230,25 +203,6 @@ def _mk_request(url: str, code: str, timeout: int, language: str = "python") -> 
     # Ensure we got a response
     response.raise_for_status()
     return response
-
-
-def run_sandbox_code(sandbox_config: dict[str, Any], code: str, language: str = "python") -> dict[str, Any]:
-    """
-    Execute code in the sandbox and return the response.
-
-    Args:
-        sandbox_config: Configuration dictionary
-        code: Code to execute
-        language: Programming language (default: python)
-
-    Returns:
-        dictionary containing the response from the sandbox
-    """
-    response = _mk_request(url=sandbox_config["execute_url"],
-                           code=code,
-                           timeout=sandbox_config["timeout"],
-                           language=language)
-    return response.json()
 
 
 def run_workflow_code(config_path: Path,
@@ -292,7 +246,7 @@ def run_workflow_code(config_path: Path,
     return response.json()
 
 
-def _test_code_execution(code_block_key: str, sandbox_type: str, config_path: Path, sandbox_config: dict[str, Any]):
+def _test_code_execution(code_block_key: str, config_path: Path):
     """Test simple print statement execution."""
 
     code_block = CODE_BLOCKS[code_block_key]
@@ -301,13 +255,8 @@ def _test_code_execution(code_block_key: str, sandbox_type: str, config_path: Pa
 
     code = textwrap.dedent(code).strip()
 
-    if sandbox_type == "local":
-        result = run_sandbox_code(sandbox_config, code)
-        result_value = result
-    else:
-
-        result = run_workflow_code(config_path=config_path, code=code)
-        result_value = result["value"]
+    result = run_workflow_code(config_path=config_path, code=code)
+    result_value = result["value"]
 
     assert "process_status" in result_value, f"Sandbox execution failed: {result}"
     assert result_value["process_status"] == "completed", f"Sandbox execution did not complete: {result}"
@@ -323,170 +272,9 @@ def _test_code_execution(code_block_key: str, sandbox_type: str, config_path: Pa
                              "simple_addition",
                              "numpy_mean",
                              "pandas_operations",
-                             "plotly_import",
-                             "file_operations",
-                             "persistence_creation",
-                             "persistence_readback",
-                             "json_persistence"
-                         ])
-@pytest.mark.parametrize("sandbox_type", ["local", "local_workflow"])
-def test_local_code_execution(code_block_key: str,
-                              sandbox_type: str,
-                              local_sandbox_workflow: Path,
-                              sandbox_config: dict[str, Any]):
-
-    _test_code_execution(code_block_key, sandbox_type, local_sandbox_workflow, sandbox_config)
-
-
-@pytest.mark.slow
-@pytest.mark.integration
-@pytest.mark.parametrize("code_block_key",
-                         [
-                             "hello_world",
-                             "simple_addition",
-                             "numpy_mean",
-                             "pandas_operations",
                              "file_operations",
                              "persistence_creation",
                              "json_persistence"
                          ])
-def test_piston_code_execution(code_block_key: str, piston_sandbox_workflow: Path, sandbox_config: dict[str, Any]):
-    _test_code_execution(code_block_key, "piston_workflow", piston_sandbox_workflow, sandbox_config)
-
-
-@pytest.mark.integration
-def test_syntax_error_handling(sandbox_config: dict[str, Any]):
-    """Test handling of syntax errors."""
-    code = """
-print('Hello World'
-# Missing closing parenthesis
-"""
-    result = run_sandbox_code(sandbox_config, code)
-
-    assert result["process_status"] == "error"
-    assert "SyntaxError" in result["stderr"] or "SyntaxError" in result["stdout"]
-
-
-@pytest.mark.integration
-def test_runtime_error_handling(sandbox_config: dict[str, Any]):
-    """Test handling of runtime errors."""
-    code = """
-x = 1 / 0
-print('This should not print')
-"""
-    result = run_sandbox_code(sandbox_config, code)
-
-    assert result["process_status"] == "error"
-    assert "ZeroDivisionError" in result["stderr"] or "ZeroDivisionError" in result["stdout"]
-
-
-@pytest.mark.integration
-def test_import_error_handling(sandbox_config: dict[str, Any]):
-    """Test handling of import errors."""
-    code = """
-import nonexistent_module
-print('This should not print')
-"""
-    result = run_sandbox_code(sandbox_config, code)
-
-    assert result["process_status"] == "error"
-    assert "ModuleNotFoundError" in result["stderr"] or "ImportError" in result["stderr"]
-
-
-@pytest.mark.integration
-def test_mixed_output(sandbox_config: dict[str, Any]):
-    """Test code that produces both stdout and stderr output."""
-    code = """
-import sys
-print('This goes to stdout')
-print('This goes to stderr', file=sys.stderr)
-print('Back to stdout')
-"""
-    result = run_sandbox_code(sandbox_config, code)
-
-    assert result["process_status"] == "completed"
-    assert "This goes to stdout" in result["stdout"]
-    assert "Back to stdout" in result["stdout"]
-    assert "This goes to stderr" in result["stderr"]
-
-
-@pytest.mark.integration
-def test_long_running_code(sandbox_config: dict[str, Any]):
-    """Test code that takes some time to execute but completes within timeout."""
-    code = """
-import time
-for i in range(3):
-    print(f'Iteration {i}')
-    time.sleep(0.5)
-print('Completed')
-"""
-    result = run_sandbox_code(sandbox_config, code)
-
-    assert result["process_status"] == "completed"
-    assert "Iteration 0" in result["stdout"]
-    assert "Iteration 1" in result["stdout"]
-    assert "Iteration 2" in result["stdout"]
-    assert "Completed" in result["stdout"]
-    assert result["stderr"] == ""
-
-
-@pytest.mark.integration
-def test_missing_generated_code_field(sandbox_config: dict[str, Any]):
-    """Test request missing the generated_code field."""
-    payload = {"timeout": 10, "language": "python"}
-
-    response = requests.post(sandbox_config["execute_url"], json=payload, timeout=sandbox_config["timeout"] + 5)
-
-    # Should return an error status code or error in response
-    assert response.status_code != 200 or "error" in response.json()
-
-
-@pytest.mark.integration
-def test_missing_timeout_field(sandbox_config: dict[str, Any]):
-    """Test request missing the timeout field."""
-    payload = {"generated_code": "print('test')", "language": "python"}
-
-    response = requests.post(sandbox_config["execute_url"], json=payload, timeout=sandbox_config["timeout"] + 5)
-
-    # Should return error for missing timeout field
-    result = response.json()
-    assert response.status_code == 400 and result["process_status"] == "error"
-
-
-@pytest.mark.integration
-def test_invalid_json(sandbox_config: dict[str, Any]):
-    """Test request with invalid JSON."""
-    invalid_json = '{"generated_code": "print("test")", "timeout": 10}'
-
-    response = requests.post(sandbox_config["execute_url"],
-                             data=invalid_json,
-                             headers={"Content-Type": "application/json"},
-                             timeout=sandbox_config["timeout"] + 5)
-
-    # Should return error for invalid JSON
-    assert response.status_code != 200
-
-
-@pytest.mark.integration
-def test_non_json_request(sandbox_config: dict[str, Any]):
-    """Test request with non-JSON content."""
-    response = requests.post(sandbox_config["execute_url"],
-                             data="This is not JSON",
-                             headers={"Content-Type": "text/plain"},
-                             timeout=sandbox_config["timeout"] + 5)
-
-    # Should return error for non-JSON content
-    assert response.status_code != 200
-
-
-@pytest.mark.integration
-def test_timeout_too_low(sandbox_config: dict[str, Any]):
-    """Test request with timeout too low."""
-    code = """
-import time
-time.sleep(2.0)
-"""
-    payload = {"generated_code": code, "timeout": 1, "language": "python"}
-    response = requests.post(sandbox_config["execute_url"], json=payload, timeout=sandbox_config["timeout"] + 5)
-    assert response.json()["process_status"] == "timeout"
-    assert response.status_code == 200
+def test_piston_code_execution(code_block_key: str, piston_sandbox_workflow: Path):
+    _test_code_execution(code_block_key, piston_sandbox_workflow)

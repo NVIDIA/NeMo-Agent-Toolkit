@@ -289,9 +289,7 @@ IGNORED_PATHS: set[str] = {
     r"\.tmp/",  #
     # files that are located in the directory of the file being checked
     r"^\./upload_to_minio\.sh$",
-    r"^\./upload_to_mysql\.sh$",
-    r"^\./start_local_sandbox\.sh$",  #
-    # script files that exist in the root of the repo
+    r"^\./upload_to_mysql\.sh$",  # script files that exist in the root of the repo
     r"^scripts/langchain_web_ingest\.py$",
     r"^scripts/bootstrap_milvus\.sh$",  #
     # generated files

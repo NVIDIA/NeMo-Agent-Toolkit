@@ -209,8 +209,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         self._outstanding_flows: dict[str, FlowState] = {}
         self._outstanding_flows_lock = asyncio.Lock()
 
-        # Conversation handlers for WebSocket reconnection support
-        self._conversation_handlers: dict[str, WebSocketMessageHandler] = {}
+        # Conversation handlers for identity-bound WebSocket reconnection support
+        self._conversation_handlers: dict[tuple[str, str], WebSocketMessageHandler] = {}
 
         # Track session managers for each route
         self._session_managers: list[SessionManager] = []
@@ -228,17 +228,17 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             remove_flow_cb=self._remove_flow,
         )
 
-    def get_conversation_handler(self, conversation_id: str) -> "WebSocketMessageHandler | None":
-        """Get a conversation handler for reconnection support."""
-        return self._conversation_handlers.get(conversation_id)
+    def get_conversation_handler(self, user_id: str, conversation_id: str) -> "WebSocketMessageHandler | None":
+        """Get the conversation handler owned by a user."""
+        return self._conversation_handlers.get((user_id, conversation_id))
 
-    def set_conversation_handler(self, conversation_id: str, handler: "WebSocketMessageHandler") -> None:
-        """Register a conversation handler for reconnection support."""
-        self._conversation_handlers[conversation_id] = handler
+    def set_conversation_handler(self, user_id: str, conversation_id: str, handler: "WebSocketMessageHandler") -> None:
+        """Register a conversation handler under its user and conversation IDs."""
+        self._conversation_handlers[(user_id, conversation_id)] = handler
 
-    def remove_conversation_handler(self, conversation_id: str) -> None:
-        """Remove a conversation handler when workflow completes."""
-        self._conversation_handlers.pop(conversation_id, None)
+    def remove_conversation_handler(self, user_id: str, conversation_id: str) -> None:
+        """Remove a user's conversation handler when its workflow completes."""
+        self._conversation_handlers.pop((user_id, conversation_id), None)
 
     async def initialize_evaluators(self, config: Config):
         """Initialize and store evaluators from config for single-item evaluation."""

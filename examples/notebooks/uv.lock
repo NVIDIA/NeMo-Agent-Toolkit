@@ -3357,7 +3357,6 @@ name = "nvidia-nat-test"
 source = { editable = "../../packages/nvidia_nat_test" }
 dependencies = [
     { name = "asgi-lifespan" },
-    { name = "flask" },
     { name = "langchain-community" },
     { name = "nvidia-nat-core" },
     { name = "pytest" },
@@ -3370,7 +3369,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "asgi-lifespan", specifier = "~=2.1" },
-    { name = "flask", specifier = ">=3.0.0" },
     { name = "langchain-community", specifier = "~=0.3" },
     { name = "nvidia-nat-core", editable = "../../packages/nvidia_nat_core" },
     { name = "pytest", specifier = ">=9.0.3,<10.0.0" },
