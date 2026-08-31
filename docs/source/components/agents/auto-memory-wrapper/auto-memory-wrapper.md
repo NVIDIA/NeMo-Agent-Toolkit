@@ -216,11 +216,10 @@ Use this setting only for local testing or behind an authenticating reverse prox
 - The proxy authenticates every request and overwrites `X-User-ID` with the authenticated principal. It must not preserve, append, or forward a client-supplied value.
 - `nat serve` is network isolated in such a way that all incoming network traffic is from the proxy.
 
-When configured, the header is authoritative for HTTP and WebSocket requests. A missing, empty, or repeated header is
-rejected. Other connection credentials and WebSocket auth messages cannot replace it. The setting cannot be combined
+When configured, the header is authoritative for HTTP and WebSocket requests. A missing, empty, or repeated header is rejected. Other connection credentials and WebSocket auth messages cannot replace it. The setting cannot be combined
 with `accepted_identity_credentials` or `identity_authentication`.
 
-After configuring the trusted boundary, a request forwarded by the proxy can contain:
+For local testing, this can be simulated with:
 
 ```bash
 curl -X POST http://localhost:8000/chat \
@@ -355,8 +354,7 @@ workflow:
 2. **Memory backends are interchangeable** - Works with any implementation of `MemoryEditor` interface
 3. **No memory tools needed** - The wrapped agent does not need explicit memory tools configured
 4. **Transparent to inner agent** - The wrapped agent is unaware of memory operations
-5. **Trusted identity headers are opt-in** - Never enable `identity_header` on a server that untrusted clients or
-   untrusted containers can reach directly.
+5. **Trusted identity headers are opt-in** - Never enable `identity_header` on a server that untrusted clients can reach directly.
 
 ---
 
