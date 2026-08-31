@@ -16,9 +16,12 @@
 import asyncio
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 from starlette.websockets import WebSocketDisconnect
 
+from nat.data_models.api_server import ApiKeyAuthPayload
+from nat.data_models.api_server import AuthMessageStatus
 from nat.data_models.api_server import OAuthMode
 from nat.data_models.api_server import OAuthModePreferencePayload
 from nat.data_models.api_server import WebSocketAuthMessage
@@ -47,6 +50,71 @@ def _make_message_handler() -> tuple[WebSocketMessageHandler, AsyncMock, WebSock
     )
     handler.set_flow_handler(flow_handler)
     return handler, socket, flow_handler
+
+
+async def test_context_manager_resolves_connection_identity_before_restoration():
+    """Connection credentials establish the owner before reconnection is attempted."""
+    handler, socket, _ = _make_message_handler()
+    user_info = MagicMock()
+    user_info.get_user_id.return_value = "user-a"
+    restore = AsyncMock()
+    handler._restore_execution_state = restore
+
+    with patch("nat.front_ends.fastapi.message_handler.UserManager.extract_user_from_connection",
+               return_value=user_info):
+        await handler.__aenter__()
+
+    socket.accept.assert_awaited_once()
+    assert handler._user_id == "user-a"
+    restore.assert_awaited_once()
+
+
+async def test_anonymous_connection_does_not_attempt_conversation_lookup():
+    """A conversation ID cannot restore state without a resolved user identity."""
+    handler, socket, _ = _make_message_handler()
+    socket.query_params = {"conversation_id": "conversation-a"}
+
+    await handler._restore_execution_state()
+
+    handler._worker.get_conversation_handler.assert_not_called()
+
+
+async def test_successful_auth_message_attempts_owned_restoration_once():
+    """Delayed authentication can restore once and cannot retry the lookup."""
+    handler, socket, _ = _make_message_handler()
+    socket.query_params = {"conversation_id": "conversation-a"}
+    handler._worker.get_conversation_handler.return_value = None
+    user_info = MagicMock()
+    user_info.get_user_id.return_value = "user-a"
+    msg = WebSocketAuthMessage(
+        type=WebSocketMessageType.AUTH_MESSAGE,
+        payload=ApiKeyAuthPayload(method="api_key", token="test-api-key"),
+    )
+
+    with patch("nat.front_ends.fastapi.message_handler.UserManager._from_auth_payload", return_value=user_info):
+        await handler._process_auth_message(msg)
+        await handler._process_auth_message(msg)
+
+    handler._worker.get_conversation_handler.assert_called_once_with("user-a", "conversation-a")
+
+
+async def test_failed_auth_message_does_not_attempt_restoration():
+    """A failed identity resolution cannot trigger conversation restoration."""
+    handler, socket, _ = _make_message_handler()
+    restore = AsyncMock()
+    handler._restore_execution_state = restore
+    msg = WebSocketAuthMessage(
+        type=WebSocketMessageType.AUTH_MESSAGE,
+        payload=ApiKeyAuthPayload(method="api_key", token="test-api-key"),
+    )
+
+    with patch("nat.front_ends.fastapi.message_handler.UserManager._from_auth_payload",
+               side_effect=ValueError("invalid credential")):
+        await handler._process_auth_message(msg)
+
+    restore.assert_not_awaited()
+    response = socket.send_json.await_args.args[0]
+    assert response["status"] == AuthMessageStatus.ERROR
 
 
 async def test_process_auth_message_sets_oauth_mode_and_sends_no_response():
