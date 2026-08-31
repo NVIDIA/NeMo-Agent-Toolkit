@@ -63,6 +63,19 @@ to the client.
 - `error`: Error information object with `code` (string, see Error types), `message` (string), and `details` (string)
 - `schema_version`: schema version - `OPTIONAL`
 
+## Reconnecting an Active Conversation
+
+To resume an active workflow, reconnect with the workflow's `conversation_id` query parameter and an identity credential that resolves to the same user who started it. The server restores state only when both values match. A connection with another identity, or no identity, does not receive the existing workflow state or its pending Human-in-the-Loop prompt.
+
+The server accepts the following identity credentials:
+
+- A `nat-session` cookie or `?session=` query parameter.
+- A JWT Bearer token.
+- An API key supplied as a Bearer token or `X-API-Key` header.
+- HTTP Basic credentials.
+
+Clients can also send a JWT, API key, or Basic credentials through an `auth_message`. Send the message before expecting restoration; restoration occurs after authentication succeeds.
+
 ## Auth Message
 This message allows clients to authenticate over a WebSocket connection when header-based or
 cookie-based authentication is not feasible (e.g., browser WebSocket APIs that do not support custom headers).
