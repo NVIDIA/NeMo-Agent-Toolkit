@@ -175,7 +175,7 @@ curl -X POST http://localhost:8000/chat \
   -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
-This header is not authentication. The example is illustrative only do not accept this header directly from untrusted clients.
+The example usage of the `X-User-ID` header is for illustrative purposes only; do not accept this header directly from untrusted clients.
 
 
 ### Local Development: Console User and Conversation IDs
