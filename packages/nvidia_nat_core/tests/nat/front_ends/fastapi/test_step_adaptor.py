@@ -78,17 +78,25 @@ def step_adaptor_disabled(disabled_config):
 def make_intermediate_step():
     """A factory fixture to create an IntermediateStep with minimal defaults."""
 
-    def _make_step(event_type: IntermediateStepType, data_input=None, data_output=None, name=None, UUID=None):
+    def _make_step(event_type: IntermediateStepType,
+                   data_input=None,
+                   data_output=None,
+                   name=None,
+                   UUID=None,
+                   metadata=None,
+                   ancestry_parent_id="abc"):
+        """Build a single IntermediateStep with the given event type, data, metadata, and ancestry."""
         payload = IntermediateStepPayload(
             event_type=event_type,
             name=name or "test_step",
             data=StreamEventData(input=data_input, output=data_output),
             UUID=UUID or "test-uuid-1234",
+            metadata=metadata,
         )
         # The IntermediateStep constructor requires a function_ancestry,
         # but for testing we can just pass None or a placeholder.
         return IntermediateStep(parent_id="root",
-                                function_ancestry=InvocationNode(parent_id="abc",
+                                function_ancestry=InvocationNode(parent_id=ancestry_parent_id,
                                                                  function_id="def",
                                                                  function_name="xyz"),
                                 payload=payload)
@@ -494,6 +502,123 @@ def test_process_function_end_without_output(step_adaptor_default, make_intermed
     assert "Function Output:" in result.payload
     assert "None" in result.payload
     assert step_adaptor_default._history[-1] is step
+
+
+def test_get_thought_description_falls_back_to_default():
+    """
+    `_get_thought_description` should return the default text when metadata is missing, empty, or has an
+    empty `thought_description` value.
+    """
+    result = StepAdaptor._get_thought_description(None, "Running function: foo", "...")
+    assert result == "Running function: foo..."
+
+    result = StepAdaptor._get_thought_description({}, "Running function: foo", "...")
+    assert result == "Running function: foo..."
+
+    result = StepAdaptor._get_thought_description({"thought_description": ""}, "Running function: foo", "...")
+    assert result == "Running function: foo..."
+
+
+def test_get_thought_description_uses_custom_value():
+    """
+    `_get_thought_description` should return the configured `thought_description` (plus suffix) when present.
+    """
+    result = StepAdaptor._get_thought_description({"thought_description": "Searching the web"},
+                                                  "Running function: foo",
+                                                  "...")
+    assert result == "Searching the web..."
+
+
+def test_function_start_uses_default_thought_text(step_adaptor_default, make_intermediate_step):
+    """
+    A FUNCTION_START event with no `thought_description` metadata should get the default thought text.
+    """
+    step = make_intermediate_step(
+        event_type=IntermediateStepType.FUNCTION_START,
+        data_input="Function Input Data",
+        name="test_function",
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result.thought_text == "Running function: test_function..."
+
+
+def test_function_start_uses_custom_thought_description(step_adaptor_default, make_intermediate_step):
+    """
+    A FUNCTION_START event whose function was configured with `thought_description` should surface that
+    text (with the "..." suffix) instead of the default "Running function: <name>" text.
+    """
+    step = make_intermediate_step(
+        event_type=IntermediateStepType.FUNCTION_START,
+        data_input="Function Input Data",
+        name="test_function",
+        metadata={"thought_description": "Searching the web"},
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result.thought_text == "Searching the web..."
+
+
+def test_function_start_omits_thought_text_for_root_workflow_function(step_adaptor_default, make_intermediate_step):
+    """
+    The top-level workflow function's parent is the synthetic "root" node; it should not get a thought_text
+    since it represents the whole run rather than a sub-step.
+    """
+    step = make_intermediate_step(
+        event_type=IntermediateStepType.FUNCTION_START,
+        data_input="Function Input Data",
+        name="test_workflow",
+        ancestry_parent_id="root",
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result.thought_text is None
+
+
+def test_function_end_uses_custom_thought_description_from_start_event(step_adaptor_default, make_intermediate_step):
+    """
+    FUNCTION_END should read `thought_description` from the matching FUNCTION_START event's metadata (the
+    end payload itself carries no metadata) and append the "completed" suffix.
+    """
+    uuid = "function-thought-uuid"
+    start_step = make_intermediate_step(
+        event_type=IntermediateStepType.FUNCTION_START,
+        data_input="Function Input Data",
+        name="test_function",
+        UUID=uuid,
+        metadata={"thought_description": "Searching the web"},
+    )
+    end_step = make_intermediate_step(
+        event_type=IntermediateStepType.FUNCTION_END,
+        data_output="Function Output Data",
+        name="test_function",
+        UUID=uuid,
+    )
+
+    step_adaptor_default.process(start_step)
+    result = step_adaptor_default.process(end_step)
+
+    assert result.thought_text == "Searching the web... completed"
+
+
+def test_function_end_omits_thought_text_for_root_workflow_function(step_adaptor_default, make_intermediate_step):
+    """
+    The top-level workflow function's parent is the synthetic "root" node; FUNCTION_END should not get a
+    thought_text for it either, mirroring the FUNCTION_START behavior.
+    """
+    step = make_intermediate_step(
+        event_type=IntermediateStepType.FUNCTION_END,
+        data_output="Function Output Data",
+        name="test_workflow",
+        ancestry_parent_id="root",
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result.thought_text is None
 
 
 def test_function_events_in_custom_mode(step_adaptor_custom, make_intermediate_step):
