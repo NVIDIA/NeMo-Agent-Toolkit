@@ -54,7 +54,6 @@ Each of the built-in `add_memory`, `get_memory`, and `delete_memory` tools requi
 For example, application code can obtain a user that authentication middleware has already verified:
 
 ```python
-# my_application/auth.py
 from my_application.request_context import get_authenticated_user
 
 

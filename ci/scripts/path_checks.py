@@ -158,6 +158,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "file/console",
     "files/functions",
     "I/O",
+    "Illustrative/testing",
     "include/exclude",
     "Input/Observation",
     "input/output",
