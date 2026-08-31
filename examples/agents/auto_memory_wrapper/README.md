@@ -133,7 +133,7 @@ User ID is extracted at runtime for memory isolation. Configure it through the f
 ### User ID Extraction Priority
 
 1. **`SessionManager.session(user_id=...)`** - For production with custom auth middleware (recommended)
-2. **`X-User-ID` HTTP header** - For testing without middleware
+2. **`X-User-ID` HTTP header** - Illustrative/testing only; assumes a hypothetical trusted upstream proxy authenticates the request and injects the header
 3. **Console front end `user_id`** - Defaults to `"nat_run_user_id"` for `nat run`
 
 Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
@@ -175,6 +175,9 @@ curl -X POST http://localhost:8000/chat \
   -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
+The example usage of the `X-User-ID` header is for illustrative purposes only; do not accept this header directly from untrusted clients.
+
+
 ### Local Development: Console User and Conversation IDs
 
 For `nat run`, set `--user_id` to control memory isolation and `--conversation_id` to isolate a specific conversation:
@@ -215,6 +218,7 @@ workflow:
 
 1. **User ID is runtime/front-end scoped** - Set via `SessionManager.session(user_id=...)`, `X-User-ID`, or `nat run --user_id`
 2. **Memory backends are interchangeable** - Works with any implementation of `MemoryEditor` interface
+3. `X-User-ID` HTTP header - Illustrative/testing only; assumes a trusted upstream proxy authenticates the request and injects this header
 
 ## Examples
 

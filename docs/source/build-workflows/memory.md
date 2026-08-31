@@ -21,6 +21,18 @@ The NeMo Agent Toolkit Memory subsystem is designed to store and retrieve a user
 
 The memory module is designed to be extensible, allowing developers to create custom memory back-ends, providers in NeMo Agent Toolkit terminology.
 
+## User Identity for Memory Tools
+
+The built-in `add_memory`, `get_memory`, and `delete_memory` tools bind every operation to an identity. Set an optional `user_id` in the tool configuration for a fixed service or single-user identity.
+
+```yaml
+functions:
+  get_memory:
+    _type: get_memory
+    memory: user_memory
+    user_id: service_user
+```
+
 ## Included Memory Modules
 The NeMo Agent Toolkit includes four memory module providers, all of which are available as plugins:
 * [Mem0](https://mem0.ai/) which is provided by the [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) plugin.
@@ -31,6 +43,44 @@ The NeMo Agent Toolkit includes four memory module providers, all of which are a
 ## Third-Party Memory Plugins
 Additional memory backends are available as community plugins:
 * [Synap](https://maximem.ai) — managed memory layer with user and customer scoping, provided by the [`maximem-synap-nemo-agent-toolkit`](https://pypi.org/project/maximem-synap-nemo-agent-toolkit/) plugin. See `examples/memory/synap/` for usage. ([Open source integration package](https://github.com/maximem-ai/maximem_synap_sdk/tree/main/packages/integrations))
+
+## Authenticating Memory Tool Users
+
+Each of the built-in `add_memory`, `get_memory`, and `delete_memory` tools require configuring an identity source:
+
+- Use `user_id` for a fixed, single-user memory namespace.
+- Use `user_id_resolver` for a multi-user application. Its value is the import path of a trusted, zero-argument Python callable that returns the current authenticated user's stable ID. The callable can be synchronous or asynchronous and is invoked for every memory operation.
+
+For example, application code can obtain a user that authentication middleware has already verified:
+
+```python
+from my_application.request_context import get_authenticated_user
+
+
+def resolve_memory_user_id() -> str:
+    user = get_authenticated_user()
+    if user is None:
+        raise RuntimeError("An authenticated user is required")
+    return user.user_id
+```
+
+Reference that callable from each memory tool:
+
+```yaml
+functions:
+  add_memory:
+    _type: add_memory
+    memory: user_memory
+    user_id_resolver: my_application.auth.resolve_memory_user_id
+  get_memory:
+    _type: get_memory
+    memory: user_memory
+    user_id_resolver: my_application.auth.resolve_memory_user_id
+  delete_memory:
+    _type: delete_memory
+    memory: user_memory
+    user_id_resolver: my_application.auth.resolve_memory_user_id
+```
 
 ## Automatic Memory Wrapper Agent
 
@@ -93,11 +143,13 @@ The automatic memory wrapper agent supports several configuration parameters:
 
 User ID is automatically extracted at runtime for memory isolation via:
 1. `SessionManager.session(user_id=...)` - For production with custom auth middleware (recommended)
-2. `X-User-ID` HTTP header - For testing without middleware
+2. `X-User-ID` HTTP header - Illustrative/testing only; assumes a trusted upstream proxy authenticates the request and injects this header
 3. Console front end `user_id` - Defaults to `"nat_run_user_id"` for `nat run`
 
 Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
 For `nat run`, pass `--conversation_id` when testing independent memory conversations from the CLI.
+
+> Never treat a client-supplied `X-User-ID` header as authentication.
 
 For detailed configuration and usage examples, refer to the `examples/agents/auto_memory_wrapper/README.md` guide.
 
