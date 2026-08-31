@@ -114,9 +114,7 @@ async def test_auth_message_cannot_replace_trusted_header_identity():
         payload=ApiKeyAuthPayload(method="api_key", token="replacement-key"),
     )
 
-    with patch(
-            "nat.front_ends.fastapi.message_handler.UserManager.from_auth_payload_with_verification",
-    ) as resolver:
+    with patch("nat.front_ends.fastapi.message_handler.UserManager.from_auth_payload_with_verification", ) as resolver:
         await handler._process_auth_message(msg)
 
     resolver.assert_not_called()

@@ -196,9 +196,7 @@ async def add_mcp_client_tool_list_route(app: FastAPI, builder: WorkflowBuilder,
             logger.error(f"Error in MCP client tool list endpoint: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to retrieve MCP client information: {str(e)}") from e
 
-    async def get_per_user_mcp_client_tool_list(
-        request: Request,
-    ) -> MCPClientToolListResponse:
+    async def get_per_user_mcp_client_tool_list(request: Request, ) -> MCPClientToolListResponse:
         """Get the list of MCP tools for a specific user in per-user workflows.
 
         Uses the per-user workflow builder to resolve function groups and

@@ -101,7 +101,9 @@ async def test_uses_resolved_context_identity(monkeypatch):
     async def cb(cfg, flow):
         return AuthenticatedContext(
             headers={"Authorization": "Basic YQ=="},
-            metadata={"username": "a", "password": "b"},
+            metadata={
+                "username": "a", "password": "b"
+            },
         )
 
     _patch_context(monkeypatch, cb, user_id="resolved-user")

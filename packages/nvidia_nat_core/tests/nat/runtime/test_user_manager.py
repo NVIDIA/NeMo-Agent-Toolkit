@@ -117,7 +117,9 @@ class TestTrustedIdentityHeader:
     def test_identity_header_takes_precedence_over_other_credentials(self):
         request = _mock_request(
             cookies={SESSION_COOKIE_NAME: "cookie-user"},
-            headers={"X-User-ID": "header-user", "authorization": "Bearer api-key"},
+            headers={
+                "X-User-ID": "header-user", "authorization": "Bearer api-key"
+            },
         )
 
         header_info = UserManager.extract_user_from_connection(request, identity_header="X-User-ID")

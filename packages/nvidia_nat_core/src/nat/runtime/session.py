@@ -500,8 +500,8 @@ class SessionManager:
 
             if isinstance(http_connection, Request):
                 if identity_header is not None or user_id is None:
-                    user_info = UserManager.extract_user_from_connection(
-                        http_connection, identity_header=identity_header)
+                    user_info = UserManager.extract_user_from_connection(http_connection,
+                                                                         identity_header=identity_header)
                     if user_info is not None:
                         user_id = user_info.get_user_id()
                 token_workflow_parent_id, token_workflow_parent_name = \
