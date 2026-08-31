@@ -24,7 +24,10 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import SerializeAsAny
 from pydantic import field_validator
+from pydantic import model_validator
 
+from nat.data_models.api_server import IdentityCredentialType
+from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.front_end import FrontEndBaseConfig
@@ -51,15 +54,17 @@ def _is_reserved(path: Path) -> bool:
 
 class EvaluateRequest(BaseModel):
     """Request model for the evaluate endpoint."""
+
     config_file: str = Field(description="Path to the configuration file for evaluation")
     job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
     reps: int = Field(default=1, gt=0, description="Number of repetitions for the evaluation, defaults to 1")
     expiry_seconds: int = Field(
         default=3600,
         gt=0,
-        description="Optional time (in seconds) before the job expires. Clamped between 600 (10 min) and 86400 (24h).")
+        description="Optional time (in seconds) before the job expires. Clamped between 600 (10 min) and 86400 (24h).",
+    )
 
-    @field_validator('job_id', mode='after')
+    @field_validator("job_id", mode="after")
     @classmethod
     def validate_job_id(cls, job_id: str):
         job_id = job_id.strip()
@@ -75,7 +80,7 @@ class EvaluateRequest(BaseModel):
 
         return job_id
 
-    @field_validator('config_file', mode='after')
+    @field_validator("config_file", mode="after")
     @classmethod
     def validate_config_file(cls, config_file: str):
         config_file = config_file.strip()
@@ -98,22 +103,26 @@ class EvaluateRequest(BaseModel):
 
 class BaseAsyncResponse(BaseModel):
     """Base model for async responses."""
+
     job_id: str = Field(description="Unique identifier for the job")
     status: str = Field(description="Current status of the job")
 
 
 class EvaluateResponse(BaseAsyncResponse):
     """Response model for the evaluate endpoint."""
+
     pass
 
 
 class AsyncGenerateResponse(BaseAsyncResponse):
     """Response model for the async generation endpoint."""
+
     pass
 
 
 class BaseAsyncStatusResponse(BaseModel):
     """Base model for async status responses."""
+
     job_id: str = Field(description="Unique identifier for the evaluation job")
     status: str = Field(description="Current status of the evaluation job")
     error: str | None = Field(default=None, description="Error message if the job failed")
@@ -124,6 +133,7 @@ class BaseAsyncStatusResponse(BaseModel):
 
 class EvaluateStatusResponse(BaseAsyncStatusResponse):
     """Response model for the evaluate status endpoint."""
+
     config_file: str = Field(description="Path to the configuration file used for evaluation")
     output_path: str | None = Field(default=None,
                                     description="Path to the output file if the job completed successfully")
@@ -132,17 +142,20 @@ class EvaluateStatusResponse(BaseAsyncStatusResponse):
 class AsyncGenerationStatusResponse(BaseAsyncStatusResponse):
     output: dict | None = Field(
         default=None,
-        description="Output of the generate request, this is only available if the job completed successfully.")
+        description="Output of the generate request, this is only available if the job completed successfully.",
+    )
 
 
 class EvaluateItemRequest(BaseModel):
     """Request model for single-item evaluation endpoint."""
+
     item: EvalInputItem = Field(description="Single evaluation input item to evaluate")
     evaluator_name: str = Field(description="Name of the evaluator to use (must match config)")
 
 
 class EvaluateItemResponse(BaseModel):
     """Response model for single-item evaluation endpoint."""
+
     success: bool = Field(description="Whether the evaluation completed successfully")
     result: SerializeAsAny[BaseModel] | None = Field(default=None, description="Evaluation result if successful")
     error: str | None = Field(default=None, description="Error message if evaluation failed")
@@ -154,7 +167,6 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     """
 
     class EndpointBase(BaseModel):
-
         method: typing.Literal["GET", "POST", "PUT", "DELETE"]
         description: str
         path: str | None = Field(
@@ -200,11 +212,13 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             description="A permitted regex string to match against origins to make cross-origin requests",
         )
         allow_methods: list[str] | None = Field(
-            default_factory=lambda: ['GET'],
-            description="A list of HTTP methods that should be allowed for cross-origin requests.")
+            default_factory=lambda: ["GET"],
+            description="A list of HTTP methods that should be allowed for cross-origin requests.",
+        )
         allow_headers: list[str] | None = Field(
             default_factory=list,
-            description="A list of HTTP request headers that should be supported for cross-origin requests.")
+            description="A list of HTTP request headers that should be supported for cross-origin requests.",
+        )
         allow_credentials: bool | None = Field(
             default=False,
             description="Indicate that cookies should be supported for cross-origin requests.",
@@ -226,11 +240,13 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     scheduler_address: str | None = Field(
         default=None,
         description=("Address of the Dask scheduler to use for async jobs. If None, a Dask local cluster is created. "
-                     "Note: This requires the optional dask dependency to be installed."))
+                     "Note: This requires the optional dask dependency to be installed."),
+    )
     db_url: str | None = Field(
         default=None,
-        description=
-        "SQLAlchemy database URL for storing async job metadata, if unset a temporary SQLite database is used.")
+        description=(
+            "SQLAlchemy database URL for storing async job metadata, if unset a temporary SQLite database is used."),
+    )
     max_running_async_jobs: int = Field(
         default=10,
         description=(
@@ -238,7 +254,8 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             "misleading as the actual number of concurrent async jobs is: "
             "`max_running_async_jobs * dask_threads_per_worker`. "
             "This parameter is only used when scheduler_address is `None` and a Dask local cluster is created."),
-        ge=1)
+        ge=1,
+    )
     dask_workers: typing.Literal["threads", "processes"] = Field(
         default="processes",
         description=(
@@ -254,15 +271,37 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         default="0",
         description=("Memory limit for each Dask worker. Can be 'auto', a memory string like '4GB' or a float "
                      "representing a fraction of the system memory. Default is '0' which means no limit. "
-                     "Refer to https://docs.dask.org/en/stable/deploying-python.html#reference for details."))
+                     "Refer to https://docs.dask.org/en/stable/deploying-python.html#reference for details."),
+    )
 
     dask_threads_per_worker: int = Field(
         default=1,
         description=(
             "Number of threads to use per worker. This parameter is only used when the value is greater than 0 and "
             "scheduler_address is `None` and a local Dask cluster is created. When set to 0 the value uses the Dask "
-            "default."))
+            "default."),
+    )
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
+
+    accepted_identity_credentials: list[IdentityCredentialType] | None = Field(
+        default=None,
+        description=("Identity credential methods accepted for WebSocket connections and auth messages. "
+                     "If omitted, all supported methods are accepted."),
+    )
+
+    identity_authentication: list[AuthenticationRef] = Field(
+        default_factory=list,
+        description=("Named JWT authentication providers used to verify WebSocket identity credentials. "
+                     "If omitted, JWT claims retain the existing decode-only behavior."),
+    )
+
+    @model_validator(mode="after")
+    def validate_jwt_identity_policy(self) -> typing.Self:
+        if (self.identity_authentication and self.accepted_identity_credentials is not None
+                and "jwt" not in self.accepted_identity_credentials):
+            raise ValueError(
+                "identity_authentication cannot be configured when jwt identity credentials are not accepted")
+        return self
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
         method="POST",
@@ -282,24 +321,27 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     )
 
     evaluate_item: typing.Annotated[EndpointBase,
-                                    Field(description="Endpoint for evaluating a single item.")] = EndpointBase(
+                                    Field(description="Endpoint for evaluating a single item.")] = (EndpointBase(
                                         method="POST",
                                         path="/evaluate/item",
                                         description="Evaluate a single item with a specified evaluator",
-                                    )
+                                    ))
 
     oauth2_callback_path: str | None = Field(
         default="/auth/redirect",
-        description="OAuth2.0 authentication callback endpoint. If None, no OAuth2 callback endpoint is created.")
+        description="OAuth2.0 authentication callback endpoint. If None, no OAuth2 callback endpoint is created.",
+    )
 
     endpoints: list[Endpoint] = Field(
         default_factory=list,
         description=("Additional endpoints to add to the FastAPI app which run functions within the NAT configuration. "
-                     "Each endpoint must have a unique path."))
+                     "Each endpoint must have a unique path."),
+    )
 
     cors: CrossOriginResourceSharing = Field(
         default_factory=CrossOriginResourceSharing,
-        description="Cross origin resource sharing configuration for the FastAPI app")
+        description="Cross origin resource sharing configuration for the FastAPI app",
+    )
 
     use_gunicorn: bool = Field(
         default=False,
@@ -317,13 +359,16 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         description=(
             "Object store reference for the FastAPI app. If present, static files can be uploaded via a POST "
             "request to '/static' and files will be served from the object store. The files will be served from the "
-            "object store at '/static/{file_name}'."))
+            "object store at '/static/{file_name}'."),
+    )
 
     disable_legacy_routes: bool = Field(
         default=False,
-        description="Disable the legacy routes for the FastAPI app. If True, the legacy routes are disabled.")
+        description="Disable the legacy routes for the FastAPI app. If True, the legacy routes are disabled.",
+    )
 
     enable_interactive_extensions: bool = Field(
         default=False,
         description=("Enable the interactive extensions for OpenAI API compatible endpoints." +
-                     " If True, the interactive extensions are enabled."))
+                     " If True, the interactive extensions are enabled."),
+    )
