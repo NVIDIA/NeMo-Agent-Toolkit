@@ -14,7 +14,6 @@
 
 import abc
 import json
-import logging
 import textwrap
 from typing import Any
 from urllib.parse import urljoin
@@ -24,9 +23,6 @@ import requests.adapters
 from pydantic import HttpUrl
 
 from nat.utils.type_utils import override
-
-logger = logging.getLogger(__file__)
-
 
 class Sandbox(abc.ABC):
     """Code execution sandbox.

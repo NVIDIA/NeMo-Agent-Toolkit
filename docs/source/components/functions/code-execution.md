@@ -16,40 +16,14 @@ limitations under the License.
 -->
 # Code Execution
 
-NeMo Agent Toolkit supports python code execution in a remote sandbox environment through use of the `code_execution` function. This function sends a string of python code to a remote code execution server where code is executed, and the result, status, and any errors are returned
+NVIDIA NeMo Agent Toolkit supports Python code execution in a remote sandbox environment through the
+`code_execution` function. This function sends Python code to a remote code execution server and returns the result,
+status, and any errors.
 
 ## Usage
 
-The local sandbox requires Docker 28 or later. Follow the [Docker installation instructions](https://docs.docker.com/get-started/get-docker/) to install a supported version, and start Docker before continuing.
-
-Currently NeMo Agent Toolkit supports code execution through the included `local_sandbox` (a locally run code execution docker container) and via a remote [Piston Server](https://github.com/engineer-man/piston). In order to utilize `code_execution` as part of your workflow this server must be running and accepting requests.
-
-To start the `local_sandbox` you must have Docker Compose installed. If Docker Compose is not installed, install Docker Compose by following the [Docker Compose installation instructions](https://docs.docker.com/compose/install/). Once Docker Compose is installed and running, navigate to the `local_sandbox` directory and start the services with Docker Compose.
-
-```bash
-# from the root of the repository
-$ cd packages/nvidia_nat_core/src/nat/tool/code_execution/local_sandbox
-$ docker compose up
-```
-It will take a bit of time for the container to build and initialize, but once you see the following, the server is ready:
-```bash
-*** uWSGI is running in multiple interpreter mode ***
-spawned uWSGI master process (pid: 9)
-spawned uWSGI worker 1 (pid: 11, cores: 1)
-spawned uWSGI worker 2 (pid: 12, cores: 1)
-spawned uWSGI worker 3 (pid: 13, cores: 1)
-spawned uWSGI worker 4 (pid: 14, cores: 1)
-spawned uWSGI worker 5 (pid: 15, cores: 1)
-spawned uWSGI worker 6 (pid: 16, cores: 1)
-spawned uWSGI worker 7 (pid: 17, cores: 1)
-spawned uWSGI worker 8 (pid: 18, cores: 1)
-spawned uWSGI worker 9 (pid: 19, cores: 1)
-spawned uWSGI worker 10 (pid: 20, cores: 1)
-running "unix_signal:15 gracefully_kill_them_all" (master-start)...
-2025-03-14 02:02:11,060 INFO success: quit_on_failure entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)
-```
-
-For Piston servers, follow the instructions [here](https://github.com/engineer-man/piston) to set up a Piston server, or connect to an existing Piston server if you have access to one. Once the server is running you can run your workflow.
+Code execution requires a running [Piston server](https://github.com/engineer-man/piston). Follow the Piston setup
+instructions or connect to an existing server, then configure the function with the server's API URL.
 
 The config object for the `code_execution` function is shown below:
 ```python
@@ -58,15 +32,17 @@ class CodeExecutionToolConfig(FunctionBaseConfig, name="code_execution"):
     Tool for executing python code in a remotely hosted sandbox environment.
     """
     uri: HttpUrl = Field(default="http://127.0.0.1:6000", description="URI for the code execution sandbox server")
-    sandbox_type: str = Field(default="local", description="The type of code execution sandbox")
+    sandbox_type: str = Field(default="piston", description="The type of code execution sandbox")
     timeout: float = Field(default=10.0, description="Number of seconds to wait for a code execution request")
     max_output_characters: int = Field(default=1000, description="Maximum number of characters that can be returned")
 ```
-The defaults for this config are set use the `local_sandbox`server with a default timeout of 10s and a maximum output of 1000 characters. Below is an example of how this would look in the config file:
+By default, the function uses the Piston client, waits up to 10 seconds, and returns at most 1000 characters. Configure
+`uri` for the Piston server before running the workflow:
 ```yaml
 functions:
     code_execution_tool:
       _type: code_execution
+      uri: "http://my-piston-server/api/v2/"
 ```
 
 Below is an example config that connects to a Piston server with a timeout of 30s and a maximum of 3000 characters returned:
@@ -74,7 +50,7 @@ Below is an example config that connects to a Piston server with a timeout of 30
 functions:
     code_execution_tool:
       _type: code_execution
-      uri: "http://my-piston-server"
+      uri: "http://my-piston-server/api/v2/"
       timeout: 30
       max_output_characters: 3000
 ```

@@ -34,7 +34,7 @@ class CodeExecutionToolConfig(FunctionBaseConfig, name="code_execution"):
     """
     uri: HttpUrl = Field(default=HttpUrl("http://127.0.0.1:6000"),
                          description="URI for the code execution sandbox server")
-    sandbox_type: Literal["local", "piston"] = Field(default="local", description="The type of code execution sandbox")
+    sandbox_type: Literal["piston"] = Field(default="piston", description="The type of code execution sandbox")
     timeout: float = Field(default=10.0, description="Number of seconds to wait for a code execution request")
     max_output_characters: int = Field(default=1000, description="Maximum number of characters that can be returned")
 
