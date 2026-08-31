@@ -120,6 +120,8 @@ Before getting started, it's possible to run this simple workflow and many other
        _type: nim
        model_name: nvidia/nemotron-3-super-120b-a12b
        temperature: 0.0
+       chat_template_kwargs:
+         enable_thinking: false
 
    workflow:
      # Use an agent that 'reasons' and 'acts'
