@@ -23,16 +23,14 @@ The memory module is designed to be extensible, allowing developers to create cu
 
 ## User Identity for Memory Tools
 
-The built-in `add_memory`, `get_memory`, and `delete_memory` tools bind every operation to an identity. Set an optional `user_id` in the tool configuration for a fixed service or single-user identity. When
-it is omitted, the tool reads `Context.user_id` for the current invocation. If neither is available, the operation
-fails rather than accessing an unscoped memory namespace.
+The built-in `add_memory`, `get_memory`, and `delete_memory` tools bind every operation to an identity. Set an optional `user_id` in the tool configuration for a fixed service or single-user identity.
 
 ```yaml
 functions:
   get_memory:
     _type: get_memory
     memory: user_memory
-    user_id: service_user  # Optional; otherwise use the current Context.user_id
+    user_id: service_user
 ```
 
 ## Included Memory Modules

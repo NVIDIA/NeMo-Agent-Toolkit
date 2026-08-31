@@ -220,7 +220,7 @@ Explanation:
 
 - We define a memory entry named `saas_memory` with `_type: mem0_memory`, using the [Mem0](https://mem0.ai/) provider included in the [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) plugin.
 - Then we define two tools (functions in NeMo Agent Toolkit terminology) that reference `saas_memory`: `add_memory` and `get_memory`.
-- The optional `user_id` is a fixed identity for these tools. If it is omitted, the tools use the current invocation's `Context.user_id` and fail if no identity is available.
+- The optional `user_id` is a fixed identity for these tools, alternately `user_id_resolver` can be used to dynamically resolve the user identity at runtime.
 - Finally, the `agent_memory` workflow references these two tool names.
 
 ### Automatic Memory with the Auto-Memory Wrapper
