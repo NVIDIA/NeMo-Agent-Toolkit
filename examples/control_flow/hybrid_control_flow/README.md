@@ -52,7 +52,7 @@ The hybrid control flow is configured through the `config.yml` file. This exampl
 llms:
   nim_llm:
     _type: nim
-    model_name: nvidia/nemotron-3-nano-30b-a3b
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     temperature: 0.0
     max_tokens: 4096
 

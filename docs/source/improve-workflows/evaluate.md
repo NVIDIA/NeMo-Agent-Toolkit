@@ -109,7 +109,7 @@ If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, yo
      llms:
        nim_rag_eval_llm:
          _type: nim
-         model_name: meta/llama-3.1-70b-instruct
+         model_name: nvidia/nemotron-3-super-120b-a12b
          max_tokens: 8
          base_url: http://localhost:8000/v1
      ```
@@ -260,7 +260,7 @@ These metrics use a judge LLM for evaluating the generated output and retrieved 
 llms:
   nim_rag_eval_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     max_tokens: 8
 ```
 For these metrics, it is recommended to use 8 tokens for the judge LLM. The judge LLM returns a floating point score between 0 and 1 for each metric where 1.0 indicates a perfect match between the expected output and the generated output.
@@ -270,8 +270,8 @@ Evaluation is dependent on the judge LLM's ability to accurately evaluate the ge
     1) nvidia/Llama-3_3-Nemotron-Super-49B-v1
     2) mistralai/mixtral-8x22b-instruct-v0.1
     3) mistralai/mixtral-8x7b-instruct-v0.1
-    4) meta/llama-3.1-70b-instruct
-    5) meta/llama-3.3-70b-instruct
+    4) nvidia/nemotron-3-super-120b-a12b
+    5) nvidia/nemotron-3-super-120b-a12b
 ```
 <!-- Update the link here when ragas is updated -->
 For a complete list of up-to-date judge LLMs, refer to the [Ragas NV metrics leadership board](https://github.com/explodinggradients/ragas/blob/main/src/ragas/metrics/_nv_metrics.py)
@@ -557,7 +557,7 @@ You can override the configuration in the `eval_config.yml` file using the `--ov
 ```bash
 nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml \
         --override llms.nim_rag_eval_llm.temperature 0.7 \
-        --override llms.nim_rag_eval_llm.model_name meta/llama-3.1-70b-instruct
+        --override llms.nim_rag_eval_llm.model_name nvidia/nemotron-3-super-120b-a12b
 ```
 
 ## Evaluation Details

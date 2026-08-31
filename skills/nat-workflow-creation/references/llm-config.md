@@ -57,7 +57,7 @@ llms:
 
   eval_llm:
     _type: nim
-    model_name: nvidia/nemotron-3-nano-30b-a3b
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     temperature: 0.0
 ```
 

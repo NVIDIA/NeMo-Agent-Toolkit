@@ -48,13 +48,13 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
 
 embedders:
   nv-embedqa-e5-v5:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
 
 workflow:
   _type: react_agent
@@ -73,7 +73,7 @@ Examining the `examples/getting_started/simple_web_query/configs/config.yml` fil
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
 ```
 
@@ -92,7 +92,7 @@ The `--override` flag can be specified multiple times, allowing the ability to o
 ```bash
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"  \
   --override llms.nim_llm.temperature 0.7 \
-  --override llms.nim_llm.model_name meta/llama-3.3-70b-instruct
+  --override llms.nim_llm.model_name nvidia/nemotron-3-super-120b-a12b
 ```
 
 :::{note}

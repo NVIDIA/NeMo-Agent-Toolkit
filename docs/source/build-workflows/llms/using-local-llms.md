@@ -47,12 +47,12 @@ Password: <PASTE_API_KEY_HERE>
 
 Download the container for the LLM:
 ```bash
-docker pull nvcr.io/nim/nvidia/nemotron-3-nano:latest
+docker pull nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b:latest
 ```
 
 Download the container for the embedding Model:
 ```bash
-docker pull nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
+docker pull nvcr.io/nim/nvidia/nemotron-3-embed-1b:latest
 ```
 
 
@@ -75,7 +75,7 @@ docker run -it --rm \
     -e NGC_API_KEY \
     -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" \
     -p 8000:8000 \
-    nvcr.io/nim/nvidia/nemotron-3-nano:latest
+    nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b:latest
 ```
 
 Open a new terminal and run the embedding model container, listening on port 8001:
@@ -90,7 +90,7 @@ docker run -it --rm \
     -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" \
     -u $(id -u) \
     -p 8001:8000 \
-    nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
+    nvcr.io/nim/nvidia/nemotron-3-embed-1b:latest
 ```
 
 ### NeMo Agent Toolkit Configuration
@@ -112,13 +112,13 @@ llms:
   nim_llm:
     _type: nim
     base_url: "http://localhost:8000/v1"
-    model_name: nvidia/nemotron-3-nano
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
 
 embedders:
   nv-embedqa-e5-v5:
     _type: nim
     base_url: "http://localhost:8001/v1"
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
 
 workflow:
   _type: react_agent

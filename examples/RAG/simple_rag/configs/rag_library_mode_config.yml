@@ -17,7 +17,7 @@
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     base_url: https://integrate.api.nvidia.com/v1
     temperature: 0
     max_tokens: 4096
@@ -26,7 +26,7 @@ llms:
 embedders:
   nim_embedder:
     _type: nim
-    model_name: nvidia/llama-nemotron-embed-1b-v2
+    model_name: nvidia/nemotron-3-embed-1b
     base_url: https://integrate.api.nvidia.com/v1
     truncate: "END"
 

@@ -157,7 +157,7 @@ Configure your Agent to use the Milvus collections for RAG. We have pre-configur
     llms:
       nim_llm:
         _type: nim
-        model_name: meta/llama-3.3-70b-instruct
+        model_name: nvidia/nemotron-3-super-120b-a12b
         temperature: 0
         max_tokens: 4096
         top_p: 1
@@ -165,7 +165,7 @@ Configure your Agent to use the Milvus collections for RAG. We have pre-configur
     embedders:
       milvus_embedder:
         _type: nim
-        model_name: nvidia/nv-embedqa-e5-v5
+        model_name: nvidia/nemotron-3-embed-1b
         truncate: "END"
 
     workflow:
@@ -247,7 +247,7 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0
     max_tokens: 4096
     top_p: 1
@@ -255,7 +255,7 @@ llms:
 embedders:
   milvus_embedder:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
     truncate: "END"
 
 workflow:

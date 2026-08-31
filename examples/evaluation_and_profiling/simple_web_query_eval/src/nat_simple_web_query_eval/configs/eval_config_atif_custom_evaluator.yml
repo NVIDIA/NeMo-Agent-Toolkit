@@ -25,13 +25,13 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: nvidia/nemotron-3-nano-30b-a3b
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     temperature: 0.0
 
 embedders:
   nv-embedqa-e5-v5:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
 
 workflow:
   _type: react_agent
