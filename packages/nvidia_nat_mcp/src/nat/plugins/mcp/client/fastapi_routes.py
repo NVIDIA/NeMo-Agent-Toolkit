@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.runtime.session import SessionManager
+from nat.runtime.user_manager import IdentityHeaderError
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +198,6 @@ async def add_mcp_client_tool_list_route(app: FastAPI, builder: WorkflowBuilder,
 
     async def get_per_user_mcp_client_tool_list(
         request: Request,
-        user_id: str | None = None,
     ) -> MCPClientToolListResponse:
         """Get the list of MCP tools for a specific user in per-user workflows.
 
@@ -209,9 +209,11 @@ async def add_mcp_client_tool_list_route(app: FastAPI, builder: WorkflowBuilder,
             raise HTTPException(status_code=400, detail="No per-user workflow is configured.")
 
         try:
-            async with per_user_manager.session(user_id=user_id, http_connection=request) as session:
+            async with per_user_manager.session(http_connection=request) as session:
                 mcp_clients_info = await _collect_mcp_client_tool_list(session.workflow.function_groups)
                 return MCPClientToolListResponse(mcp_clients=mcp_clients_info)
+        except IdentityHeaderError:
+            raise
         except Exception as e:
             logger.exception("Error in per-user MCP client tool list endpoint: %s", e)
             raise HTTPException(status_code=500,

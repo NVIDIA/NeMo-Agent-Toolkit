@@ -68,53 +68,20 @@ class AutoMemoryWrapperGraph:
         self._context = Context.get()
 
     def _get_user_id_from_context(self) -> str:
-        """
-        Extract user_id from runtime context.
-
-        Priority order:
-
-        1. Context.user_id - For authenticated sessions (set via SessionManager.session())
-        2. user_manager.get_id() - Legacy/custom context compatibility
-        3. X-User-ID HTTP header - Illustrative/testing only; assumes a trusted upstream proxy
-           has authenticated the request and injected the header
-        4. "default_user" - Fallback for development/testing without authentication
-
-        Returns:
-            str: The user ID for memory operations
-        """
-        # Priority 1: Get user_id from the runtime context.
+        """Return the identity resolved by the runtime session."""
         try:
             user_id = self._context.user_id
             if user_id:
-                logger.debug(f"Using user_id from context: {user_id}")
                 return user_id
-        except Exception as e:
-            logger.debug(f"Failed to get user_id from context: {e}")
+        except Exception:
+            logger.debug("Failed to get user_id from context", exc_info=True)
+        raise RuntimeError("No resolved user identity is available for automatic memory operations")
 
-        # Priority 2: Get user_id from user_manager (legacy/custom context compatibility)
-        user_manager = getattr(self._context, "user_manager", None)
-        if user_manager and hasattr(user_manager, 'get_id'):
-            try:
-                user_id = user_manager.get_id()
-                if user_id:
-                    logger.debug(f"Using user_id from user_manager: {user_id}")
-                    return user_id
-            except Exception as e:
-                logger.debug(f"Failed to get user_id from user_manager: {e}")
-
-        # Priority 3: Extract an identity header injected by a trusted upstream proxy. This is illustrative/testing
-        # support only; an application must not accept a client-supplied X-User-ID header as authentication.
-        metadata = getattr(self._context, "metadata", None)
-        headers = getattr(metadata, "headers", None) if metadata else None
-        if headers:
-            user_id = headers.get("x-user-id") or headers.get("X-User-ID")
-            if user_id:
-                logger.debug(f"Using user_id from X-User-ID header: {user_id}")
-                return user_id
-
-        # Fallback: default for development/testing
-        logger.debug("Using default user_id: default_user")
-        return "default_user"
+    def _get_user_id(self, state: AutoMemoryWrapperState) -> str:
+        """Resolve the identity once and retain it for the full graph invocation."""
+        if state.user_id is None:
+            state.user_id = self._get_user_id_from_context()
+        return state.user_id
 
     def get_wrapper_node_count(self) -> int:
         """
@@ -164,7 +131,7 @@ class AutoMemoryWrapperGraph:
         user_message = state.messages[-1]
         if isinstance(user_message, HumanMessage):
             # Get user_id from runtime context
-            user_id = self._get_user_id_from_context()
+            user_id = self._get_user_id(state)
 
             # Add to memory
             await self.memory_editor.add_items(
@@ -183,7 +150,7 @@ class AutoMemoryWrapperGraph:
         user_message = state.messages[-1]
 
         # Get user_id from runtime context
-        user_id = self._get_user_id_from_context()
+        user_id = self._get_user_id(state)
 
         # Retrieve memory from memory provider
         memory_items = await self.memory_editor.search(
@@ -249,7 +216,7 @@ class AutoMemoryWrapperGraph:
         ai_message = state.messages[-1]
         if isinstance(ai_message, AIMessage):
             # Get user_id from runtime context
-            user_id = self._get_user_id_from_context()
+            user_id = self._get_user_id(state)
 
             # Add to memory
             await self.memory_editor.add_items(

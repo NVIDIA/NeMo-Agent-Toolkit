@@ -43,6 +43,10 @@ class IdentityCredentialNotAcceptedError(ValueError):
     """Raised when a supplied identity credential method is disabled by policy."""
 
 
+class IdentityHeaderError(ValueError):
+    """Raised when a configured trusted identity header is missing or ambiguous."""
+
+
 class JwtVerificationError(ValueError):
     """Raised when an enabled JWT verification policy rejects a token."""
 
@@ -55,6 +59,7 @@ class UserManager:
         cls,
         connection: Request | WebSocket,
         accepted_identity_credentials: typing.Collection[IdentityCredentialType] | None = None,
+        identity_header: str | None = None,
     ) -> UserInfo | None:
         """Resolve an HTTP/WebSocket connection into a ``UserInfo``.
 
@@ -69,6 +74,10 @@ class UserManager:
             ValueError: If a credential is found but cannot be resolved
                 to a valid user identity.
         """
+        if identity_header is not None:
+            identity = cls._get_identity_header(connection, identity_header)
+            return UserInfo._from_identity_header(identity_header, identity)
+
         cookie: str | None = cls._get_session_cookie(connection)
         if cookie:
             cls._ensure_identity_credential_accepted("session_cookie", accepted_identity_credentials)
@@ -93,7 +102,12 @@ class UserManager:
         connection: Request | WebSocket,
         accepted_identity_credentials: typing.Collection[IdentityCredentialType] | None = None,
         jwt_validators: typing.Mapping[str, BearerTokenValidator] | None = None,
+        identity_header: str | None = None,
     ) -> UserInfo | None:
+        if identity_header is not None:
+            identity = cls._get_identity_header(connection, identity_header)
+            return UserInfo._from_identity_header(identity_header, identity)
+
         cookie = cls._get_session_cookie(connection)
         if cookie:
             cls._ensure_identity_credential_accepted("session_cookie", accepted_identity_credentials)
@@ -270,6 +284,31 @@ class UserManager:
         """Reject a recognized credential type when it is disabled by policy."""
         if accepted_identity_credentials is not None and credential_type not in accepted_identity_credentials:
             raise IdentityCredentialNotAcceptedError(f"Identity credential type '{credential_type}' is not accepted")
+
+    @staticmethod
+    def _get_identity_header(connection: Request | WebSocket, header_name: str) -> str:
+        """Read one non-empty value for a trusted identity header, failing closed otherwise."""
+        values: list[str] = []
+        if isinstance(connection, Request):
+            values = list(connection.headers.getlist(header_name))
+        elif isinstance(connection, WebSocket) and hasattr(connection, "scope"):
+            target = header_name.lower()
+            for name, value in connection.scope.get("headers", []):
+                try:
+                    if name.decode("latin-1").lower() == target:
+                        values.append(value.decode("latin-1"))
+                except (AttributeError, UnicodeDecodeError):
+                    raise IdentityHeaderError(f"Configured identity header '{header_name}' is malformed") from None
+
+        if not values:
+            raise IdentityHeaderError(f"Configured identity header '{header_name}' is missing")
+        if len(values) != 1:
+            raise IdentityHeaderError(f"Configured identity header '{header_name}' must occur exactly once")
+
+        identity = values[0].strip()
+        if not identity:
+            raise IdentityHeaderError(f"Configured identity header '{header_name}' must not be empty")
+        return identity
 
     @staticmethod
     def _get_session_cookie(connection: Request | WebSocket) -> str | None:

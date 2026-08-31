@@ -210,6 +210,9 @@ class SessionManager:
         from nat.cli.type_registry import GlobalTypeRegistry
 
         self._config = config
+        front_end = getattr(config.general, "front_end", None)
+        identity_header = getattr(front_end, "identity_header", None)
+        self._identity_header = identity_header if isinstance(identity_header, str) else None
         self._max_concurrency = max_concurrency
         self._entry_function = entry_function
 
@@ -472,6 +475,7 @@ class SessionManager:
         builder_info: PerUserBuilderInfo | None = None
         request_start_time: float | None = None
         request_success = True
+        identity_header = getattr(self, "_identity_header", None)
 
         try:
             if user_input_callback is not None:
@@ -487,15 +491,17 @@ class SessionManager:
                 token_user_message_id = self._context_state.user_message_id.set(user_message_id)
 
             if isinstance(http_connection, WebSocket):
-                if user_id is None:
-                    user_info: UserInfo | None = UserManager.extract_user_from_connection(http_connection)
+                if identity_header is not None or user_id is None:
+                    user_info: UserInfo | None = UserManager.extract_user_from_connection(
+                        http_connection, identity_header=identity_header)
                     if user_info is not None:
                         user_id = user_info.get_user_id()
                 self.set_metadata_from_websocket(http_connection, user_message_id, conversation_id)
 
             if isinstance(http_connection, Request):
-                if user_id is None:
-                    user_info = UserManager.extract_user_from_connection(http_connection)
+                if identity_header is not None or user_id is None:
+                    user_info = UserManager.extract_user_from_connection(
+                        http_connection, identity_header=identity_header)
                     if user_info is not None:
                         user_id = user_info.get_user_id()
                 token_workflow_parent_id, token_workflow_parent_name = \

@@ -195,3 +195,27 @@ def test_identity_authentication_rejects_policy_that_disables_jwt():
             accepted_identity_credentials=["session_cookie"],
             identity_authentication=["corporate_jwt"],
         )
+
+
+def test_identity_header_is_disabled_by_default():
+    assert FastApiFrontEndConfig().identity_header is None
+
+
+def test_identity_header_accepts_and_trims_valid_header_name():
+    assert FastApiFrontEndConfig(identity_header=" X-User-ID ").identity_header == "X-User-ID"
+
+
+@pytest.mark.parametrize("header_name", ["", "   ", "X User ID", "X-User-ID\r\nInjected"])
+def test_identity_header_rejects_invalid_header_name(header_name):
+    with pytest.raises(ValueError, match="identity_header"):
+        FastApiFrontEndConfig(identity_header=header_name)
+
+
+def test_identity_header_cannot_be_combined_with_credential_policy():
+    with pytest.raises(ValueError, match="identity_header cannot be combined"):
+        FastApiFrontEndConfig(identity_header="X-User-ID", accepted_identity_credentials=[])
+
+
+def test_identity_header_cannot_be_combined_with_jwt_authentication():
+    with pytest.raises(ValueError, match="identity_header cannot be combined"):
+        FastApiFrontEndConfig(identity_header="X-User-ID", identity_authentication=["corporate_jwt"])

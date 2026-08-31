@@ -27,12 +27,14 @@ from fastapi import Request
 from fastapi import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from starlette.responses import JSONResponse
 
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.builder.workflow_builder import WorkflowEvalBuilderBase
 from nat.data_models.config import Config
 from nat.runtime.session import SessionManager
+from nat.runtime.user_manager import IdentityHeaderError
 from nat.utils.log_utils import setup_logging
 
 from .auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
@@ -125,6 +127,10 @@ class FastApiFrontEndPluginWorkerBase(ABC):
             logger.debug("Closing NAT server from process %s", os.getpid())
 
         nat_app = FastAPI(lifespan=lifespan)
+
+        @nat_app.exception_handler(IdentityHeaderError)
+        async def identity_header_error_handler(_request: Request, exc: IdentityHeaderError) -> JSONResponse:
+            return JSONResponse(status_code=401, content={"detail": str(exc)})
 
         # Configure app CORS.
         self.set_cors_config(nat_app)

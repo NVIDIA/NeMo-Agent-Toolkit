@@ -141,15 +141,29 @@ The automatic memory wrapper agent supports several configuration parameters:
 
 ### Multi-Tenant Memory Isolation
 
-User ID is automatically extracted at runtime for memory isolation via:
-1. `SessionManager.session(user_id=...)` - For production with custom auth middleware (recommended)
-2. `X-User-ID` HTTP header - Illustrative/testing only; assumes a trusted upstream proxy authenticates the request and injects this header
-3. Console front end `user_id` - Defaults to `"nat_run_user_id"` for `nat run`
+The automatic memory wrapper reads only the identity resolved by the runtime session. Resolve identity through
+authenticated front-end credentials, `SessionManager.session(user_id=...)`, or the console front end `user_id` (which
+defaults to `"nat_run_user_id"` for `nat run`). Memory operations fail closed when no identity is available.
+
+For local testing or an isolated deployment behind an authenticating reverse proxy, you can explicitly opt in to a
+trusted upstream identity header:
+
+```yaml
+general:
+  front_end:
+    _type: fastapi
+    identity_header: X-User-ID
+```
+
+Do not enable this setting unless clients cannot reach `nat serve` directly, the proxy authenticates every request and
+overwrites the header, the toolkit port is not published outside the trusted backend network, and every container on
+that network is trusted. A client-supplied identity header is not authentication.
 
 Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
 For `nat run`, pass `--conversation_id` when testing independent memory conversations from the CLI.
 
-> Never treat a client-supplied `X-User-ID` header as authentication.
+When configured, the header is authoritative for HTTP and WebSocket requests. Missing, empty, and repeated values are
+rejected, and other credentials cannot override it.
 
 For detailed configuration and usage examples, refer to the `examples/agents/auto_memory_wrapper/README.md` guide.
 

@@ -45,6 +45,7 @@ def _make_jwt(claims: dict) -> str:
 def _make_message_handler(
     accepted_identity_credentials=None,
     jwt_validators=None,
+    identity_header=None,
 ) -> tuple[WebSocketMessageHandler, MagicMock, WebSocketAuthenticationFlowHandler]:
     """Build a WebSocketMessageHandler with a mockable socket and a real flow handler."""
     socket = MagicMock(spec=WebSocket)
@@ -58,6 +59,7 @@ def _make_message_handler(
         worker=MagicMock(),
         accepted_identity_credentials=accepted_identity_credentials,
         jwt_validators=jwt_validators,
+        identity_header=identity_header,
     )
     flow_handler = WebSocketAuthenticationFlowHandler(
         add_flow_cb=AsyncMock(),
@@ -85,6 +87,41 @@ async def test_context_manager_resolves_connection_identity_before_restoration()
     socket.accept.assert_awaited_once()
     assert handler._user_id == "user-a"
     restore.assert_awaited_once()
+
+
+async def test_context_manager_uses_configured_identity_header():
+    """The configured identity header is passed through the verified connection resolver."""
+    handler, socket, _ = _make_message_handler(identity_header="X-User-ID")
+    user_info = MagicMock()
+    user_info.get_user_id.return_value = "resolved-user"
+
+    with patch(
+            "nat.front_ends.fastapi.message_handler.UserManager.extract_user_from_connection_with_verification",
+            return_value=user_info,
+    ) as resolver:
+        await handler.__aenter__()
+
+    assert resolver.await_args.kwargs["identity_header"] == "X-User-ID"
+    assert handler._user_id == "resolved-user"
+
+
+async def test_auth_message_cannot_replace_trusted_header_identity():
+    """A WebSocket auth message cannot override an upstream-asserted identity."""
+    handler, socket, _ = _make_message_handler(identity_header="X-User-ID")
+    handler._user_id = "resolved-user"
+    msg = WebSocketAuthMessage(
+        type=WebSocketMessageType.AUTH_MESSAGE,
+        payload=ApiKeyAuthPayload(method="api_key", token="replacement-key"),
+    )
+
+    with patch(
+            "nat.front_ends.fastapi.message_handler.UserManager.from_auth_payload_with_verification",
+    ) as resolver:
+        await handler._process_auth_message(msg)
+
+    resolver.assert_not_called()
+    assert handler._user_id == "resolved-user"
+    assert socket.send_json.await_args.args[0]["status"] == AuthMessageStatus.ERROR
 
 
 async def test_context_manager_rejects_disabled_connection_credential_without_restoration():

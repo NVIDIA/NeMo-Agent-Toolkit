@@ -15,6 +15,7 @@
 
 import logging
 import os
+import re
 import sys
 import typing
 from datetime import datetime
@@ -295,8 +296,32 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
                      "If omitted, JWT claims retain the existing decode-only behavior."),
     )
 
+    identity_header: str | None = Field(
+        default=None,
+        description=("Name of an HTTP header containing an identity asserted by a trusted upstream proxy. "
+                     "This is disabled by default and must only be enabled when untrusted clients cannot reach "
+                     "the server directly and the proxy removes any client-supplied value before setting it."),
+    )
+
+    @field_validator("identity_header")
+    @classmethod
+    def validate_identity_header(cls, identity_header: str | None) -> str | None:
+        if identity_header is None:
+            return None
+        identity_header = identity_header.strip()
+        if not identity_header:
+            raise ValueError("identity_header must not be empty")
+        if re.fullmatch(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+", identity_header) is None:
+            raise ValueError("identity_header must be a valid HTTP header name")
+        return identity_header
+
     @model_validator(mode="after")
     def validate_jwt_identity_policy(self) -> typing.Self:
+        if self.identity_header is not None:
+            if self.accepted_identity_credentials is not None:
+                raise ValueError("identity_header cannot be combined with accepted_identity_credentials")
+            if self.identity_authentication:
+                raise ValueError("identity_header cannot be combined with identity_authentication")
         if (self.identity_authentication and self.accepted_identity_credentials is not None
                 and "jwt" not in self.accepted_identity_credentials):
             raise ValueError(

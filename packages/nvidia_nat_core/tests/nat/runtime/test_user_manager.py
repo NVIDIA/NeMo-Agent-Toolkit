@@ -34,6 +34,7 @@ from nat.data_models.user_info import JwtUserInfo
 from nat.data_models.user_info import UserInfo
 from nat.runtime.session import SESSION_COOKIE_NAME
 from nat.runtime.user_manager import IdentityCredentialNotAcceptedError
+from nat.runtime.user_manager import IdentityHeaderError
 from nat.runtime.user_manager import JwtVerificationError
 from nat.runtime.user_manager import UserManager
 
@@ -50,7 +51,9 @@ def _mock_request(cookies: dict[str, str] | None = None, headers: dict[str, str]
     mock = MagicMock(spec=Request)
     mock.cookies = cookies or {}
     mock.headers = MagicMock()
-    mock.headers.get = (headers or {}).get
+    header_values = headers or {}
+    mock.headers.get = header_values.get
+    mock.headers.getlist = lambda name: [value for key, value in header_values.items() if key.lower() == name.lower()]
     return mock
 
 
@@ -58,6 +61,7 @@ def _mock_websocket(
     cookie_header: str | None = None,
     auth_header: str | None = None,
     api_key_header: str | None = None,
+    extra_headers: list[tuple[bytes, bytes]] | None = None,
 ) -> MagicMock:
     """Create a MagicMock that passes ``isinstance(obj, WebSocket)``."""
     raw_headers: list[tuple[bytes, bytes]] = []
@@ -67,10 +71,60 @@ def _mock_websocket(
         raw_headers.append((b"authorization", auth_header.encode()))
     if api_key_header:
         raw_headers.append((b"x-api-key", api_key_header.encode()))
+    raw_headers.extend(extra_headers or [])
 
     mock = MagicMock(spec=WebSocket)
     mock.scope = {"headers": raw_headers}
     return mock
+
+
+class TestTrustedIdentityHeader:
+    """A configured upstream identity header is authoritative and fails closed."""
+
+    def test_request_identity_header_returns_deterministic_user(self):
+        request = _mock_request(headers={"X-User-ID": "alice"})
+
+        first = UserManager.extract_user_from_connection(request, identity_header="X-User-ID")
+        second = UserManager.extract_user_from_connection(request, identity_header="x-user-id")
+
+        assert first is not None
+        assert second is not None
+        assert first.get_user_id() == second.get_user_id()
+        assert first.get_user_details() is None
+
+    def test_websocket_identity_header_is_supported(self):
+        websocket = _mock_websocket(extra_headers=[(b"x-user-id", b"alice")])
+
+        info = UserManager.extract_user_from_connection(websocket, identity_header="X-User-ID")
+
+        assert info is not None
+        assert info.get_user_id()
+
+    @pytest.mark.parametrize("value", [None, "", "   "])
+    def test_missing_or_empty_identity_header_is_rejected(self, value):
+        headers = {} if value is None else {"X-User-ID": value}
+        request = _mock_request(headers=headers)
+
+        with pytest.raises(IdentityHeaderError):
+            UserManager.extract_user_from_connection(request, identity_header="X-User-ID")
+
+    def test_duplicate_identity_header_is_rejected(self):
+        websocket = _mock_websocket(extra_headers=[(b"x-user-id", b"alice"), (b"X-User-ID", b"mallory")])
+
+        with pytest.raises(IdentityHeaderError, match="exactly once"):
+            UserManager.extract_user_from_connection(websocket, identity_header="X-User-ID")
+
+    def test_identity_header_takes_precedence_over_other_credentials(self):
+        request = _mock_request(
+            cookies={SESSION_COOKIE_NAME: "cookie-user"},
+            headers={"X-User-ID": "header-user", "authorization": "Bearer api-key"},
+        )
+
+        header_info = UserManager.extract_user_from_connection(request, identity_header="X-User-ID")
+        expected = UserInfo._from_identity_header("X-User-ID", "header-user")
+
+        assert header_info is not None
+        assert header_info.get_user_id() == expected.get_user_id()
 
 
 class TestFromConnectionRequestCookie:
@@ -895,6 +949,21 @@ class TestSessionUserIdResolution:
             async with sm.session(user_id="explicit-id", http_connection=ws) as session:
                 assert session._user_id == "explicit-id"
             mock_extract.assert_not_called()
+
+    async def test_identity_header_overrides_explicit_user_id_for_connection(self):
+        """A caller cannot bypass configured header identity with an explicit user_id."""
+        from unittest.mock import patch
+
+        sm = self._make_session_manager()
+        sm._identity_header = "X-User-ID"
+        ws = _mock_websocket(extra_headers=[(b"x-user-id", b"proxy-user")])
+        header_info = UserInfo._from_identity_header("X-User-ID", "proxy-user")
+
+        with patch.object(UserManager, "extract_user_from_connection", return_value=header_info) as resolver:
+            async with sm.session(user_id="caller-controlled", http_connection=ws) as session:
+                assert session._user_id == header_info.get_user_id()
+
+        resolver.assert_called_once_with(ws, identity_header="X-User-ID")
 
     async def test_websocket_cookie_sets_user_id_in_context(self):
         """Input: WebSocket with session cookie. Asserts session user_id matches cookie-derived UUID."""
