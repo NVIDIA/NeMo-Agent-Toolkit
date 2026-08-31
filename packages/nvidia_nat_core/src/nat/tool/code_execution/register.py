@@ -32,7 +32,7 @@ class CodeExecutionToolConfig(FunctionBaseConfig, name="code_execution"):
     """
     Tool for executing python code in a remotely hosted sandbox environment.
     """
-    uri: HttpUrl = Field(default=HttpUrl("http://127.0.0.1:6000"),
+    uri: HttpUrl = Field(default=HttpUrl("http://127.0.0.1:2000/api/v2"),
                          description="URI for the code execution sandbox server")
     sandbox_type: Literal["piston"] = Field(default="piston", description="The type of code execution sandbox")
     timeout: float = Field(default=10.0, description="Number of seconds to wait for a code execution request")

@@ -24,6 +24,7 @@ from pydantic import HttpUrl
 
 from nat.utils.type_utils import override
 
+
 class Sandbox(abc.ABC):
     """Code execution sandbox.
 
