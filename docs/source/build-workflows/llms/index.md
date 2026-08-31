@@ -48,7 +48,7 @@ llms:
     model_name: gpt-4o-mini
   aws_bedrock_llm:
     _type: aws_bedrock
-    model_name: nvidia/nemotron-3-super-120b-a12b
+    model_name: meta/llama-3.1-70b-instruct
     region_name: us-east-1
   azure_openai_llm:
     _type: azure_openai
