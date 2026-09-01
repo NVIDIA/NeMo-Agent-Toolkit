@@ -112,8 +112,7 @@ general:
 
 Each JWT provider requires `issuer_url`, `jwks_uri`, and `audience`. It can also require `scopes` and configure `timeout` and `leeway`. Add another named provider and select it in `identity_authentication` to accept JWT tokens from another issuer. The issuer claim selects the matching provider; an unknown issuer or a failed signature, time, audience, or scope check returns an authentication error and does not restore workflow state. If `identity_authentication` is omitted, JWT tokens retain the existing decode-only behavior. Configuring `identity_authentication` while excluding `jwt` from `accepted_identity_credentials` is invalid.
 
-For local testing or a deployment where an authenticating reverse proxy is the only service that can reach
-`nat serve`, the FastAPI front end can instead trust an upstream identity header:
+For local testing or a deployment where an authenticating reverse proxy is the only service that can reach `nat serve`, the FastAPI front end can instead trust an upstream identity header:
 
 ```yaml
 general:
@@ -122,11 +121,9 @@ general:
     identity_header: X-User-ID
 ```
 
-This setting is secure only if the proxy authenticates every connection, overwrites any client-supplied value, and the
-toolkit port is not exposed outside a trusted backend network. Every container that can reach that network must also
-be trusted. When enabled, the header is authoritative: the connection is rejected if it is missing, empty, or repeated,
+This setting is secure only if the proxy authenticates every connection, overwrites any client-supplied value, and the server is in an isolated network environment. When enabled, the header is authoritative: the connection is rejected if it is missing, empty, or repeated,
 and an `auth_message` cannot replace the resolved identity. `identity_header` cannot be combined with
-`accepted_identity_credentials` or `identity_authentication`.
+`accepted_identity_credentials` or `identity_authentication`. Do not use this technique if `nat serve` is reachable by untrusted clients.
 
 ## Auth Message
 This message allows clients to authenticate over a WebSocket connection when header-based or
