@@ -85,6 +85,9 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 
+### Framework parity harness ###
+.framework_parity_results/
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
