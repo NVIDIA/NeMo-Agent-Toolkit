@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 import pytest
@@ -45,8 +47,9 @@ def calculator(expression: str) -> str:
         return f"Error calculating expression: {str(e)}"
 
 
-async def create_minimal_agent(llm_name: str, llm_config: Any) -> ReActAgent:
-    """Helper function to create a minimal agent with the specified LLM."""
+@asynccontextmanager
+async def create_minimal_agent(llm_name: str, llm_config: Any) -> AsyncIterator[ReActAgent]:
+    """Create an agent whose managed LLM clients remain available while in use."""
     async with WorkflowBuilder() as builder:
         await builder.add_llm(llm_name, llm_config)
         llm = await builder.get_llm(llm_name, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -58,20 +61,21 @@ async def create_minimal_agent(llm_name: str, llm_config: Any) -> ReActAgent:
                                        "Input should be a string containing a mathematical expression.")
         ]
 
-        return ReActAgent(tools=tools, llm=llm, verbose=True)
+        yield ReActAgent(tools=tools, llm=llm, verbose=True)
 
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_nim_minimal_agent():
     """Test NIM LLM with minimal LlamaIndex agent. Requires NVIDIA_API_KEY to be set."""
-    llm_config = NIMModelConfig(model_name="nvidia/nemotron-3-super-120b-a12b", temperature=0.0)
-    agent = await create_minimal_agent("nim_llm", llm_config)
-
-    response = await agent.run("What is 1+2?")
-    assert response is not None
-    assert hasattr(response, 'response')
-    assert "3" in response.response.content.lower()
+    llm_config = NIMModelConfig(model_name="nvidia/nemotron-3-super-120b-a12b",
+                                temperature=0.0,
+                                is_chat_model=True)
+    async with create_minimal_agent("nim_llm", llm_config) as agent:
+        response = await agent.run("What is 1+2?")
+        assert response is not None
+        assert hasattr(response, 'response')
+        assert "3" in response.response.content.lower()
 
 
 @pytest.mark.integration
@@ -79,12 +83,11 @@ async def test_nim_minimal_agent():
 async def test_openai_minimal_agent():
     """Test OpenAI LLM with minimal LlamaIndex agent. Requires OPENAI_API_KEY to be set."""
     llm_config = OpenAIModelConfig(model_name="gpt-5.4-mini", temperature=0.0)
-    agent = await create_minimal_agent("openai_llm", llm_config)
-
-    response = await agent.run("What is 1+2?")
-    assert response is not None
-    assert hasattr(response, 'response')
-    assert "3" in response.response.content.lower()
+    async with create_minimal_agent("openai_llm", llm_config) as agent:
+        response = await agent.run("What is 1+2?")
+        assert response is not None
+        assert hasattr(response, 'response')
+        assert "3" in response.response.content.lower()
 
 
 @pytest.mark.integration
@@ -100,12 +103,11 @@ async def test_aws_bedrock_minimal_agent():
                                        region_name="us-east-2",
                                        context_size=1024,
                                        credentials_profile_name="default")
-    agent = await create_minimal_agent("aws_bedrock_llm", llm_config)
-
-    response = await agent.run("What is 1+2?")
-    assert response is not None
-    assert hasattr(response, 'response')
-    assert "3" in response.response.content.lower()
+    async with create_minimal_agent("aws_bedrock_llm", llm_config) as agent:
+        response = await agent.run("What is 1+2?")
+        assert response is not None
+        assert hasattr(response, 'response')
+        assert "3" in response.response.content.lower()
 
 
 @pytest.mark.integration
@@ -126,9 +128,8 @@ async def test_azure_openai_minimal_agent(api_version: str | None):
     if api_version is not None:
         config_args["api_version"] = api_version
     llm_config = AzureOpenAIModelConfig(**config_args)
-    agent = await create_minimal_agent("azure_openai_llm", llm_config)
-
-    response = await agent.run("What is 1+2?")
-    assert response is not None
-    assert hasattr(response, 'response')
-    assert "3" in response.response.content.lower()
+    async with create_minimal_agent("azure_openai_llm", llm_config) as agent:
+        response = await agent.run("What is 1+2?")
+        assert response is not None
+        assert hasattr(response, 'response')
+        assert "3" in response.response.content.lower()
