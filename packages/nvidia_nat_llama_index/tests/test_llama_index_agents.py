@@ -65,7 +65,7 @@ async def create_minimal_agent(llm_name: str, llm_config: Any) -> ReActAgent:
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_nim_minimal_agent():
     """Test NIM LLM with minimal LlamaIndex agent. Requires NVIDIA_API_KEY to be set."""
-    llm_config = NIMModelConfig(model_name="meta/llama-3.1-70b-instruct", temperature=0.0)
+    llm_config = NIMModelConfig(model_name="nvidia/nemotron-3-super-120b-a12b", temperature=0.0)
     agent = await create_minimal_agent("nim_llm", llm_config)
 
     response = await agent.run("What is 1+2?")
