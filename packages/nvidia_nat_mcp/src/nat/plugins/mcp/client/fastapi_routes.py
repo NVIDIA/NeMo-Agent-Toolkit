@@ -266,6 +266,9 @@ async def add_mcp_client_tool_list_route(app: FastAPI, builder: WorkflowBuilder,
                           400: {
                               "description": "No per-user workflow is configured"
                           },
+                          401: {
+                              "description": "Required identity header is missing or invalid"
+                          },
                           500: {
                               "description": "Internal Server Error"
                           }
