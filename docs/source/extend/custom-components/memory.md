@@ -19,7 +19,7 @@ limitations under the License.
 
 This documentation presumes familiarity with the NeMo Agent Toolkit [memory module](../../build-workflows/memory.md), [plugin architecture](../plugins.md), the concept of "function registration" using `@register_function`, and how we define [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) and workflow configurations in the NeMo Agent Toolkit config described in the [Creating a New Tool and Workflow](../../get-started/tutorials/create-a-new-workflow.md) tutorial.
 
-For applications that expose the built-in memory tools to multiple authenticated users, see
+For applications that expose the built-in memory tools to multiple authenticated users, refer to
 [Authenticating Memory Tool Users](../../build-workflows/memory.md#authenticating-memory-tool-users). Configure a trusted
 `user_id_resolver`.
 
@@ -89,7 +89,7 @@ In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.plugin_a
            ...
    ```
 3. **Tell NeMo Agent Toolkit how to build your MemoryEditor**. Typically, you do this by hooking into the builder system so that when `builder.get_memory_client("my_custom_memory")` is called, it returns an instance of `MyCustomMemoryEditor`.
-   - For example, you might define a `@register_memory` or do it manually with the global type registry. The standard pattern is to see how memory plugins register and build their memory clients. For an in-repository example, see `packages/nvidia_nat_mem0ai/src/nat/plugins/mem0ai/memory.py`; for an external plugin example, see the [`nemo-agent-toolkit-redis`](https://github.com/redis-developer/nemo-agent-toolkit-redis) Redis memory plugin.
+   - For example, you might define a `@register_memory` or do it manually with the global type registry. The standard pattern is to see how memory plugins register and build their memory clients. For an in-repository example, refer to `packages/nvidia_nat_mem0ai/src/nat/plugins/mem0ai/memory.py`. For an external plugin example, refer to the [`nemo-agent-toolkit-redis`](https://github.com/redis-developer/nemo-agent-toolkit-redis) Redis memory plugin.
 
 4. **Use in config**: Now in your NeMo Agent Toolkit config, you can do something like:
    ```yaml

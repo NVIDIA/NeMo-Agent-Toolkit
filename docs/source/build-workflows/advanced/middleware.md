@@ -461,7 +461,7 @@ Both abstract methods receive the `InteractionResponse` from the user and the cu
 
 #### Configuration
 
-`HITLMiddlewareConfig` is the base configuration class. It has no YAML `_type` of its own — because `HITLMiddleware` is abstract, concrete subclasses must declare their own `name` to be runnable. It provides two prompt fields and inherits all function-targeting fields from `DynamicMiddlewareConfig`.
+`HITLMiddlewareConfig` is the base configuration class and has no YAML `_type` of its own. Because `HITLMiddleware` is abstract, concrete subclasses must declare their own `name` to be runnable. It provides two prompt fields and inherits all function-targeting fields from `DynamicMiddlewareConfig`.
 
 - **`pre_invoke_prompt`**: Any `HumanPrompt` to display before the function is called. Omit or set to `null` to disable pre-invoke interaction.
 - **`post_invoke_prompt`**: Any `HumanPrompt` to display after the function returns. Omit or set to `null` to disable post-invoke interaction.
