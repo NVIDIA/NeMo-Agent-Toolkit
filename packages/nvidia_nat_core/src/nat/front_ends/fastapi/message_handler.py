@@ -66,6 +66,7 @@ from nat.front_ends.fastapi.response_helpers import generate_streaming_response
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 from nat.runtime.session import SessionManager
 from nat.runtime.user_manager import IdentityCredentialNotAcceptedError
+from nat.runtime.user_manager import IdentityHeaderError
 from nat.runtime.user_manager import JwtVerificationError
 from nat.runtime.user_manager import UserManager
 
@@ -96,6 +97,7 @@ class WebSocketMessageHandler:
         worker: "FastApiFrontEndPluginWorker",
         accepted_identity_credentials: typing.Collection[IdentityCredentialType] | None = None,
         jwt_validators: typing.Mapping[str, BearerTokenValidator] | None = None,
+        identity_header: str | None = None,
     ):
         self._socket: WebSocket = socket
         self._session_manager: SessionManager = session_manager
@@ -103,6 +105,7 @@ class WebSocketMessageHandler:
         self._worker: FastApiFrontEndPluginWorker = worker
         self._accepted_identity_credentials = accepted_identity_credentials
         self._jwt_validators = jwt_validators
+        self._identity_header = identity_header
 
         self._message_validator: MessageValidator = MessageValidator()
         self._running_workflow_task: asyncio.Task | None = None
@@ -192,8 +195,9 @@ class WebSocketMessageHandler:
                 self._socket,
                 accepted_identity_credentials=self._accepted_identity_credentials,
                 jwt_validators=self._jwt_validators,
+                identity_header=self._identity_header,
             )
-        except (IdentityCredentialNotAcceptedError, JwtVerificationError) as exc:
+        except (IdentityCredentialNotAcceptedError, IdentityHeaderError, JwtVerificationError) as exc:
             self._connection_rejected = True
             response = WebSocketAuthResponseMessage(
                 status=AuthMessageStatus.ERROR,
@@ -311,6 +315,18 @@ class WebSocketMessageHandler:
 
             if isinstance(self._flow_handler, websocket_flow_handler.WebSocketAuthenticationFlowHandler):
                 self._flow_handler.set_oauth_mode(message.payload.mode)
+            return
+
+        if self._identity_header is not None:
+            response = WebSocketAuthResponseMessage(
+                status=AuthMessageStatus.ERROR,
+                payload=Error(
+                    code=ErrorTypes.USER_AUTH_ERROR,
+                    message="Authentication failed",
+                    details="WebSocket auth messages cannot replace an identity asserted by a trusted header",
+                ),
+            )
+            await self._socket.send_json(response.model_dump())
             return
 
         identity_resolved = False

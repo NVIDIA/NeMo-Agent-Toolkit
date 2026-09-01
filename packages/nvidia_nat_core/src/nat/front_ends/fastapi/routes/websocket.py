@@ -114,6 +114,7 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager, jwt_vali
                 worker,
                 accepted_identity_credentials=worker.front_end_config.accepted_identity_credentials,
                 jwt_validators=jwt_validators,
+                identity_header=worker.front_end_config.identity_header,
         ) as handler:
             origin = websocket.headers.get("origin")
             allowed_origins = worker.front_end_config.cors.allow_origins or []
