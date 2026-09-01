@@ -68,9 +68,7 @@ async def create_minimal_agent(llm_name: str, llm_config: Any) -> AsyncIterator[
 @pytest.mark.usefixtures("nvidia_api_key")
 async def test_nim_minimal_agent():
     """Test NIM LLM with minimal LlamaIndex agent. Requires NVIDIA_API_KEY to be set."""
-    llm_config = NIMModelConfig(model_name="nvidia/nemotron-3-super-120b-a12b",
-                                temperature=0.0,
-                                is_chat_model=True)
+    llm_config = NIMModelConfig(model_name="nvidia/nemotron-3-super-120b-a12b", temperature=0.0, is_chat_model=True)
     async with create_minimal_agent("nim_llm", llm_config) as agent:
         response = await agent.run("What is 1+2?")
         assert response is not None
