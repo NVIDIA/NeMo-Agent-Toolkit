@@ -228,13 +228,19 @@ def test_google_adk_tool_wrapper_preserves_field_defaults(mock_function_tool):
 
 
 @patch('google.adk.tools.function_tool.FunctionTool')
-def test_google_adk_tool_wrapper_handles_data_aware_default_factory(mock_function_tool):
-    """A default factory requiring validated data must not break signature creation."""
+def test_google_adk_tool_wrapper_does_not_evaluate_default_factories(mock_function_tool):
+    """Default factories remain deferred until Pydantic validates the input model."""
     import inspect
+
+    factory_calls = []
+
+    def generate_value():
+        factory_calls.append("called")
+        return ["generated"]
 
     class FactoryInput(BaseModel):
         required_value: str
-        generated: list[str] = Field(default_factory=list)
+        generated: list[str] = Field(default_factory=generate_value)
         derived: str = Field(default_factory=lambda data: data["required_value"])
 
     class FactoryFunction:
@@ -251,8 +257,17 @@ def test_google_adk_tool_wrapper_handles_data_aware_default_factory(mock_functio
     signature = inspect.signature(mock_function_tool.call_args[0][0])
 
     assert list(signature.parameters) == ["required_value", "generated", "derived"]
-    assert signature.parameters["generated"].default == []
+    assert signature.parameters["generated"].default is None
     assert signature.parameters["derived"].default is None
+    assert factory_calls == []
+
+    first = FactoryInput(required_value="first")
+    second = FactoryInput(required_value="second")
+    assert factory_calls == ["called", "called"]
+    assert first.generated == ["generated"]
+    assert second.generated == ["generated"]
+    assert first.derived == "first"
+    assert second.derived == "second"
 
 
 @patch('google.adk.tools.function_tool.FunctionTool')
@@ -269,7 +284,9 @@ def test_google_adk_tool_wrapper_supports_legacy_and_annotation_fields(mock_func
 
     class LegacyInput:
         __fields__: ClassVar[dict[str, object]] = {
-            "required_value": type("RequiredField", (), {"annotation": str, "outer_type_": str, "required": True})(),
+            "required_value": type("RequiredField", (), {
+                "annotation": str, "outer_type_": str, "required": True
+            })(),
             "optional_value": LegacyField(),
         }
 

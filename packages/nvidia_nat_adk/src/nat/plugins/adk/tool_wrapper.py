@@ -77,12 +77,7 @@ def google_adk_tool_wrapper(
             return inspect.Parameter.empty
         default_factory = getattr(field, "default_factory", None)
         if default_factory is not None:
-            if getattr(field, "default_factory_takes_validated_data", False):
-                return None
-            try:
-                return default_factory()
-            except TypeError:
-                return None
+            return None
         return getattr(field, "default", inspect.Parameter.empty)
 
     async def callable_ainvoke(*args: Any, **kwargs: Any) -> Any:
