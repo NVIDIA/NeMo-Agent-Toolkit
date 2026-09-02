@@ -404,7 +404,7 @@ We also we see the `evaluators` section, which includes the following metrics:
 
 ### Running the Profiler
 
-> *Note*: The models used in the following sections were models available at the time of writing on [`build.nvidia.com`](https://build.nvidia.com) some of these have been deprecated and are no longer available. Please use the models that are available to you at the time of running the profiler.
+> *Note*: The models used in the following sections were models available at the time of writing on [`build.nvidia.com`](https://build.nvidia.com) some of these have been deprecated and are no longer available. Use the models that are available to you at the time of running the profiler.
 
 To run the profiler, simply run the `nat eval` command with the workflow configuration file. The profiler will collect usage statistics and store them in the output directory specified in the configuration file.
 
