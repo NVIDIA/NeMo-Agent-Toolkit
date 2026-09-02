@@ -76,7 +76,7 @@ def nim_config_fixture() -> NIMModelConfig:
     """
     api_key = os.environ.get("NVIDIA_API_KEY")
     return NIMModelConfig(
-        model_name="meta/llama-3.1-8b-instruct",
+        model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
         api_key=api_key,
         base_url="https://integrate.api.nvidia.com/v1",
         temperature=0.0,  # Deterministic for testing
@@ -389,7 +389,7 @@ async def test_nim_autogen_error_handling_telemetry(
 
     # Create config with invalid API key
     invalid_config = NIMModelConfig(
-        model_name="meta/llama-3.1-8b-instruct",
+        model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
         api_key="invalid-api-key-12345",
         temperature=0.0,
     )

@@ -14,6 +14,7 @@ Use this skill first when working in the NeMo Agent Toolkit repository. It route
 - Discover registered component `_type` values with `nat info components` before writing workflow, evaluation, optimizer, logging, or tracing YAML.
 - Do not invent `_type` names or configuration keys from memory.
 - Use `nat` only for technical identifiers such as the CLI, package name, Python namespace, paths, and environment variables.
+- Treat Git submodule contents as read-only unless the user explicitly requests a change within that submodule. Exclude submodule contents from repository-wide mutation tasks by default.
 - In prose, use "NVIDIA NeMo Agent Toolkit" on first use, then "NeMo Agent Toolkit" or "the toolkit".
 - Prefer existing examples and docs before creating new patterns.
 - Keep generated examples runnable from the repository root unless the surrounding example uses another convention.
