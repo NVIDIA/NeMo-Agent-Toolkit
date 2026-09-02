@@ -42,5 +42,7 @@ workflow:
   _type: tool_calling_agent
   tool_names: [wiki_search]
   llm_name: nim_llm
+  middleware:
+    - hol_guard
   verbose: true
   parse_agent_response_max_retries: 3

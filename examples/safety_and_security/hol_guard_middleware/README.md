@@ -60,7 +60,7 @@ pip install -e examples/safety_and_security/hol_guard_middleware
 
 HOL Guard middleware wraps functions with a pre-execution security check:
 
-```
+```text
 User Request → [HOL Guard Check] → [Decision] → Function Execution
                                 ↓
                          allow → Execute function
@@ -112,5 +112,5 @@ uv run pytest examples/safety_and_security/hol_guard_middleware/tests/ -v
 ## Further Reading
 
 - [HOL Guard Documentation](https://github.com/hashgraph-online/hol-guard)
-- [NAT Middleware Documentation](../../../docs/source/build-workflows/advanced/middleware.md)
+- [NeMo Agent Toolkit Middleware Documentation](../../../docs/source/build-workflows/advanced/middleware.md)
 - [Third-Party Plugin Guide](../../../docs/source/extend/third-party-plugins.md)

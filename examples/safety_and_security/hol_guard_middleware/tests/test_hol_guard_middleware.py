@@ -27,7 +27,7 @@ from dataclasses import dataclass
 @dataclass
 class GuardDecision:
     """Mock HOL Guard decision."""
-    action: str  # 'allow', 'deny', 'review'
+    action: str  # 'allow', 'deny', 'review', 'error'
     reason: str = ""
 
 
@@ -37,11 +37,11 @@ class StubGuardSource:
     Allows tests to control the Guard decision for each invocation.
     """
 
-    def __init__(self, decision: GuardDecision):
+    def __init__(self, decision: GuardDecision) -> None:
         self.decision = decision
         self.call_count = 0
 
-    async def check(self, context: dict) -> GuardDecision:
+    async def check(self, context: dict[str, object]) -> GuardDecision:
         """Return the configured decision."""
         self.call_count += 1
         return self.decision
