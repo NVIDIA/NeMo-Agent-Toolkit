@@ -38,12 +38,10 @@ class TestNATRAG:
         from nat.retriever.milvus.register import MilvusRetrieverConfig
 
         builder = MagicMock(spec=Builder)
-        builder.get_llm_config = MagicMock(
-            return_value=NIMModelConfig(
-                model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
-                base_url="https://integrate.api.nvidia.com/v1",
-            )
-        )
+        builder.get_llm_config = MagicMock(return_value=NIMModelConfig(
+            model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
+            base_url="https://integrate.api.nvidia.com/v1",
+        ))
         builder.get_embedder_config = MagicMock(return_value=NIMEmbedderModelConfig(
             model_name="nvidia/nemotron-3-embed-1b",
             base_url="https://integrate.api.nvidia.com/v1",
