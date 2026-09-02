@@ -88,7 +88,7 @@ When successful, the output contains the following line:
 nat.cli.cli_utils.config_override - INFO - Successfully set override for llms.nim_llm.temperature with value: 0.7
 ```
 
-The `--override` flag can be specified multiple times, allowing multiple parameters to be overridden in a single command. For example, the configured model and temperature can be overridden together:
+The `--override` flag can be specified multiple times, allowing the ability to override multiple parameters. For example, the configured model and temperature can be overridden together:
 ```bash
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"  \
   --override llms.nim_llm.temperature 0.7 \
