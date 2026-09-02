@@ -110,19 +110,20 @@ If Milvus is running the script should work out of the box. If you want to custo
 python scripts/langchain_web_ingest.py --help
 ```
 ```console
-usage: langchain_web_ingest.py [-h] [--urls URLS] [--collection_name COLLECTION_NAME] [--milvus_uri MILVUS_URI] [--clean_cache]
+usage: langchain_web_ingest.py [-h] [--urls URLS] [--collection_name COLLECTION_NAME] [--milvus_uri MILVUS_URI] [--clean_cache] [--drop_collection]
+                               [--embedding_model EMBEDDING_MODEL]
 
 options:
--h, --help            show this help message and exit
---urls URLS           Urls to scrape for RAG context (default: ['https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html',
-                                                                'https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html',
-                                                                'https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html',
-                                                                'https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html'])
---collection_name COLLECTION_NAME, -n COLLECTION_NAME
+  -h, --help            show this help message and exit
+  --urls URLS           Urls to scrape for RAG context. Defaults to built-in URLs for NVIDIA CUDA documentation. (default: [])
+  --collection_name, -n COLLECTION_NAME
                         Collection name for the data. (default: cuda_docs)
---milvus_uri MILVUS_URI, -u MILVUS_URI
+  --milvus_uri, -u MILVUS_URI
                         Milvus host URI (default: http://localhost:19530)
---clean_cache         If true, deletes local files (default: False)
+  --clean_cache         If true, deletes local files (default: False)
+  --drop_collection     Drop existing collection before ingesting (default: False)
+  --embedding_model, -e EMBEDDING_MODEL
+                        Embedding model to use (default: nvidia/nemotron-3-embed-1b)
 ```
 
 #### Configure Your Agent
@@ -235,7 +236,8 @@ functions:
     memory: saas_memory
     description: |
       Add any facts about user preferences to long term memory. Always use this if users mention a preference.
-      The input to this tool should be a string that describes the user's preference, not the question or answer.
+      Provide a JSON object matching the tool schema. For a simple preference, set memory to a concise description
+      of the user's preference, not the question or answer.
   get_memory:
     _type: get_memory
     memory: saas_memory
@@ -259,7 +261,7 @@ embedders:
     truncate: "END"
 
 workflow:
-  _type: react_agent
+  _type: tool_calling_agent
   tool_names:
    - cuda_retriever_tool
    - mcp_retriever_tool
@@ -267,6 +269,12 @@ workflow:
    - get_memory
   verbose: true
   llm_name: nim_llm
+  handle_tool_errors: true
+  additional_instructions: |
+    Make get_memory the only tool call in the first tool-calling step.
+    After get_memory returns, use the retrieved preferences when formulating the response.
+    If the user states a preference, call add_memory to store it before answering.
+    Use the provided tool schemas for all tool arguments.
 ```
 
 Notice in the configuration above that the only addition to the configuration that was required to add long term memory to the agent was a `memory` section in the configuration specifying:
