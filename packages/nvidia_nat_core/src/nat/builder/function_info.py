@@ -453,7 +453,23 @@ class FunctionInfo:
 
             final_single_fn_desc = FunctionDescriptor.from_function(final_single_fn)
 
-            if (final_single_fn_desc.arg_count > 1):
+            if (final_single_fn_desc.arg_count == 0):
+                # Zero-argument function: wrap in a single-parameter shim with an empty model
+                if (input_schema is None):
+                    input_schema = create_model(f"{final_single_fn.__name__}Input")
+
+                saved_final_single_fn = final_single_fn
+
+                async def _convert_input_pydantic(value: input_schema) -> final_single_fn_desc.output_type:
+                    # Ignore the empty model, call the original function with no arguments
+                    return await saved_final_single_fn()
+
+                final_single_fn = _convert_input_pydantic
+
+                # Reset the descriptor
+                final_single_fn_desc = FunctionDescriptor.from_function(final_single_fn)
+
+            elif (final_single_fn_desc.arg_count > 1):
                 if (input_schema is not None):
                     logger.warning("Using provided input_schema for multi-argument function")
                 else:

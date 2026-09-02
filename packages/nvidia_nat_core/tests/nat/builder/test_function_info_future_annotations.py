@@ -101,3 +101,26 @@ async def test_from_fn_multi_argument_resolves_future_annotations():
     assert info.single_fn is not None
     value = info.input_schema(first="a: ", second=EchoInput(text="b"))
     assert await info.single_fn(value) == "a: b"
+
+
+async def test_from_fn_zero_argument():
+    """Regression test for zero-argument functions (issue #2184)."""
+
+    async def get_status() -> str:
+        return "ok"
+
+    info = FunctionInfo.from_fn(get_status, description="get status")
+
+    # The function should be wrapped with an empty input model
+    assert info.input_schema is not None
+    assert len(info.input_schema.model_fields) == 0
+
+    assert info.single_fn is not None
+    # Call with an empty model instance
+    value = info.input_schema()
+    assert await info.single_fn(value) == "ok"
+
+    # The auto-synthesized streaming wrapper should also work
+    assert info.stream_fn is not None
+    chunks = [chunk async for chunk in info.stream_fn(info.input_schema())]
+    assert chunks == ["ok"]
