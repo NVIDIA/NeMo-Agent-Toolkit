@@ -236,6 +236,7 @@ def _atif_to_user_input(trajectory) -> str:
 
 
 class TrajectoryEvaluator(BaseEvaluator):
+
     def __init__(
         self,
         llm: Runnable[LanguageModelInput, str] | Runnable[LanguageModelInput, BaseMessage],
@@ -247,9 +248,9 @@ class TrajectoryEvaluator(BaseEvaluator):
         # TrajectoryEvalChain still requires LLMChain, but constructing it outside
         # LangChain emits a deprecation warning that its own from_llm factory suppresses.
         with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore", message=r"The class `LLMChain` was deprecated", category=DeprecationWarning
-            )
+            warnings.filterwarnings("ignore",
+                                    message=r"The class `LLMChain` was deprecated",
+                                    category=DeprecationWarning)
             eval_chain = LLMChain(llm=llm, prompt=prompt)
         self.traj_eval_chain = TrajectoryEvalChain(
             agent_tools=tools,
