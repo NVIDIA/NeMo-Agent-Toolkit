@@ -405,16 +405,6 @@ uv pip install -e packages/nvidia_nat_rag
 
 ### Bootstrap Data
 
-> [!IMPORTANT]
-> The NVIDIA RAG Library example uses a different embedding model (`nvidia/llama-nemotron-embed-1b-v2`) than the basic quickstart. If you have an existing `cuda_docs` collection from the quickstart, drop and re-ingest with the correct embedding model:
-
-```bash
-python scripts/langchain_web_ingest.py \
-    -n cuda_docs \
-    -e nvidia/llama-nemotron-embed-1b-v2 \
-    --drop_collection
-```
-
 ### Key Capabilities
 
 The `nvidia_nat_rag` package orchestrates a multi-stage retrieval pipeline with the following capabilities:
@@ -474,7 +464,7 @@ function_groups:
       default_confidence_threshold: 0.25
       ranking:
         enable_reranker: true
-        model_name: nvidia/llama-nemotron-rerank-1b-v2
+        model_name: nvidia/llama-nemotron-rerank-vl-1b-v2
       query_rewriter:
         enabled: true
 ```
