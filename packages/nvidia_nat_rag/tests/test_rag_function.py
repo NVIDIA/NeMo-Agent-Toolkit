@@ -252,11 +252,9 @@ class TestNvidiaRAGIntegration:
         assert result is not None
 
     @pytest.mark.parametrize("llm_ref", list(LLM_CONFIGS.keys()))
-    @pytest.mark.parametrize(
-        "embedder_ref",
-        [
-            "nim_embedder",
-        ])
+    @pytest.mark.parametrize("embedder_ref", [
+        "nim_embedder",
+    ])
     @pytest.mark.parametrize("retriever_ref", list(RETRIEVER_CONFIGS.keys()))
     async def test_health(
         self,
