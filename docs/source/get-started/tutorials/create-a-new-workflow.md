@@ -188,7 +188,7 @@ functions:
     _type: text_file_ingest
     ingest_glob: examples/text_file_ingest/data/*.txt
     description: "Search for information about DOCA and GPUNetIO. For any questions about DOCA and GPUNetIO, you must use this tool!"
-    embedder_name: nv-embedqa-e5-v5
+    embedder_name: nemotron-3-embed-1b
     chunk_size: 512
   current_datetime:
     _type: current_datetime

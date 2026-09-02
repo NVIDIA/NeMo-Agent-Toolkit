@@ -1817,5 +1817,5 @@ def test_build_lc_config_ignores_unknown_model_sentinel():
     assert "configurable" not in _build_lc_config(5, None)
 
     # a genuine per-request model is still forwarded as an override
-    lc_config = _build_lc_config(5, "meta/llama-3.1-8b-instruct")
-    assert lc_config["configurable"] == {"model_name": "meta/llama-3.1-8b-instruct"}
+    lc_config = _build_lc_config(5, "nvidia/nemotron-3.5-lightning-30b-a3b")
+    assert lc_config["configurable"] == {"model_name": "nvidia/nemotron-3.5-lightning-30b-a3b"}
