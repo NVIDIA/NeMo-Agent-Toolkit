@@ -57,7 +57,7 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "langchain-openai>=1.1.6,<2.0.0", # hidden dependency of `nvidia-rag`
-  "nvidia-rag>=2.4.0",
+  "nvidia-rag>=2.6.0",
   "opentelemetry-api~=1.2", # hidden dependency of `nvidia-rag`
   "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0", # hidden dependency of `nvidia-rag`
   "opentelemetry-instrumentation-milvus>=0.36,<1.0", # hidden dependency of `nvidia-rag`

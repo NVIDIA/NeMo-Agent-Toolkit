@@ -7613,7 +7613,7 @@ requires-dist = [
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'test'", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
-    { name = "nvidia-rag", specifier = ">=2.4.0" },
+    { name = "nvidia-rag", specifier = ">=2.6.0" },
     { name = "opentelemetry-api", specifier = "~=1.2" },
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.50b0,<1.0" },
     { name = "opentelemetry-instrumentation-milvus", specifier = ">=0.36,<1.0" },
@@ -7819,7 +7819,7 @@ provides-extras = ["test"]
 
 [[package]]
 name = "nvidia-rag"
-version = "2.5.0"
+version = "2.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -7833,6 +7833,7 @@ dependencies = [
     { name = "langchain-core" },
     { name = "langchain-milvus" },
     { name = "langchain-nvidia-ai-endpoints" },
+    { name = "langgraph" },
     { name = "lark" },
     { name = "minio" },
     { name = "pdfplumber", version = "0.11.9", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.13' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
@@ -7848,7 +7849,7 @@ dependencies = [
     { name = "uvicorn", extra = ["standard"], marker = "extra == 'extra-10-nvidia-nat-rag' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ca/46/ef887b1b08add07e0564c9438076f23946280f1a5a3c6c09d7b4c7105150/nvidia_rag-2.5.0-py3-none-any.whl", hash = "sha256:4e7f41396dd1dfcd93503f6a4d0bb3902d99c7ab4f47d293b0773eda8dd86b3d", size = 255674, upload-time = "2026-03-17T17:23:58.093Z" },
+    { url = "https://files.pythonhosted.org/packages/94/fa/f6916027ff775f76c633f4f6630875b4640c2fc73f7ab07c054b20186ff6/nvidia_rag-2.6.0-py3-none-any.whl", hash = "sha256:ccf0414cfe92110c257967a065b17079d058e788a45da400976dfadfbb89bd5c", size = 404013, upload-time = "2026-06-03T19:19:28.596Z" },
 ]
 
 [[package]]
@@ -10006,11 +10007,11 @@ cli = [
 
 [[package]]
 name = "python-multipart"
-version = "0.0.22"
+version = "0.0.32"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/94/01/979e98d542a70714b0cb2b6728ed0b7c46792b695e3eaec3e20711271ca3/python_multipart-0.0.22.tar.gz", hash = "sha256:7340bef99a7e0032613f56dc36027b959fd3b30a787ed62d310e951f7c3a3a58", size = 37612, upload-time = "2026-01-25T10:15:56.219Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5b/42/55c32bb9b12693c092ad250a0e82edb5b31ddeda6eb772de5f308b3804ad/python_multipart-0.0.32.tar.gz", hash = "sha256:be54b7f3fa167bb83e4fcd936b887b708f4e57fe75911c02aebf53efaf8d938e", size = 46881, upload-time = "2026-06-04T16:18:58.647Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1b/d0/397f9626e711ff749a95d96b7af99b9c566a9bb5129b8e4c10fc4d100304/python_multipart-0.0.22-py3-none-any.whl", hash = "sha256:2b2cd894c83d21bf49d702499531c7bafd057d730c201782048f7945d82de155", size = 24579, upload-time = "2026-01-25T10:15:54.811Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/04/e8135ebd1ad02c56ec633277529b2602ff99ff634be76cdba5744cf554fd/python_multipart-0.0.32-py3-none-any.whl", hash = "sha256:ff6d3f776f16878c894e52e107296ffc890e913c611b1a4ec6c44e2821fe2e23", size = 30042, upload-time = "2026-06-04T16:18:57.319Z" },
 ]
 
 [[package]]

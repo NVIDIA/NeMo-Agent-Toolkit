@@ -27,6 +27,7 @@ from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import RetrieverRef
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.llm.nim_llm import NIMModelConfig
+from nat.plugins.rag.config import RAGPipelineConfig
 from nat.retriever.milvus.register import MilvusRetrieverConfig
 
 # NOTE: First nvidia_rag import takes ~20s due to module-level initialization.
@@ -55,7 +56,6 @@ LLM_CONFIGS: dict[str, NIMModelConfig] = {
 }
 
 EMBEDDER_CONFIGS: dict[str, NIMEmbedderModelConfig] = {
-    # nvidia/nemotron-3-embed-1b: supports dimensions parameter
     "nim_embedder":
         NIMEmbedderModelConfig(
             model_name="nvidia/nemotron-3-embed-1b",
@@ -103,6 +103,10 @@ def fixture_mock_builder() -> MagicMock:
 
 class TestNvidiaRAGMethods:
     """Test NvidiaRAG class can be imported and has expected methods."""
+
+    def test_default_reranker_model(self) -> None:
+        """Use a supported NVIDIA RAG reranker by default."""
+        assert RAGPipelineConfig().ranking.model_name == "nvidia/llama-nemotron-rerank-vl-1b-v2"
 
     def test_import_and_instantiate_nvidia_rag(self) -> None:
         """Verify nvidia_rag can be imported and instantiated."""
@@ -201,11 +205,12 @@ class TestNvidiaRAGIntegration:
         llm_config = LLM_CONFIGS[llm_ref]
         embedder_config = EMBEDDER_CONFIGS[embedder_ref]
 
-        rag_config = NvidiaRAGConfig()
+        rag_config = NvidiaRAGConfig(ranking=RAGPipelineConfig().ranking)
         rag_config.llm.model_name = llm_config.model_name
         rag_config.llm.server_url = llm_config.base_url
         rag_config.embeddings.model_name = embedder_config.model_name
         rag_config.embeddings.server_url = embedder_config.base_url
+        rag_config.vector_store.name = "milvus"
         rag_config.vector_store.url = milvus_uri
         rag_config.vector_store.default_collection_name = collection_name
 
@@ -232,11 +237,12 @@ class TestNvidiaRAGIntegration:
         llm_config = LLM_CONFIGS[llm_ref]
         embedder_config = EMBEDDER_CONFIGS[embedder_ref]
 
-        rag_config = NvidiaRAGConfig()
+        rag_config = NvidiaRAGConfig(ranking=RAGPipelineConfig().ranking)
         rag_config.llm.model_name = llm_config.model_name
         rag_config.llm.server_url = llm_config.base_url
         rag_config.embeddings.model_name = embedder_config.model_name
         rag_config.embeddings.server_url = embedder_config.base_url
+        rag_config.vector_store.name = "milvus"
         rag_config.vector_store.url = milvus_uri
 
         rag = NvidiaRAG(config=rag_config)
@@ -250,9 +256,6 @@ class TestNvidiaRAGIntegration:
         "embedder_ref",
         [
             "nim_embedder",
-            pytest.param(
-                "nim_embedder_e5",
-                marks=pytest.mark.xfail(reason="nvidia_rag passes dimensions param which nemotron-3-embed-1b rejects")),
         ])
     @pytest.mark.parametrize("retriever_ref", list(RETRIEVER_CONFIGS.keys()))
     async def test_health(
@@ -270,11 +273,12 @@ class TestNvidiaRAGIntegration:
         llm_config = LLM_CONFIGS[llm_ref]
         embedder_config = EMBEDDER_CONFIGS[embedder_ref]
 
-        rag_config = NvidiaRAGConfig()
+        rag_config = NvidiaRAGConfig(ranking=RAGPipelineConfig().ranking)
         rag_config.llm.model_name = llm_config.model_name
         rag_config.llm.server_url = llm_config.base_url
         rag_config.embeddings.model_name = embedder_config.model_name
         rag_config.embeddings.server_url = embedder_config.base_url
+        rag_config.vector_store.name = "milvus"
         rag_config.vector_store.url = milvus_uri
 
         rag = NvidiaRAG(config=rag_config)
