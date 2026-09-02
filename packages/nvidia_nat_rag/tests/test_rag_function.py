@@ -36,17 +36,17 @@ from nat.retriever.milvus.register import MilvusRetrieverConfig
 # =============================================================================
 
 LLM_CONFIGS: dict[str, NIMModelConfig] = {
-    "nim_llm_llama8b":
+    "nim_llm_nemotron_lightning":
         NIMModelConfig(
-            model_name="meta/llama-3.1-8b-instruct",
+            model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
             base_url="https://integrate.api.nvidia.com/v1",
             temperature=0.2,
             top_p=0.95,
             max_tokens=4096,
         ),
-    "nim_llm_llama70b":
+    "nim_llm_nemotron_super":
         NIMModelConfig(
-            model_name="meta/llama-3.1-70b-instruct",
+            model_name="nvidia/nemotron-3-super-120b-a12b",
             base_url="https://integrate.api.nvidia.com/v1",
             temperature=0.1,
             top_p=0.9,
@@ -58,12 +58,7 @@ EMBEDDER_CONFIGS: dict[str, NIMEmbedderModelConfig] = {
     # nvidia/llama-nemotron-embed-1b-v2: supports dimensions parameter
     "nim_embedder":
         NIMEmbedderModelConfig(
-            model_name="nvidia/llama-nemotron-embed-1b-v2",
-            base_url="https://integrate.api.nvidia.com/v1",
-        ),  # nvidia/nv-embedqa-e5-v5: REJECTS dimensions param
-    "nim_embedder_e5":
-        NIMEmbedderModelConfig(
-            model_name="nvidia/nv-embedqa-e5-v5",
+            model_name="nvidia/nemotron-3-embed-1b",
             base_url="https://integrate.api.nvidia.com/v1",
         ),
 }
@@ -186,14 +181,7 @@ class TestNvidiaRAGIntegration:
                 client.drop_collection(name)
 
     @pytest.mark.parametrize("llm_ref", list(LLM_CONFIGS.keys()))
-    @pytest.mark.parametrize(
-        "embedder_ref",
-        [
-            "nim_embedder",
-            pytest.param(
-                "nim_embedder_e5",
-                marks=pytest.mark.xfail(reason="nvidia_rag passes dimensions param which nv-embedqa-e5-v5 rejects")),
-        ])
+    @pytest.mark.parametrize("embedder_ref", ["nim_embedder"])
     @pytest.mark.parametrize("retriever_ref", list(RETRIEVER_CONFIGS.keys()))
     async def test_search(
         self,
@@ -227,14 +215,7 @@ class TestNvidiaRAGIntegration:
         assert result is not None
 
     @pytest.mark.parametrize("llm_ref", list(LLM_CONFIGS.keys()))
-    @pytest.mark.parametrize(
-        "embedder_ref",
-        [
-            "nim_embedder",
-            pytest.param(
-                "nim_embedder_e5",
-                marks=pytest.mark.xfail(reason="nvidia_rag passes dimensions param which nv-embedqa-e5-v5 rejects")),
-        ])
+    @pytest.mark.parametrize("embedder_ref", ["nim_embedder"])
     @pytest.mark.parametrize("retriever_ref", list(RETRIEVER_CONFIGS.keys()))
     async def test_generate(
         self,
