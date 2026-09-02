@@ -391,8 +391,16 @@ def test_extract_input_obj_base_model_without_field(rag_evaluator, rag_evaluator
     "metric",
     [
         "MultiModalFaithfulness",
-        {"MultiModalFaithfulness": {"kwargs": {}}},
-        {"MultiModalFaithfulness": {"skip": True}},
+        {
+            "MultiModalFaithfulness": {
+                "kwargs": {}
+            }
+        },
+        {
+            "MultiModalFaithfulness": {
+                "skip": True
+            }
+        },
     ],
 )
 def test_multimodal_faithfulness_is_disabled(metric):
