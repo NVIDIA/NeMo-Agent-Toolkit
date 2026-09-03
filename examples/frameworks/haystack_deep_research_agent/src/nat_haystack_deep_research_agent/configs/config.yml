@@ -17,14 +17,17 @@ llms:
   rag_llm:
     _type: nim
     model: nvidia/nemotron-3-super-120b-a12b
+    base_url: https://integrate.api.nvidia.com:443/v1
   agent_llm:
     _type: nim
     model: nvidia/nemotron-3-super-120b-a12b
+    base_url: https://integrate.api.nvidia.com:443/v1
 
 embedders:
   nv-embed:
     _type: nim
     model: nvidia/nemotron-3-embed-1b
+    base_url: https://integrate.api.nvidia.com:443/v1
 
 workflow:
   _type: haystack_deep_research_agent
