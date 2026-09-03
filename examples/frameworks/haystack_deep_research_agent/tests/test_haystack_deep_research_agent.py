@@ -93,7 +93,7 @@ def test_indexing_chunks_stay_within_embedder_token_limit() -> None:
 
     from nat_haystack_deep_research_agent.pipelines.indexing import _build_indexing_pipeline
 
-    pipeline = _build_indexing_pipeline(InMemoryDocumentStore(), embedder_model="nvidia/nv-embedqa-e5-v5")
+    pipeline = _build_indexing_pipeline(InMemoryDocumentStore(), embedder_model="nvidia/nemotron-3-embed-1b")
     components = pipeline.to_dict()["components"]
 
     # The embedder must truncate over-long inputs instead of failing the run.

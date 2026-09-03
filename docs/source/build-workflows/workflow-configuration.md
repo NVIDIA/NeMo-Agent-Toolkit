@@ -42,7 +42,7 @@ functions:
     _type: webpage_query
     webpage_url: https://docs.smith.langchain.com
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
-    embedder_name: nv-embedqa-e5-v5
+    embedder_name: nemotron-3-embed-1b
     chunk_size: 512
   current_datetime:
     _type: current_datetime
@@ -54,7 +54,7 @@ llms:
     temperature: 0.0
 
 embedders:
-  nv-embedqa-e5-v5:
+  nemotron-3-embed-1b:
     _type: nim
     model_name: nvidia/nemotron-3-embed-1b
 

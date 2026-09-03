@@ -43,7 +43,8 @@ class TestLLMEndpointValidation:
         """Create config with NIM LLM."""
         config = Config()
         config.llms = {
-            "nim_llm": NIMModelConfig(model_name="meta/llama-3.1-8b-instruct", base_url="http://localhost:8000/v1")
+            "nim_llm":
+                NIMModelConfig(model_name="nvidia/nemotron-3.5-lightning-30b-a3b", base_url="http://localhost:8000/v1")
         }
         return config
 
@@ -59,8 +60,10 @@ class TestLLMEndpointValidation:
         """Create config with multiple LLMs of different types."""
         config = Config()
         config.llms = {
-            "openai_llm": OpenAIModelConfig(model_name="gpt-4", base_url="http://localhost:8000/v1"),
-            "nim_llm": NIMModelConfig(model_name="llama-3.1-8b-instruct", base_url="http://localhost:8001/v1")
+            "openai_llm":
+                OpenAIModelConfig(model_name="gpt-4", base_url="http://localhost:8000/v1"),
+            "nim_llm":
+                NIMModelConfig(model_name="nvidia/nemotron-3.5-lightning-30b-a3b", base_url="http://localhost:8001/v1"),
         }
         return config
 
@@ -452,8 +455,10 @@ class TestLLMValidationIntegration:
         config = Config()
         config.llms = {
             "training_llm":
-                NIMModelConfig(model_name="default/meta-llama-3.1-8b-instruct-nat-dpo",
-                               base_url="http://nim-endpoint:8000/v1")
+                NIMModelConfig(
+                    model_name="default/nvidia-nemotron-3.5-lightning-30b-a3b-nat-dpo",
+                    base_url="http://nim-endpoint:8000/v1",
+                )
         }
         return config
 
@@ -478,7 +483,7 @@ class TestLLMValidationIntegration:
         mock_llm = AsyncMock()
 
         error_404 = NotFoundError(
-            "404: Model not found - the model default/meta-llama-3.1-8b-instruct-nat-dpo does not exist")
+            "404: Model not found - the model default/nvidia-nemotron-3.5-lightning-30b-a3b-nat-dpo does not exist")
         mock_llm.ainvoke = AsyncMock(side_effect=error_404)
 
         mock_builder.add_llm = AsyncMock()

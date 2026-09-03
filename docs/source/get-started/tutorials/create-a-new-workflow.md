@@ -188,7 +188,7 @@ functions:
     _type: text_file_ingest
     ingest_glob: examples/text_file_ingest/data/*.txt
     description: "Search for information about DOCA and GPUNetIO. For any questions about DOCA and GPUNetIO, you must use this tool!"
-    embedder_name: nv-embedqa-e5-v5
+    embedder_name: nemotron-3-embed-1b
     chunk_size: 512
   current_datetime:
     _type: current_datetime
@@ -224,7 +224,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
 
   In this example, you have been using NeMo Agent Toolkit with LangChain/LangGraph. This is why the dependency is declared on `nvidia-nat[langchain]`, that is to say NeMo Agent Toolkit with the LangChain/LangGraph integration plugin. If you want to use LlamaIndex, declare the dependency on `nvidia-nat[llama-index]`. This is described in more detail in [Packages](../installation.md#packages).
 
-- **Version**: In this example, and in NeMo Agent Toolkit in general, we use [setuptools-scm](https://setuptools-scm.readthedocs.io/en/latest/) to automatically determine the version of the package based on the Git tags. We did this by setting `dynamic = ["version"]` and declaring a build dependency on both `setuptools` and `setuptools_scm` in the `build-system` section of `pyproject.toml`:
+- **Version**: In this example, and in NeMo Agent Toolkit in general, we use [setuptools-scm](https://setuptools-scm.readthedocs.io/latest/) to automatically determine the version of the package based on the Git tags. We did this by setting `dynamic = ["version"]` and declaring a build dependency on both `setuptools` and `setuptools_scm` in the `build-system` section of `pyproject.toml`:
   ```toml
   [build-system]
   requires = ["setuptools", "setuptools_scm"]
