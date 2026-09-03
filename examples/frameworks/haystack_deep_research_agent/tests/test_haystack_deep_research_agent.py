@@ -78,6 +78,8 @@ def test_config_yaml_loads_and_has_keys() -> None:
     ]:
         assert key in text, f"Missing key: {key}"
 
+    assert text.count("base_url: https://integrate.api.nvidia.com:443/v1") == 3
+
 
 def test_indexing_chunks_stay_within_embedder_token_limit() -> None:
     """Regression test for NAT-309.
@@ -115,3 +117,44 @@ def test_indexing_chunks_stay_within_embedder_token_limit() -> None:
     assert len(chunks) > 1, "expected the long document to be split into multiple chunks"
     for chunk in chunks:
         assert len(chunk.content.split()) <= split_length
+
+
+def test_indexing_pipeline_uses_configured_embedder_api_url() -> None:
+    from haystack.document_stores.in_memory import InMemoryDocumentStore
+
+    from nat_haystack_deep_research_agent.pipelines.indexing import _build_indexing_pipeline
+
+    embedder_api_url = "https://integrate.api.nvidia.com:443/v1"
+    pipeline = _build_indexing_pipeline(
+        InMemoryDocumentStore(),
+        embedder_model="nvidia/nemotron-3-embed-1b",
+        embedder_api_url=embedder_api_url,
+    )
+
+    components = pipeline.to_dict()["components"]
+    assert components["embedder"]["init_parameters"]["api_url"] == embedder_api_url
+
+
+def test_rag_pipeline_uses_configured_api_urls() -> None:
+    from haystack_integrations.components.generators.nvidia import NvidiaChatGenerator
+    from haystack_integrations.document_stores.opensearch import OpenSearchDocumentStore
+
+    from nat_haystack_deep_research_agent.pipelines.rag import create_rag_tool
+
+    api_url = "https://integrate.api.nvidia.com:443/v1"
+    document_store = OpenSearchDocumentStore(hosts=["http://localhost:9200"], embedding_dim=1024)
+    generator = NvidiaChatGenerator(
+        model="nvidia/nemotron-3-super-120b-a12b",
+        api_base_url=api_url,
+    )
+
+    _, pipeline = create_rag_tool(
+        document_store,
+        generator=generator,
+        embedder_model="nvidia/nemotron-3-embed-1b",
+        embedder_api_url=api_url,
+    )
+
+    components = pipeline.to_dict()["components"]
+    assert components["query_embedder"]["init_parameters"]["api_url"] == api_url
+    assert components["llm"]["init_parameters"]["api_base_url"] == api_url
