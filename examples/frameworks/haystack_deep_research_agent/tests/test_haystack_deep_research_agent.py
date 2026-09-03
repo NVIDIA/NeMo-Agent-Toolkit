@@ -134,6 +134,7 @@ def test_indexing_pipeline_uses_configured_embedder_api_url() -> None:
     components = pipeline.to_dict()["components"]
     assert components["embedder"]["init_parameters"]["api_url"] == embedder_api_url
 
+
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
 def test_rag_pipeline_uses_configured_api_urls() -> None:
