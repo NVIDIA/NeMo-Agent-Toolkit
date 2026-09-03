@@ -1272,7 +1272,7 @@ async def test_export_processed(custom_exporter):
 
 def test_isolated_attributes():
     """Test that isolated attributes work correctly across instances."""
-    from nat.builder.context import ContextState
+    from nat.plugin_api import ContextState
 
     # Create original exporter
     exporter1 = CustomSpanExporter(

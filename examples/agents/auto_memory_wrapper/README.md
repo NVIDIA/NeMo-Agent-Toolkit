@@ -130,11 +130,11 @@ See `config_zep.yml` for comprehensive parameter examples.
 User ID is extracted at runtime for memory isolation. Configure it through the front end or session runtime, not the
 `auto_memory_agent` workflow block.
 
-### User ID Extraction Priority
+### User ID Resolution
 
-1. **`SessionManager.session(user_id=...)`** - For production with custom auth middleware (recommended)
-2. **`X-User-ID` HTTP header** - For testing without middleware
-3. **Console front end `user_id`** - Defaults to `"nat_run_user_id"` for `nat run`
+The wrapper reads only the identity resolved by the runtime session. Use authenticated front-end credentials,
+`SessionManager.session(user_id=...)`, or the console front end `user_id` (which defaults to `"nat_run_user_id"` for
+`nat run`). Memory operations fail closed when no identity is available.
 
 Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
 For Zep Cloud, if no conversation ID is supplied, the integration uses a deterministic per-user default thread.
@@ -163,9 +163,23 @@ async def handle_request(request):
     return result
 ```
 
-### Testing: X-User-ID Header
+### Local Testing or a Trusted Upstream Identity Header
 
-For quick testing without custom middleware:
+To explicitly trust an identity header, configure the FastAPI front end:
+
+```yaml
+general:
+  front_end:
+    _type: fastapi
+    identity_header: X-User-ID
+```
+
+Use this only for local testing or when `nat serve` is isolated behind an authenticating reverse proxy. Clients must
+not be able to reach the toolkit service directly. The proxy must overwrite the header after authentication, the
+toolkit port must not be published outside the trusted backend network, and every container on that network must be
+trusted.
+
+After configuring that trust boundary:
 
 ```bash
 curl -X POST http://localhost:8000/chat \
@@ -174,6 +188,10 @@ curl -X POST http://localhost:8000/chat \
   -H "conversation-id: test_conv_001" \
   -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
 ```
+
+Never accept this header directly from untrusted clients. When `identity_header` is configured, it is authoritative;
+missing, empty, or repeated values are rejected and other credentials cannot override it.
+
 
 ### Local Development: Console User and Conversation IDs
 
@@ -213,8 +231,11 @@ workflow:
 
 ## Important Notes
 
-1. **User ID is runtime/front-end scoped** - Set via `SessionManager.session(user_id=...)`, `X-User-ID`, or `nat run --user_id`
+1. **User ID is runtime/front-end scoped** - Set through authenticated front-end identity resolution,
+   `SessionManager.session(user_id=...)`, an explicitly configured trusted `identity_header`, or `nat run --user_id`
 2. **Memory backends are interchangeable** - Works with any implementation of `MemoryEditor` interface
+3. **Trusted headers require network enforcement** - Never expose a trusted identity-header deployment directly to
+   untrusted clients or containers
 
 ## Examples
 

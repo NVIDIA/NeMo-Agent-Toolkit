@@ -158,6 +158,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "file/console",
     "files/functions",
     "I/O",
+    "Illustrative/testing",
     "include/exclude",
     "Input/Observation",
     "input/output",
@@ -172,7 +173,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "mistralai/mistral-large-3-675b-instruct-2512",
     "mistralai/mistral-small-4-119b-2603",
     "N/A",
-    "nvidia/nemotron-3-nano-30b-a3b",
+    "nvidia/nemotron-3.5-lightning-30b-a3b",
     "output/jobs/job_",
     "Copyright/Trademark/Plagiarism.",
     "Fraud/Deception.",
@@ -289,9 +290,7 @@ IGNORED_PATHS: set[str] = {
     r"\.tmp/",  #
     # files that are located in the directory of the file being checked
     r"^\./upload_to_minio\.sh$",
-    r"^\./upload_to_mysql\.sh$",
-    r"^\./start_local_sandbox\.sh$",  #
-    # script files that exist in the root of the repo
+    r"^\./upload_to_mysql\.sh$",  # script files that exist in the root of the repo
     r"^scripts/langchain_web_ingest\.py$",
     r"^scripts/bootstrap_milvus\.sh$",  #
     # generated files

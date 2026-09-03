@@ -25,10 +25,12 @@ from fastapi import WebSocket
 from pydantic import SecretStr
 from starlette.requests import Request
 
+from nat.authentication.credential_validator.bearer_token_validator import BearerTokenValidator
 from nat.authentication.jwt_utils import decode_jwt_claims_unverified
 from nat.data_models.api_server import ApiKeyAuthPayload
 from nat.data_models.api_server import AuthPayload
 from nat.data_models.api_server import BasicAuthPayload
+from nat.data_models.api_server import IdentityCredentialType
 from nat.data_models.api_server import JwtAuthPayload
 from nat.data_models.user_info import BasicUserInfo
 from nat.data_models.user_info import JwtUserInfo
@@ -37,11 +39,28 @@ from nat.data_models.user_info import UserInfo
 logger = logging.getLogger(__name__)
 
 
+class IdentityCredentialNotAcceptedError(ValueError):
+    """Raised when a supplied identity credential method is disabled by policy."""
+
+
+class IdentityHeaderError(ValueError):
+    """Raised when a configured trusted identity header is missing or ambiguous."""
+
+
+class JwtVerificationError(ValueError):
+    """Raised when an enabled JWT verification policy rejects a token."""
+
+
 class UserManager:
     """Stateless resolver that creates ``UserInfo`` from HTTP/WebSocket connections."""
 
     @classmethod
-    def extract_user_from_connection(cls, connection: Request | WebSocket) -> UserInfo | None:
+    def extract_user_from_connection(
+        cls,
+        connection: Request | WebSocket,
+        accepted_identity_credentials: typing.Collection[IdentityCredentialType] | None = None,
+        identity_header: str | None = None,
+    ) -> UserInfo | None:
         """Resolve an HTTP/WebSocket connection into a ``UserInfo``.
 
         Args:
@@ -55,24 +74,90 @@ class UserManager:
             ValueError: If a credential is found but cannot be resolved
                 to a valid user identity.
         """
+        if identity_header is not None:
+            identity = cls._get_identity_header(connection, identity_header)
+            return UserInfo._from_identity_header(identity_header, identity)
+
         cookie: str | None = cls._get_session_cookie(connection)
         if cookie:
+            cls._ensure_identity_credential_accepted("session_cookie", accepted_identity_credentials)
             return cls._user_info_from_session_cookie(cookie)
 
         auth_header: str | None = cls._get_auth_header(connection)
         if auth_header:
-            resolved: UserInfo | None = cls._resolve_from_auth_header(auth_header)
+            resolved: UserInfo | None = cls._resolve_from_auth_header(auth_header, accepted_identity_credentials)
             if resolved is not None:
                 return resolved
 
         api_key: str | None = cls._get_api_key_header(connection)
         if api_key:
+            cls._ensure_identity_credential_accepted("api_key", accepted_identity_credentials)
             return UserInfo._from_api_key(api_key)
 
         return None
 
     @classmethod
-    def _resolve_from_auth_header(cls, auth_header: str) -> UserInfo | None:
+    async def extract_user_from_connection_with_verification(
+        cls,
+        connection: Request | WebSocket,
+        accepted_identity_credentials: typing.Collection[IdentityCredentialType] | None = None,
+        jwt_validators: typing.Mapping[str, BearerTokenValidator] | None = None,
+        identity_header: str | None = None,
+    ) -> UserInfo | None:
+        if identity_header is not None:
+            identity = cls._get_identity_header(connection, identity_header)
+            return UserInfo._from_identity_header(identity_header, identity)
+
+        cookie = cls._get_session_cookie(connection)
+        if cookie:
+            cls._ensure_identity_credential_accepted("session_cookie", accepted_identity_credentials)
+            return cls._user_info_from_session_cookie(cookie)
+
+        auth_header = cls._get_auth_header(connection)
+        if auth_header:
+            resolved = await cls._resolve_from_auth_header_with_verification(
+                auth_header,
+                accepted_identity_credentials=accepted_identity_credentials,
+                jwt_validators=jwt_validators,
+            )
+            if resolved is not None:
+                return resolved
+
+        api_key = cls._get_api_key_header(connection)
+        if api_key:
+            cls._ensure_identity_credential_accepted("api_key", accepted_identity_credentials)
+            return UserInfo._from_api_key(api_key)
+
+        return None
+
+    @classmethod
+    async def _resolve_from_auth_header_with_verification(
+        cls,
+        auth_header: str,
+        accepted_identity_credentials: typing.Collection[IdentityCredentialType] | None = None,
+        jwt_validators: typing.Mapping[str, BearerTokenValidator] | None = None,
+    ) -> UserInfo | None:
+        parts = auth_header.strip().split(maxsplit=1)
+        if len(parts) != 2:
+            return None
+
+        scheme, credential = parts[0].lower(), parts[1]
+        if not credential:
+            return None
+
+        if scheme == "bearer" and credential.count(".") == 2:
+            cls._ensure_identity_credential_accepted("jwt", accepted_identity_credentials)
+            claims = await cls._decode_verified_jwt(credential, jwt_validators)
+            return cls._user_info_from_jwt(claims, issuer_scoped=bool(jwt_validators))
+
+        return cls._resolve_from_auth_header(auth_header, accepted_identity_credentials)
+
+    @classmethod
+    def _resolve_from_auth_header(
+        cls,
+        auth_header: str,
+        accepted_identity_credentials: typing.Collection[IdentityCredentialType] | None = None,
+    ) -> UserInfo | None:
         """Parse an ``Authorization`` header and resolve identity by scheme.
 
         Args:
@@ -98,17 +183,23 @@ class UserManager:
 
         if scheme == "bearer":
             if credential.count(".") == 2:
+                cls._ensure_identity_credential_accepted("jwt", accepted_identity_credentials)
                 claims: dict[str, typing.Any] = decode_jwt_claims_unverified(credential)
                 return cls._user_info_from_jwt(claims)
+            cls._ensure_identity_credential_accepted("api_key", accepted_identity_credentials)
             return UserInfo._from_api_key(credential)
 
         if scheme == "basic":
+            cls._ensure_identity_credential_accepted("basic", accepted_identity_credentials)
             return cls._user_info_from_basic_auth(credential)
 
         return None
 
     @staticmethod
-    def _from_auth_payload(payload: AuthPayload) -> UserInfo:
+    def _from_auth_payload(
+        payload: AuthPayload,
+        accepted_identity_credentials: typing.Collection[IdentityCredentialType] | None = None,
+    ) -> UserInfo:
         """Resolve a ``UserInfo`` from a WebSocket auth message payload.
 
         This is an identity resolver, not an authenticator.  JWTs are decoded
@@ -127,23 +218,97 @@ class UserManager:
             ValueError: If the payload cannot be resolved to a valid user identity.
         """
         if isinstance(payload, JwtAuthPayload):
+            UserManager._ensure_identity_credential_accepted("jwt", accepted_identity_credentials)
             raw_token: str = payload.token.get_secret_value()
             claims: dict[str, typing.Any] = decode_jwt_claims_unverified(raw_token)
             return UserManager._user_info_from_jwt(claims)
 
         if isinstance(payload, ApiKeyAuthPayload):
+            UserManager._ensure_identity_credential_accepted("api_key", accepted_identity_credentials)
             token_value: str = payload.token.get_secret_value()
             if not token_value:
                 raise ValueError("API key token is empty")
             return UserInfo._from_api_key(token_value)
 
         if isinstance(payload, BasicAuthPayload):
+            UserManager._ensure_identity_credential_accepted("basic", accepted_identity_credentials)
             return UserInfo(basic_user=BasicUserInfo(
                 username=payload.username,
                 password=payload.password,
             ))
 
         typing.assert_never(payload)
+
+    @staticmethod
+    async def from_auth_payload_with_verification(
+        payload: AuthPayload,
+        accepted_identity_credentials: typing.Collection[IdentityCredentialType] | None = None,
+        jwt_validators: typing.Mapping[str, BearerTokenValidator] | None = None,
+    ) -> UserInfo:
+        """Resolve an auth payload, verifying JWTs when a verifier is configured."""
+        if isinstance(payload, JwtAuthPayload) and jwt_validators:
+            UserManager._ensure_identity_credential_accepted("jwt", accepted_identity_credentials)
+            raw_token = payload.token.get_secret_value()
+            claims = await UserManager._decode_verified_jwt(raw_token, jwt_validators)
+            return UserManager._user_info_from_jwt(claims, issuer_scoped=True)
+
+        return UserManager._from_auth_payload(payload, accepted_identity_credentials)
+
+    @staticmethod
+    async def _decode_verified_jwt(
+        token: str,
+        jwt_validators: typing.Mapping[str, BearerTokenValidator] | None,
+    ) -> dict[str, typing.Any]:
+        claims = decode_jwt_claims_unverified(token)
+        if not jwt_validators:
+            return claims
+
+        issuer = claims.get("iss")
+        if not isinstance(issuer, str) or not issuer:
+            raise JwtVerificationError("JWT verification requires a non-empty issuer claim")
+
+        jwt_validator = jwt_validators.get(issuer)
+        if jwt_validator is None:
+            raise JwtVerificationError(f"JWT issuer is not accepted: {issuer}")
+
+        result = await jwt_validator.verify(token)
+        if not result.active:
+            raise JwtVerificationError("JWT verification failed")
+        return claims
+
+    @staticmethod
+    def _ensure_identity_credential_accepted(
+        credential_type: IdentityCredentialType,
+        accepted_identity_credentials: typing.Collection[IdentityCredentialType] | None,
+    ) -> None:
+        """Reject a recognized credential type when it is disabled by policy."""
+        if accepted_identity_credentials is not None and credential_type not in accepted_identity_credentials:
+            raise IdentityCredentialNotAcceptedError(f"Identity credential type '{credential_type}' is not accepted")
+
+    @staticmethod
+    def _get_identity_header(connection: Request | WebSocket, header_name: str) -> str:
+        """Read one non-empty value for a trusted identity header, failing closed otherwise."""
+        values: list[str] = []
+        if isinstance(connection, Request):
+            values = list(connection.headers.getlist(header_name))
+        elif isinstance(connection, WebSocket) and hasattr(connection, "scope"):
+            target = header_name.lower()
+            for name, value in connection.scope.get("headers", []):
+                try:
+                    if name.decode("latin-1").lower() == target:
+                        values.append(value.decode("latin-1"))
+                except (AttributeError, UnicodeDecodeError):
+                    raise IdentityHeaderError(f"Configured identity header '{header_name}' is malformed") from None
+
+        if not values:
+            raise IdentityHeaderError(f"Configured identity header '{header_name}' is missing")
+        if len(values) != 1:
+            raise IdentityHeaderError(f"Configured identity header '{header_name}' must occur exactly once")
+
+        identity = values[0].strip()
+        if not identity:
+            raise IdentityHeaderError(f"Configured identity header '{header_name}' must not be empty")
+        return identity
 
     @staticmethod
     def _get_session_cookie(connection: Request | WebSocket) -> str | None:
@@ -207,7 +372,7 @@ class UserManager:
         return UserInfo._from_session_cookie(cookie_value)
 
     @staticmethod
-    def _user_info_from_jwt(claims: dict[str, typing.Any]) -> UserInfo:
+    def _user_info_from_jwt(claims: dict[str, typing.Any], *, issuer_scoped: bool = False) -> UserInfo:
         """Build a ``UserInfo`` from decoded JWT claims.
 
         Registered claims (``sub``, ``iss``, ``aud``, ``exp``, ``iat``) follow
@@ -224,8 +389,8 @@ class UserManager:
         if not has_identity:
             raise ValueError("JWT contains no usable identity claim (sub, email, preferred_username)")
 
-        given_name: str | None = (claims.get("given_name") if isinstance(claims.get("given_name"), str) else None)
-        family_name: str | None = (claims.get("family_name") if isinstance(claims.get("family_name"), str) else None)
+        given_name: str | None = claims.get("given_name") if isinstance(claims.get("given_name"), str) else None
+        family_name: str | None = claims.get("family_name") if isinstance(claims.get("family_name"), str) else None
         if not given_name and not family_name:
             raw_name: typing.Any = claims.get("name")
             if isinstance(raw_name, str) and raw_name.strip():
@@ -271,7 +436,7 @@ class UserManager:
                        if isinstance(claims.get("azp"), str) or isinstance(claims.get("client_id"), str) else None),
             claims=claims,
         )
-        return UserInfo._from_jwt(jwt_info)
+        return UserInfo._from_jwt(jwt_info, issuer_scoped=issuer_scoped)
 
     @staticmethod
     def _user_info_from_basic_auth(b64_credential: str) -> UserInfo:

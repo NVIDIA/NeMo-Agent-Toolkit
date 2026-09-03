@@ -15,7 +15,6 @@
 
 import logging
 import os
-import time
 import uuid
 from enum import Enum
 from typing import Any
@@ -23,6 +22,10 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
+
+from nat.utils.providers import current_time_ns
+from nat.utils.providers import generate_span_id
+from nat.utils.providers import generate_trace_id
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +131,7 @@ class SpanStatusCode(Enum):
 
 
 class SpanEvent(BaseModel):
-    timestamp: float = Field(default_factory=lambda: int(time.time() * 1e9), description="The timestamp of the event.")
+    timestamp: float = Field(default_factory=current_time_ns, description="The timestamp of the event.")
     name: str = Field(description="The name of the event.")
     attributes: dict[str, Any] = Field(default_factory=dict, description="The attributes of the event.")
 
@@ -140,12 +143,12 @@ class SpanStatus(BaseModel):
 
 def _generate_nonzero_trace_id() -> int:
     """Generate a non-zero 128-bit trace ID."""
-    return uuid.uuid4().int
+    return generate_trace_id()
 
 
 def _generate_nonzero_span_id() -> int:
     """Generate a non-zero 64-bit span ID."""
-    return uuid.uuid4().int >> 64
+    return generate_span_id()
 
 
 class SpanContext(BaseModel):
@@ -186,7 +189,7 @@ class Span(BaseModel):
     name: str = Field(description="The name of the span.")
     context: SpanContext | None = Field(default=None, description="The context of the span.")
     parent: "Span | None" = Field(default=None, description="The parent span of the span.")
-    start_time: int = Field(default_factory=lambda: int(time.time() * 1e9), description="The start time of the span.")
+    start_time: int = Field(default_factory=current_time_ns, description="The start time of the span.")
     end_time: int | None = Field(default=None, description="The end time of the span.")
     attributes: dict[str, Any] = Field(default_factory=dict, description="The attributes of the span.")
     events: list[SpanEvent] = Field(default_factory=list, description="The events of the span.")
@@ -234,5 +237,5 @@ class Span(BaseModel):
             end_time (int | None): The end time of the span.
         """
         if end_time is None:
-            end_time = int(time.time() * 1e9)
+            end_time = current_time_ns()
         self.end_time = end_time

@@ -133,6 +133,14 @@ export NAT_OAUTH_CLIENT_SECRET=<your_client_secret>
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
+## Choosing How the Login Page Opens
+
+Set the `NEXT_PUBLIC_NAT_OAUTH_MODE` environment variable in the NeMo Agent Toolkit UI to choose how
+the OAuth provider's login page opens:
+
+- `redirect` (default) — The current tab navigates to the login page and returns to the chat after authentication completes.
+- `popup` — The login page opens in a popup window; the chat tab stays open, and the popup closes automatically once authentication completes.
+
 ## Serve The Agent
 
 In a new terminal, serve the agent using the following command:
@@ -141,7 +149,7 @@ In a new terminal, serve the agent using the following command:
 nat serve --config_file=examples/front_ends/simple_auth/configs/config.yml
 ```
 
-This will start a FastAPI server on `http://localhost:8000` that listens for requests from the UI and
+This starts a FastAPI server on `http://localhost:8000` that listens for requests from the UI and
 handles authentication.
 
 ## Query the Agent

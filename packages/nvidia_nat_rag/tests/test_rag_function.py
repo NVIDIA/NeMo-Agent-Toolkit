@@ -27,6 +27,7 @@ from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import RetrieverRef
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.llm.nim_llm import NIMModelConfig
+from nat.plugins.rag.config import RAGPipelineConfig
 from nat.retriever.milvus.register import MilvusRetrieverConfig
 
 # NOTE: First nvidia_rag import takes ~20s due to module-level initialization.
@@ -36,17 +37,17 @@ from nat.retriever.milvus.register import MilvusRetrieverConfig
 # =============================================================================
 
 LLM_CONFIGS: dict[str, NIMModelConfig] = {
-    "nim_llm_llama8b":
+    "nim_llm_nemotron_lightning":
         NIMModelConfig(
-            model_name="meta/llama-3.1-8b-instruct",
+            model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
             base_url="https://integrate.api.nvidia.com/v1",
             temperature=0.2,
             top_p=0.95,
             max_tokens=4096,
         ),
-    "nim_llm_llama70b":
+    "nim_llm_nemotron_super":
         NIMModelConfig(
-            model_name="meta/llama-3.1-70b-instruct",
+            model_name="nvidia/nemotron-3-super-120b-a12b",
             base_url="https://integrate.api.nvidia.com/v1",
             temperature=0.1,
             top_p=0.9,
@@ -55,15 +56,9 @@ LLM_CONFIGS: dict[str, NIMModelConfig] = {
 }
 
 EMBEDDER_CONFIGS: dict[str, NIMEmbedderModelConfig] = {
-    # nvidia/llama-nemotron-embed-1b-v2: supports dimensions parameter
     "nim_embedder":
         NIMEmbedderModelConfig(
-            model_name="nvidia/llama-nemotron-embed-1b-v2",
-            base_url="https://integrate.api.nvidia.com/v1",
-        ),  # nvidia/nv-embedqa-e5-v5: REJECTS dimensions param
-    "nim_embedder_e5":
-        NIMEmbedderModelConfig(
-            model_name="nvidia/nv-embedqa-e5-v5",
+            model_name="nvidia/nemotron-3-embed-1b",
             base_url="https://integrate.api.nvidia.com/v1",
         ),
 }
@@ -108,6 +103,10 @@ def fixture_mock_builder() -> MagicMock:
 
 class TestNvidiaRAGMethods:
     """Test NvidiaRAG class can be imported and has expected methods."""
+
+    def test_default_reranker_model(self) -> None:
+        """Use a supported NVIDIA RAG reranker by default."""
+        assert RAGPipelineConfig().ranking.model_name == "nvidia/llama-nemotron-rerank-vl-1b-v2"
 
     def test_import_and_instantiate_nvidia_rag(self) -> None:
         """Verify nvidia_rag can be imported and instantiated."""
@@ -186,14 +185,7 @@ class TestNvidiaRAGIntegration:
                 client.drop_collection(name)
 
     @pytest.mark.parametrize("llm_ref", list(LLM_CONFIGS.keys()))
-    @pytest.mark.parametrize(
-        "embedder_ref",
-        [
-            "nim_embedder",
-            pytest.param(
-                "nim_embedder_e5",
-                marks=pytest.mark.xfail(reason="nvidia_rag passes dimensions param which nv-embedqa-e5-v5 rejects")),
-        ])
+    @pytest.mark.parametrize("embedder_ref", ["nim_embedder"])
     @pytest.mark.parametrize("retriever_ref", list(RETRIEVER_CONFIGS.keys()))
     async def test_search(
         self,
@@ -213,11 +205,12 @@ class TestNvidiaRAGIntegration:
         llm_config = LLM_CONFIGS[llm_ref]
         embedder_config = EMBEDDER_CONFIGS[embedder_ref]
 
-        rag_config = NvidiaRAGConfig()
+        rag_config = NvidiaRAGConfig(ranking=RAGPipelineConfig().ranking)
         rag_config.llm.model_name = llm_config.model_name
         rag_config.llm.server_url = llm_config.base_url
         rag_config.embeddings.model_name = embedder_config.model_name
         rag_config.embeddings.server_url = embedder_config.base_url
+        rag_config.vector_store.name = "milvus"
         rag_config.vector_store.url = milvus_uri
         rag_config.vector_store.default_collection_name = collection_name
 
@@ -227,14 +220,7 @@ class TestNvidiaRAGIntegration:
         assert result is not None
 
     @pytest.mark.parametrize("llm_ref", list(LLM_CONFIGS.keys()))
-    @pytest.mark.parametrize(
-        "embedder_ref",
-        [
-            "nim_embedder",
-            pytest.param(
-                "nim_embedder_e5",
-                marks=pytest.mark.xfail(reason="nvidia_rag passes dimensions param which nv-embedqa-e5-v5 rejects")),
-        ])
+    @pytest.mark.parametrize("embedder_ref", ["nim_embedder"])
     @pytest.mark.parametrize("retriever_ref", list(RETRIEVER_CONFIGS.keys()))
     async def test_generate(
         self,
@@ -251,11 +237,12 @@ class TestNvidiaRAGIntegration:
         llm_config = LLM_CONFIGS[llm_ref]
         embedder_config = EMBEDDER_CONFIGS[embedder_ref]
 
-        rag_config = NvidiaRAGConfig()
+        rag_config = NvidiaRAGConfig(ranking=RAGPipelineConfig().ranking)
         rag_config.llm.model_name = llm_config.model_name
         rag_config.llm.server_url = llm_config.base_url
         rag_config.embeddings.model_name = embedder_config.model_name
         rag_config.embeddings.server_url = embedder_config.base_url
+        rag_config.vector_store.name = "milvus"
         rag_config.vector_store.url = milvus_uri
 
         rag = NvidiaRAG(config=rag_config)
@@ -265,14 +252,9 @@ class TestNvidiaRAGIntegration:
         assert result is not None
 
     @pytest.mark.parametrize("llm_ref", list(LLM_CONFIGS.keys()))
-    @pytest.mark.parametrize(
-        "embedder_ref",
-        [
-            "nim_embedder",
-            pytest.param(
-                "nim_embedder_e5",
-                marks=pytest.mark.xfail(reason="nvidia_rag passes dimensions param which nv-embedqa-e5-v5 rejects")),
-        ])
+    @pytest.mark.parametrize("embedder_ref", [
+        "nim_embedder",
+    ])
     @pytest.mark.parametrize("retriever_ref", list(RETRIEVER_CONFIGS.keys()))
     async def test_health(
         self,
@@ -289,11 +271,12 @@ class TestNvidiaRAGIntegration:
         llm_config = LLM_CONFIGS[llm_ref]
         embedder_config = EMBEDDER_CONFIGS[embedder_ref]
 
-        rag_config = NvidiaRAGConfig()
+        rag_config = NvidiaRAGConfig(ranking=RAGPipelineConfig().ranking)
         rag_config.llm.model_name = llm_config.model_name
         rag_config.llm.server_url = llm_config.base_url
         rag_config.embeddings.model_name = embedder_config.model_name
         rag_config.embeddings.server_url = embedder_config.base_url
+        rag_config.vector_store.name = "milvus"
         rag_config.vector_store.url = milvus_uri
 
         rag = NvidiaRAG(config=rag_config)

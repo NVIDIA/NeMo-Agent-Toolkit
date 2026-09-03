@@ -17,135 +17,48 @@ limitations under the License.
 
 # Code Execution Sandbox
 
-A secure, containerized Python code execution environment that allows safe execution of Python code with comprehensive error handling and debugging capabilities.
+The code execution tool sends Python code to a remote
+[Piston](https://github.com/engineer-man/piston) server and returns the execution status, standard output, and
+standard error.
 
-## Overview
+## Setup
 
-The Code Execution Sandbox provides:
-- **Secure code execution** in isolated Docker containers
-- **Multiple input formats** including raw code, dictionary format, and markdown
-- **Dependency management** with pre-installed libraries
-- **Flexible configuration** with customizable timeouts and output limits
-- **Robust debugging** with extensive logging and error reporting
-
-## Quick Start
-
-### Step 1: Start the Sandbox Server
-
-Navigate to the local sandbox directory and start the server:
-
-```bash
-cd packages/nvidia_nat_core/src/nat/tool/code_execution/local_sandbox
-./start_local_sandbox.sh
-```
-
-The script will:
-- Build the Docker image if it doesn't exist
-- Start the sandbox server on port 6000
-- Mount your working directory for file operations
-
-#### Advanced Usage:
-```bash
-# Custom container name
-./start_local_sandbox.sh my-sandbox
-
-# Custom output directory
-./start_local_sandbox.sh my-sandbox /path/to/output
-
-# Using environment variable
-export OUTPUT_DATA_PATH=/path/to/output
-./start_local_sandbox.sh
-```
-
-### Step 2: Test the Installation
-
-Run the comprehensive test suite to verify everything is working:
-
-```bash
-cd packages/nvidia_nat_core/src/nat/tool/code_execution
-pytest test_code_execution_sandbox.py
-```
-
-Note: a running instance of a local sandbox is required.
+Follow the Piston deployment instructions or connect to an existing Piston server. The Piston server must include
+the Python 3.10.0 runtime expected by the client.
 
 ## Using the Code Execution Tool
 
-### Basic Usage
+Configure a workflow with the Piston API base URL:
 
-The sandbox accepts HTTP POST requests to `http://localhost:6000/execute` with JSON payloads:
-
-```bash
-curl -X POST \
-  -H "Content-Type: application/json" \
-  -d '{
-    "generated_code": "print(\"Hello, World!\")",
-    "timeout": 30,
-    "language": "python"
-  }' \
-  http://localhost:6000/execute
+```yaml
+functions:
+  code_execution_tool:
+    _type: code_execution
+    sandbox_type: piston
+    uri: http://my-piston-server/api/v2/
+    timeout: 30
+    max_output_characters: 3000
 ```
 
-### Supported Input Formats
+The `sandbox_type` field remains part of the configuration API so additional sandbox implementations can be added
+without changing the function configuration shape.
 
-#### 1. Raw Python Code
-```json
-{
-  "generated_code": "import numpy as np\nprint(np.array([1, 2, 3]))",
-  "timeout": 30,
-  "language": "python"
-}
-```
+## Response Format
 
-#### 2. Dictionary Format
-```json
-{
-  "generated_code": "{'generated_code': 'print(\"Hello from dict format\")'}",
-  "timeout": 30,
-  "language": "python"
-}
-```
-
-#### 3. Markdown Code Blocks
-```json
-{
-  "generated_code": "```python\nprint('Hello from markdown')\n```",
-  "timeout": 30,
-  "language": "python"
-}
-```
-
-### Response Format
-
-The sandbox returns JSON responses with the following structure:
+The tool returns a dictionary with `process_status`, `stdout`, and `stderr` fields:
 
 ```json
 {
-  "process_status": "completed|error|timeout",
-  "stdout": "Standard output content",
-  "stderr": "Standard error content"
+  "process_status": "completed",
+  "stdout": "Hello, World!\n",
+  "stderr": ""
 }
 ```
 
-## Configuration Options
-
-### Sandbox Configuration
-
-- **URI**: Default `http://127.0.0.1:6000`
-- **Timeout**: Default 10 seconds (configurable)
-- **Max Output Characters**: Default 1000 characters
-- **Memory Limit**: 10GB (configurable in Docker)
-- **Working Directory**: Mounted volume for file operations
-
-### Environment Variables
-
-- `OUTPUT_DATA_PATH`: Custom path for file operations
-- `SANDBOX_HOST`: Custom sandbox host
-- `SANDBOX_PORT`: Custom sandbox port
+Only printed output is returned. Files and in-memory objects created by executed code are not returned to the
+workflow.
 
 ## Security Considerations
 
-- **Isolated execution**: All code runs in Docker containers
-- **Resource limits**: Memory and CPU limits prevent resource exhaustion
-- **Network isolation**: Containers have limited network access
-- **File system isolation**: Mounted volumes provide controlled file access
-- **Process isolation**: Each execution runs in a separate process
+Executing untrusted code carries risk. Configure authentication, authorization, network policies, and resource limits
+on the remote execution service as appropriate for the deployment.

@@ -28,3 +28,4 @@ class AutoMemoryWrapperState(BaseModel):
     """
     messages: list[BaseMessage] = Field(default_factory=list,
                                         description="Conversation messages with context injection")
+    user_id: str | None = Field(default=None, description="Resolved runtime identity used for memory operations")

@@ -33,6 +33,9 @@ from nat.data_models.user_info import BasicUserInfo
 from nat.data_models.user_info import JwtUserInfo
 from nat.data_models.user_info import UserInfo
 from nat.runtime.session import SESSION_COOKIE_NAME
+from nat.runtime.user_manager import IdentityCredentialNotAcceptedError
+from nat.runtime.user_manager import IdentityHeaderError
+from nat.runtime.user_manager import JwtVerificationError
 from nat.runtime.user_manager import UserManager
 
 
@@ -48,7 +51,9 @@ def _mock_request(cookies: dict[str, str] | None = None, headers: dict[str, str]
     mock = MagicMock(spec=Request)
     mock.cookies = cookies or {}
     mock.headers = MagicMock()
-    mock.headers.get = (headers or {}).get
+    header_values = headers or {}
+    mock.headers.get = header_values.get
+    mock.headers.getlist = lambda name: [value for key, value in header_values.items() if key.lower() == name.lower()]
     return mock
 
 
@@ -56,6 +61,7 @@ def _mock_websocket(
     cookie_header: str | None = None,
     auth_header: str | None = None,
     api_key_header: str | None = None,
+    extra_headers: list[tuple[bytes, bytes]] | None = None,
 ) -> MagicMock:
     """Create a MagicMock that passes ``isinstance(obj, WebSocket)``."""
     raw_headers: list[tuple[bytes, bytes]] = []
@@ -65,10 +71,62 @@ def _mock_websocket(
         raw_headers.append((b"authorization", auth_header.encode()))
     if api_key_header:
         raw_headers.append((b"x-api-key", api_key_header.encode()))
+    raw_headers.extend(extra_headers or [])
 
     mock = MagicMock(spec=WebSocket)
     mock.scope = {"headers": raw_headers}
     return mock
+
+
+class TestTrustedIdentityHeader:
+    """A configured upstream identity header is authoritative and fails closed."""
+
+    def test_request_identity_header_returns_deterministic_user(self):
+        request = _mock_request(headers={"X-User-ID": "alice"})
+
+        first = UserManager.extract_user_from_connection(request, identity_header="X-User-ID")
+        second = UserManager.extract_user_from_connection(request, identity_header="x-user-id")
+
+        assert first is not None
+        assert second is not None
+        assert first.get_user_id() == second.get_user_id()
+        assert first.get_user_details() is None
+
+    def test_websocket_identity_header_is_supported(self):
+        websocket = _mock_websocket(extra_headers=[(b"x-user-id", b"alice")])
+
+        info = UserManager.extract_user_from_connection(websocket, identity_header="X-User-ID")
+
+        assert info is not None
+        assert info.get_user_id()
+
+    @pytest.mark.parametrize("value", [None, "", "   "])
+    def test_missing_or_empty_identity_header_is_rejected(self, value):
+        headers = {} if value is None else {"X-User-ID": value}
+        request = _mock_request(headers=headers)
+
+        with pytest.raises(IdentityHeaderError):
+            UserManager.extract_user_from_connection(request, identity_header="X-User-ID")
+
+    def test_duplicate_identity_header_is_rejected(self):
+        websocket = _mock_websocket(extra_headers=[(b"x-user-id", b"alice"), (b"X-User-ID", b"mallory")])
+
+        with pytest.raises(IdentityHeaderError, match="exactly once"):
+            UserManager.extract_user_from_connection(websocket, identity_header="X-User-ID")
+
+    def test_identity_header_takes_precedence_over_other_credentials(self):
+        request = _mock_request(
+            cookies={SESSION_COOKIE_NAME: "cookie-user"},
+            headers={
+                "X-User-ID": "header-user", "authorization": "Bearer api-key"
+            },
+        )
+
+        header_info = UserManager.extract_user_from_connection(request, identity_header="X-User-ID")
+        expected = UserInfo._from_identity_header("X-User-ID", "header-user")
+
+        assert header_info is not None
+        assert header_info.get_user_id() == expected.get_user_id()
 
 
 class TestFromConnectionRequestCookie:
@@ -87,16 +145,16 @@ class TestFromConnectionRequestCookie:
         req1 = _mock_request(cookies={SESSION_COOKIE_NAME: "same-cookie"})
         req2 = _mock_request(cookies={SESSION_COOKIE_NAME: "same-cookie"})
 
-        assert UserManager.extract_user_from_connection(req1).get_user_id() == \
-               UserManager.extract_user_from_connection(req2).get_user_id()
+        assert (UserManager.extract_user_from_connection(req1).get_user_id() ==
+                UserManager.extract_user_from_connection(req2).get_user_id())
 
     def test_different_cookies_different_uuids(self):
         """Input: two Requests with different cookie values. Asserts they produce different user_ids."""
         req1 = _mock_request(cookies={SESSION_COOKIE_NAME: "cookie-a"})
         req2 = _mock_request(cookies={SESSION_COOKIE_NAME: "cookie-b"})
 
-        assert UserManager.extract_user_from_connection(req1).get_user_id() != \
-               UserManager.extract_user_from_connection(req2).get_user_id()
+        assert (UserManager.extract_user_from_connection(req1).get_user_id()
+                != UserManager.extract_user_from_connection(req2).get_user_id())
 
 
 class TestFromConnectionRequestJwt:
@@ -223,6 +281,86 @@ class TestFromConnectionWebSocketJwt:
         assert isinstance(details, JwtUserInfo)
         assert details.email == "ws@example.com"
 
+    async def test_omitted_verifier_preserves_decode_only_behavior(self):
+        token = _make_jwt({"sub": "decode-only-user"})
+        ws = _mock_websocket(auth_header=f"Bearer {token}")
+
+        info = await UserManager.extract_user_from_connection_with_verification(ws, jwt_validators=None)
+
+        assert info is not None
+        assert info.get_user_details().subject == "decode-only-user"
+
+    async def test_active_verifier_accepts_websocket_jwt(self):
+        issuer = "https://identity.example.com"
+        token = _make_jwt({"iss": issuer, "sub": "verified-user"})
+        ws = _mock_websocket(auth_header=f"Bearer {token}")
+        jwt_validator = MagicMock()
+        jwt_validator.verify = AsyncMock(return_value=MagicMock(active=True))
+
+        info = await UserManager.extract_user_from_connection_with_verification(
+            ws,
+            jwt_validators={issuer: jwt_validator},
+        )
+
+        jwt_validator.verify.assert_awaited_once_with(token)
+        assert info is not None
+        assert info.get_user_details().subject == "verified-user"
+
+    async def test_inactive_verifier_rejects_websocket_jwt(self):
+        issuer = "https://identity.example.com"
+        token = _make_jwt({"iss": issuer, "sub": "unverified-user"})
+        ws = _mock_websocket(auth_header=f"Bearer {token}")
+        jwt_validator = MagicMock()
+        jwt_validator.verify = AsyncMock(return_value=MagicMock(active=False))
+
+        with pytest.raises(JwtVerificationError, match="JWT verification failed"):
+            await UserManager.extract_user_from_connection_with_verification(
+                ws,
+                jwt_validators={issuer: jwt_validator},
+            )
+
+    async def test_unknown_issuer_rejects_websocket_jwt(self):
+        token = _make_jwt({"iss": "https://unknown.example.com", "sub": "unknown-user"})
+        ws = _mock_websocket(auth_header=f"Bearer {token}")
+
+        with pytest.raises(JwtVerificationError, match="JWT issuer is not accepted"):
+            await UserManager.extract_user_from_connection_with_verification(
+                ws,
+                jwt_validators={"https://identity.example.com": MagicMock()},
+            )
+
+    async def test_missing_issuer_rejects_websocket_jwt_when_verification_is_configured(self):
+        token = _make_jwt({"sub": "missing-issuer-user"})
+        ws = _mock_websocket(auth_header=f"Bearer {token}")
+
+        with pytest.raises(JwtVerificationError, match="non-empty issuer claim"):
+            await UserManager.extract_user_from_connection_with_verification(
+                ws,
+                jwt_validators={"https://identity.example.com": MagicMock()},
+            )
+
+    async def test_verified_jwt_identity_is_scoped_by_issuer(self):
+        first_issuer = "https://first.example.com"
+        second_issuer = "https://second.example.com"
+        validators = {}
+        for issuer in (first_issuer, second_issuer):
+            validator = MagicMock()
+            validator.verify = AsyncMock(return_value=MagicMock(active=True))
+            validators[issuer] = validator
+
+        first = await UserManager.extract_user_from_connection_with_verification(
+            _mock_websocket(auth_header=f"Bearer {_make_jwt({'iss': first_issuer, 'sub': 'shared-subject'})}"),
+            jwt_validators=validators,
+        )
+        second = await UserManager.extract_user_from_connection_with_verification(
+            _mock_websocket(auth_header=f"Bearer {_make_jwt({'iss': second_issuer, 'sub': 'shared-subject'})}"),
+            jwt_validators=validators,
+        )
+
+        assert first is not None
+        assert second is not None
+        assert first.get_user_id() != second.get_user_id()
+
 
 class TestFromConnectionPriority:
     """extract_user_from_connection prefers session cookie over JWT when both are present."""
@@ -246,6 +384,108 @@ class TestFromConnectionPriority:
         )
         info: UserInfo = UserManager.extract_user_from_connection(ws)
         assert info.get_user_details() == "ws-cookie-user"
+
+    def test_disabled_cookie_does_not_fall_through_to_allowed_jwt(self):
+        """A disabled higher-priority credential rejects the connection instead of changing identity."""
+        token: str = _make_jwt({"sub": "jwt-user"})
+        ws = _mock_websocket(
+            cookie_header=f"{SESSION_COOKIE_NAME}=ws-cookie-user",
+            auth_header=f"Bearer {token}",
+        )
+
+        with pytest.raises(IdentityCredentialNotAcceptedError, match="session_cookie"):
+            UserManager.extract_user_from_connection(ws, accepted_identity_credentials=["jwt"])
+
+    async def test_async_resolver_does_not_fall_through_from_disabled_cookie_to_verified_jwt(self):
+        issuer = "https://identity.example.com"
+        token = _make_jwt({"iss": issuer, "sub": "jwt-user"})
+        ws = _mock_websocket(
+            cookie_header=f"{SESSION_COOKIE_NAME}=ws-cookie-user",
+            auth_header=f"Bearer {token}",
+        )
+        jwt_validator = MagicMock()
+        jwt_validator.verify = AsyncMock(return_value=MagicMock(active=True))
+
+        with pytest.raises(IdentityCredentialNotAcceptedError, match="session_cookie"):
+            await UserManager.extract_user_from_connection_with_verification(
+                ws,
+                accepted_identity_credentials=["jwt"],
+                jwt_validators={issuer: jwt_validator},
+            )
+
+        jwt_validator.verify.assert_not_awaited()
+
+
+class TestAcceptedIdentityCredentials:
+    """Configured credential methods limit WebSocket identity resolution."""
+
+    @pytest.mark.parametrize(
+        ("websocket", "accepted_method"),
+        [
+            (_mock_websocket(cookie_header=f"{SESSION_COOKIE_NAME}=session"), "session_cookie"),
+            (_mock_websocket(auth_header=f"Bearer {_make_jwt({'sub': 'jwt-user'})}"), "jwt"),
+            (_mock_websocket(auth_header="Bearer api-key"), "api_key"),
+            (_mock_websocket(api_key_header="api-key"), "api_key"),
+            (_mock_websocket(auth_header="Basic dXNlcjpwYXNz"), "basic"),
+        ],
+        ids=["session-cookie", "jwt", "bearer-api-key", "x-api-key", "basic"],
+    )
+    def test_enabled_connection_credential_is_accepted(self, websocket, accepted_method):
+        info = UserManager.extract_user_from_connection(websocket, accepted_identity_credentials=[accepted_method])
+
+        assert info is not None
+
+    @pytest.mark.parametrize(
+        ("websocket", "disabled_method"),
+        [
+            (_mock_websocket(cookie_header=f"{SESSION_COOKIE_NAME}=session"), "session_cookie"),
+            (_mock_websocket(auth_header=f"Bearer {_make_jwt({'sub': 'jwt-user'})}"), "jwt"),
+            (_mock_websocket(auth_header="Bearer api-key"), "api_key"),
+            (_mock_websocket(api_key_header="api-key"), "api_key"),
+            (_mock_websocket(auth_header="Basic dXNlcjpwYXNz"), "basic"),
+        ],
+        ids=["session-cookie", "jwt", "bearer-api-key", "x-api-key", "basic"],
+    )
+    def test_disabled_connection_credential_is_rejected(self, websocket, disabled_method):
+        with pytest.raises(IdentityCredentialNotAcceptedError, match=disabled_method):
+            UserManager.extract_user_from_connection(websocket, accepted_identity_credentials=[])
+
+    @pytest.mark.parametrize(
+        ("websocket", "accepted_method"),
+        [
+            (_mock_websocket(cookie_header=f"{SESSION_COOKIE_NAME}=session"), "session_cookie"),
+            (_mock_websocket(auth_header=f"Bearer {_make_jwt({'sub': 'jwt-user'})}"), "jwt"),
+            (_mock_websocket(auth_header="Bearer api-key"), "api_key"),
+            (_mock_websocket(api_key_header="api-key"), "api_key"),
+            (_mock_websocket(auth_header="Basic dXNlcjpwYXNz"), "basic"),
+        ],
+        ids=["session-cookie", "jwt", "bearer-api-key", "x-api-key", "basic"],
+    )
+    async def test_enabled_connection_credential_is_accepted_by_async_resolver(self, websocket, accepted_method):
+        info = await UserManager.extract_user_from_connection_with_verification(
+            websocket,
+            accepted_identity_credentials=[accepted_method],
+        )
+
+        assert info is not None
+
+    @pytest.mark.parametrize(
+        ("websocket", "disabled_method"),
+        [
+            (_mock_websocket(cookie_header=f"{SESSION_COOKIE_NAME}=session"), "session_cookie"),
+            (_mock_websocket(auth_header=f"Bearer {_make_jwt({'sub': 'jwt-user'})}"), "jwt"),
+            (_mock_websocket(auth_header="Bearer api-key"), "api_key"),
+            (_mock_websocket(api_key_header="api-key"), "api_key"),
+            (_mock_websocket(auth_header="Basic dXNlcjpwYXNz"), "basic"),
+        ],
+        ids=["session-cookie", "jwt", "bearer-api-key", "x-api-key", "basic"],
+    )
+    async def test_disabled_connection_credential_is_rejected_by_async_resolver(self, websocket, disabled_method):
+        with pytest.raises(IdentityCredentialNotAcceptedError, match=disabled_method):
+            await UserManager.extract_user_from_connection_with_verification(
+                websocket,
+                accepted_identity_credentials=[],
+            )
 
 
 class TestFromConnectionNoCredential:
@@ -296,8 +536,7 @@ class TestFromAuthPayloadJwt:
         p1 = JwtAuthPayload(method="jwt", token=SecretStr(token))
         p2 = JwtAuthPayload(method="jwt", token=SecretStr(token))
 
-        assert UserManager._from_auth_payload(p1).get_user_id() == \
-               UserManager._from_auth_payload(p2).get_user_id()
+        assert UserManager._from_auth_payload(p1).get_user_id() == UserManager._from_auth_payload(p2).get_user_id()
 
     def test_jwt_payload_invalid_token_raises(self):
         """Input: JWT payload with non-JWT string. Asserts raises ValueError matching "malformed"."""
@@ -317,6 +556,38 @@ class TestFromAuthPayloadJwt:
         with pytest.raises(ValueError, match="no usable identity claim"):
             UserManager._from_auth_payload(payload)
 
+    async def test_active_verifier_accepts_jwt_payload(self):
+        issuer = "https://identity.example.com"
+        token = _make_jwt({"iss": issuer, "sub": "verified-payload-user"})
+        payload = JwtAuthPayload(method="jwt", token=SecretStr(token))
+        jwt_validator = MagicMock()
+        jwt_validator.verify = AsyncMock(return_value=MagicMock(active=True))
+
+        info = await UserManager.from_auth_payload_with_verification(payload, jwt_validators={issuer: jwt_validator})
+
+        jwt_validator.verify.assert_awaited_once_with(token)
+        assert info.get_user_details().subject == "verified-payload-user"
+
+    async def test_inactive_verifier_rejects_jwt_payload(self):
+        issuer = "https://identity.example.com"
+        token = _make_jwt({"iss": issuer, "sub": "unverified-payload-user"})
+        payload = JwtAuthPayload(method="jwt", token=SecretStr(token))
+        jwt_validator = MagicMock()
+        jwt_validator.verify = AsyncMock(return_value=MagicMock(active=False))
+
+        with pytest.raises(JwtVerificationError, match="JWT verification failed"):
+            await UserManager.from_auth_payload_with_verification(payload, jwt_validators={issuer: jwt_validator})
+
+    async def test_missing_issuer_rejects_jwt_payload_when_verification_is_configured(self):
+        token = _make_jwt({"sub": "missing-issuer-user"})
+        payload = JwtAuthPayload(method="jwt", token=SecretStr(token))
+
+        with pytest.raises(JwtVerificationError, match="non-empty issuer claim"):
+            await UserManager.from_auth_payload_with_verification(
+                payload,
+                jwt_validators={"https://identity.example.com": MagicMock()},
+            )
+
 
 class TestFromAuthPayloadApiKey:
     """_from_auth_payload resolves UserInfo from an ApiKeyAuthPayload."""
@@ -334,8 +605,7 @@ class TestFromAuthPayloadApiKey:
         p1 = ApiKeyAuthPayload(method="api_key", token=SecretStr("same-key"))
         p2 = ApiKeyAuthPayload(method="api_key", token=SecretStr("same-key"))
 
-        assert UserManager._from_auth_payload(p1).get_user_id() == \
-               UserManager._from_auth_payload(p2).get_user_id()
+        assert UserManager._from_auth_payload(p1).get_user_id() == UserManager._from_auth_payload(p2).get_user_id()
 
     def test_api_key_empty_token_raises(self):
         """Input: API key payload with empty token. Asserts raises ValidationError (min_length=1)."""
@@ -361,16 +631,28 @@ class TestFromAuthPayloadBasic:
         p1 = BasicAuthPayload(method="basic", username="bob", password=SecretStr("pass"))
         p2 = BasicAuthPayload(method="basic", username="bob", password=SecretStr("pass"))
 
-        assert UserManager._from_auth_payload(p1).get_user_id() == \
-               UserManager._from_auth_payload(p2).get_user_id()
+        assert UserManager._from_auth_payload(p1).get_user_id() == UserManager._from_auth_payload(p2).get_user_id()
 
     def test_basic_different_users_different_uuids(self):
         """Input: two different basic payloads. Asserts they produce different user_ids."""
         p1 = BasicAuthPayload(method="basic", username="alice", password=SecretStr("pass"))
         p2 = BasicAuthPayload(method="basic", username="bob", password=SecretStr("pass"))
 
-        assert UserManager._from_auth_payload(p1).get_user_id() != \
-               UserManager._from_auth_payload(p2).get_user_id()
+        assert UserManager._from_auth_payload(p1).get_user_id() != UserManager._from_auth_payload(p2).get_user_id()
+
+
+@pytest.mark.parametrize(
+    ("payload", "disabled_method"),
+    [
+        (JwtAuthPayload(method="jwt", token=SecretStr(_make_jwt({"sub": "user"}))), "jwt"),
+        (ApiKeyAuthPayload(method="api_key", token=SecretStr("api-key")), "api_key"),
+        (BasicAuthPayload(method="basic", username="user", password=SecretStr("password")), "basic"),
+    ],
+    ids=["jwt", "api-key", "basic"],
+)
+async def test_disabled_auth_payload_is_rejected(payload, disabled_method):
+    with pytest.raises(IdentityCredentialNotAcceptedError, match=disabled_method):
+        await UserManager.from_auth_payload_with_verification(payload, accepted_identity_credentials=[])
 
 
 class TestHandlerProcessAuthMessage:
@@ -378,6 +660,7 @@ class TestHandlerProcessAuthMessage:
 
     def _make_handler(self):
         from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
+
         mock_socket = MagicMock(spec=WebSocket)
         mock_socket.send_json = AsyncMock()
         handler = WebSocketMessageHandler(
@@ -396,6 +679,7 @@ class TestHandlerProcessAuthMessage:
     async def test_jwt_auth_message_sets_user_id(self):
         """Input: valid JWT auth message. Asserts handler._user_id is set and success response sent."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
         token: str = _make_jwt({"sub": "ws-auth-user", "email": "ws@auth.io"})
         msg = WebSocketAuthMessage(
@@ -417,6 +701,7 @@ class TestHandlerProcessAuthMessage:
     async def test_api_key_auth_message_sets_user_id(self):
         """Input: API key auth message. Asserts handler._user_id is set and success response sent."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
         msg = WebSocketAuthMessage(
             type="auth_message",
@@ -432,6 +717,7 @@ class TestHandlerProcessAuthMessage:
     async def test_basic_auth_message_sets_user_id(self):
         """Input: basic auth message. Asserts handler._user_id is set and success response sent."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
         msg = WebSocketAuthMessage(
             type="auth_message",
@@ -446,6 +732,7 @@ class TestHandlerProcessAuthMessage:
     async def test_invalid_jwt_leaves_user_id_none_and_sends_failure(self):
         """Input: malformed JWT auth message. Asserts user_id stays None and error response sent."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
         msg = WebSocketAuthMessage(
             type="auth_message",
@@ -464,6 +751,7 @@ class TestHandlerProcessAuthMessage:
     async def test_api_key_auth_success_response_contains_user_id(self):
         """Input: API key auth message. Asserts response user_id matches handler._user_id."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
         msg = WebSocketAuthMessage(
             type="auth_message",
@@ -477,6 +765,7 @@ class TestHandlerProcessAuthMessage:
     async def test_basic_auth_success_response_contains_user_id(self):
         """Input: basic auth message. Asserts response user_id matches handler._user_id."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
         msg = WebSocketAuthMessage(
             type="auth_message",
@@ -490,6 +779,7 @@ class TestHandlerProcessAuthMessage:
     async def test_auth_message_user_id_matches_direct_resolution(self):
         """The handler-stored user_id must match a direct _from_auth_payload call."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
         token: str = _make_jwt({"sub": "consistency-check", "email": "c@c.io"})
         payload = JwtAuthPayload(method="jwt", token=SecretStr(token))
@@ -524,6 +814,7 @@ class TestHandlerProcessAuthMessage:
     async def test_success_response_payload_is_none(self):
         """Input: valid JWT auth message. Asserts success response payload is None (no error)."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
         token: str = _make_jwt({"sub": "u", "email": "a@b.com"})
         msg = WebSocketAuthMessage(
@@ -538,6 +829,7 @@ class TestHandlerProcessAuthMessage:
     async def test_error_response_user_id_is_none(self):
         """Input: malformed JWT auth message. Asserts error response user_id is None."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
         msg = WebSocketAuthMessage(
             type="auth_message",
@@ -551,6 +843,7 @@ class TestHandlerProcessAuthMessage:
     async def test_error_response_has_details(self):
         """Input: malformed JWT auth message. Asserts error response contains non-empty details string."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
         msg = WebSocketAuthMessage(
             type="auth_message",
@@ -565,6 +858,7 @@ class TestHandlerProcessAuthMessage:
     async def test_second_auth_message_overrides_user_id(self):
         """Input: two auth messages for different users. Asserts second overrides first user_id."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
 
         token_a: str = _make_jwt({"sub": "user-a", "email": "user-a@x.com"})
@@ -592,6 +886,7 @@ class TestHandlerProcessAuthMessage:
     async def test_auth_then_workflow_passes_user_id(self):
         """Input: auth message then _run_workflow. Asserts session is called with the resolved user_id."""
         from nat.data_models.api_server import WebSocketAuthMessage
+
         handler = self._make_handler()
         token: str = _make_jwt({"sub": "flow-user", "email": "flow@x.com"})
         msg = WebSocketAuthMessage(
@@ -656,6 +951,21 @@ class TestSessionUserIdResolution:
             async with sm.session(user_id="explicit-id", http_connection=ws) as session:
                 assert session._user_id == "explicit-id"
             mock_extract.assert_not_called()
+
+    async def test_identity_header_overrides_explicit_user_id_for_connection(self):
+        """A caller cannot bypass configured header identity with an explicit user_id."""
+        from unittest.mock import patch
+
+        sm = self._make_session_manager()
+        sm._identity_header = "X-User-ID"
+        ws = _mock_websocket(extra_headers=[(b"x-user-id", b"proxy-user")])
+        header_info = UserInfo._from_identity_header("X-User-ID", "proxy-user")
+
+        with patch.object(UserManager, "extract_user_from_connection", return_value=header_info) as resolver:
+            async with sm.session(user_id="caller-controlled", http_connection=ws) as session:
+                assert session._user_id == header_info.get_user_id()
+
+        resolver.assert_called_once_with(ws, identity_header="X-User-ID")
 
     async def test_websocket_cookie_sets_user_id_in_context(self):
         """Input: WebSocket with session cookie. Asserts session user_id matches cookie-derived UUID."""
@@ -848,6 +1158,7 @@ class TestContextVarPropagation:
     def test_context_var_set_and_readable(self):
         """Input: set user_id to "test-user". Asserts get() returns "test-user"."""
         from nat.builder.context import ContextState
+
         state: ContextState = ContextState.get()
         token = state.user_id.set("test-user")
         try:
@@ -858,6 +1169,7 @@ class TestContextVarPropagation:
     def test_context_var_reset_restores_previous(self):
         """Input: set "user-a", then "user-b", then reset. Asserts get() returns "user-a" after reset."""
         from nat.builder.context import ContextState
+
         state: ContextState = ContextState.get()
         token_a = state.user_id.set("user-a")
         try:
@@ -1021,8 +1333,8 @@ class TestFromConnectionRequestBasicAuth:
         req1 = _mock_request(headers={"authorization": f"Basic {b64}"})
         req2 = _mock_request(headers={"authorization": f"Basic {b64}"})
 
-        assert UserManager.extract_user_from_connection(req1).get_user_id() == \
-               UserManager.extract_user_from_connection(req2).get_user_id()
+        assert (UserManager.extract_user_from_connection(req1).get_user_id() ==
+                UserManager.extract_user_from_connection(req2).get_user_id())
 
     def test_basic_auth_matches_direct_construction(self):
         """Input: Basic auth via header matches UserInfo(basic_user=...) with same creds."""
@@ -1082,8 +1394,8 @@ class TestFromConnectionRequestApiKey:
         req1 = _mock_request(headers={"authorization": "Bearer sk-key-xyz"})
         req2 = _mock_request(headers={"authorization": "Bearer sk-key-xyz"})
 
-        assert UserManager.extract_user_from_connection(req1).get_user_id() == \
-               UserManager.extract_user_from_connection(req2).get_user_id()
+        assert (UserManager.extract_user_from_connection(req1).get_user_id() ==
+                UserManager.extract_user_from_connection(req2).get_user_id())
 
     def test_api_key_matches_from_api_key_factory(self):
         """Input: API key via Bearer header matches UserInfo._from_api_key with same key."""
@@ -1131,8 +1443,8 @@ class TestFromConnectionXApiKeyHeader:
         req1 = _mock_request(headers={"x-api-key": "nvapi-stable"})
         req2 = _mock_request(headers={"x-api-key": "nvapi-stable"})
 
-        assert UserManager.extract_user_from_connection(req1).get_user_id() == \
-               UserManager.extract_user_from_connection(req2).get_user_id()
+        assert (UserManager.extract_user_from_connection(req1).get_user_id() ==
+                UserManager.extract_user_from_connection(req2).get_user_id())
 
     def test_x_api_key_matches_bearer_api_key(self):
         """Input: Same key via X-API-Key and Bearer. Asserts same user_id."""

@@ -24,7 +24,7 @@ functions:
 llms:
   nim_llm:
     _type: litellm
-    model_name: nvidia_nim/nvidia/nemotron-3-nano-30b-a3b
+    model_name: nvidia_nim/nvidia/nemotron-3.5-lightning-30b-a3b
     api_key: ${NVIDIA_API_KEY}
     chat_template_kwargs:
       enable_thinking: false

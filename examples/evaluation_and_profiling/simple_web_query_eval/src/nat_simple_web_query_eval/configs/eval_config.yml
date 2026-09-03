@@ -19,35 +19,35 @@ functions:
     _type: webpage_query
     webpage_url: https://docs.smith.langchain.com
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
-    embedder_name: nv-embedqa-e5-v5
+    embedder_name: nemotron-3-embed-1b
   current_datetime:
     _type: current_datetime
 
 llms:
   nim_llm:
     _type: nim
-    model_name: nvidia/nemotron-3-nano-30b-a3b
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     temperature: 0.0
     chat_template_kwargs:
       enable_thinking: false
   nim_rag_eval_llm:
     _type: nim
-    model_name: nvidia/nemotron-3-nano-30b-a3b
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     max_tokens: 8
     chat_template_kwargs:
       enable_thinking: false
   nim_trajectory_eval_llm:
     _type: nim
-    model_name: nvidia/nemotron-3-nano-30b-a3b
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     temperature: 0.0
     max_tokens: 1024
     chat_template_kwargs:
       enable_thinking: false
 
 embedders:
-  nv-embedqa-e5-v5:
+  nemotron-3-embed-1b:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
 
 workflow:
   _type: react_agent

@@ -142,10 +142,10 @@ async def huggingface_provider(
         import torch
         from transformers import AutoModelForCausalLM
         from transformers import AutoTokenizer
-    except ImportError:
+    except ImportError as err:
         raise ValueError("HuggingFace dependencies not installed. \n"
                          "Install with:\n"
-                         "  `pip install \"transformers[torch,accelerate]~=4.57\"")
+                         "  `pip install \"transformers[torch,accelerate]>=5.0,<6.0\"`") from err
 
     cache = ModelCache()
 

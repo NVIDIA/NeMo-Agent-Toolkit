@@ -35,22 +35,27 @@ from nat.data_models.common import SerializableSecretStr
 from nat.data_models.interactive import HumanPrompt
 from nat.utils.type_converter import GlobalTypeConverter
 
-FINISH_REASONS = frozenset({'stop', 'length', 'tool_calls', 'content_filter', 'function_call'})
+FINISH_REASONS = frozenset({"stop", "length", "tool_calls", "content_filter", "function_call"})
+
+UNKNOWN_MODEL_SENTINEL = "unknown-model"
 
 
 class UserMessageContentRoleType(StrEnum):
     """
     Enum representing chat message roles in API requests and responses.
     """
+
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
+    TOOL = "tool"
 
 
 class Request(BaseModel):
     """
     Request is a data model that represents HTTP request and WebSocket attributes.
     """
+
     model_config = ConfigDict(extra="forbid")
 
     method: str | None = Field(default=None,
@@ -74,6 +79,7 @@ class ChatContentType(StrEnum):
     """
     ChatContentType is an Enum that represents the type of Chat content.
     """
+
     TEXT = "text"
     IMAGE_URL = "image_url"
     INPUT_AUDIO = "input_audio"
@@ -114,8 +120,23 @@ UserContent = typing.Annotated[TextContent | ImageContent | AudioContent, Discri
 
 
 class Message(BaseModel):
-    content: str | list[UserContent]
+    model_config = ConfigDict(extra="allow")
+
+    content: str | list[UserContent] | None
     role: UserMessageContentRoleType
+    tool_calls: list[dict[str, typing.Any]] | None = None
+    tool_call_id: str | None = None
+
+    @model_validator(mode="after")
+    def validate_content(self):
+        if self.content is not None:
+            return self
+
+        if self.role == UserMessageContentRoleType.ASSISTANT:
+            if self.tool_calls or (self.model_extra and self.model_extra.get("function_call")):
+                return self
+
+        raise ValueError("content may be null only for assistant messages with tool_calls or function_call")
 
 
 class ChatRequest(BaseModel):
@@ -150,45 +171,55 @@ class ChatRequest(BaseModel):
     tool_choice: str | dict[str, typing.Any] | None = Field(default=None, description="Controls which tool is called")
     parallel_tool_calls: bool | None = Field(default=True, description="Whether to enable parallel function calling")
     user: str | None = Field(default=None, description="Unique identifier representing end-user")
-    model_config = ConfigDict(extra="allow",
-                              json_schema_extra={
-                                  "example": {
-                                      "model": "nvidia/nemotron",
-                                      "messages": [{
-                                          "role": "user", "content": "who are you?"
-                                      }],
-                                      "temperature": 0.7,
-                                      "stream": False
-                                  }
-                              })
+    model_config = ConfigDict(
+        extra="allow",
+        json_schema_extra={
+            "example": {
+                "model": "nvidia/nemotron",
+                "messages": [{
+                    "role": "user", "content": "who are you?"
+                }],
+                "temperature": 0.7,
+                "stream": False,
+            }
+        },
+    )
 
     @staticmethod
-    def from_string(data: str,
-                    *,
-                    model: str | None = None,
-                    temperature: float | None = None,
-                    max_tokens: int | None = None,
-                    top_p: float | None = None) -> "ChatRequest":
+    def from_string(
+        data: str,
+        *,
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        top_p: float | None = None,
+    ) -> "ChatRequest":
 
-        return ChatRequest(messages=[Message(content=data, role=UserMessageContentRoleType.USER)],
-                           model=model,
-                           temperature=temperature,
-                           max_tokens=max_tokens,
-                           top_p=top_p)
+        return ChatRequest(
+            messages=[Message(content=data, role=UserMessageContentRoleType.USER)],
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+        )
 
     @staticmethod
-    def from_content(content: list[UserContent],
-                     *,
-                     model: str | None = None,
-                     temperature: float | None = None,
-                     max_tokens: int | None = None,
-                     top_p: float | None = None) -> "ChatRequest":
+    def from_content(
+        content: list[UserContent],
+        *,
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        top_p: float | None = None,
+    ) -> "ChatRequest":
 
-        return ChatRequest(messages=[Message(content=content, role=UserMessageContentRoleType.USER)],
-                           model=model,
-                           temperature=temperature,
-                           max_tokens=max_tokens,
-                           top_p=top_p)
+        return ChatRequest(
+            messages=[Message(content=content, role=UserMessageContentRoleType.USER)],
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+        )
 
 
 class ChatRequestOrMessage(BaseModel):
@@ -202,6 +233,7 @@ class ChatRequestOrMessage(BaseModel):
     Note: When `messages` is provided, extra fields are allowed to enable lossless round-trip
     conversion with ChatRequest. When `input_message` is provided, no extra fields are permitted.
     """
+
     model_config = ConfigDict(
         extra="allow",
         json_schema_extra={
@@ -214,7 +246,7 @@ class ChatRequestOrMessage(BaseModel):
                         "role": "user", "content": "What can you do?"
                     }],
                     "model": "nvidia/nemotron",
-                    "temperature": 0.7
+                    "temperature": 0.7,
                 },
             ],
             "oneOf": [
@@ -226,7 +258,7 @@ class ChatRequestOrMessage(BaseModel):
                         },
                     },
                     "additionalProperties": {
-                        "not": True, "errorMessage": 'remove additional property ${0#}'
+                        "not": True, "errorMessage": "remove additional property ${0#}"
                     },
                 },
                 {
@@ -236,9 +268,9 @@ class ChatRequestOrMessage(BaseModel):
                             "type": "array"
                         },
                     },
-                    "additionalProperties": True
+                    "additionalProperties": True,
                 },
-            ]
+            ],
         },
     )
 
@@ -247,7 +279,8 @@ class ChatRequestOrMessage(BaseModel):
 
     input_message: str | None = Field(
         default=None,
-        description="A single input message to process. Useful for functions that do not require a conversation")
+        description="A single input message to process. Useful for functions that do not require a conversation",
+    )
 
     @property
     def is_string(self) -> bool:
@@ -277,12 +310,14 @@ class ChoiceMessage(BaseModel):
 
 class ChoiceDeltaToolCallFunction(BaseModel):
     """Function details within a streamed tool call delta (OpenAI-compatible)."""
+
     name: str | None = None
     arguments: str | None = None
 
 
 class ChoiceDeltaToolCall(BaseModel):
     """Tool call delta for streaming responses (OpenAI-compatible)."""
+
     index: int
     id: str | None = None
     type: str | None = None
@@ -291,6 +326,7 @@ class ChoiceDeltaToolCall(BaseModel):
 
 class ChoiceDelta(BaseModel):
     """Delta object for streaming responses (OpenAI-compatible)"""
+
     content: str | None = None
     role: UserMessageContentRoleType | None = None
     tool_calls: list[ChoiceDeltaToolCall] | None = None
@@ -298,18 +334,21 @@ class ChoiceDelta(BaseModel):
 
 class ChoiceBase(BaseModel):
     """Base choice model with common fields for both streaming and non-streaming responses"""
+
     model_config = ConfigDict(extra="allow")
-    finish_reason: typing.Literal['stop', 'length', 'tool_calls', 'content_filter', 'function_call'] | None = None
+    finish_reason: typing.Literal["stop", "length", "tool_calls", "content_filter", "function_call"] | None = None
     index: int
 
 
 class ChatResponseChoice(ChoiceBase):
     """Choice model for non-streaming responses - contains message field"""
+
     message: ChoiceMessage
 
 
 class ChatResponseChunkChoice(ChoiceBase):
     """Choice model for streaming responses - contains delta field"""
+
     delta: ChoiceDelta
 
 
@@ -356,47 +395,52 @@ class ChatResponse(ResponseBaseModelOutput):
     model_config = ConfigDict(extra="allow")
     id: str
     object: str = "chat.completion"
-    model: str = "unknown-model"
+    model: str = UNKNOWN_MODEL_SENTINEL
     created: datetime.datetime
     choices: list[ChatResponseChoice]
     usage: Usage
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
 
-    @field_serializer('created')
+    @field_serializer("created")
     def serialize_created(self, created: datetime.datetime) -> int:
         """Serialize datetime to Unix timestamp for OpenAI compatibility"""
         return int(created.timestamp())
 
     @staticmethod
-    def from_string(data: str,
-                    *,
-                    id_: str | None = None,
-                    object_: str | None = None,
-                    model: str | None = None,
-                    created: datetime.datetime | None = None,
-                    usage: Usage) -> "ChatResponse":
+    def from_string(
+        data: str,
+        *,
+        id_: str | None = None,
+        object_: str | None = None,
+        model: str | None = None,
+        created: datetime.datetime | None = None,
+        usage: Usage,
+    ) -> "ChatResponse":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
         if object_ is None:
             object_ = "chat.completion"
         if model is None:
-            model = "unknown-model"
+            model = UNKNOWN_MODEL_SENTINEL
         if created is None:
             created = datetime.datetime.now(datetime.UTC)
 
-        return ChatResponse(id=id_,
-                            object=object_,
-                            model=model,
-                            created=created,
-                            choices=[
-                                ChatResponseChoice(index=0,
-                                                   message=ChoiceMessage(content=data,
-                                                                         role=UserMessageContentRoleType.ASSISTANT),
-                                                   finish_reason="stop")
-                            ],
-                            usage=usage)
+        return ChatResponse(
+            id=id_,
+            object=object_,
+            model=model,
+            created=created,
+            choices=[
+                ChatResponseChoice(
+                    index=0,
+                    message=ChoiceMessage(content=data, role=UserMessageContentRoleType.ASSISTANT),
+                    finish_reason="stop",
+                )
+            ],
+            usage=usage,
+        )
 
 
 class ChatResponseChunk(ResponseBaseModelOutput):
@@ -411,66 +455,72 @@ class ChatResponseChunk(ResponseBaseModelOutput):
     id: str
     choices: list[ChatResponseChunkChoice]
     created: datetime.datetime
-    model: str = "unknown-model"
+    model: str = UNKNOWN_MODEL_SENTINEL
     object: str = "chat.completion.chunk"
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
     usage: Usage | None = None
 
-    @field_serializer('created')
+    @field_serializer("created")
     def serialize_created(self, created: datetime.datetime) -> int:
         """Serialize datetime to Unix timestamp for OpenAI compatibility"""
         return int(created.timestamp())
 
     @staticmethod
-    def from_string(data: str,
-                    *,
-                    id_: str | None = None,
-                    created: datetime.datetime | None = None,
-                    model: str | None = None,
-                    object_: str | None = None,
-                    finish_reason: str | None = None) -> "ChatResponseChunk":
+    def from_string(
+        data: str,
+        *,
+        id_: str | None = None,
+        created: datetime.datetime | None = None,
+        model: str | None = None,
+        object_: str | None = None,
+        finish_reason: str | None = None,
+    ) -> "ChatResponseChunk":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
         if created is None:
             created = datetime.datetime.now(datetime.UTC)
         if model is None:
-            model = "unknown-model"
+            model = UNKNOWN_MODEL_SENTINEL
         if object_ is None:
             object_ = "chat.completion.chunk"
 
         final_finish_reason = finish_reason if finish_reason in FINISH_REASONS else None
 
-        return ChatResponseChunk(id=id_,
-                                 choices=[
-                                     ChatResponseChunkChoice(index=0,
-                                                             delta=ChoiceDelta(
-                                                                 content=data,
-                                                                 role=UserMessageContentRoleType.ASSISTANT),
-                                                             finish_reason=final_finish_reason)
-                                 ],
-                                 created=created,
-                                 model=model,
-                                 object=object_)
+        return ChatResponseChunk(
+            id=id_,
+            choices=[
+                ChatResponseChunkChoice(
+                    index=0,
+                    delta=ChoiceDelta(content=data, role=UserMessageContentRoleType.ASSISTANT),
+                    finish_reason=final_finish_reason,
+                )
+            ],
+            created=created,
+            model=model,
+            object=object_,
+        )
 
     @staticmethod
-    def create_streaming_chunk(content: str,
-                               *,
-                               id_: str | None = None,
-                               created: datetime.datetime | None = None,
-                               model: str | None = None,
-                               role: UserMessageContentRoleType | None = None,
-                               finish_reason: str | None = None,
-                               usage: Usage | None = None,
-                               system_fingerprint: str | None = None) -> "ChatResponseChunk":
+    def create_streaming_chunk(
+        content: str,
+        *,
+        id_: str | None = None,
+        created: datetime.datetime | None = None,
+        model: str | None = None,
+        role: UserMessageContentRoleType | None = None,
+        finish_reason: str | None = None,
+        usage: Usage | None = None,
+        system_fingerprint: str | None = None,
+    ) -> "ChatResponseChunk":
         """Create an OpenAI-compatible streaming chunk"""
         if id_ is None:
             id_ = str(uuid.uuid4())
         if created is None:
             created = datetime.datetime.now(datetime.UTC)
         if model is None:
-            model = "unknown-model"
+            model = UNKNOWN_MODEL_SENTINEL
 
         delta = ChoiceDelta(content=content, role=role) if content is not None or role is not None else ChoiceDelta()
 
@@ -483,14 +533,17 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                     index=0,
                     delta=delta,
                     finish_reason=typing.cast(
-                        typing.Literal['stop', 'length', 'tool_calls', 'content_filter', 'function_call'] | None,
-                        final_finish_reason))
+                        typing.Literal["stop", "length", "tool_calls", "content_filter", "function_call"] | None,
+                        final_finish_reason,
+                    ),
+                )
             ],
             created=created,
             model=model,
             object="chat.completion.chunk",
             usage=usage,
-            system_fingerprint=system_fingerprint)
+            system_fingerprint=system_fingerprint,
+        )
 
 
 class ResponseIntermediateStep(ResponseBaseModelIntermediate):
@@ -613,6 +666,7 @@ class WebSocketMessageType(StrEnum):
     """
     WebSocketMessageType is an Enum that represents WebSocket Message types.
     """
+
     USER_MESSAGE = "user_message"
     RESPONSE_MESSAGE = "system_response_message"
     INTERMEDIATE_STEP_MESSAGE = "system_intermediate_message"
@@ -628,6 +682,7 @@ class WorkflowSchemaType(StrEnum):
     """
     WorkflowSchemaType is an Enum that represents Workkflow response types.
     """
+
     GENERATE_STREAM = "generate_stream"
     CHAT_STREAM = "chat_stream"
     GENERATE = "generate"
@@ -638,6 +693,7 @@ class WebSocketMessageStatus(StrEnum):
     """
     WebSocketMessageStatus is an Enum that represents the status of a WebSocket message.
     """
+
     IN_PROGRESS = "in_progress"
     COMPLETE = "complete"
 
@@ -684,6 +740,7 @@ class WebSocketUserMessage(BaseModel):
     For more details, refer to the API documentation:
     docs/source/developer_guide/websockets.md
     """
+
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")
 
@@ -703,6 +760,7 @@ class WebSocketUserInteractionResponseMessage(BaseModel):
     For more details, refer to the API documentation:
     docs/source/developer_guide/websockets.md
     """
+
     type: typing.Literal[WebSocketMessageType.USER_INTERACTION_MESSAGE]
     id: str = "default"
     thread_id: str = "default"
@@ -717,41 +775,77 @@ class WebSocketUserInteractionResponseMessage(BaseModel):
 
 class AuthMethod(StrEnum):
     """Supported authentication methods for WebSocket auth messages."""
+
     JWT = "jwt"
     API_KEY = "api_key"
     BASIC = "basic"
+    OAUTH_MODE_PREFERENCE = "oauth_mode_preference"
+
+
+SessionCookieIdentityCredentialType: typing.TypeAlias = typing.Literal["session_cookie"]
+JwtIdentityCredentialType: typing.TypeAlias = typing.Literal["jwt"]
+ApiKeyIdentityCredentialType: typing.TypeAlias = typing.Literal["api_key"]
+BasicIdentityCredentialType: typing.TypeAlias = typing.Literal["basic"]
+IdentityCredentialType: typing.TypeAlias = (SessionCookieIdentityCredentialType
+                                            | JwtIdentityCredentialType
+                                            | ApiKeyIdentityCredentialType
+                                            | BasicIdentityCredentialType)
+
+
+class OAuthMode(StrEnum):
+    """How the UI presents the OAuth login page."""
+
+    REDIRECT = "redirect"
+    POPUP = "popup"
 
 
 class JwtAuthPayload(BaseModel):
     """JWT Bearer token authentication payload."""
+
     model_config = ConfigDict(extra="forbid")
-    method: typing.Literal[AuthMethod.JWT] = Field(description="Authentication method discriminator.")
+    method: JwtIdentityCredentialType = Field(description="Authentication method discriminator.")
     token: SerializableSecretStr = Field(min_length=1, description="Encoded JWT Bearer token.")
 
 
 class ApiKeyAuthPayload(BaseModel):
     """API key authentication payload."""
+
     model_config = ConfigDict(extra="forbid")
-    method: typing.Literal[AuthMethod.API_KEY] = Field(description="Authentication method discriminator.")
+    method: ApiKeyIdentityCredentialType = Field(description="Authentication method discriminator.")
     token: SerializableSecretStr = Field(min_length=1, description="API key token.")
 
 
 class BasicAuthPayload(BaseModel):
     """Username/password authentication payload."""
+
     model_config = ConfigDict(extra="forbid")
-    method: typing.Literal[AuthMethod.BASIC] = Field(description="Authentication method discriminator.")
+    method: BasicIdentityCredentialType = Field(description="Authentication method discriminator.")
     username: str = Field(min_length=1, description="Username for basic authentication.")
     password: SerializableSecretStr = Field(min_length=1, description="Password for basic authentication.")
 
 
+class OAuthModePreferencePayload(BaseModel):
+    """UI-declared preference for how the OAuth login page is opened.
+
+    This is a routing hint, not a credential: it carries no identity and does
+    not resolve a ``user_id``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    method: typing.Literal[AuthMethod.OAUTH_MODE_PREFERENCE] = Field(
+        description="Authentication message discriminator.")
+    mode: OAuthMode = Field(description="Preferred OAuth login presentation mode.")
+
+
 AuthPayload = typing.Annotated[
-    JwtAuthPayload | ApiKeyAuthPayload | BasicAuthPayload,
+    JwtAuthPayload | ApiKeyAuthPayload | BasicAuthPayload | OAuthModePreferencePayload,
     Discriminator("method"),
 ]
 
 
 class WebSocketAuthMessage(BaseModel):
     """WebSocket authentication message for payload-based auth when header or cookie auth is not feasible."""
+
     model_config = ConfigDict(extra="forbid")
     type: typing.Literal[WebSocketMessageType.AUTH_MESSAGE]
     payload: AuthPayload
@@ -760,12 +854,14 @@ class WebSocketAuthMessage(BaseModel):
 
 class AuthMessageStatus(StrEnum):
     """Outcome of a WebSocket authentication attempt."""
+
     SUCCESS = "success"
     ERROR = "error"
 
 
 class WebSocketAuthResponseMessage(BaseModel):
     """Server response to a WebSocket ``auth_message``."""
+
     model_config = ConfigDict(extra="forbid")
     type: typing.Literal[WebSocketMessageType.AUTH_RESPONSE] = WebSocketMessageType.AUTH_RESPONSE
     status: AuthMessageStatus = Field(description="Outcome of the authentication attempt.")
@@ -785,6 +881,7 @@ class WebSocketSystemIntermediateStepMessage(BaseModel):
     For more details, refer to the API documentation:
     docs/source/developer_guide/websockets.md
     """
+
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")
 
@@ -811,6 +908,7 @@ class WebSocketSystemResponseTokenMessage(BaseModel):
     For more details, refer to the API documentation:
     docs/source/developer_guide/websockets.md
     """
+
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")
 
@@ -841,11 +939,12 @@ class WebSocketSystemInteractionMessage(BaseModel):
     For more details, refer to the API documentation:
     docs/source/developer_guide/websockets.md
     """
+
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")
 
-    type: typing.Literal[
-        WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE] = WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE
+    type: typing.Literal[WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE] = (
+        WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE)
     id: str | None = "default"
     thread_id: str | None = "default"
     parent_id: str = "default"
@@ -865,11 +964,12 @@ class WebSocketObservabilityTraceMessage(BaseModel):
     WebSocket message for observability trace ID.
     Sent once after the workflow completes to correlate the request with observability traces.
     """
+
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")
 
-    type: typing.Literal[
-        WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE] = WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE
+    type: typing.Literal[WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE] = (
+        WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE)
     id: str = "default"
     parent_id: str = "default"
     conversation_id: str | None = None
@@ -905,16 +1005,19 @@ GlobalTypeConverter.register_converter(_generate_response_to_chat_response)
 
 # ======== ChatRequest Converters ========
 def _nat_chat_request_to_string(data: ChatRequest) -> str:
-    if isinstance(data.messages[-1].content, str):
-        return data.messages[-1].content
-    return str(data.messages[-1].content)
+    content = data.messages[-1].content
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    return str(content)
 
 
 GlobalTypeConverter.register_converter(_nat_chat_request_to_string)
 
 
 def _string_to_nat_chat_request(data: str) -> ChatRequest:
-    return ChatRequest.from_string(data, model="unknown-model")
+    return ChatRequest.from_string(data, model=UNKNOWN_MODEL_SENTINEL)
 
 
 GlobalTypeConverter.register_converter(_string_to_nat_chat_request)
@@ -971,7 +1074,7 @@ GlobalTypeConverter.register_converter(_nat_chat_response_to_string)
 
 
 def _string_to_nat_chat_response(data: str) -> ChatResponse:
-    '''Converts a string to an ChatResponse object'''
+    """Converts a string to an ChatResponse object"""
 
     # Simulate usage
     prompt_tokens = 0
@@ -999,7 +1102,7 @@ GlobalTypeConverter.register_converter(_chat_response_chunk_to_string)
 
 
 def _string_to_nat_chat_response_chunk(data: str) -> ChatResponseChunk:
-    '''Converts a string to an ChatResponseChunk object'''
+    """Converts a string to an ChatResponseChunk object"""
 
     # Build and return the response
     return ChatResponseChunk.from_string(data)

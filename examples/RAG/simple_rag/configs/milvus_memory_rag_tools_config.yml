@@ -44,12 +44,14 @@ functions:
   add_memory:
     _type: add_memory
     memory: saas_memory
+    user_id: user_12
     description: |
       Add any facts about user preferences to long term memory. Always use this if users mention a preference.
       The input to this tool should be a string that describes the user's preference, not the question or answer.
   get_memory:
     _type: get_memory
     memory: saas_memory
+    user_id: user_12
     description: |
       Always call this tool before calling any other tools, even if the user does not mention to use it.
       The question should be about user preferences which will help you format your response.
@@ -70,7 +72,7 @@ function_groups:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0
     max_tokens: 4096
     top_p: 1
@@ -78,7 +80,7 @@ llms:
 embedders:
   milvus_embedder:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
     truncate: "END"
 
 workflow:

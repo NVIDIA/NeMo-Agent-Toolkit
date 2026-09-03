@@ -42,7 +42,7 @@ The LLM configuration is defined in the `llms` section of the workflow configura
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
   openai_llm:
     _type: openai
     model_name: gpt-4o-mini
@@ -216,7 +216,7 @@ The Hugging Face LLM provider is defined by the {py:class}`~nat.llm.huggingface_
 :::{note}
 Hugging Face is a built-in NeMo Agent Toolkit LLM provider, but requires extra dependencies to run. They can be installed with:
 ```
-pip install "transformers[torch,accelerate]~=4.57"
+pip install "transformers[torch,accelerate]>=5.0,<6.0"
 ```
 :::
 
