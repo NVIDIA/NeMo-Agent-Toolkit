@@ -1,0 +1,123 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Framework Parity
+run-name: Framework Parity
+
+# NAT claims to work alongside every framework listed in scripts/framework_parity/matrix.py.
+# This workflow is the proof: each one gets installed into its own isolated environment,
+# nightly, and checked for real -- not just "the example folder still exists".
+on:
+  schedule:
+    - cron: "0 9 * * *" # 09:00 UTC nightly
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - "examples/frameworks/**"
+      - "scripts/framework_parity/**"
+      - ".github/workflows/framework_parity.yml"
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: ${{ matrix.entry }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        entry:
+          - crewai
+          - semantic_kernel
+          - adk
+          - langchain_llama_index
+          - agno
+          - autogen
+          - strands
+          - haystack
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Run framework-parity check for ${{ matrix.entry }}
+        # Only the scheduled nightly run and manual dispatch get the live-tier
+        # credentials; PRs from forks (including this harness's own PRs while it's
+        # under review) never see repo secrets, so they naturally exercise the
+        # structural tier only -- which needs no credentials at all.
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MEM0_API_KEY: ${{ secrets.MEM0_API_KEY }}
+        run: |
+          LIVE_FLAG=""
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            LIVE_FLAG="--live"
+          fi
+          python scripts/framework_parity/orchestrate.py --only ${{ matrix.entry }} $LIVE_FLAG
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: framework-parity-result-${{ matrix.entry }}
+          path: .framework_parity_results/${{ matrix.entry }}.json
+          retention-days: 90
+
+  publish-table:
+    name: Publish parity table
+    needs: check
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: framework-parity-result-*
+          path: .framework_parity_results
+          merge-multiple: true
+
+      - name: Render badge table
+        run: |
+          python scripts/framework_parity/render_table.py \
+            --results-dir .framework_parity_results \
+            --readme examples/frameworks/README.md
+
+      - name: Commit updated table
+        # Only push the regenerated table back on the nightly/manual run against this
+        # repo's own branches -- never from a pull_request event, so an external
+        # contributor's PR can't be used to trigger a commit back to the branch.
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- examples/frameworks/README.md; then
+            echo "Table unchanged, nothing to commit."
+            exit 0
+          fi
+          git add examples/frameworks/README.md
+          git commit -m "chore: update framework-parity table [skip ci]"
+          git push
