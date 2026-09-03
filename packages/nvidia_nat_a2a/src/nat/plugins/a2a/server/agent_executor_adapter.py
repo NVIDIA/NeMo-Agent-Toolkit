@@ -58,7 +58,7 @@ class NATWorkflowAgentExecutor(AgentExecutor):
         """
         self.session_manager = session_manager
         logger.info("Initialized NATWorkflowAgentExecutor (message-only) for workflow: %s",
-                    session_manager.workflow.config.workflow.type)
+                    session_manager.config.workflow.type)
 
     async def execute(
         self,
@@ -103,8 +103,8 @@ class NATWorkflowAgentExecutor(AgentExecutor):
         try:
             # Run the NAT workflow using SessionManager for proper concurrency handling
             # Each message gets its own independent session (stateless)
-            # TODO: Add support for user input callbacks and authentication in later phases
-            async with self.session_manager.session() as session:
+            # TODO: Add support for user input callbacks in later phases
+            async with self.session_manager.session(user_id=self._resolve_user_id(context)) as session:
                 async with session.run(query) as runner:
                     # Get the result as a string
                     response_text = await runner.result(to_type=str)
@@ -134,6 +134,24 @@ class NATWorkflowAgentExecutor(AgentExecutor):
             )
             await event_queue.enqueue_event(error_message)
             raise ServerError(error=InternalError()) from e
+
+    @staticmethod
+    def _resolve_user_id(context: RequestContext) -> str | None:
+        """Return the authenticated subject for this request, or None.
+
+        A per-user workflow needs a user to build for. `SessionManager.session`
+        raises a descriptive error when one is required and missing, so an
+        unauthenticated request is passed through as None rather than guessed at.
+        """
+        call_context = context.call_context
+        if call_context is None:
+            return None
+
+        user = call_context.user
+        if user is not None and user.is_authenticated:
+            return user.user_name
+
+        return None
 
     def _validate_request(self, context: RequestContext) -> bool:
         """Validate the incoming request context.
