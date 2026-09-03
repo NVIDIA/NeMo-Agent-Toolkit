@@ -66,49 +66,52 @@ class FastMCPFrontEndPlugin(FrontEndBase[FastMCPFrontEndConfig]):
             # Get the worker instance
             worker = self._get_worker_instance()
 
-            # Let the worker create the FastMCP server (allows plugins to customize)
-            mcp = await worker.create_mcp_server()
-
-            # Add routes through the worker (includes health endpoint and function registration)
-            await worker.add_routes(mcp, builder)
-
             try:
-                if self.front_end_config.base_path:
-                    if self.front_end_config.transport == "sse":
-                        logger.warning(
-                            "base_path is configured but SSE transport does not support mounting at sub-paths. "
-                            "Use streamable-http transport for base_path support.")
+                # Let the worker create the FastMCP server (allows plugins to customize)
+                mcp = await worker.create_mcp_server()
+
+                # Add routes through the worker (includes health endpoint and function registration)
+                await worker.add_routes(mcp, builder)
+
+                try:
+                    if self.front_end_config.base_path:
+                        if self.front_end_config.transport == "sse":
+                            logger.warning(
+                                "base_path is configured but SSE transport does not support mounting at sub-paths. "
+                                "Use streamable-http transport for base_path support.")
+                            logger.info("Starting FastMCP server with SSE endpoint at /sse")
+                            await mcp.run_async(transport="sse",
+                                                host=self.front_end_config.host,
+                                                port=self.front_end_config.port,
+                                                log_level=self.front_end_config.log_level.lower())
+                        else:
+                            full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}{self.front_end_config.base_path}/mcp"
+                            logger.info(
+                                "Mounting FastMCP server at %s/mcp on %s:%s",
+                                self.front_end_config.base_path,
+                                self.front_end_config.host,
+                                self.front_end_config.port,
+                            )
+                            logger.info("FastMCP server URL: %s", full_url)
+                            await self._run_with_mount(mcp, worker)
+                    elif self.front_end_config.transport == "sse":
                         logger.info("Starting FastMCP server with SSE endpoint at /sse")
                         await mcp.run_async(transport="sse",
                                             host=self.front_end_config.host,
                                             port=self.front_end_config.port,
                                             log_level=self.front_end_config.log_level.lower())
                     else:
-                        full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}{self.front_end_config.base_path}/mcp"
-                        logger.info(
-                            "Mounting FastMCP server at %s/mcp on %s:%s",
-                            self.front_end_config.base_path,
-                            self.front_end_config.host,
-                            self.front_end_config.port,
-                        )
+                        full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}/mcp"
                         logger.info("FastMCP server URL: %s", full_url)
-                        await self._run_with_mount(mcp, worker)
-                elif self.front_end_config.transport == "sse":
-                    logger.info("Starting FastMCP server with SSE endpoint at /sse")
-                    await mcp.run_async(transport="sse",
-                                        host=self.front_end_config.host,
-                                        port=self.front_end_config.port,
-                                        log_level=self.front_end_config.log_level.lower())
-                else:
-                    full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}/mcp"
-                    logger.info("FastMCP server URL: %s", full_url)
-                    await mcp.run_async(transport="streamable-http",
-                                        host=self.front_end_config.host,
-                                        port=self.front_end_config.port,
-                                        path="/mcp",
-                                        log_level=self.front_end_config.log_level.lower())
-            except KeyboardInterrupt:
-                logger.info("FastMCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
+                        await mcp.run_async(transport="streamable-http",
+                                            host=self.front_end_config.host,
+                                            port=self.front_end_config.port,
+                                            path="/mcp",
+                                            log_level=self.front_end_config.log_level.lower())
+                except KeyboardInterrupt:
+                    logger.info("FastMCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
+            finally:
+                await worker.cleanup()
 
     async def _run_with_mount(self, mcp: "FastMCP", worker: FastMCPFrontEndPluginWorkerBase) -> None:
         """Run FastMCP server mounted at configured base_path using FastAPI wrapper.

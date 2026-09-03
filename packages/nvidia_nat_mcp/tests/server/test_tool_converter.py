@@ -30,6 +30,7 @@ from pydantic.json_schema import PydanticJsonSchemaWarning
 
 from nat.builder.function import Function
 from nat.builder.workflow import Workflow
+from nat.plugins.mcp.server.tool_converter import INJECTED_CONTEXT_PARAM
 from nat.plugins.mcp.server.tool_converter import _build_name_mapping
 from nat.plugins.mcp.server.tool_converter import _sanitize_parameter_name
 from nat.plugins.mcp.server.tool_converter import create_function_wrapper
@@ -120,6 +121,7 @@ def create_mock_session_manager(workflow=None, result_value="result"):
         result_value: The value to return from runner.result()
     """
     mock_session_manager = MagicMock(spec=SessionManager)
+    mock_session_manager.is_workflow_per_user = False
 
     if workflow is None:
         workflow = create_mock_workflow_with_observability()
@@ -290,6 +292,27 @@ class TestCreateFunctionWrapper:
         assert "name" in sig.parameters
         assert "age" in sig.parameters
 
+    def test_create_wrapper_declares_context_for_injection(self):
+        """FastMCP injects request context only when a Context parameter is annotated."""
+        from mcp.server.fastmcp.utilities.context_injection import find_context_parameter
+
+        mock_session_manager = create_mock_session_manager()
+        wrapper = create_function_wrapper("regular_function", mock_session_manager, MockRegularSchema)
+
+        assert find_context_parameter(wrapper) == INJECTED_CONTEXT_PARAM
+        sig = getattr(wrapper, "__signature__", None)
+        assert sig is not None
+        assert INJECTED_CONTEXT_PARAM not in sig.parameters
+
+    def test_create_wrapper_rejects_schema_field_named_ctx(self):
+        """A workflow field named `ctx` collides with MCP context injection."""
+        from pydantic import create_model
+
+        schema = create_model("CtxSchema", **{"ctx": (str, ...)})  # type: ignore[call-overload]
+
+        with pytest.raises(ValueError, match="cannot declare a field named 'ctx'"):
+            create_function_wrapper("tool", create_mock_session_manager(), schema)
+
     def test_create_wrapper_for_workflow(self):
         """Test creating wrapper for workflow function."""
         # Arrange
@@ -407,6 +430,7 @@ class TestRegisterFunctionWithMcp:
         mock_function = MagicMock(spec=Function)
         mock_function.input_schema = "function_schema"
         mock_session_manager = MagicMock(spec=SessionManager)
+        mock_session_manager.is_workflow_per_user = False
         mock_session_manager.workflow = mock_workflow
         function_name = "test_function"
 
@@ -436,6 +460,7 @@ class TestRegisterFunctionWithMcp:
         mock_workflow = MagicMock(spec=Workflow)
         mock_workflow.input_schema = "workflow_schema"
         mock_session_manager = MagicMock(spec=SessionManager)
+        mock_session_manager.is_workflow_per_user = False
         mock_session_manager.workflow = mock_workflow
         function_name = "test_workflow"
 
@@ -699,6 +724,7 @@ class TestIntegrationScenarios:
         # Arrange
         mock_workflow = create_mock_workflow_with_observability()
         mock_session_manager = MagicMock(spec=SessionManager)
+        mock_session_manager.is_workflow_per_user = False
         mock_session_manager.workflow = mock_workflow
 
         # Create mock runner that raises an error
