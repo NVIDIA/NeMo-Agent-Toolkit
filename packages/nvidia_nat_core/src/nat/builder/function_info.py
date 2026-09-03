@@ -481,8 +481,7 @@ class FunctionInfo:
 
                 saved_final_single_fn = final_single_fn
 
-                async def _convert_input_pydantic_empty(
-                        value: input_schema) -> final_single_fn_desc.output_type:
+                async def _convert_input_pydantic_empty(value: input_schema) -> final_single_fn_desc.output_type:
                     no_args_fn = typing.cast(Callable[[], Awaitable[typing.Any]], saved_final_single_fn)
                     return await no_args_fn()
 

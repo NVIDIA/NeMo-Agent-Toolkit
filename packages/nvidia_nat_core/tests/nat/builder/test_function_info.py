@@ -879,8 +879,7 @@ async def test_create_no_args_conversions():
     async def convert_to_stream(value: str) -> AsyncGenerator[int]:
         yield len(value)
 
-    single_to_stream_info = FunctionInfo.create(single_fn=fn_no_args_to_str,
-                                                single_to_stream_fn=convert_to_stream)
+    single_to_stream_info = FunctionInfo.create(single_fn=fn_no_args_to_str, single_to_stream_fn=convert_to_stream)
     assert await single_to_stream_info.single_fn(single_to_stream_info.input_schema()) == "no args"
     values = [value async for value in single_to_stream_info.stream_fn(single_to_stream_info.input_schema())]
     assert values == [len("no args")]
