@@ -23,7 +23,7 @@ This guide will help you set up your NVIDIA NeMo Agent Toolkit development envir
 
 The following [LLM](../build-workflows/llms/index.md) API providers are supported:
 
-- NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)
+- NIM
 - OpenAI
 - AWS Bedrock
 - Azure OpenAI

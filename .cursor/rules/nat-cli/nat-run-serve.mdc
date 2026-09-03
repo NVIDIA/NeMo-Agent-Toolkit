@@ -109,7 +109,7 @@ Both commands require a valid workflow configuration file that:
 llms:
   nim_llm:
     _type: "nim_llm"
-    model: "meta/llama-3.1-8b-instruct"
+    model: "nvidia/nemotron-3.5-lightning-30b-a3b"
     temperature: 0.7
 
 retrievers:

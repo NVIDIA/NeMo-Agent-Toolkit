@@ -501,7 +501,7 @@ The endpoint accepts all standard OpenAI Chat Completions API parameters:
 curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "nvidia/llama-3.1-8b-instruct",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
     "messages": [
       {"role": "user", "content": "What is the capital of France?"}
     ],
@@ -517,7 +517,7 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "nvidia/llama-3.1-8b-instruct",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
     "messages": [
       {"role": "user", "content": "Tell me a short story"}
     ],
@@ -541,7 +541,7 @@ client = OpenAI(
 
 # Non-streaming chat completion
 response = client.chat.completions.create(
-    model="nvidia/llama-3.1-8b-instruct",
+    model="nvidia/nemotron-3.5-lightning-30b-a3b",
     messages=[
         {"role": "user", "content": "Explain quantum computing in simple terms"}
     ],
@@ -567,7 +567,7 @@ const customOpenAI = openai({
 
 // Non-streaming generation
 const { text } = await generateText({
-  model: customOpenAI('nvidia/llama-3.1-8b-instruct'),
+  model: customOpenAI('nvidia/nemotron-3.5-lightning-30b-a3b'),
   prompt: 'Explain the benefits of renewable energy',
   temperature: 0.7,
   maxTokens: 200

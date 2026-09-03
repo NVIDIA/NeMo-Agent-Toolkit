@@ -40,7 +40,7 @@ functions:
     _type: webpage_query
     webpage_url: https://docs.smith.langchain.com
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
-    embedder_name: nv-embedqa-e5-v5
+    embedder_name: nemotron-3-embed-1b
     chunk_size: 512
   current_datetime:
     _type: current_datetime
@@ -52,7 +52,7 @@ llms:
     temperature: 0.0
 
 embedders:
-  nv-embedqa-e5-v5:
+  nemotron-3-embed-1b:
     _type: nim
     model_name: nvidia/nemotron-3-embed-1b
 
@@ -88,11 +88,11 @@ When successful, the output contains the following line:
 nat.cli.cli_utils.config_override - INFO - Successfully set override for llms.nim_llm.temperature with value: 0.7
 ```
 
-The `--override` flag can be specified multiple times, allowing the ability to override multiple parameters. For example, the `llama-3.1-70b-instruct` model can be replaced with the `llama-3.3-70b-instruct` using:
+The `--override` flag can be specified multiple times, allowing the ability to override multiple parameters. For example, the configured model and temperature can be overridden together:
 ```bash
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"  \
   --override llms.nim_llm.temperature 0.7 \
-  --override llms.nim_llm.model_name nvidia/nemotron-3-super-120b-a12b
+  --override llms.nim_llm.model_name nvidia/nemotron-3.5-lightning-30b-a3b
 ```
 
 :::{note}

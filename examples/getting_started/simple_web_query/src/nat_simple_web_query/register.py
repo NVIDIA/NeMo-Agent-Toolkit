@@ -29,7 +29,7 @@ class WebQueryToolConfig(FunctionBaseConfig, name="webpage_query"):
     webpage_url: str
     description: str
     chunk_size: int = 1024
-    embedder_name: EmbedderRef = "nvidia/nv-embedqa-e5-v5"
+    embedder_name: EmbedderRef = "nvidia/nemotron-3-embed-1b"
 
 
 @register_function(config_type=WebQueryToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
