@@ -14,11 +14,13 @@
 # limitations under the License.
 
 from typing import Any
+from typing import ClassVar
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
+from pydantic import Field
 
 from nat.plugins.adk.tool_wrapper import google_adk_tool_wrapper
 from nat.plugins.adk.tool_wrapper import resolve_type
@@ -30,6 +32,13 @@ from nat.plugins.adk.tool_wrapper import resolve_type
 
 class DummyInput(BaseModel):
     value: int
+
+
+class OptionalInput(BaseModel):
+    """Input model with one required and one optional field."""
+
+    optional_value: int = 42
+    required_value: str
 
 
 class DummyOutput(BaseModel):
@@ -192,6 +201,122 @@ async def test_google_adk_tool_wrapper_nested_function(mock_function_tool):
     call_args = mock_function_tool.call_args[0][0]
     assert call_args.__name__ == 'nested_adk_func'
     assert call_args.__doc__ == "Nested ADK function"
+
+
+@patch('google.adk.tools.function_tool.FunctionTool')
+def test_google_adk_tool_wrapper_preserves_field_defaults(mock_function_tool):
+    """Optional input fields must remain optional in the ADK signature."""
+    import inspect
+
+    class OptionalFunction:
+        description = "Optional ADK function"
+        has_single_output = True
+        has_streaming_output = False
+        input_schema = OptionalInput
+
+        async def acall_invoke(self, *_args, **_kwargs):
+            return None
+
+    google_adk_tool_wrapper("optional_adk_func", OptionalFunction(), MagicMock())
+
+    callable_tool = mock_function_tool.call_args[0][0]
+    signature = inspect.signature(callable_tool)
+
+    assert list(signature.parameters) == ["required_value", "optional_value"]
+    assert signature.parameters["required_value"].default is inspect.Parameter.empty
+    assert signature.parameters["optional_value"].default == 42
+
+
+@patch('google.adk.tools.function_tool.FunctionTool')
+def test_google_adk_tool_wrapper_does_not_evaluate_default_factories(mock_function_tool):
+    """Default factories remain deferred until Pydantic validates the input model."""
+    import inspect
+
+    factory_calls = []
+
+    def generate_value():
+        factory_calls.append("called")
+        return ["generated"]
+
+    class FactoryInput(BaseModel):
+        required_value: str
+        generated: list[str] = Field(default_factory=generate_value)
+        derived: str = Field(default_factory=lambda data: data["required_value"])
+
+    class FactoryFunction:
+        description = "Factory ADK function"
+        has_single_output = True
+        has_streaming_output = False
+        input_schema = FactoryInput
+
+        async def acall_invoke(self, *_args, **_kwargs):
+            return None
+
+    google_adk_tool_wrapper("factory_adk_func", FactoryFunction(), MagicMock())
+
+    signature = inspect.signature(mock_function_tool.call_args[0][0])
+
+    assert list(signature.parameters) == ["required_value", "generated", "derived"]
+    assert signature.parameters["generated"].default is None
+    assert signature.parameters["derived"].default is None
+    assert factory_calls == []
+
+    first = FactoryInput(required_value="first")
+    second = FactoryInput(required_value="second")
+    assert factory_calls == ["called", "called"]
+    assert first.generated == ["generated"]
+    assert second.generated == ["generated"]
+    assert first.derived == "first"
+    assert second.derived == "second"
+
+
+@patch('google.adk.tools.function_tool.FunctionTool')
+def test_google_adk_tool_wrapper_supports_legacy_and_annotation_fields(mock_function_tool):
+    """Legacy Pydantic and annotation-only schemas must preserve defaults."""
+    import inspect
+
+    class LegacyField:
+        annotation = int
+        outer_type_ = int
+        required = False
+        default = 7
+        default_factory = None
+
+    class LegacyInput:
+        __fields__: ClassVar[dict[str, object]] = {
+            "required_value": type("RequiredField", (), {
+                "annotation": str, "outer_type_": str, "required": True
+            })(),
+            "optional_value": LegacyField(),
+        }
+
+    class AnnotationInput:
+        __annotations__ = {"required_value": str, "optional_value": int}
+        optional_value = 7
+
+    class LegacyFunction:
+        description = "Legacy ADK function"
+        has_single_output = True
+        has_streaming_output = False
+        input_schema = LegacyInput
+
+        async def acall_invoke(self, *_args, **_kwargs):
+            return None
+
+    class AnnotationFunction(LegacyFunction):
+        input_schema = AnnotationInput
+
+    google_adk_tool_wrapper("legacy_adk_func", LegacyFunction(), MagicMock())
+    legacy_signature = inspect.signature(mock_function_tool.call_args[0][0])
+    assert list(legacy_signature.parameters) == ["required_value", "optional_value"]
+    assert legacy_signature.parameters["required_value"].default is inspect.Parameter.empty
+    assert legacy_signature.parameters["optional_value"].default == 7
+
+    google_adk_tool_wrapper("annotation_adk_func", AnnotationFunction(), MagicMock())
+    annotation_signature = inspect.signature(mock_function_tool.call_args[0][0])
+    assert list(annotation_signature.parameters) == ["required_value", "optional_value"]
+    assert annotation_signature.parameters["required_value"].default is inspect.Parameter.empty
+    assert annotation_signature.parameters["optional_value"].default == 7
 
 
 @patch('google.adk.tools.function_tool.FunctionTool')
