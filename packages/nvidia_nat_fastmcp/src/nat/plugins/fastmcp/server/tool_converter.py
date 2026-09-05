@@ -20,9 +20,11 @@ import logging
 import re
 from inspect import Parameter
 from inspect import Signature
+from typing import Annotated
 from typing import Any
 
 from pydantic import BaseModel
+from pydantic import Field
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
@@ -35,6 +37,22 @@ logger = logging.getLogger(__name__)
 
 # Sentinel: marks "optional; let Pydantic supply default/factory"
 _USE_PYDANTIC_DEFAULT = object()
+
+
+def _use_pydantic_default() -> Any:
+    """Defer an omitted argument's factory to the original input model."""
+    return _USE_PYDANTIC_DEFAULT
+
+
+def _build_field_annotation(field_info: FieldInfo) -> Any:
+    """Keep factory-backed arguments optional without evaluating their factories."""
+    annotation = field_info.annotation or Any
+    if field_info.default_factory is not None:
+        # FastMCP validates arguments before invoking the wrapper. Supply a marker
+        # there so the original model can apply its factory with validated data.
+        # The marker is removed by the wrapper and must not be type-validated.
+        return Annotated[annotation, Field(default_factory=_use_pydantic_default, validate_default=False)]
+    return annotation
 
 
 def _sanitize_parameter_name(name: str) -> str:
@@ -139,7 +157,7 @@ def _build_signature_from_schema(schema: Any) -> tuple[Signature, dict[str, str]
 
     params: list[Parameter] = []
     for name, field_info in schema.model_fields.items():  # type: ignore[attr-defined]
-        annotation = field_info.annotation or Any
+        annotation = _build_field_annotation(field_info)
         default = _get_field_default(field_info)
         safe_name = name_map[name]
         if default is _USE_PYDANTIC_DEFAULT:
@@ -175,7 +193,7 @@ def _build_annotations_from_schema(schema: Any) -> dict[str, Any]:
     annotations: dict[str, Any] = {}
     for name, field_info in schema.model_fields.items():  # type: ignore[attr-defined]
         safe_name = name_map[name]
-        annotations[safe_name] = field_info.annotation or Any
+        annotations[safe_name] = _build_field_annotation(field_info)
     return annotations
 
 
