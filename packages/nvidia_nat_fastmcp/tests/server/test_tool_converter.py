@@ -184,10 +184,10 @@ async def test_registered_tool_defers_default_factory(field_name, data_aware):
     schema = create_model(
         "FactorySchema",
         **{
-            "query": (int, ...),
+            "query": (int, Field(gt=0, description="Query identifier")),
             field_name: (list[int],
                          Field(default_factory=data_factory if data_aware else factory, validate_default=True)),
-            "limit": (int, 10),
+            "limit": (int, Field(default=10, ge=1, description="Result limit")),
         })
     mock_sm = _mock_session_manager()
     mock_sm.workflow = MagicMock(input_schema=schema)
@@ -198,6 +198,12 @@ async def test_registered_tool_defers_default_factory(field_name, data_aware):
     async with Client(server) as client:
         tools = await client.list_tools()
         assert tools[0].inputSchema["required"] == ["query"]
+        properties = tools[0].inputSchema["properties"]
+        assert properties["query"]["exclusiveMinimum"] == 0
+        assert properties["query"]["description"] == "Query identifier"
+        assert properties["limit"]["minimum"] == 1
+        assert properties["limit"]["description"] == "Result limit"
+        assert properties["limit"]["default"] == 10
         assert factory_calls == []
         for _ in range(2):
             result = await client.call_tool("tool", {"query": "7"})
@@ -227,13 +233,21 @@ async def test_registered_tool_validates_factory_default(default_value, succeeds
     """The original model still validates the factory's type and constraints."""
     schema = create_model("ValidatedFactorySchema",
                           labels=(list[int],
-                                  Field(default_factory=lambda: default_value, min_length=1, validate_default=True)))
+                                  Field(default_factory=lambda: default_value,
+                                        min_length=1,
+                                        description="Selected labels",
+                                        validate_default=True)))
     mock_sm = _mock_session_manager()
     mock_sm.workflow = MagicMock(input_schema=schema)
     server = FastMCP("factory-validation-test")
     register_function_with_mcp(server, "tool", mock_sm)
 
     async with Client(server) as client:
+        tools = await client.list_tools()
+        input_schema = tools[0].inputSchema
+        assert "labels" not in input_schema.get("required", [])
+        assert input_schema["properties"]["labels"]["minItems"] == 1
+        assert input_schema["properties"]["labels"]["description"] == "Selected labels"
         result = await client.call_tool("tool", {}, raise_on_error=False)
     assert result.is_error is not succeeds
     assert mock_sm.run.call_count == int(succeeds)

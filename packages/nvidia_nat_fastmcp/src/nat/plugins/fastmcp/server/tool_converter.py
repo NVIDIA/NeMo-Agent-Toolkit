@@ -45,14 +45,15 @@ def _use_pydantic_default() -> Any:
 
 
 def _build_field_annotation(field_info: FieldInfo) -> Any:
-    """Keep factory-backed arguments optional without evaluating their factories."""
+    """Preserve field metadata and defer factories to the original input model."""
     annotation = field_info.annotation or Any
+    field_metadata: list[Any] = [field_info]
     if field_info.default_factory is not None:
         # FastMCP validates arguments before invoking the wrapper. Supply a marker
         # there so the original model can apply its factory with validated data.
         # The marker is removed by the wrapper and must not be type-validated.
-        return Annotated[annotation, Field(default_factory=_use_pydantic_default, validate_default=False)]
-    return annotation
+        field_metadata.append(Field(default_factory=_use_pydantic_default, validate_default=False))
+    return Annotated[(annotation, *field_metadata)]
 
 
 def _sanitize_parameter_name(name: str) -> str:
