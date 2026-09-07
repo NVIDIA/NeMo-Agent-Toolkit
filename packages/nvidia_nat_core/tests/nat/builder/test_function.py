@@ -21,12 +21,15 @@ import pytest
 from pydantic import BaseModel
 
 from nat.builder.builder import Builder
+from nat.builder.context import Context
 from nat.builder.function import Function
 from nat.builder.function import LambdaFunction
 from nat.builder.function_info import FunctionInfo
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepType
 
 
 class DummyConfig(FunctionBaseConfig, name="dummy"):
@@ -88,6 +91,70 @@ async def test_direct_create_with_lambda():
         assert isinstance(fn_obj, LambdaFunction)
 
         assert await fn_obj.ainvoke("test", to_type=str) == "test!"
+
+
+async def test_thought_description_included_in_function_start_metadata():
+    """
+    A function configured with `thought_description` should attach it as metadata on the
+    FUNCTION_START step it emits, so the step adaptor can surface it as a friendly thought label.
+    """
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_function_with_thought",
+                                            config=LambdaFnConfig(thought_description="Searching the web"))
+
+        captured_steps: list[IntermediateStep] = []
+        Context.get().intermediate_step_manager.subscribe(captured_steps.append)
+
+        assert await fn_obj.ainvoke("test", to_type=str) == "test!"
+
+    start_steps = [s for s in captured_steps if s.event_type == IntermediateStepType.FUNCTION_START]
+
+    assert start_steps, "Expected at least one FUNCTION_START step to have been emitted"
+    assert start_steps[-1].metadata == {"thought_description": "Searching the web"}
+
+
+async def test_thought_description_absent_when_not_configured():
+    """
+    When `thought_description` is left unset (the default), no metadata should be attached to the
+    FUNCTION_START step, matching the pre-existing behavior for functions without a thought label.
+    """
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_function_without_thought", config=LambdaFnConfig())
+
+        captured_steps: list[IntermediateStep] = []
+        Context.get().intermediate_step_manager.subscribe(captured_steps.append)
+
+        assert await fn_obj.ainvoke("test", to_type=str) == "test!"
+
+    start_steps = [s for s in captured_steps if s.event_type == IntermediateStepType.FUNCTION_START]
+
+    assert start_steps, "Expected at least one FUNCTION_START step to have been emitted"
+    assert start_steps[-1].metadata is None
+
+
+async def test_thought_description_included_in_function_start_metadata_for_streaming():
+    """
+    Same as `test_thought_description_included_in_function_start_metadata`, but for the `astream` path:
+    a function configured with `thought_description` should attach it as metadata on the FUNCTION_START
+    step it emits when invoked via streaming rather than `ainvoke`.
+    """
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_stream_function_with_thought",
+                                            config=LambdaStreamFnConfig(thought_description="Searching the web"))
+
+        captured_steps: list[IntermediateStep] = []
+        Context.get().intermediate_step_manager.subscribe(captured_steps.append)
+
+        results = [result async for result in fn_obj.astream("test", to_type=str)]
+        assert results == ["test!"]
+
+    start_steps = [s for s in captured_steps if s.event_type == IntermediateStepType.FUNCTION_START]
+
+    assert start_steps, "Expected at least one FUNCTION_START step to have been emitted"
+    assert start_steps[-1].metadata == {"thought_description": "Searching the web"}
 
 
 async def test_direct_create_with_class():

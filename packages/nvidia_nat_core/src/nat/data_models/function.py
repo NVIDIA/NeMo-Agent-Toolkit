@@ -31,6 +31,8 @@ class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
             If not provided, the function type will be used.
         `middleware`: List of function middleware names to apply to this function.
             These must match names defined in the `middleware` section of the YAML configuration.
+        `thought_description`: Optional custom thought description shown in the simplified thought
+            process UI in place of the default "Running function: <name>" text.
     """
     name: str | None = Field(
         default=None,
@@ -39,6 +41,11 @@ class FunctionBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     middleware: list[str] = Field(
         default_factory=list,
         description="List of function middleware names to apply to this function in order",
+    )
+    thought_description: str | None = Field(
+        default=None,
+        description="Optional custom thought description shown in the simplified thought process UI "
+        "in place of the default text for this function.",
     )
 
 
