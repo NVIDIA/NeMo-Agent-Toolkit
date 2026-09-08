@@ -55,6 +55,17 @@ class TestOpenAIEmbedderLlamaIndex:
             mock_httpx_sync_client.assert_called_once()
             assert mock_httpx_sync_client.call_args.kwargs["verify"] is verify_ssl
 
+    @patch("llama_index.embeddings.openai.OpenAIEmbedding")
+    async def test_auto_retry_can_be_disabled(self, mock_embedding, openai_embedder_config, mock_builder):
+        """Do not wrap an OpenAI embedder when automatic retries are disabled."""
+        openai_embedder_config.do_auto_retry = False
+
+        with patch("nat.plugins.llama_index.embedder.patch_with_retry") as mock_patch_retry:
+            async with openai_llama_index(openai_embedder_config, mock_builder):
+                pass
+
+        mock_patch_retry.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # Azure OpenAI embedder → Llama-Index
@@ -90,6 +101,22 @@ class TestAzureOpenAIEmbedderLlamaIndex:
             mock_httpx_sync_client.assert_called_once()
             assert mock_httpx_sync_client.call_args.kwargs["verify"] is verify_ssl
 
+    @patch("llama_index.embeddings.azure_openai.AzureOpenAIEmbedding")
+    async def test_auto_retry_can_be_disabled(self,
+                                              mock_embedding,
+                                              azure_embedder_config,
+                                              mock_builder,
+                                              mock_httpx_async_client,
+                                              mock_httpx_sync_client):
+        """Do not wrap an Azure OpenAI embedder when automatic retries are disabled."""
+        azure_embedder_config.do_auto_retry = False
+
+        with patch("nat.plugins.llama_index.embedder.patch_with_retry") as mock_patch_retry:
+            async with azure_openai_llama_index(azure_embedder_config, mock_builder):
+                pass
+
+        mock_patch_retry.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # NIM embedder → Llama-Index
@@ -117,3 +144,14 @@ class TestNIMEmbedderLlamaIndex:
         with pytest.raises(ValueError, match="verify_ssl is currently not supported for NVIDIAEmbedding"):
             async with nim_llama_index(nim_embedder_config, mock_builder):
                 pass
+
+    @patch("llama_index.embeddings.nvidia.NVIDIAEmbedding")
+    async def test_auto_retry_can_be_disabled(self, mock_embedding, nim_embedder_config, mock_builder):
+        """Do not wrap a NIM embedder when automatic retries are disabled."""
+        nim_embedder_config.do_auto_retry = False
+
+        with patch("nat.plugins.llama_index.embedder.patch_with_retry") as mock_patch_retry:
+            async with nim_llama_index(nim_embedder_config, mock_builder):
+                pass
+
+        mock_patch_retry.assert_not_called()

@@ -17,6 +17,8 @@ from unittest.mock import AsyncMock
 from unittest.mock import Mock
 from unittest.mock import patch
 
+from nat.plugins.zep_cloud.memory import ZepMemoryClientConfig
+from nat.plugins.zep_cloud.memory import zep_memory_client
 from nat.plugins.zep_cloud.zep_editor import ZepEditor
 
 
@@ -79,3 +81,16 @@ async def test_search_falls_back_to_thread_context_without_graph_results():
     zep_client.thread.get_user_context.assert_awaited_once_with(thread_id="conversation-123", mode="summary")
     assert len(results) == 1
     assert results[0].memory == "Formatted Zep context"
+
+
+async def test_zep_memory_client_respects_disabled_retry():
+    """Do not wrap a Zep editor when automatic retries are disabled."""
+    config = ZepMemoryClientConfig(do_auto_retry=False)
+
+    with patch.dict("os.environ", {"ZEP_API_KEY": "test-key"}):
+        with patch("zep_cloud.client.AsyncZep", return_value=Mock()):
+            with patch("nat.plugins.zep_cloud.memory.patch_with_retry") as mock_patch_retry:
+                async with zep_memory_client(config, Mock()) as editor:
+                    assert editor is not None
+
+    mock_patch_retry.assert_not_called()

@@ -25,9 +25,23 @@ from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.llama_index.llm import _patch_llm_based_on_config
 from nat.plugins.llama_index.llm import aws_bedrock_llama_index
 from nat.plugins.llama_index.llm import nim_llama_index
 from nat.plugins.llama_index.llm import openai_llama_index
+
+
+def test_llm_retry_can_be_disabled():
+    """Do not wrap a LlamaIndex client when automatic retries are disabled."""
+    config = OpenAIModelConfig(model_name="gpt-4o", do_auto_retry=False)
+    client = MagicMock()
+
+    with patch("nat.plugins.llama_index.llm.patch_with_retry") as mock_patch_retry:
+        result = _patch_llm_based_on_config(client, config)
+
+    mock_patch_retry.assert_not_called()
+    assert result is client
+
 
 # ---------------------------------------------------------------------------
 # NIM → Llama-Index wrapper tests

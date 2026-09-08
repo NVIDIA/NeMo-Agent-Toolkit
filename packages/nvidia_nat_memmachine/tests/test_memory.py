@@ -155,3 +155,17 @@ async def test_memmachine_memory_client_with_retry_mixin(config: MemMachineMemor
                 assert call_kwargs["retries"] == 5
                 assert call_kwargs["retry_codes"] == [500, 502, 503]
                 assert call_kwargs["retry_on_messages"] == ["ConnectionError"]
+
+
+async def test_memmachine_memory_client_respects_disabled_retry(config_minimal: MemMachineMemoryClientConfig,
+                                                                mock_builder: Mock,
+                                                                mock_memmachine_client: Mock):
+    """Do not wrap a MemMachine editor when automatic retries are disabled."""
+    config_minimal.do_auto_retry = False
+
+    with patch("memmachine_client.MemMachineClient", return_value=mock_memmachine_client):
+        with patch("nat.plugins.memmachine.memory.patch_with_retry") as mock_patch:
+            async with memmachine_memory_client(config_minimal, mock_builder) as editor:
+                assert editor is not None
+
+    mock_patch.assert_not_called()

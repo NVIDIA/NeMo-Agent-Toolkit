@@ -30,6 +30,7 @@ from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.oci_llm import OCIModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.langchain.llm import _patch_llm_based_on_config
 from nat.plugins.langchain.llm import aws_bedrock_langchain
 from nat.plugins.langchain.llm import azure_openai_langchain
 from nat.plugins.langchain.llm import dynamo_langchain
@@ -37,6 +38,19 @@ from nat.plugins.langchain.llm import litellm_langchain
 from nat.plugins.langchain.llm import nim_langchain
 from nat.plugins.langchain.llm import oci_langchain
 from nat.plugins.langchain.llm import openai_langchain
+
+
+def test_llm_retry_can_be_disabled():
+    """Do not wrap a LangChain client when automatic retries are disabled."""
+    config = OpenAIModelConfig(model_name="gpt-4o-mini", do_auto_retry=False)
+    client = MagicMock()
+
+    with patch("nat.plugins.langchain.llm.patch_with_retry") as mock_patch_retry:
+        result = _patch_llm_based_on_config(client, config)
+
+    mock_patch_retry.assert_not_called()
+    assert result is client
+
 
 # ---------------------------------------------------------------------------
 # NIM → LangChain wrapper tests

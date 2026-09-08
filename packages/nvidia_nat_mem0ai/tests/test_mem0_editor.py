@@ -14,11 +14,15 @@
 # limitations under the License.
 
 from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
 
 from nat.memory.models import MemoryItem
 from nat.plugins.mem0ai.mem0_editor import Mem0Editor
+from nat.plugins.mem0ai.memory import Mem0MemoryClientConfig
+from nat.plugins.mem0ai.memory import mem0_memory_client
 
 
 @pytest.fixture(name="mock_mem0_client")
@@ -127,3 +131,16 @@ async def test_remove_items_missing_arguments(mem0_editor: Mem0Editor):
     result = await mem0_editor.remove_items()
 
     assert result is None
+
+
+async def test_mem0_memory_client_respects_disabled_retry():
+    """Do not wrap a Mem0 editor when automatic retries are disabled."""
+    config = Mem0MemoryClientConfig(do_auto_retry=False)
+
+    with patch.dict("os.environ", {"MEM0_API_KEY": "test-key"}):
+        with patch("mem0.AsyncMemoryClient", return_value=Mock()):
+            with patch("nat.plugins.mem0ai.memory.patch_with_retry") as mock_patch_retry:
+                async with mem0_memory_client(config, Mock()) as editor:
+                    assert editor is not None
+
+    mock_patch_retry.assert_not_called()

@@ -18,9 +18,11 @@ from unittest.mock import patch
 import pytest
 
 from nat.embedder.azure_openai_embedder import AzureOpenAIEmbedderModelConfig
+from nat.embedder.huggingface_embedder import HuggingFaceEmbedderConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.embedder.openai_embedder import OpenAIEmbedderModelConfig
 from nat.plugins.langchain.embedder import azure_openai_langchain
+from nat.plugins.langchain.embedder import huggingface_langchain
 from nat.plugins.langchain.embedder import nim_langchain
 from nat.plugins.langchain.embedder import openai_langchain
 
@@ -52,6 +54,17 @@ class TestOpenAIEmbedderLangChain:
             assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
             mock_httpx_sync_client.assert_called_once()
             assert mock_httpx_sync_client.call_args.kwargs["verify"] is verify_ssl
+
+    @patch("langchain_openai.OpenAIEmbeddings")
+    async def test_auto_retry_can_be_disabled(self, mock_embeddings, openai_embedder_config, mock_builder):
+        """Do not wrap an OpenAI embedder when automatic retries are disabled."""
+        openai_embedder_config.do_auto_retry = False
+
+        with patch("nat.plugins.langchain.embedder.patch_with_retry") as mock_patch_retry:
+            async with openai_langchain(openai_embedder_config, mock_builder):
+                pass
+
+        mock_patch_retry.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -88,6 +101,22 @@ class TestAzureOpenAIEmbedderLangChain:
             mock_httpx_sync_client.assert_called_once()
             assert mock_httpx_sync_client.call_args.kwargs["verify"] is verify_ssl
 
+    @patch("langchain_openai.AzureOpenAIEmbeddings")
+    async def test_auto_retry_can_be_disabled(self,
+                                              mock_embeddings,
+                                              azure_embedder_config,
+                                              mock_builder,
+                                              mock_httpx_async_client,
+                                              mock_httpx_sync_client):
+        """Do not wrap an Azure OpenAI embedder when automatic retries are disabled."""
+        azure_embedder_config.do_auto_retry = False
+
+        with patch("nat.plugins.langchain.embedder.patch_with_retry") as mock_patch_retry:
+            async with azure_openai_langchain(azure_embedder_config, mock_builder):
+                pass
+
+        mock_patch_retry.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # NIM embedder → LangChain
@@ -113,3 +142,33 @@ class TestNIMEmbedderLangChain:
         async with nim_langchain(nim_embedder_config, mock_builder):
             mock_embeddings.assert_called_once()
             assert mock_embeddings.call_args.kwargs["verify_ssl"] is verify_ssl
+
+    @patch("langchain_nvidia_ai_endpoints.NVIDIAEmbeddings")
+    async def test_auto_retry_can_be_disabled(self, mock_embeddings, nim_embedder_config, mock_builder):
+        """Do not wrap a NIM embedder when automatic retries are disabled."""
+        nim_embedder_config.do_auto_retry = False
+
+        with patch("nat.plugins.langchain.embedder.patch_with_retry") as mock_patch_retry:
+            async with nim_langchain(nim_embedder_config, mock_builder):
+                pass
+
+        mock_patch_retry.assert_not_called()
+
+
+class TestHuggingFaceEmbedderLangChain:
+    """Tests for the huggingface_langchain embedder wrapper."""
+
+    @pytest.fixture
+    def huggingface_embedder_config(self):
+        return HuggingFaceEmbedderConfig(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+    @patch("langchain_huggingface.HuggingFaceEmbeddings")
+    async def test_auto_retry_can_be_disabled(self, mock_embeddings, huggingface_embedder_config, mock_builder):
+        """Do not wrap a HuggingFace embedder when automatic retries are disabled."""
+        huggingface_embedder_config.do_auto_retry = False
+
+        with patch("nat.plugins.langchain.embedder.patch_with_retry") as mock_patch_retry:
+            async with huggingface_langchain(huggingface_embedder_config, mock_builder):
+                pass
+
+        mock_patch_retry.assert_not_called()

@@ -24,8 +24,21 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.agno.llm import _patch_llm_based_on_config
 from nat.plugins.agno.llm import nim_agno
 from nat.plugins.agno.llm import openai_agno
+
+
+def test_llm_retry_can_be_disabled():
+    """Do not wrap an Agno client when automatic retries are disabled."""
+    config = OpenAIModelConfig(model_name="gpt-4", do_auto_retry=False)
+    client = MagicMock()
+
+    with patch("nat.plugins.agno.llm.patch_with_retry") as mock_patch_retry:
+        result = _patch_llm_based_on_config(client, config)
+
+    mock_patch_retry.assert_not_called()
+    assert result is client
 
 
 class TestNimAgno:

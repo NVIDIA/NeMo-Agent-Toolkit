@@ -24,8 +24,22 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.semantic_kernel.llm import _patch_llm_based_on_config
 from nat.plugins.semantic_kernel.llm import azure_openai_semantic_kernel
 from nat.plugins.semantic_kernel.llm import openai_semantic_kernel
+
+
+def test_llm_retry_can_be_disabled():
+    """Do not wrap a Semantic Kernel client when automatic retries are disabled."""
+    config = OpenAIModelConfig(model_name="gpt-4o", do_auto_retry=False)
+    client = MagicMock()
+
+    with patch("nat.plugins.semantic_kernel.llm.patch_with_retry") as mock_patch_retry:
+        result = _patch_llm_based_on_config(client, config)
+
+    mock_patch_retry.assert_not_called()
+    assert result is client
+
 
 # ---------------------------------------------------------------------------
 # OpenAI → Semantic-Kernel wrapper tests

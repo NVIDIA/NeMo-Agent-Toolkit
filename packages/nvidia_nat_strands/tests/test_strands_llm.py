@@ -394,6 +394,16 @@ class TestPatchLLMBasedOnConfig:
         assert result == mock_client
 
     @patch("nat.plugins.strands.llm.patch_with_retry")
+    def test_patch_llm_with_retry_disabled(self, mock_patch_retry, mock_client):
+        """Do not wrap a Strands client when automatic retries are disabled."""
+        config = OpenAIModelConfig(model_name="gpt-4", do_auto_retry=False)
+
+        result = _patch_llm_based_on_config(mock_client, config)
+
+        mock_patch_retry.assert_not_called()
+        assert result is mock_client
+
+    @patch("nat.plugins.strands.llm.patch_with_retry")
     def test_patch_llm_with_retry_mixin(self, mock_patch_retry, mock_client):
         """Test patching with retry mixin."""
         from nat.data_models.retry_mixin import RetryMixin
