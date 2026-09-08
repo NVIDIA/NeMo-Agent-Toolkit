@@ -419,6 +419,21 @@ class TestPatchLLMBasedOnConfig:
                                                  retry_on_messages=["timeout"])
         assert result == mock_patched_client
 
+    @patch("nat.plugins.strands.llm.patch_with_retry")
+    def test_patch_llm_with_retry_mixin_disabled(self, mock_patch_retry, mock_client):
+        """Test client is not patched when do_auto_retry is False."""
+        from nat.data_models.retry_mixin import RetryMixin
+
+        class TestConfigWithRetry(OpenAIModelConfig, RetryMixin):
+            pass
+
+        config = TestConfigWithRetry(model_name="gpt-4", do_auto_retry=False)
+
+        result = _patch_llm_based_on_config(mock_client, config)
+
+        mock_patch_retry.assert_not_called()
+        assert result == mock_client
+
     @patch("nat.plugins.strands.llm.patch_with_thinking")
     def test_patch_llm_with_thinking_mixin(self, mock_patch_thinking, mock_client):
         """Test patching with thinking mixin."""

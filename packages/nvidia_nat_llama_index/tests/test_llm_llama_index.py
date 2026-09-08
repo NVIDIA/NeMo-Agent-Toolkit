@@ -135,6 +135,24 @@ class TestOpenAILlamaIndex:
             mock_httpx_sync_client.assert_called_once()
             assert mock_httpx_sync_client.call_args.kwargs["verify"] is verify_ssl
 
+    @patch("nat.plugins.llama_index.llm.patch_with_retry")
+    @patch("llama_index.llms.openai.OpenAI")
+    async def test_auto_retry_enabled_by_default(self, mock_openai, mock_patch_retry, oa_cfg_chat, mock_builder):
+        """When do_auto_retry is True (default), patch_with_retry is called."""
+        mock_patch_retry.return_value = mock_openai.return_value
+        async with openai_llama_index(oa_cfg_chat, mock_builder):
+            pass
+        mock_patch_retry.assert_called_once()
+
+    @patch("nat.plugins.llama_index.llm.patch_with_retry")
+    @patch("llama_index.llms.openai.OpenAI")
+    async def test_auto_retry_disabled(self, mock_openai, mock_patch_retry, oa_cfg_chat, mock_builder):
+        """When do_auto_retry is False, patch_with_retry is not called."""
+        oa_cfg_chat.do_auto_retry = False
+        async with openai_llama_index(oa_cfg_chat, mock_builder):
+            pass
+        mock_patch_retry.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # AWS Bedrock → Llama-Index wrapper tests

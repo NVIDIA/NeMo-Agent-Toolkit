@@ -149,6 +149,24 @@ class TestOpenAILangChain:
         mock_httpx_async_client.assert_called_once()
         assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
 
+    @patch("nat.plugins.langchain.llm.patch_with_retry")
+    @patch("langchain_openai.ChatOpenAI")
+    async def test_auto_retry_enabled_by_default(self, mock_chat, mock_patch_retry, oa_cfg, mock_builder):
+        """When do_auto_retry is True (default), patch_with_retry is called."""
+        mock_patch_retry.return_value = mock_chat.return_value
+        async with openai_langchain(oa_cfg, mock_builder):
+            pass
+        mock_patch_retry.assert_called_once()
+
+    @patch("nat.plugins.langchain.llm.patch_with_retry")
+    @patch("langchain_openai.ChatOpenAI")
+    async def test_auto_retry_disabled(self, mock_chat, mock_patch_retry, oa_cfg, mock_builder):
+        """When do_auto_retry is False, patch_with_retry is not called."""
+        oa_cfg.do_auto_retry = False
+        async with openai_langchain(oa_cfg, mock_builder):
+            pass
+        mock_patch_retry.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # Azure OpenAI → LangChain wrapper tests
