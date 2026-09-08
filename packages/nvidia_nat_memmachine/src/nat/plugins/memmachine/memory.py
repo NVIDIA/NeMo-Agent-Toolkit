@@ -60,8 +60,9 @@ async def memmachine_memory_client(
     # This follows the documented SDK pattern for local instances:
     # client = MemMachineClient(base_url="http://localhost:8095")
     # Note: api_key is not needed for local/self-hosted MemMachine instances
+    sdk_max_retries = config.max_retries if config.do_auto_retry else 0
     try:
-        client = MemMachineClient(base_url=config.base_url, timeout=config.timeout, max_retries=config.max_retries)
+        client = MemMachineClient(base_url=config.base_url, timeout=config.timeout, max_retries=sdk_max_retries)
     except Exception as e:
         raise RuntimeError(f"Failed to initialize MemMachineClient with base_url '{config.base_url}'. "
                            f"Error: {e}. "

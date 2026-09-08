@@ -158,8 +158,8 @@ class TestNIMEmbedderLangChain:
 class TestHuggingFaceEmbedderLangChain:
     """Tests for the huggingface_langchain embedder wrapper."""
 
-    @pytest.fixture
-    def huggingface_embedder_config(self):
+    @pytest.fixture(name="huggingface_embedder_config")
+    def huggingface_embedder_config_fixture(self):
         return HuggingFaceEmbedderConfig(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
     @patch("langchain_huggingface.HuggingFaceEmbeddings")
