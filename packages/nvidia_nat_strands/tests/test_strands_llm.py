@@ -420,7 +420,7 @@ class TestPatchLLMBasedOnConfig:
         assert result == mock_patched_client
 
     @patch("nat.plugins.strands.llm.patch_with_retry")
-    def test_patch_llm_with_retry_mixin_disabled(self, mock_patch_retry, mock_client):
+    def test_patch_llm_with_retry_mixin_disabled(self, mock_patch_retry: MagicMock, mock_client: MagicMock):
         """Test client is not patched when do_auto_retry is False."""
         from nat.data_models.retry_mixin import RetryMixin
 

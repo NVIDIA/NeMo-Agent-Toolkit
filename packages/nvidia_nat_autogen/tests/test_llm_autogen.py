@@ -90,7 +90,7 @@ class TestPatchAutoGenClient:
         assert result == mock_patched_client
 
     @patch('nat.plugins.autogen.llm.patch_with_retry')
-    def test_patch_with_retry_mixin_disabled(self, mock_patch_retry):
+    def test_patch_with_retry_mixin_disabled(self, mock_patch_retry: Mock):
         """Test client is not patched when do_auto_retry is False."""
         mock_client = Mock()
         retry_config = MockRetryConfig(do_auto_retry=False)

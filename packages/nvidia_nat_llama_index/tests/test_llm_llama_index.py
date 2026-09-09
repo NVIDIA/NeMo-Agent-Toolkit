@@ -137,7 +137,11 @@ class TestOpenAILlamaIndex:
 
     @patch("nat.plugins.llama_index.llm.patch_with_retry")
     @patch("llama_index.llms.openai.OpenAI")
-    async def test_auto_retry_enabled_by_default(self, mock_openai, mock_patch_retry, oa_cfg_chat, mock_builder):
+    async def test_auto_retry_enabled_by_default(self,
+                                                 mock_openai: MagicMock,
+                                                 mock_patch_retry: MagicMock,
+                                                 oa_cfg_chat: OpenAIModelConfig,
+                                                 mock_builder: MagicMock):
         """When do_auto_retry is True (default), patch_with_retry is called."""
         mock_patch_retry.return_value = mock_openai.return_value
         async with openai_llama_index(oa_cfg_chat, mock_builder):
@@ -146,7 +150,11 @@ class TestOpenAILlamaIndex:
 
     @patch("nat.plugins.llama_index.llm.patch_with_retry")
     @patch("llama_index.llms.openai.OpenAI")
-    async def test_auto_retry_disabled(self, mock_openai, mock_patch_retry, oa_cfg_chat, mock_builder):
+    async def test_auto_retry_disabled(self,
+                                       mock_openai: MagicMock,
+                                       mock_patch_retry: MagicMock,
+                                       oa_cfg_chat: OpenAIModelConfig,
+                                       mock_builder: MagicMock):
         """When do_auto_retry is False, patch_with_retry is not called."""
         oa_cfg_chat.do_auto_retry = False
         async with openai_llama_index(oa_cfg_chat, mock_builder):

@@ -151,7 +151,11 @@ class TestOpenAILangChain:
 
     @patch("nat.plugins.langchain.llm.patch_with_retry")
     @patch("langchain_openai.ChatOpenAI")
-    async def test_auto_retry_enabled_by_default(self, mock_chat, mock_patch_retry, oa_cfg, mock_builder):
+    async def test_auto_retry_enabled_by_default(self,
+                                                 mock_chat: MagicMock,
+                                                 mock_patch_retry: MagicMock,
+                                                 oa_cfg: OpenAIModelConfig,
+                                                 mock_builder: MagicMock):
         """When do_auto_retry is True (default), patch_with_retry is called."""
         mock_patch_retry.return_value = mock_chat.return_value
         async with openai_langchain(oa_cfg, mock_builder):
@@ -160,7 +164,11 @@ class TestOpenAILangChain:
 
     @patch("nat.plugins.langchain.llm.patch_with_retry")
     @patch("langchain_openai.ChatOpenAI")
-    async def test_auto_retry_disabled(self, mock_chat, mock_patch_retry, oa_cfg, mock_builder):
+    async def test_auto_retry_disabled(self,
+                                       mock_chat: MagicMock,
+                                       mock_patch_retry: MagicMock,
+                                       oa_cfg: OpenAIModelConfig,
+                                       mock_builder: MagicMock):
         """When do_auto_retry is False, patch_with_retry is not called."""
         oa_cfg.do_auto_retry = False
         async with openai_langchain(oa_cfg, mock_builder):
