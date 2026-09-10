@@ -20,18 +20,15 @@ This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 
 ## Release v1.9.0
 ### Summary
-
-* Migrated Redis memory and object store support out of the NeMo Agent Toolkit repository and into the Redis-maintained [`nemo-agent-toolkit-redis`](https://pypi.org/project/nemo-agent-toolkit-redis/) plugin. The `nvidia-nat[redis]` extra, historical `nvidia-nat-redis` distribution, Python imports, and Redis component configuration names remain compatible through the no-code shim. New projects should install the external package directly. The external plugin requires `redis>=5.0.0,<6.0.0`; environments constrained to an earlier Redis Python client must update that constraint. Refer to the [migration guide](./resources/migration-guide.md#redis-package-migration) for details.
-
-## Release v1.8.0
-### Summary
-
-* Added Guardrails support
-* Added Experimental coding-agent adapters with NeMo-Relay telemetry
-* Added Microsoft Agent 365 integration plugin
-* Added Windows WSL2 setup instructions
-
-Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.8/CHANGELOG.md) for the complete list of changes.
-
-## Known Issues
-- Refer to [https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) for an up to date list of current issues.
+* feat(middleware): add HITLMiddleware for human-in-the-loop function interception by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2060
+* Enable preflight authentication for applicable authentication providers by @ericevans-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2078
+* Track LangChain Runnable callbacks by @WilliamK112 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2100
+* Add MLflow OTLP telemetry exporter, docs, and example by @EnesYilmazcode in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2112
+* feat(plugin-api): export runtime context and interactive HITL models by @DABH in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2113
+* feat(core): add opt-in provider hooks for generated ids and timestamps by @DABH in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2114
+* feat(plugin-api): export the interactive prompt content models by @DABH in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2145
+* feat(core): route interaction prompt ids and timestamps via providers by @DABH in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2144
+* feat(core): Add CircuitBreakerMiddleware for tool fault tolerance by @sankhyanreyansh in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2158
+* chore: Remove `local_sandbox` by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2194
+* fix: Don't expose the `user_id` parameter to the LLM by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2190
+* Improved user identity resolution by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/2197
