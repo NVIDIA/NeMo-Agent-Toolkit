@@ -34,7 +34,7 @@ general:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     api_key: ${NVIDIA_API_KEY}
     base_url: https://integrate.api.nvidia.com/v1
     temperature: 0.0
@@ -43,7 +43,7 @@ llms:
   # Evaluator LLM (used for evaluation metrics)
   evaluator_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     api_key: ${NVIDIA_API_KEY}
     base_url: https://integrate.api.nvidia.com/v1
     temperature: 0.0

@@ -26,7 +26,7 @@ The automatic memory wrapper agent works with any memory backend that implements
 - [`nvidia-nat-zep-cloud`](https://pypi.org/project/nvidia-nat-zep-cloud/) - Zep Cloud memory backend ([Zep NVIDIA NeMo documentation](https://help.getzep.com/nvidia-nemo))
 - [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) - Mem0 memory backend
 - [`nvidia-nat-memmachine`](https://pypi.org/project/nvidia-nat-memmachine/) - MemMachine memory backend (**Experimental; not recommended for production use**) ([MemMachine documentation](https://docs.memmachine.ai/))
-- [`nvidia-nat-redis`](https://pypi.org/project/nvidia-nat-redis/) - Redis memory backend
+- [`nemo-agent-toolkit-redis`](https://pypi.org/project/nemo-agent-toolkit-redis/) - Redis memory backend
 
 ## Configuration
 
@@ -163,11 +163,14 @@ The wrapper automatically:
 The automatic memory wrapper agent provides multi-tenant support through runtime user ID extraction. Configure user IDs
 through the front end or session runtime, not the `auto_memory_agent` workflow block.
 
-### User ID Extraction Priority
+### User ID Resolution
 
-1. **`SessionManager.session(user_id=...)`** - For production with custom auth middleware (recommended)
-2. **`X-User-ID` HTTP header** - For testing without middleware
-3. **Console front end `user_id`** - Defaults to `"nat_run_user_id"` for `nat run`
+The wrapper reads only the user ID resolved by the runtime session. It does not read request headers directly and does
+not use a shared fallback identity. If a memory operation is enabled and the runtime has not resolved an identity, the
+request fails instead of sharing memory across unauthenticated users.
+
+Resolve identity with authenticated front-end credentials, `SessionManager.session(user_id=...)`, or the console front
+end `user_id` (which defaults to `"nat_run_user_id"` for `nat run`).
 
 Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
 For Zep Cloud, if no conversation ID is supplied, the integration uses a deterministic per-user default thread.
@@ -196,9 +199,27 @@ async def handle_request(request):
     return result
 ```
 
-### Testing: X-User-ID Header
+### Local Testing or a Trusted Upstream Identity Header
 
-For quick testing without custom middleware:
+The FastAPI front end can explicitly trust one upstream identity header:
+
+```yaml
+general:
+  front_end:
+    _type: fastapi
+    identity_header: X-User-ID
+```
+
+Use this setting only for local testing or behind an authenticating reverse proxy. It is secure only when all of the following are true:
+
+- Clients cannot connect to `nat serve` directly; only the trusted proxy can reach its listening port.
+- The proxy authenticates every request and overwrites `X-User-ID` with the authenticated principal. It must not preserve, append, or forward a client-supplied value.
+- `nat serve` is network isolated in such a way that all incoming network traffic is from the proxy.
+
+When configured, the header is authoritative for HTTP and WebSocket requests. A missing, empty, or repeated header is rejected. Other connection credentials and WebSocket auth messages cannot replace it. The setting cannot be combined
+with `accepted_identity_credentials` or `identity_authentication`.
+
+For local testing, this can be simulated with:
 
 ```bash
 curl -X POST http://localhost:8000/chat \
@@ -232,7 +253,7 @@ memory:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.7
 
 function_groups:
@@ -327,10 +348,13 @@ workflow:
 
 ## Important Notes
 
-1. **User ID is runtime/front-end scoped** - Set via `SessionManager.session(user_id=...)`, `X-User-ID`, or `nat run --user_id`
+1. **User ID is runtime/front-end scoped** - Set through authenticated front-end identity resolution,
+   `SessionManager.session(user_id=...)`, an explicitly configured trusted `identity_header`, or `nat run --user_id`.
+   Memory operations fail when no identity is available.
 2. **Memory backends are interchangeable** - Works with any implementation of `MemoryEditor` interface
 3. **No memory tools needed** - The wrapped agent does not need explicit memory tools configured
 4. **Transparent to inner agent** - The wrapped agent is unaware of memory operations
+5. **Trusted identity headers are opt-in** - Never enable `identity_header` on a server that untrusted clients can reach directly.
 
 ---
 

@@ -188,6 +188,7 @@ numpydoc_class_members_toctree = False
 # mysql.com  reports a 403 when requested by linkcheck
 # api.service.com is a placeholder for a service example
 # Ignore example.com/mcp as it is inaccessible when building the docs
+# Ignore sphinx-doc.org because it can rate limit CI link checks
 # docs.dbnl.com is inaccessible and https://www.distributional.com/ says "Something new is coming", putting this on
 # hold for now
 linkcheck_ignore = [
@@ -203,7 +204,8 @@ linkcheck_ignore = [
     r'http://custom-server',
     r'^\?provider=',
     r'https://agent\.example\.com',
-    r'https://github\.com/NVIDIA/NeMo-Agent-Toolkit/(issues|pull)/'
+    r'https://github\.com/NVIDIA/NeMo-Agent-Toolkit/(issues|pull)/',
+    r'https://www\.sphinx-doc\.org/en/master/?'
 ]
 
 templates_path = ['_templates']

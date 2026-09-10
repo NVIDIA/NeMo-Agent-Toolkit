@@ -146,6 +146,27 @@ async def test_workflow_alias_usage_in_mcp_front_end():
     assert "func1" in functions
 
 
+async def test_get_all_functions_falls_back_to_type_without_workflow_alias_field():
+    """Test workflow configs without workflow_alias register under their type."""
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+
+    from nat.data_models.config import Config
+    from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorker
+
+    mock_workflow = MagicMock()
+    mock_workflow.functions = {}
+    mock_workflow.function_groups = {}
+    mock_workflow.config.workflow = SimpleNamespace(type="langgraph_wrapper")
+
+    config = Config(general=GeneralConfig(front_end=MCPFrontEndConfig()), workflow=EchoFunctionConfig())
+    worker = MCPFrontEndPluginWorker(config)
+
+    functions = await worker._get_all_functions(mock_workflow)
+
+    assert functions == {"langgraph_wrapper": mock_workflow}
+
+
 async def test_workflow_alias_priority_over_type():
     """Test that workflow_alias takes priority over workflow type when both are present."""
     from unittest.mock import MagicMock

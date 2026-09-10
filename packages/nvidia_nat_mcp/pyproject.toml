@@ -57,7 +57,7 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "aiorwlock~=1.5",
-  "mcp~=1.25",
+  "mcp~=1.29.1",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]

@@ -133,6 +133,31 @@ class JobInfo(Base):
         return f"JobInfo(job_id={self.job_id}, status={self.status})"
 
 
+DEFAULT_SUBMIT_TIMEOUT_SECONDS = 30
+
+
+def _submit_timeout_seconds() -> int:
+    """Resolve the Dask ``Variable.set`` acknowledgement timeout, in seconds.
+
+    ``submit_job`` waits for the Dask scheduler to acknowledge registration of the
+    job's ``Future``. A large task graph can block the scheduler event loop for
+    several seconds, so a too-small timeout makes the backend drop tracking of a
+    job that is in fact still running (see issue #2124). Defaults to
+    ``DEFAULT_SUBMIT_TIMEOUT_SECONDS`` and is overridable via the
+    ``NAT_JOB_STORE_SUBMIT_TIMEOUT`` environment variable.
+    """
+    raw = os.environ.get("NAT_JOB_STORE_SUBMIT_TIMEOUT")
+    if raw is None:
+        return DEFAULT_SUBMIT_TIMEOUT_SECONDS
+    try:
+        seconds = int(raw)
+    except ValueError as e:
+        raise ValueError(f"NAT_JOB_STORE_SUBMIT_TIMEOUT must be an integer number of seconds, got {raw!r}") from e
+    if seconds <= 0:
+        raise ValueError(f"NAT_JOB_STORE_SUBMIT_TIMEOUT must be a positive integer number of seconds, got {raw!r}")
+    return seconds
+
+
 class JobStore(DaskClientMixin):
     """
     Tracks and manages jobs submitted to the Dask scheduler, along with persisting job metadata (JobInfo objects) in a
@@ -295,7 +320,7 @@ class JobStore(DaskClientMixin):
 
         # Store the future in a variable, this allows us to potentially cancel the future later if needed
         future_var = Variable(name=job_id, client=self.dask_client)
-        future_var.set(future, timeout="5 s")
+        future_var.set(future, timeout=f"{_submit_timeout_seconds()} s")
         if sync_timeout > 0:
             try:
                 future.result(timeout=sync_timeout)
@@ -557,9 +582,59 @@ class JobStore(DaskClientMixin):
             return num_expired
 
 
-def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool = True) -> "Engine | AsyncEngine":
+_POOL_PRE_PING_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+_POOL_PRE_PING_FALSE_VALUES = frozenset({"0", "false", "no", "off"})
+
+
+def _apply_pool_env_defaults(engine_kwargs: dict[str, typing.Any]) -> dict[str, typing.Any]:
     """
-    Create a SQLAlchemy database engine, this should only be run once per process
+    Fill in the JobStore connection pool settings from the environment.
+
+    Parameters
+    ----------
+    engine_kwargs: dict[str, typing.Any]
+        Explicitly supplied engine keyword arguments. Keys present here take precedence, and the matching
+        environment variable is left unread rather than validated.
+
+    Returns
+    -------
+    dict[str, typing.Any]
+        A new mapping with the environment derived pool settings filled in. Unset variables are omitted so that the
+        SQLAlchemy defaults apply.
+    """
+    resolved = dict(engine_kwargs)
+
+    if "pool_pre_ping" not in resolved:
+        pre_ping = os.environ.get("NAT_JOB_STORE_POOL_PRE_PING")
+        if pre_ping is not None:
+            normalized = pre_ping.strip().lower()
+            if normalized in _POOL_PRE_PING_TRUE_VALUES:
+                resolved["pool_pre_ping"] = True
+            elif normalized in _POOL_PRE_PING_FALSE_VALUES:
+                resolved["pool_pre_ping"] = False
+            else:
+                raise ValueError(
+                    f"NAT_JOB_STORE_POOL_PRE_PING must be one of "
+                    f"{sorted(_POOL_PRE_PING_TRUE_VALUES | _POOL_PRE_PING_FALSE_VALUES)}, got {pre_ping!r}")
+
+    if "pool_recycle" not in resolved:
+        recycle = os.environ.get("NAT_JOB_STORE_POOL_RECYCLE")
+        if recycle is not None:
+            try:
+                resolved["pool_recycle"] = int(recycle)
+            except ValueError as e:
+                raise ValueError(
+                    f"NAT_JOB_STORE_POOL_RECYCLE must be an integer number of seconds, got {recycle!r}") from e
+
+    return resolved
+
+
+def get_db_engine(db_url: str | None = None,
+                  echo: bool = False,
+                  use_async: bool = True,
+                  **engine_kwargs: typing.Any) -> "Engine | AsyncEngine":
+    """
+    Create a SQLAlchemy database engine. This should only be run once per process.
 
     Parameters
     ----------
@@ -570,6 +645,18 @@ def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool
     use_async: bool, optional, default=True
         If True, use the async database engine. The JobStore class requires an async database engine, setting
         `use_async` to False is only useful for testing.
+    engine_kwargs: dict[str, typing.Any]
+        Additional keyword arguments forwarded to the SQLAlchemy engine factory, such as `pool_pre_ping` and
+        `pool_recycle`. Refer to
+        https://docs.sqlalchemy.org/en/20/core/engines.html#sqlalchemy.create_engine
+
+    Notes
+    -----
+    Server-side connection drops during idle periods are typically addressed with `pool_pre_ping=True` and a
+    `pool_recycle` below the infrastructure idle timeout. An engine is built in each process that reaches the
+    job store, and not every call site threads these settings through. The `NAT_JOB_STORE_POOL_PRE_PING` and
+    `NAT_JOB_STORE_POOL_RECYCLE` environment variables supply them to any such process that inherits the
+    environment, which excludes workers belonging to a separately managed Dask scheduler.
     """
     if db_url is None:
         db_url = os.environ.get("NAT_JOB_STORE_DB_URL")
@@ -594,7 +681,9 @@ def get_db_engine(db_url: str | None = None, echo: bool = False, use_async: bool
     else:
         from sqlalchemy import create_engine as create_engine_fn
 
-    return create_engine_fn(db_url, echo=echo)
+    engine_kwargs = _apply_pool_env_defaults(engine_kwargs)
+
+    return create_engine_fn(db_url, echo=echo, **engine_kwargs)
 
 
 # Prevent Sphinx from attempting to document the Base class which produces warnings

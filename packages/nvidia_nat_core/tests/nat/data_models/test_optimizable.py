@@ -229,11 +229,6 @@ class TestSearchSpaceToGridValues:
         with pytest.raises(ValueError, match="Log scale is not yet supported for grid search"):
             space.to_grid_values()
 
-    def test_missing_low_high_raises_error(self):
-        space = SearchSpace(low=None, high=None)
-        with pytest.raises(ValueError, match="requires either 'values' or both 'low' and 'high'"):
-            space.to_grid_values()
-
     def test_categorical_values_returned_as_list(self):
         space = SearchSpace(values=["small", "medium", "large"])
         result = space.to_grid_values()
@@ -309,6 +304,11 @@ class TestSearchSpaceValidation:
         """Test that empty values list raises validation error."""
         with pytest.raises(ValueError, match="'values' must not be empty"):
             SearchSpace(values=[])
+
+    def test_missing_values_and_range_raises_error(self):
+        """Test that a search space must define values or a range."""
+        with pytest.raises(ValueError, match="requires either 'values' or both 'low' and 'high'"):
+            SearchSpace()
 
     def test_low_equals_high_raises_error(self):
         """Test that low == high raises validation error."""

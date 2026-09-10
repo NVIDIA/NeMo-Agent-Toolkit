@@ -122,6 +122,12 @@ The following CLI flags are available to configure the asynchronous generate end
 * `--max_concurrent_jobs`: Maximum number of Dask workers to create for running async jobs. The name of this parameter is misleading as the actual number of concurrent async jobs is: `max_running_async_jobs * dask_threads_per_worker`. Default is 10. This is only used when `scheduler_address` is not set.
 * `--scheduler_address`: The address of an existing Dask scheduler to connect to. If not set, a local Dask cluster will be created.
 
+### Database Connection Pooling
+Deployments backed by a network-attached database, such as a managed PostgreSQL instance, can have idle pooled connections closed by the database server or by intervening infrastructure. The client is not notified, so the next request to check out a stale connection fails before the pool replaces it. The following environment variables configure the [SQLAlchemy connection pool](https://docs.sqlalchemy.org/en/20/core/pooling.html) used for job history and metadata. They apply to every process that inherits them, which covers the API server workers and the workers of a local Dask cluster created at start time. Workers belonging to a Dask scheduler you run separately need these variables set in their own environment:
+* `NAT_JOB_STORE_POOL_PRE_PING`: When set to `1`, `true`, `yes`, or `on`, each pooled connection is tested with a lightweight query before use, and stale connections are transparently replaced. Set to `0`, `false`, `no`, or `off` to disable. Unset by default, which leaves the SQLAlchemy default of disabled.
+* `NAT_JOB_STORE_POOL_RECYCLE`: The maximum age in seconds of a pooled connection before it is discarded and reopened. Set this below the idle timeout enforced by your database or network infrastructure. Unset by default, which leaves the SQLAlchemy default of `-1`, meaning connections are never recycled.
+
+Setting `NAT_JOB_STORE_POOL_PRE_PING` to `true` is the usual remedy when the first asynchronous job submitted after an idle period fails with a closed connection error. Explicit `pool_pre_ping` and `pool_recycle` keyword arguments passed to `get_db_engine` take precedence over these variables.
 
 ### Endpoint Details
 
@@ -197,7 +203,7 @@ The following CLI flags are available to configure the asynchronous generate end
     "id": "ba5191e6-b818-4206-ac14-863112e597fe",
     "parent_id": "5db32854-d9b2-4e75-9001-543da6a55dd0",
     "type": "markdown",
-    "name": "meta/llama-3.1-70b-instruct",
+    "name": "nvidia/nemotron-3-super-120b-a12b",
     "payload": "**Input:**\n```python\n[SystemMessage(content='\\nAnswer the following questions as best you can. You
                 may ask the human to use the following tools:\\n\\ncalculator_multiply: This is a mathematical tool used to multiply
                 two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.. . Arguments
@@ -253,7 +259,7 @@ The following CLI flags are available to configure the asynchronous generate end
     ```
 - **HTTP Intermediate Step Stream Example:**
   ```json
-  "intermediate_data": {"id":"dda55b33-edd1-4dde-b938-182676a42a19","parent_id":"8282eb42-01dd-4db6-9fd5-915ed4a2a032","type":"LLM_END","name":"meta/llama-3.1-70b-instruct","payload":"{\"event_type\":\"LLM_END\",\"event_timestamp\":1744051441.449566,\"span_event_timestamp\":1744051440.5072863,\"framework\":\"langchain\",\"name\":\"meta/llama-3.1-70b-instruct\",\"tags\":null,\"metadata\":{\"chat_responses\":[{\"text\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"generation_info\":null,\"type\":\"ChatGenerationChunk\",\"message\":{\"content\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"additional_kwargs\":{},\"response_metadata\":{\"finish_reason\":\"stop\",\"model_name\":\"meta/llama-3.1-70b-instruct\"},\"type\":\"AIMessageChunk\",\"name\":null,\"id\":\"run-dda55b33-edd1-4dde-b938-182676a42a19\"}}],\"chat_inputs\":null,\"tool_inputs\":null,\"tool_outputs\":null,\"tool_info\":null},\"data\":{\"input\":\"First number 8 is less than the second number 11\",\"output\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"chunk\":null},\"usage_info\":{\"token_usage\":{\"prompt_tokens\":37109,\"completion_tokens\":902,\"total_tokens\":38011},\"num_llm_calls\":0,\"seconds_between_calls\":0},\"UUID\":\"dda55b33-edd1-4dde-b938-182676a42a19\"}"}
+  "intermediate_data": {"id":"dda55b33-edd1-4dde-b938-182676a42a19","parent_id":"8282eb42-01dd-4db6-9fd5-915ed4a2a032","type":"LLM_END","name":"nvidia/nemotron-3-super-120b-a12b","payload":"{\"event_type\":\"LLM_END\",\"event_timestamp\":1744051441.449566,\"span_event_timestamp\":1744051440.5072863,\"framework\":\"langchain\",\"name\":\"nvidia/nemotron-3-super-120b-a12b\",\"tags\":null,\"metadata\":{\"chat_responses\":[{\"text\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"generation_info\":null,\"type\":\"ChatGenerationChunk\",\"message\":{\"content\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"additional_kwargs\":{},\"response_metadata\":{\"finish_reason\":\"stop\",\"model_name\":\"nvidia/nemotron-3-super-120b-a12b\"},\"type\":\"AIMessageChunk\",\"name\":null,\"id\":\"run-dda55b33-edd1-4dde-b938-182676a42a19\"}}],\"chat_inputs\":null,\"tool_inputs\":null,\"tool_outputs\":null,\"tool_info\":null},\"data\":{\"input\":\"First number 8 is less than the second number 11\",\"output\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"chunk\":null},\"usage_info\":{\"token_usage\":{\"prompt_tokens\":37109,\"completion_tokens\":902,\"total_tokens\":38011},\"num_llm_calls\":0,\"seconds_between_calls\":0},\"UUID\":\"dda55b33-edd1-4dde-b938-182676a42a19\"}"}
   ```
 - **HTTP Response Example:**
   ```json
@@ -341,7 +347,7 @@ The following CLI flags are available to configure the asynchronous generate end
     "id": "9ed4bce7-191c-41cb-be08-7a72d30166cc",
     "parent_id": "136edafb-797b-42cd-bd11-29153359b193",
     "type": "markdown",
-    "name": "meta/llama-3.1-70b-instruct",
+    "name": "nvidia/nemotron-3-super-120b-a12b",
     "payload": "**Input:**\n```python\n[SystemMessage(content='\\nAnswer the following questions as best you can. You
                 may ask the human to use the following tools:\\n\\ncalculator_multiply: This is a mathematical tool used to multiply
                 two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.. . Arguments
@@ -495,7 +501,7 @@ The endpoint accepts all standard OpenAI Chat Completions API parameters:
 curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "nvidia/llama-3.1-8b-instruct",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
     "messages": [
       {"role": "user", "content": "What is the capital of France?"}
     ],
@@ -511,7 +517,7 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "nvidia/llama-3.1-8b-instruct",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
     "messages": [
       {"role": "user", "content": "Tell me a short story"}
     ],
@@ -535,7 +541,7 @@ client = OpenAI(
 
 # Non-streaming chat completion
 response = client.chat.completions.create(
-    model="nvidia/llama-3.1-8b-instruct",
+    model="nvidia/nemotron-3.5-lightning-30b-a3b",
     messages=[
         {"role": "user", "content": "Explain quantum computing in simple terms"}
     ],
@@ -561,7 +567,7 @@ const customOpenAI = openai({
 
 // Non-streaming generation
 const { text } = await generateText({
-  model: customOpenAI('nvidia/llama-3.1-8b-instruct'),
+  model: customOpenAI('nvidia/nemotron-3.5-lightning-30b-a3b'),
   prompt: 'Explain the benefits of renewable energy',
   temperature: 0.7,
   maxTokens: 200

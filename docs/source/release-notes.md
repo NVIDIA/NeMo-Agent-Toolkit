@@ -18,15 +18,22 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit Release Notes
 This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 
-## Release v1.8.0
+## Release v1.9.0
 ### Summary
+* Add `HITLMiddleware` for human-in-the-loop function interception
+* Enable preflight authentication for applicable authentication providers
+* Track LangChain Runnable callbacks
+* Add MLflow OTLP telemetry exporter, docs, and example
+* Export runtime context and interactive HITL models
+* Add opt-in provider hooks for generated ids and timestamps
+* Export the interactive prompt content models
+* Route interaction prompt ids and timestamps via providers
+* Add CircuitBreakerMiddleware for tool fault tolerance
+* Remove `local_sandbox`
+* Don't expose the `user_id` parameter to the LLM
+* Improved user identity resolution
 
-* Added Guardrails support
-* Added Experimental coding-agent adapters with NeMo-Relay telemetry
-* Added Microsoft Agent 365 integration plugin
-* Added Windows WSL2 setup instructions
-
-Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.8/CHANGELOG.md) for the complete list of changes.
+Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.9/CHANGELOG.md) for the complete list of changes.
 
 ## Known Issues
 - Refer to [https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) for an up to date list of current issues.

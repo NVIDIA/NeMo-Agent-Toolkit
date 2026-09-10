@@ -429,7 +429,7 @@ The OpenAI-compatible endpoint (`/v1/chat/completions`) also supports interactiv
 curl -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "nvidia/llama-3.1-8b-instruct",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
     "messages": [
       {"role": "user", "content": "Summarize my documents"}
     ],

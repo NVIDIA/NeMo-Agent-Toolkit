@@ -21,6 +21,8 @@ from typing import Any
 from fastapi import FastAPI
 from starlette.websockets import WebSocket
 
+from nat.authentication.credential_validator.bearer_token_validator import BearerTokenValidator
+from nat.authentication.jwt.jwt_auth_provider import JwtAuthProvider
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 from nat.runtime.session import SESSION_COOKIE_NAME
@@ -29,10 +31,44 @@ from nat.runtime.session import SessionManager
 logger = logging.getLogger(__name__)
 
 # Only allow URL-safe characters in session IDs (alphanumeric, hyphen, underscore, period, tilde).
-_SAFE_SESSION_ID_RE = re.compile(r'^[A-Za-z0-9\-_.~]+$')
+_SAFE_SESSION_ID_RE = re.compile(r"^[A-Za-z0-9\-_.~]+$")
 
 
-def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
+def _is_origin_allowed(origin: str | None, allowed_origins: list[str], allow_origin_regex: str | None) -> bool:
+    """Return True if *origin* should be treated as an allowed CORS origin.
+
+    Mirrors the three-tier check used by Starlette's CORSMiddleware:
+    1. Wildcard ``"*"`` in *allowed_origins* accepts any non-empty origin.
+    2. Exact membership in *allowed_origins*.
+    3. Full-string match against *allow_origin_regex* (when set).
+    """
+    if not origin:
+        return False
+    if "*" in allowed_origins:
+        return True
+    if origin in allowed_origins:
+        return True
+    if allow_origin_regex and re.fullmatch(allow_origin_regex, origin):
+        return True
+    return False
+
+
+async def _get_jwt_validators(worker: Any, session_manager: SessionManager) -> dict[str, BearerTokenValidator]:
+    validators: dict[str, BearerTokenValidator] = {}
+    for provider_name in worker.front_end_config.identity_authentication:
+        provider = await session_manager.shared_builder.get_auth_provider(provider_name)
+        if not isinstance(provider, JwtAuthProvider):
+            raise ValueError(f"Identity authentication provider '{provider_name}' must have _type: jwt")
+
+        issuer = provider.config.issuer_url
+        if issuer in validators:
+            raise ValueError(f"Duplicate JWT issuer configured for identity authentication: {issuer}")
+        validators[issuer] = provider.validator
+    return validators
+
+
+def websocket_endpoint(*, worker: Any, session_manager: SessionManager, jwt_validators: dict[str,
+                                                                                             BearerTokenValidator]):
     """Build websocket endpoint handler with auth-flow integration."""
 
     async def _websocket_endpoint(websocket: WebSocket):
@@ -71,8 +107,23 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
 
             websocket.scope["headers"] = headers
 
-        async with WebSocketMessageHandler(websocket, session_manager, worker.get_step_adaptor(), worker) as handler:
-            flow_handler = WebSocketAuthenticationFlowHandler(worker._add_flow, worker._remove_flow, handler)
+        async with WebSocketMessageHandler(
+                websocket,
+                session_manager,
+                worker.get_step_adaptor(),
+                worker,
+                accepted_identity_credentials=worker.front_end_config.accepted_identity_credentials,
+                jwt_validators=jwt_validators,
+                identity_header=worker.front_end_config.identity_header,
+        ) as handler:
+            origin = websocket.headers.get("origin")
+            allowed_origins = worker.front_end_config.cors.allow_origins or []
+            allow_origin_regex = worker.front_end_config.cors.allow_origin_regex
+            return_url = origin if _is_origin_allowed(origin, allowed_origins, allow_origin_regex) else None
+            flow_handler = WebSocketAuthenticationFlowHandler(worker._add_flow,
+                                                              worker._remove_flow,
+                                                              handler,
+                                                              return_url=return_url)
             handler.set_flow_handler(flow_handler)
             await handler.run()
 
@@ -87,8 +138,12 @@ async def add_websocket_routes(
 ):
     """Add websocket route for an endpoint."""
     if endpoint.websocket_path:
-        app.add_api_websocket_route(endpoint.websocket_path,
-                                    websocket_endpoint(
-                                        worker=worker,
-                                        session_manager=session_manager,
-                                    ))
+        jwt_validators = await _get_jwt_validators(worker, session_manager)
+        app.add_api_websocket_route(
+            endpoint.websocket_path,
+            websocket_endpoint(
+                worker=worker,
+                session_manager=session_manager,
+                jwt_validators=jwt_validators,
+            ),
+        )

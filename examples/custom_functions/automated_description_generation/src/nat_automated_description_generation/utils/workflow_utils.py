@@ -15,6 +15,8 @@
 
 import asyncio
 import math
+from operator import add
+from typing import Annotated
 from typing import Any
 from typing import TypedDict
 
@@ -27,7 +29,7 @@ from langgraph.types import Send
 class OverallState(TypedDict):
     contents: list[str]
     batches: list[list[str]]
-    summaries: list[Any]
+    summaries: Annotated[list[Any], add]
     collapsed_summaries: list[Document]
     final_summary: str
     bypass_map_reduce: bool

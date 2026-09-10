@@ -134,22 +134,6 @@ services:
       retries: 3
       start_period: 30s
 
-
-  local-sandbox:
-    build:
-      context: ../packages/nvidia_nat_core/src/nat/tool/code_execution/local_sandbox
-      dockerfile: Dockerfile.sandbox
-    container_name: test-local-sandbox
-    ports:
-      - "6000:6000"
-
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6000/')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
   milvus:
     container_name: test-milvus-standalone
     image: milvusdb/milvus:v2.3.1

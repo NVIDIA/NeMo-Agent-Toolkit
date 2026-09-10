@@ -106,6 +106,51 @@ def test_nat_chat_request_openai_fields():
     assert request.user == "user123"
 
 
+def test_nat_chat_request_accepts_openai_tool_call_history():
+    """Test that ChatRequest accepts OpenAI-compatible tool-call messages."""
+    request = ChatRequest.model_validate({
+        "messages": [
+            {
+                "role": "user",
+                "content": "Use a tool.",
+            },
+            {
+                "role":
+                    "assistant",
+                "content":
+                    None,
+                "tool_calls": [{
+                    "id": "call_123",
+                    "type": "function",
+                    "function": {
+                        "name": "current_datetime",
+                        "arguments": "{}",
+                    },
+                }, ],
+            },
+            {
+                "role": "tool",
+                "tool_call_id": "call_123",
+                "content": "{\"time\":\"2026-06-12T12:00:00Z\"}",
+            },
+            {
+                "role": "user",
+                "content": "Continue.",
+            },
+        ],
+    })
+
+    assistant_message = request.messages[1]
+    assert assistant_message.role == UserMessageContentRoleType.ASSISTANT
+    assert assistant_message.content is None
+    assert assistant_message.tool_calls is not None
+    assert assistant_message.tool_calls[0]["function"]["name"] == "current_datetime"
+
+    tool_message = request.messages[2]
+    assert tool_message.role == UserMessageContentRoleType.TOOL
+    assert tool_message.tool_call_id == "call_123"
+
+
 def test_nat_choice_delta_class():
     """Test that ChoiceDelta class works correctly"""
     # Test empty delta
@@ -281,6 +326,86 @@ async def test_openai_compatible_mode_stream_parameter():
 
         assert event_source.response.status_code == 200
         assert event_source.response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+
+async def test_openai_compatible_endpoint_accepts_tool_call_history():
+    """Test that OpenAI v1 mode accepts valid tool-call conversation history."""
+    front_end_config = FastApiFrontEndConfig()
+    front_end_config.workflow.openai_api_v1_path = "/v1/chat/completions"
+
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=True),
+    )
+
+    payloads = [
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Use a tool.",
+                },
+                {
+                    "role":
+                        "assistant",
+                    "content":
+                        None,
+                    "tool_calls": [{
+                        "id": "call_123",
+                        "type": "function",
+                        "function": {
+                            "name": "current_datetime",
+                            "arguments": "{}",
+                        },
+                    }, ],
+                },
+                {
+                    "role": "user",
+                    "content": "Continue.",
+                },
+            ],
+        },
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Use a tool.",
+                },
+                {
+                    "role":
+                        "assistant",
+                    "content":
+                        "",
+                    "tool_calls": [{
+                        "id": "call_123",
+                        "type": "function",
+                        "function": {
+                            "name": "current_datetime",
+                            "arguments": "{}",
+                        },
+                    }, ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "call_123",
+                    "content": "{\"time\":\"2026-06-12T12:00:00Z\"}",
+                },
+                {
+                    "role": "user",
+                    "content": "Continue.",
+                },
+            ],
+        },
+    ]
+
+    async with build_nat_client(config) as client:
+        for payload in payloads:
+            response = await client.post("/v1/chat/completions", json=payload)
+
+            assert response.status_code == 200, response.text
+            data = response.json()
+            assert data["choices"][0]["message"]["role"] == "assistant"
+            assert isinstance(data["choices"][0]["message"]["content"], str)
 
 
 async def test_legacy_non_streaming_response_format():

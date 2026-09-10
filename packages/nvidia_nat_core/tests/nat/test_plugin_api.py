@@ -21,8 +21,17 @@ from pathlib import Path
 from nat import plugin_api
 
 EXPECTED_PLUGIN_API_EXPORTS = {
+    "BinaryHumanPromptOption": ("nat.data_models.interactive", "BinaryHumanPromptOption"),
     "Builder": ("nat.builder.builder", "Builder"),
+    "CircuitBreakerMiddleware": ("nat.middleware.circuit_breaker.circuit_breaker_middleware",
+                                 "CircuitBreakerMiddleware"),
+    "CircuitBreakerMiddlewareConfig": ("nat.middleware.circuit_breaker.circuit_breaker_middleware_config",
+                                       "CircuitBreakerMiddlewareConfig"),
+    "CircuitBreakerOpenError": ("nat.middleware.circuit_breaker.circuit_breaker_middleware", "CircuitBreakerOpenError"),
+    "CircuitBreakerState": ("nat.middleware.circuit_breaker.circuit_breaker_middleware", "CircuitBreakerState"),
     "ComponentRef": ("nat.data_models.component_ref", "ComponentRef"),
+    "Context": ("nat.builder.context", "Context"),
+    "ContextState": ("nat.builder.context", "ContextState"),
     "DatasetLoaderInfo": ("nat.builder.dataset_loader", "DatasetLoaderInfo"),
     "Document": ("nat.retriever.models", "Document"),
     "DynamicFunctionMiddleware": ("nat.middleware.dynamic.dynamic_function_middleware", "DynamicFunctionMiddleware"),
@@ -44,6 +53,25 @@ EXPECTED_PLUGIN_API_EXPORTS = {
     "FunctionMiddleware": ("nat.middleware.function_middleware", "FunctionMiddleware"),
     "FunctionMiddlewareBaseConfig": ("nat.data_models.middleware", "FunctionMiddlewareBaseConfig"),
     "FunctionMiddlewareContext": ("nat.middleware.middleware", "FunctionMiddlewareContext"),
+    "HITLMiddleware": ("nat.middleware.hitl.hitl_middleware", "HITLMiddleware"),
+    "HITLMiddlewareConfig": ("nat.middleware.hitl.hitl_middleware_config", "HITLMiddlewareConfig"),
+    "HumanPrompt": ("nat.data_models.interactive", "HumanPrompt"),
+    "HumanPromptBinary": ("nat.data_models.interactive", "HumanPromptBinary"),
+    "HumanPromptCheckbox": ("nat.data_models.interactive", "HumanPromptCheckbox"),
+    "HumanPromptDropdown": ("nat.data_models.interactive", "HumanPromptDropdown"),
+    "HumanPromptNotification": ("nat.data_models.interactive", "HumanPromptNotification"),
+    "HumanPromptRadio": ("nat.data_models.interactive", "HumanPromptRadio"),
+    "HumanPromptText": ("nat.data_models.interactive", "HumanPromptText"),
+    "HumanResponse": ("nat.data_models.interactive", "HumanResponse"),
+    "HumanResponseBinary": ("nat.data_models.interactive", "HumanResponseBinary"),
+    "HumanResponseCheckbox": ("nat.data_models.interactive", "HumanResponseCheckbox"),
+    "HumanResponseDropdown": ("nat.data_models.interactive", "HumanResponseDropdown"),
+    "HumanResponseNotification": ("nat.data_models.interactive", "HumanResponseNotification"),
+    "HumanResponseRadio": ("nat.data_models.interactive", "HumanResponseRadio"),
+    "HumanResponseText": ("nat.data_models.interactive", "HumanResponseText"),
+    "InteractionPrompt": ("nat.data_models.interactive", "InteractionPrompt"),
+    "InteractionResponse": ("nat.data_models.interactive", "InteractionResponse"),
+    "InvocationAction": ("nat.middleware.middleware", "InvocationAction"),
     "InvocationContext": ("nat.middleware.middleware", "InvocationContext"),
     "KeyAlreadyExistsError": ("nat.data_models.object_store", "KeyAlreadyExistsError"),
     "LLMBaseConfig": ("nat.data_models.llm", "LLMBaseConfig"),
@@ -59,6 +87,7 @@ EXPECTED_PLUGIN_API_EXPORTS = {
     "MemoryWriter": ("nat.memory.interfaces", "MemoryWriter"),
     "MiddlewareBaseConfig": ("nat.data_models.middleware", "MiddlewareBaseConfig"),
     "MiddlewareRef": ("nat.data_models.component_ref", "MiddlewareRef"),
+    "MultipleChoiceOption": ("nat.data_models.interactive", "MultipleChoiceOption"),
     "NoSuchKeyError": ("nat.data_models.object_store", "NoSuchKeyError"),
     "ObjectStore": ("nat.object_store.interfaces", "ObjectStore"),
     "ObjectStoreRef": ("nat.data_models.component_ref", "ObjectStoreRef"),
@@ -355,7 +384,26 @@ def test_plugin_authoring_docs_prefer_public_api_imports():
         "from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware",
         "from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig",
         "from nat.middleware.function_middleware import FunctionMiddleware",
+        "from nat.middleware.hitl import HITLMiddleware",
+        "from nat.middleware.hitl import HITLMiddlewareConfig",
+        "from nat.middleware.hitl import HumanPrompt",
+        "from nat.middleware.hitl import InteractionResponse",
+        "from nat.builder.context import Context",
+        "from nat.builder.context import ContextState",
+        "from nat.data_models.interactive import BinaryHumanPromptOption",
+        "from nat.data_models.interactive import HumanPrompt",
+        "from nat.data_models.interactive import HumanPromptBinary",
+        "from nat.data_models.interactive import HumanPromptCheckbox",
+        "from nat.data_models.interactive import HumanPromptDropdown",
+        "from nat.data_models.interactive import HumanPromptNotification",
+        "from nat.data_models.interactive import HumanPromptRadio",
+        "from nat.data_models.interactive import HumanPromptText",
+        "from nat.data_models.interactive import HumanResponse",
+        "from nat.data_models.interactive import InteractionPrompt",
+        "from nat.data_models.interactive import InteractionResponse",
+        "from nat.data_models.interactive import MultipleChoiceOption",
         "from nat.middleware.middleware import FunctionMiddlewareContext",
+        "from nat.middleware.middleware import InvocationAction",
         "from nat.middleware.middleware import InvocationContext",
         "from nat.object_store.interfaces import ObjectStore",
         "from nat.object_store.models import ObjectStoreItem",
@@ -469,3 +517,98 @@ def test_consumer_style_plugin_group_registration():
     registered = GlobalTypeRegistry.get().get_function_group(_ConsumerTestPluginGroupConfig)
     assert registered.config_type is _ConsumerTestPluginGroupConfig
     assert registered.build_fn is not None
+
+
+def test_consumer_style_context_and_interactive_types():
+    """Exercise the runtime context accessors and interactive models using only ``nat.plugin_api`` imports.
+
+    Middleware and HITL plugin authors read invocation-scoped state through ``Context``/``ContextState`` and
+    consume/produce the interactive prompt and response models, so the public surface must be sufficient for
+    both without falling back to implementation modules.
+    """
+    from nat.plugin_api import Context
+    from nat.plugin_api import ContextState
+    from nat.plugin_api import HumanResponseText
+    from nat.plugin_api import InteractionPrompt
+    from nat.plugin_api import InteractionResponse
+
+    # Context accessors resolve to the shared context state.
+    assert isinstance(Context.get(), Context)
+    assert ContextState.get() is ContextState.get()
+
+    with Context.scope(workflow_run_id="plugin-api-test-run"):
+        assert Context.get().workflow_run_id == "plugin-api-test-run"
+
+    # A prompt as delivered to a user-input callback, and the matching response a plugin would return.
+    prompt = InteractionPrompt(
+        id="interaction-1",
+        timestamp="2026-01-01T00:00:00Z",
+        content={
+            "input_type": "text", "text": "Proceed?"
+        },
+    )
+    assert prompt.content.text == "Proceed?"
+
+    response = InteractionResponse(
+        id="interaction-1",
+        timestamp="2026-01-01T00:00:01Z",
+        content=HumanResponseText(text="yes"),
+    )
+    assert isinstance(response.content, HumanResponseText)
+
+    # The ``HumanResponse`` discriminated union resolves the concrete response models.
+    parsed = InteractionResponse.model_validate(response.model_dump())
+    assert isinstance(parsed.content, HumanResponseText)
+    assert parsed.content.text == "yes"
+
+
+def test_consumer_style_prompt_content_models():
+    """Construct interactive prompts using only ``nat.plugin_api`` imports.
+
+    Plugin authors do not only consume responses: HITL middleware hooks, user-input callbacks, and front-end
+    integrations also build the prompt side of an interaction (``InteractionPrompt.content``) from the concrete
+    prompt content models. The public surface must be sufficient to construct every prompt variant, including
+    the option models embedded by binary and multiple-choice prompts, without falling back to
+    ``nat.data_models.interactive``.
+    """
+    from nat.plugin_api import BinaryHumanPromptOption
+    from nat.plugin_api import HumanPromptBinary
+    from nat.plugin_api import HumanPromptCheckbox
+    from nat.plugin_api import HumanPromptDropdown
+    from nat.plugin_api import HumanPromptNotification
+    from nat.plugin_api import HumanPromptRadio
+    from nat.plugin_api import HumanPromptText
+    from nat.plugin_api import InteractionPrompt
+    from nat.plugin_api import MultipleChoiceOption
+
+    choices = [
+        MultipleChoiceOption(id="email", label="Email", value="email", description="Notify over email."),
+        MultipleChoiceOption(id="sms", label="SMS", value="sms", description="Notify over SMS."),
+    ]
+    prompts = [
+        HumanPromptText(text="Describe the change.", placeholder="Enter a description.", required=True),
+        HumanPromptNotification(text="The workflow resumed."),
+        HumanPromptBinary(
+            text="Continue the workflow?",
+            options=[
+                BinaryHumanPromptOption(id="continue", label="Continue", value=True),
+                BinaryHumanPromptOption(id="cancel", label="Cancel", value=False),
+            ],
+        ),
+        HumanPromptRadio(text="Pick one channel.", options=choices),
+        HumanPromptCheckbox(text="Pick any channels.", options=choices),
+        HumanPromptDropdown(text="Pick a channel from the list.", options=choices),
+    ]
+
+    # Each concrete prompt model is a member of the ``HumanPrompt`` discriminated union, so it is accepted as
+    # typed ``InteractionPrompt.content`` and survives a serialization round trip as the same concrete type.
+    for index, content in enumerate(prompts):
+        prompt = InteractionPrompt(
+            id=f"interaction-{index}",
+            timestamp="2026-01-01T00:00:00Z",
+            content=content,
+        )
+        parsed = InteractionPrompt.model_validate(prompt.model_dump())
+        assert type(parsed.content) is type(content)
+        assert parsed.content.text == content.text
+        assert parsed.content.model_dump() == content.model_dump()

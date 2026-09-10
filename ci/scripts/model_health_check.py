@@ -27,6 +27,8 @@ and checks each model in two passes:
 
 Reports removed and down models separately so the team can tell whether a
 config needs a model swap (removed) or just needs to wait (down).
+
+Use --catalog-only to run only the catalog check (pass 1).
 """
 
 import argparse
@@ -63,7 +65,31 @@ INTER_REQUEST_DELAY = 1.0
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 SCHEMA_VERSION = "1.0"
 
-EXCLUDE_YAMLS = ("examples/documentation_guides/locally_hosted_llms/nim_config.yml", )
+EXCLUDE_YAMLS = (
+    "examples/documentation_guides/locally_hosted_llms/nim_config.yml",
+    "examples/evaluation_and_profiling/email_phishing_analyzer/src/"
+    "nat_email_phishing_analyzer/configs/config-langsmith-eval.yml",
+    "examples/evaluation_and_profiling/email_phishing_analyzer/src/"
+    "nat_email_phishing_analyzer/configs/config-langsmith-optimize.yml",
+    "examples/evaluation_and_profiling/email_phishing_analyzer/src/"
+    "nat_email_phishing_analyzer/configs/config-llama-3.1-8b-instruct.yml",
+    "examples/evaluation_and_profiling/email_phishing_analyzer/src/"
+    "nat_email_phishing_analyzer/configs/config-llama-3.3-70b-instruct.yml",
+    "examples/evaluation_and_profiling/email_phishing_analyzer/src/"
+    "nat_email_phishing_analyzer/configs/config-mistral-large-3-675b-instruct-2512.yml",
+    "examples/evaluation_and_profiling/email_phishing_analyzer/src/"
+    "nat_email_phishing_analyzer/configs/config-mistral-small-4-119b-2603.yml",
+    "examples/evaluation_and_profiling/email_phishing_analyzer/src/"
+    "nat_email_phishing_analyzer/configs/config-nemotron-3-nano-30b-a3b.yml",
+    "examples/evaluation_and_profiling/email_phishing_analyzer/src/"
+    "nat_email_phishing_analyzer/configs/config-nemotron-3-super-120b-a12b.yml",
+    "examples/evaluation_and_profiling/email_phishing_analyzer/src/"
+    "nat_email_phishing_analyzer/configs/config-reasoning.yml",
+    "examples/evaluation_and_profiling/email_phishing_analyzer/src/"
+    "nat_email_phishing_analyzer/configs/config.yml",
+    "examples/evaluation_and_profiling/email_phishing_analyzer/src/"
+    "nat_email_phishing_analyzer/configs/config_optimizer.yml",
+)
 
 
 def get_git_files() -> frozenset[str]:
@@ -276,6 +302,16 @@ def main() -> int:
         help="Scan configs and list models without making API calls",
     )
     parser.add_argument(
+        "--catalog-only",
+        action="store_true",
+        help="Only check the /v1/models catalog (pass 1); skip inference checks (pass 2)",
+    )
+    parser.add_argument(
+        "--suppress-summary",
+        action="store_true",
+        help="Suppress the final human-readable summary",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Show which config files reference each model",
@@ -347,87 +383,95 @@ def main() -> int:
 
     _logger.info("")
 
-    # -- Pass 2: inference check on models still in catalog ------------------
-    llm_to_test = sorted(set(llm_models.keys()) & catalog_ok)
-    embedder_to_test = sorted(set(embedder_models.keys()) & catalog_ok)
-
-    if llm_to_test or embedder_to_test:
-        _logger.info("Pass 2: inference check on catalog-listed models...")
-
     down: list[tuple[str, int, str]] = []
     deprecation: list[tuple[str, str]] = []
-    call_count = 0
 
-    for model in llm_to_test:
-        if call_count > 0:
-            time.sleep(INTER_REQUEST_DELAY)
-        call_count += 1
+    if args.catalog_only:
+        _logger.info("Pass 2: skipped (--catalog-only)")
+    else:
+        # -- Pass 2: inference check on models still in catalog --------------
+        llm_to_test = sorted(set(llm_models.keys()) & catalog_ok)
+        embedder_to_test = sorted(set(embedder_models.keys()) & catalog_ok)
 
-        status, detail, deprecation_detail = check_model(model, api_key)
-        if status in (401, 403):
-            _logger.error("\n  ERROR: API key is invalid or expired (HTTP %s): %s", status, detail)
-            return 1
-        elif deprecation_detail != "":
-            _logger.info("  Deprecation: %s", deprecation_detail)
-            deprecation.append((model, deprecation_detail))
-        elif status == 200:
-            _logger.info("  OK      %s", model)
-        else:
-            label = f"HTTP {status}" if status > 0 else "ERROR"
-            _logger.info("  DOWN    %s -> %s: %s", model, label, detail)
-            down.append((model, status, detail))
+        if llm_to_test or embedder_to_test:
+            _logger.info("Pass 2: inference check on catalog-listed models...")
 
-    for model in embedder_to_test:
-        if call_count > 0:
-            time.sleep(INTER_REQUEST_DELAY)
-        call_count += 1
+        call_count = 0
 
-        status, detail, deprecation_detail = check_embedder(model, api_key)
-        if status in (401, 403):
-            _logger.error("\n  ERROR: API key is invalid or expired (HTTP %s): %s", status, detail)
-            return 1
-        elif deprecation_detail != "":
-            _logger.info("  Deprecation: %s", deprecation_detail)
-            deprecation.append((model, deprecation_detail))
-        elif status == 200:
-            _logger.info("  OK      %s  (embedder)", model)
-        else:
-            label = f"HTTP {status}" if status > 0 else "ERROR"
-            _logger.info("  DOWN    %s -> %s (embedder): %s", model, label, detail)
-            down.append((model, status, detail))
+        for model in llm_to_test:
+            if call_count > 0:
+                time.sleep(INTER_REQUEST_DELAY)
+            call_count += 1
+
+            status, detail, deprecation_detail = check_model(model, api_key)
+            if status in (401, 403):
+                _logger.error("\n  ERROR: API key is invalid or expired (HTTP %s): %s", status, detail)
+                return 1
+            elif deprecation_detail != "":
+                _logger.info("  Deprecation: %s", deprecation_detail)
+                deprecation.append((model, deprecation_detail))
+            elif status == 200:
+                _logger.info("  OK      %s", model)
+            else:
+                label = f"HTTP {status}" if status > 0 else "ERROR"
+                _logger.info("  DOWN    %s -> %s: %s", model, label, detail)
+                down.append((model, status, detail))
+
+        for model in embedder_to_test:
+            if call_count > 0:
+                time.sleep(INTER_REQUEST_DELAY)
+            call_count += 1
+
+            status, detail, deprecation_detail = check_embedder(model, api_key)
+            if status in (401, 403):
+                _logger.error("\n  ERROR: API key is invalid or expired (HTTP %s): %s", status, detail)
+                return 1
+            elif deprecation_detail != "":
+                _logger.info("  Deprecation: %s", deprecation_detail)
+                deprecation.append((model, deprecation_detail))
+            elif status == 200:
+                _logger.info("  OK      %s  (embedder)", model)
+            else:
+                label = f"HTTP {status}" if status > 0 else "ERROR"
+                _logger.info("  DOWN    %s -> %s (embedder): %s", model, label, detail)
+                down.append((model, status, detail))
 
     _logger.info("")
 
     # -- Summary -------------------------------------------------------------
     has_failures = bool(removed) or bool(down) or bool(deprecation)
 
-    if removed:
-        _logger.info("%s model(s) REMOVED from catalog (need config update):\n", len(removed))
-        for model in removed:
-            _logger.info("  %s", model)
-            for f in sorted(set(all_configs[model])):
-                _logger.info("    - %s", f)
-            _logger.info("")
+    if not args.suppress_summary:
+        if removed:
+            _logger.info("%s model(s) REMOVED from catalog (need config update):\n", len(removed))
+            for model in removed:
+                _logger.info("  %s", model)
+                for f in sorted(set(all_configs[model])):
+                    _logger.info("    - %s", f)
+                _logger.info("")
 
-    if deprecation:
-        _logger.info("%s model(s) DEPRECATED (in catalog but deprecated):\n", len(deprecation))
-        for model, detail in deprecation:
-            _logger.info("  %s (%s)", model, detail)
-            for f in sorted(set(all_configs[model])):
-                _logger.info("    - %s", f)
-            _logger.info("")
+        if deprecation:
+            _logger.info("%s model(s) DEPRECATED (in catalog but deprecated):\n", len(deprecation))
+            for model, detail in deprecation:
+                _logger.info("  %s (%s)", model, detail)
+                for f in sorted(set(all_configs[model])):
+                    _logger.info("    - %s", f)
+                _logger.info("")
 
-    if down:
-        _logger.info("%s model(s) DOWN (in catalog but unreachable):\n", len(down))
-        for model, status, _detail in down:
-            label = f"HTTP {status}" if status > 0 else "ERROR"
-            _logger.info("  %s (%s)", model, label)
-            for f in sorted(set(all_configs[model])):
-                _logger.info("    - %s", f)
-            _logger.info("")
+        if down:
+            _logger.info("%s model(s) DOWN (in catalog but unreachable):\n", len(down))
+            for model, status, _detail in down:
+                label = f"HTTP {status}" if status > 0 else "ERROR"
+                _logger.info("  %s (%s)", model, label)
+                for f in sorted(set(all_configs[model])):
+                    _logger.info("    - %s", f)
+                _logger.info("")
 
-    if not has_failures:
-        _logger.info("All %s model(s) are reachable.", len(all_configs))
+        if args.catalog_only:
+            if catalog and not removed:
+                _logger.info("All %s model(s) are present in the catalog.", len(all_configs))
+        elif not has_failures:
+            _logger.info("All %s model(s) are reachable.", len(all_configs))
 
     if args.output_json:
         down_models = {m for m, _s, _d in down}

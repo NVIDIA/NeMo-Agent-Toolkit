@@ -16,3 +16,4 @@
 FROM ghcr.io/astral-sh/uv:0.9.28-python3.13-bookworm
 
 RUN VERSION=2.99.0 curl -fL https://install-cli.jfrog.io | sh
+RUN uv pip install --system pkginfo==1.12.1.2 requests==2.32.5

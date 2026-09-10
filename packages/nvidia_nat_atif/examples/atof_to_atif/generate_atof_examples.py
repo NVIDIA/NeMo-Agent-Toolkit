@@ -35,7 +35,7 @@
   avoids the LLM cost, recording an input-safety policy check parented under
   the agent scope. Demonstrates that marks are in-line lifecycle checkpoints
   (not session brackets) and that the ``guardrail`` category is a first-class
-  spec category (atof-event-format.md §4).
+  spec category (ATOF Core Specification §4).
 
 - **EXMP-04 — Anthropic Messages**: A document-summarization workflow where
   Claude calls a ``read_file`` tool, then formulates a summary. LLM payloads
@@ -361,8 +361,8 @@ def generate_exmp03() -> list[Event]:
     (spec §3.2), categorized via the ``guardrail`` category (§4), parented
     under the agent scope so the checkpoint anchors within the agent's
     execution:
-    - ``category="guardrail"`` (a first-class spec category per
-      atof-event-format.md §4), ``category_profile=None``.
+    - ``category="guardrail"`` (a first-class spec category per the ATOF Core
+      Specification §4), ``category_profile=None``.
     - Fired AFTER the agent scope-start and BEFORE the LLM scope-start,
       parented under the agent scope (``parent_uuid="agent-003"``) so it
       rides alongside the agent's lifecycle.

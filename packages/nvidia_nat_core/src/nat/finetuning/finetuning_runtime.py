@@ -71,16 +71,20 @@ async def run_finetuning(runner: Trainer) -> None:
                              failed_jobs,
                              len(job_statuses))
             elif canceled_jobs:
-                logger.warning("Finetuning was canceled. %d job(s) were canceled out of %d total.",
-                               canceled_jobs,
-                               len(job_statuses))
+                logger.warning(
+                    "Finetuning was canceled. %d job(s) were canceled out of %d total.",
+                    canceled_jobs,
+                    len(job_statuses),
+                )
             elif completed_jobs == len(job_statuses):
                 logger.info("Finetuning completed successfully!")
             else:
                 # Some jobs may still be pending or running (unexpected state)
-                logger.warning("Finetuning finished with %d completed, %d pending/running job(s).",
-                               completed_jobs,
-                               len(job_statuses) - completed_jobs)
+                logger.warning(
+                    "Finetuning finished with %d completed, %d pending/running job(s).",
+                    completed_jobs,
+                    len(job_statuses) - completed_jobs,
+                )
 
     except Exception as e:
         logger.error("Finetuning failed: %s", e)
@@ -100,10 +104,22 @@ async def finetuning_main(run_config: FinetuneRunConfig) -> None:
         run_config: FinetuneRunConfig object containing finetuning settings
     """
 
+    from typing import cast
+
+    from pydantic import BaseModel
+
     from nat.builder.workflow_builder import WorkflowBuilder
+    from nat.data_models.config import Config
     from nat.runtime.loader import load_config
 
-    config = load_config(config_file=run_config.config_file)
+    if isinstance(run_config.config_file, BaseModel):
+        config = cast(Config, run_config.config_file)
+    else:
+        if run_config.override:
+            raise ValueError("Overrides require a pre-resolved config object. "
+                             "Please apply overrides and validate the config before calling finetuning_main, "
+                             "or pass a Config object directly.")
+        config = load_config(config_file=run_config.config_file)
     finetuning_config = config.finetuning
     finetuning_config.run_configuration = run_config
 

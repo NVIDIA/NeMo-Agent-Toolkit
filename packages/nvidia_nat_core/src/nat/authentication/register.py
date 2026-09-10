@@ -17,4 +17,5 @@
 
 from nat.authentication.api_key import register as register_api_key
 from nat.authentication.http_basic_auth import register as register_http_basic_auth
+from nat.authentication.jwt import register as register_jwt
 from nat.authentication.oauth2 import register as register_oauth2

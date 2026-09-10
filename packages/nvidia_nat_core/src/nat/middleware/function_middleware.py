@@ -30,6 +30,7 @@ the next callable.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from collections.abc import Sequence
 from typing import Any
@@ -37,8 +38,11 @@ from typing import Any
 from nat.middleware.middleware import CallNext
 from nat.middleware.middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationAction
 from nat.middleware.middleware import InvocationContext
 from nat.middleware.middleware import Middleware
+
+logger = logging.getLogger(__name__)
 
 
 class FunctionMiddleware(Middleware):
@@ -184,6 +188,9 @@ class FunctionMiddleware(Middleware):
         if result is not None:
             ctx = result
 
+        if ctx.action == InvocationAction.SKIP:
+            return None
+
         # Final middleware does not call next by default; subclass must override to invoke the function.
         if self.is_final:
             return ctx.output
@@ -210,6 +217,9 @@ class FunctionMiddleware(Middleware):
         Pre-invoke runs once before streaming starts.
         Post-invoke runs per-chunk as they stream through.
 
+        ``None`` is the suppression sentinel: if ``post_invoke`` sets ``context.output``
+        to ``None``, that chunk is dropped and not forwarded to the caller.
+
         Override for custom streaming behavior (e.g., buffering,
         aggregation, chunk filtering).
 
@@ -223,7 +233,8 @@ class FunctionMiddleware(Middleware):
             kwargs: Keyword arguments for the function.
 
         Yields:
-            Stream chunks (potentially transformed by post_invoke).
+            Stream chunks (potentially transformed by post_invoke). Chunks suppressed by
+            setting ``context.output = None`` in ``post_invoke`` are not yielded.
         """
         # Build invocation context with frozen originals + mutable current
         # output starts as None (pre-invoke phase)
@@ -241,6 +252,9 @@ class FunctionMiddleware(Middleware):
         if result is not None:
             ctx = result
 
+        if ctx.action == InvocationAction.SKIP:
+            return
+
         # Final middleware does not call next by default; subclass must override to stream function output.
         if self.is_final:
             return
@@ -255,7 +269,9 @@ class FunctionMiddleware(Middleware):
             if result is not None:
                 ctx = result
 
-            yield ctx.output
+            # None output is the suppression sentinel: post_invoke cleared it to suppress this chunk.
+            if ctx.output is not None:
+                yield ctx.output
 
 
 class FunctionMiddlewareChain:
@@ -349,7 +365,12 @@ class FunctionMiddlewareChain:
 
 
 def validate_middleware(middleware: Sequence[Middleware] | None) -> tuple[Middleware, ...]:
-    """Validate a sequence of middleware, enforcing ordering guarantees."""
+    """Validate a sequence of middleware, enforcing ordering guarantees.
+
+    Repeated instances of the same middleware are dropped (the first occurrence keeps its
+    position so that an explicitly configured middleware wins over a later auto-registered
+    one), since the same instance must not execute more than once per invocation.
+    """
 
     if not middleware:
         return tuple()
@@ -358,17 +379,28 @@ def validate_middleware(middleware: Sequence[Middleware] | None) -> tuple[Middle
         if not isinstance(mw, Middleware):
             raise TypeError("All middleware must be instances of Middleware")
 
-    final_indices: list[int] = [i for i, mw in enumerate(middleware) if mw.is_final]
+    deduplicated: list[Middleware] = []
+    for mw in middleware:
+        if any(m is mw for m in deduplicated):
+            logger.warning(
+                "Middleware %s is registered more than once; the duplicate registration is ignored. "
+                "The same middleware instance must not be added to a function more than once.",
+                type(mw).__name__,
+            )
+            continue
+        deduplicated.append(mw)
+
+    final_indices: list[int] = [i for i, mw in enumerate(deduplicated) if mw.is_final]
 
     if len(final_indices) > 1:
-        names: str = ", ".join(type(middleware[i]).__name__ for i in final_indices)
+        names: str = ", ".join(type(deduplicated[i]).__name__ for i in final_indices)
         raise ValueError(f"Only one final middleware may be specified per function, but found multiple: {names}")
 
-    if final_indices and final_indices[0] != len(middleware) - 1:
-        name: str = type(middleware[final_indices[0]]).__name__
+    if final_indices and final_indices[0] != len(deduplicated) - 1:
+        name: str = type(deduplicated[final_indices[0]]).__name__
         raise ValueError(f"{name} is marked as final but is not the last middleware in the chain")
 
-    return tuple(middleware)
+    return tuple(deduplicated)
 
 
 __all__ = [

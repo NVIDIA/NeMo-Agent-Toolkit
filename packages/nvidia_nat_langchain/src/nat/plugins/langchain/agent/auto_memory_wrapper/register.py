@@ -69,9 +69,9 @@ class AutoMemoryAgentConfig(AgentBaseConfig, name="auto_memory_agent"):
 
     **Multi-tenant User Isolation:**
 
-    User ID is automatically extracted from runtime context (user_manager.get_id()) for proper
-    multi-tenant memory isolation. Set user_manager via SessionManager.session() in production.
-    Defaults to "default_user" for testing/development. See README.md for deployment examples.
+    User ID is read only from the identity resolved by the runtime session. Memory operations fail
+    closed when no identity is available. Configure authentication on the front end or pass an
+    explicit user ID to ``SessionManager.session()``. See README.md for deployment examples.
     """
 
     # Memory configuration

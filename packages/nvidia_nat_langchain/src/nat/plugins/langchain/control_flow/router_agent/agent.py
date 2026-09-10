@@ -22,6 +22,7 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.tools import BaseTool
+from langgraph.graph import END
 from langgraph.graph import StateGraph
 from pydantic import BaseModel
 from pydantic import Field
@@ -202,6 +203,7 @@ class RouterAgentGraph(BaseAgent):
         graph.add_node("agent", self.agent_node)
         graph.add_node("branch", self.branch_node)
         graph.add_edge("agent", "branch")
+        graph.add_edge("branch", END)
         graph.set_entry_point("agent")
 
         self.graph = graph.compile()

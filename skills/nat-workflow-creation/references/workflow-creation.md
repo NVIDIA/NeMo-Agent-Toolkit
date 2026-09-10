@@ -45,7 +45,7 @@ functions:
 llms:
   base_llm:
     _type: nim                            # confirm via `nat info components -t llm_provider`
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
 
 workflow:

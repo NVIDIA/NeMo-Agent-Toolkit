@@ -83,7 +83,9 @@ def walk_optimizables(obj: BaseModel, path: str = "") -> dict[str, SearchSpace]:
                 _, val_t = get_args(ann) or (None, None)
                 if isinstance(val_t, type) and issubclass(val_t, BaseModel):
                     if allowed_params is None or name in allowed_params:
-                        spaces[f"{full}.*"] = SearchSpace(low=None, high=None)  # sentinel
+                        # This is an internal wildcard marker, not a runnable search space.
+                        # Construct it without applying the public configuration validator.
+                        spaces[f"{full}.*"] = SearchSpace.model_construct()
 
     if allowed_params is None and has_optimizable_flag:
         logger.warning(

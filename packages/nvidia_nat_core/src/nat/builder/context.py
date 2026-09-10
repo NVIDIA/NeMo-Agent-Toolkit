@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import typing
-import uuid
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -36,6 +35,7 @@ from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.runtime.user_metadata import RequestAttributes
+from nat.utils.providers import generate_id
 from nat.utils.reactive.subject import Subject
 
 
@@ -247,7 +247,7 @@ class Context:
         AND create an OTel child span for that function call.
         """
         parent_function_node = self._context_state.active_function.get()
-        current_function_id = str(uuid.uuid4())
+        current_function_id = generate_id()
         current_function_node = InvocationNode(function_id=current_function_id,
                                                function_name=function_name,
                                                parent_id=parent_function_node.function_id,

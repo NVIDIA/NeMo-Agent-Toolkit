@@ -16,7 +16,7 @@
 import inspect
 import logging
 import types
-from functools import lru_cache
+from collections.abc import Callable
 from typing import Any
 from typing import TypeVar
 from typing import get_args
@@ -38,6 +38,29 @@ class TypeIntrospectionMixin:
     This mixin combines the DecomposedType class utilities with MRO traversal
     to properly handle complex inheritance chains like HeaderRedactionProcessor or ProcessingExporter.
     """
+
+    def _get_or_set_cache(self, attr_name: str, compute_func: Callable[[], Any], key: Any = None) -> Any:
+        """Centralized helper for lazy cache evaluation.
+
+        Args:
+            attr_name (str): The name of the instance attribute to use for caching.
+            compute_func (Callable[[], Any]): Function to compute the value if not cached.
+            key (Any, optional): If provided, the cache is treated as a dictionary. Defaults to None.
+
+        Returns:
+            Any: The cached or newly computed value.
+        """
+        if key is None:
+            if not hasattr(self, attr_name):
+                setattr(self, attr_name, compute_func())
+            return getattr(self, attr_name)
+
+        if not hasattr(self, attr_name):
+            setattr(self, attr_name, {})
+        cache_dict = getattr(self, attr_name)
+        if key not in cache_dict:
+            cache_dict[key] = compute_func()
+        return cache_dict[key]
 
     def _extract_types_from_signature_method(self) -> tuple[type[Any], type[Any]] | None:
         """Extract input/output types from the signature method.
@@ -277,7 +300,6 @@ class TypeIntrospectionMixin:
 
         return None
 
-    @lru_cache
     def _extract_input_output_types(self) -> tuple[type[Any], type[Any]]:
         """Extract both input and output types using available approaches.
 
@@ -287,19 +309,19 @@ class TypeIntrospectionMixin:
         Raises:
             ValueError: If types cannot be extracted
         """
-        # First try the signature-based approach
-        result = self._extract_types_from_signature_method()
-        if result:
-            return result
 
-        # Fallback to MRO-based approach for complex inheritance
-        result = self._extract_instance_types_from_mro()
-        if result:
-            return result
+        def compute():
+            result = self._extract_types_from_signature_method()
+            if result:
+                return result
+            result = self._extract_instance_types_from_mro()
+            if result:
+                return result
+            raise ValueError(f"Could not extract input/output types from {self.__class__.__name__}. "
+                             f"Ensure class inherits from a generic like Processor[InputT, OutputT] "
+                             f"or has a signature method with type annotations")
 
-        raise ValueError(f"Could not extract input/output types from {self.__class__.__name__}. "
-                         f"Ensure class inherits from a generic like Processor[InputT, OutputT] "
-                         f"or has a signature method with type annotations")
+        return self._get_or_set_cache("_extract_input_output_types_cache", compute)
 
     @property
     def input_type(self) -> type[Any]:
@@ -319,7 +341,6 @@ class TypeIntrospectionMixin:
         """
         return self._extract_input_output_types()[1]
 
-    @lru_cache
     def _get_union_info(self, type_obj: type[Any]) -> tuple[bool, tuple[type, ...] | None]:
         """Get union information for a type.
 
@@ -329,8 +350,12 @@ class TypeIntrospectionMixin:
         Returns:
             tuple[bool, tuple[type, ...] | None]: (is_union, union_types_or_none)
         """
-        decomposed = DecomposedType(type_obj)
-        return decomposed.is_union, decomposed.args if decomposed.is_union else None
+
+        def compute():
+            decomposed = DecomposedType(type_obj)
+            return (decomposed.is_union, decomposed.args if decomposed.is_union else None)
+
+        return self._get_or_set_cache("_get_union_info_cache", compute, key=type_obj)
 
     @property
     def has_union_input(self) -> bool:
@@ -423,25 +448,31 @@ class TypeIntrospectionMixin:
 
         return False
 
-    @lru_cache
     def _get_input_validator(self) -> type[BaseModel]:
         """Create a Pydantic model for validating input types.
 
         Returns:
             type[BaseModel]: The Pydantic model for validating input types
         """
-        input_type = self.input_type
-        return create_model(f"{self.__class__.__name__}InputValidator", input=(input_type, FieldInfo()))
 
-    @lru_cache
+        def compute():
+            input_type = self.input_type
+            return create_model(f"{self.__class__.__name__}InputValidator", input=(input_type, FieldInfo()))
+
+        return self._get_or_set_cache("_input_validator_cache", compute)
+
     def _get_output_validator(self) -> type[BaseModel]:
         """Create a Pydantic model for validating output types.
 
         Returns:
             type[BaseModel]: The Pydantic model for validating output types
         """
-        output_type = self.output_type
-        return create_model(f"{self.__class__.__name__}OutputValidator", output=(output_type, FieldInfo()))
+
+        def compute():
+            output_type = self.output_type
+            return create_model(f"{self.__class__.__name__}OutputValidator", output=(output_type, FieldInfo()))
+
+        return self._get_or_set_cache("_output_validator_cache", compute)
 
     def validate_input_type(self, item: Any) -> bool:
         """Validate that an item matches the expected input type using Pydantic.
@@ -477,7 +508,6 @@ class TypeIntrospectionMixin:
             logger.warning("Item %s is not compatible with output type %s", item, self.output_type)
             return False
 
-    @lru_cache
     def extract_non_optional_type(self, type_obj: type | types.UnionType) -> Any:
         """Extract the non-None type from Optional[T] or Union[T, None] types.
 
@@ -490,7 +520,11 @@ class TypeIntrospectionMixin:
         Returns:
             Any: The actual type without None, or the original type if not a union with None
         """
-        decomposed = DecomposedType(type_obj)  # type: ignore[arg-type]
-        if decomposed.is_optional:
-            return decomposed.get_optional_type().type
-        return type_obj
+
+        def compute():
+            decomposed = DecomposedType(type_obj)  # type: ignore[arg-type]
+            if decomposed.is_optional:
+                return decomposed.get_optional_type().type
+            return type_obj
+
+        return self._get_or_set_cache("_extract_non_optional_type_cache", compute, key=type_obj)

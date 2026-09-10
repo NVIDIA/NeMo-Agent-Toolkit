@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Literal
+
 from pydantic import Field
 from pydantic import HttpUrl
 from pydantic import model_validator
@@ -71,6 +73,9 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     token_storage_object_store: str | None = Field(
         default=None,
         description="Reference to object store for secure token storage. If None, uses in-memory storage.")
+
+    # MCP authentication is handled internally via 401-triggered discovery and does not support preflight.
+    preflight_auth: Literal[False] = False
 
     @model_validator(mode="after")
     def validate_auth_config(self):

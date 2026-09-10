@@ -29,6 +29,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
+from nat.data_models.api_server import UNKNOWN_MODEL_SENTINEL
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import ChatResponseChunk
@@ -108,6 +109,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
     from langgraph.graph.state import CompiledStateGraph
 
     from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
+    from nat.plugins.langchain.agent.base import _extract_message_text
     from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
     from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
     from nat.plugins.langchain.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
@@ -172,7 +174,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             # get and return the output from the state
             state = ToolCallAgentGraphState(**state)
             output_message = state.messages[-1]
-            return str(output_message.content)
+            return _extract_message_text(output_message.content)
 
         except GraphRecursionError:
             logger.warning(
@@ -223,8 +225,9 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                 if metadata.get("langgraph_node") != "agent":
                     continue
 
-                if isinstance(msg.content, str) and msg.content:
-                    yield ChatResponseChunk.create_streaming_chunk(msg.content, id_=chunk_id)
+                chunk_text = _extract_message_text(msg.content)
+                if chunk_text:
+                    yield ChatResponseChunk.create_streaming_chunk(chunk_text, id_=chunk_id)
 
                 tool_calls = getattr(msg, "tool_call_chunks", None) or getattr(msg, "tool_calls", None)
                 if tool_calls:
@@ -252,7 +255,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                             )
                         ],
                         created=datetime.datetime.now(datetime.UTC),
-                        model="unknown-model",
+                        model=UNKNOWN_MODEL_SENTINEL,
                         object="chat.completion.chunk",
                     )
         except GraphRecursionError:

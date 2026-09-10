@@ -38,6 +38,7 @@ from pydantic import Field
 from pydantic import FilePath
 
 from nat.builder.builder import Builder
+from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.cli.register_workflow import register_function
@@ -103,30 +104,48 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, LanggraphWrapperO
 
         self._graph = graph
 
+    @staticmethod
+    def _build_runnable_config() -> RunnableConfig | None:
+        """Build a ``RunnableConfig`` carrying the LangGraph ``thread_id``.
+
+        The ``conversation_id`` from the request context (set per chat
+        conversation) maps to LangGraph's ``thread_id``, which checkpointer-backed
+        graphs require for conversation continuity. Without it, invoking a graph
+        compiled with a checkpointer raises a ``ValueError``. Returns ``None``
+        when no conversation is in context, preserving the prior behavior for
+        stateless graphs.
+        """
+        conversation_id = Context.get().conversation_id
+        if conversation_id is None:
+            return None
+        return RunnableConfig(configurable={"thread_id": conversation_id})
+
     async def _ainvoke(self, value: LanggraphWrapperInput) -> LanggraphWrapperOutput:
 
+        config = self._build_runnable_config()
         try:
             # Check if the graph is an async context manager (e.g., from @asynccontextmanager)
             if hasattr(self._graph, '__aenter__') and hasattr(self._graph, '__aexit__'):
                 logger.info("Graph is an async context manager")
                 async with self._graph as graph:
-                    output = await graph.ainvoke(value.model_dump())
+                    output = await graph.ainvoke(value.model_dump(), config=config)
             else:
-                output = await self._graph.ainvoke(value.model_dump())
+                output = await self._graph.ainvoke(value.model_dump(), config=config)
             return LanggraphWrapperOutput.model_validate(output)
         except Exception as e:
             raise RuntimeError(f"Error in LangGraph workflow: {e}") from e
 
     async def _astream(self, value: LanggraphWrapperInput) -> AsyncGenerator[LanggraphWrapperOutput, None]:
+        config = self._build_runnable_config()
         try:
 
             if hasattr(self._graph, '__aenter__') and hasattr(self._graph, '__aexit__'):
                 logger.info("Graph is an async context manager")
                 async with self._graph as graph:
-                    async for output in graph.astream(value.model_dump()):
+                    async for output in graph.astream(value.model_dump(), config=config):
                         yield self._parse_stream_output(output)
             else:
-                async for output in self._graph.astream(value.model_dump()):
+                async for output in self._graph.astream(value.model_dump(), config=config):
                     yield self._parse_stream_output(output)
         except Exception as e:
             raise RuntimeError(f"Error in LangGraph workflow: {e}") from e

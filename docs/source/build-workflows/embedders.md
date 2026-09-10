@@ -34,7 +34,7 @@ The embedder configuration is defined in the `embedders` section of the workflow
 embedders:
   nim_embedder:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
   openai_embedder:
     _type: openai
     model_name: text-embedding-3-small

@@ -1186,6 +1186,15 @@ async def test_invalid_openai_chat_request_fields():
         ChatRequest(messages=[{"role": "user", "content": "Hello"}], stream="not_a_boolean")
 
     with pytest.raises(ValidationError):
+        ChatRequest(messages=[{"role": "user", "content": None}])
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages=[{"role": "assistant", "content": None}])
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages=[{"role": "tool", "tool_call_id": "call_123", "content": None}])
+
+    with pytest.raises(ValidationError):
         ChatRequest(messages="not_a_list")
 
     with pytest.raises(ValidationError):
@@ -1237,6 +1246,7 @@ async def test_restore_execution_state_sends_prompt_with_remaining_timeout():
     )
     handler.create_websocket_message = AsyncMock()
     handler._conversation_id = "conv1"
+    handler._user_id = "user-a"
 
     future: asyncio.Future = asyncio.get_running_loop().create_future()
     prompt_content = HumanPromptText(text="Confirm?", required=True, placeholder="y", timeout=10)
@@ -1255,10 +1265,31 @@ async def test_restore_execution_state_sends_prompt_with_remaining_timeout():
     with patch("nat.front_ends.fastapi.message_handler.time.monotonic", return_value=3.0):
         await handler._restore_execution_state()
 
+    mock_worker.get_conversation_handler.assert_called_once_with("user-a", "conv1")
     handler.create_websocket_message.assert_called_once()
     call_kwargs = handler.create_websocket_message.call_args[1]
     sent_content = call_kwargs["data_model"]
     assert sent_content.timeout == 7
+
+
+def test_conversation_handler_registry_isolates_users_and_owner_cleanup():
+    """Equal conversation IDs remain isolated across users and clean up independently."""
+    worker = FastApiFrontEndPluginWorker.__new__(FastApiFrontEndPluginWorker)
+    worker._conversation_handlers = {}
+    user_a_handler = MagicMock()
+    user_b_handler = MagicMock()
+
+    worker.set_conversation_handler("user-a", "shared-conversation", user_a_handler)
+    worker.set_conversation_handler("user-b", "shared-conversation", user_b_handler)
+
+    assert worker.get_conversation_handler("user-a", "shared-conversation") is user_a_handler
+    assert worker.get_conversation_handler("user-b", "shared-conversation") is user_b_handler
+    assert worker.get_conversation_handler("anonymous", "shared-conversation") is None
+
+    worker.remove_conversation_handler("user-a", "shared-conversation")
+
+    assert worker.get_conversation_handler("user-a", "shared-conversation") is None
+    assert worker.get_conversation_handler("user-b", "shared-conversation") is user_b_handler
 
 
 async def test_process_workflow_request_cancels_in_flight_task():

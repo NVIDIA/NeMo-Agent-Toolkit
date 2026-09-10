@@ -58,7 +58,7 @@ general:
 
 llms:
   nim_llm:
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     max_tokens: 1024
 

@@ -420,6 +420,38 @@ class TestMiddlewareErrorHandling:
         with pytest.raises(ValueError, match="found multiple"):
             validate_middleware([final1, final2])
 
+    def test_validate_middleware_deduplicates_repeated_instances(self):
+        """`validate_middleware` drops repeated instances of the same middleware, keeping the first occurrence."""
+        from nat.middleware.function_middleware import validate_middleware
+
+        shared = _TestMiddleware(test_param="shared", call_order=[])
+        other = _NonFinalTestMiddleware()
+
+        result = validate_middleware([shared, other, shared, shared])
+
+        assert result == (shared, other)
+
+    def test_validate_middleware_keeps_distinct_instances_of_same_class(self):
+        """`validate_middleware` keeps distinct middleware instances of the same class in order."""
+        from nat.middleware.function_middleware import validate_middleware
+
+        first = _NonFinalTestMiddleware()
+        second = _NonFinalTestMiddleware()
+
+        result = validate_middleware([first, second])
+
+        assert result == (first, second)
+
+    def test_validate_middleware_deduplicated_final_is_accepted(self):
+        """A final middleware listed twice is deduplicated to a single last entry, not a `multiple finals` error."""
+        from nat.middleware.function_middleware import validate_middleware
+
+        final = _FinalTestMiddleware()
+
+        result = validate_middleware([final, final])
+
+        assert result == (final, )
+
     def test_configure_middleware_final_not_last_raises_error(self):
         """configure_middleware raises ValueError when a final middleware is not last (build-path regression)."""
         from nat.builder.function import FunctionGroup

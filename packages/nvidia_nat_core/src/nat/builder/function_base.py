@@ -23,13 +23,13 @@ import logging
 import typing
 from abc import ABC
 from collections.abc import Callable
-from functools import lru_cache
 from types import NoneType
 
 from pydantic import BaseModel
 
 from nat.utils.type_converter import TypeConverter
 from nat.utils.type_utils import DecomposedType
+from nat.utils.type_utils import read_only_cached_property
 
 InputT = typing.TypeVar("InputT")
 StreamingOutputT = typing.TypeVar("StreamingOutputT")
@@ -92,8 +92,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
 
         self._converter: TypeConverter = TypeConverter(converters)
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def input_type(self) -> type[InputT]:
         """
         Get the input type of the function. The input type is determined by the generic parameters of the class.
@@ -120,8 +119,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
 
         raise ValueError("Could not find input schema")
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def input_class(self) -> type:
         """
         Get the python class of the input type. This is the class that can be used to check if a value is an instance of
@@ -146,8 +144,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
 
         return input_origin
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def input_schema(self) -> type[BaseModel]:
         """
         Get the Pydantic model schema for validating inputs. The schema must be pydantic models. This allows for
@@ -179,8 +176,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
         """
         return self._converter_list
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def streaming_output_type(self) -> type[StreamingOutputT]:
         """
         Get the streaming output type of the function. The streaming output type is determined by the generic parameters
@@ -208,8 +204,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
 
         raise ValueError("Could not find output schema")
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def streaming_output_class(self) -> type:
         """
         Get the python class of the output type. This is the class that can be used to check if a value is an instance
@@ -234,8 +229,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
 
         return output_origin
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def streaming_output_schema(self) -> type[BaseModel] | type[None]:
         """
         Get the Pydantic model schema for validating streaming outputs. The schema must be pydantic models. This allows
@@ -255,8 +249,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
         """
         return self._streaming_output_schema
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def single_output_type(self) -> type[SingleOutputT]:
         """
         Get the single output type of the function. The single output type is determined by the generic parameters
@@ -284,8 +277,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
 
         raise ValueError("Could not find output schema")
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def single_output_class(self) -> type:
         """
         Get the python class of the output type. This is the class that can be used to check if a value is an instance
@@ -310,8 +302,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
 
         return output_origin
 
-    @property
-    @lru_cache
+    @read_only_cached_property
     def single_output_schema(self) -> type[BaseModel] | type[None]:
         """
         Get the Pydantic model schema for validating single outputs. The schema must be pydantic models. This allows for

@@ -69,7 +69,7 @@ def fixture_mock_inner_agent() -> Mock:
 def fixture_mock_context() -> Mock:
     """Create a mock Context for testing."""
     context = Mock(spec=Context)
-    context.user_id = None
+    context.user_id = "test-user"
     context.metadata = None
     return context
 
@@ -140,10 +140,11 @@ class TestAutoMemoryWrapperGraph:
         count = wrapper.get_wrapper_node_count()
         assert count == 1  # only inner_agent
 
-    def test_get_user_id_default(self, wrapper_graph):
-        """Test user ID extraction defaults to 'default_user'."""
-        user_id = wrapper_graph._get_user_id_from_context()
-        assert user_id == "default_user"
+    def test_get_user_id_missing_raises(self, wrapper_graph, mock_context):
+        """Test memory access fails closed when the runtime did not resolve an identity."""
+        mock_context.user_id = None
+        with pytest.raises(RuntimeError, match="No resolved user identity"):
+            wrapper_graph._get_user_id_from_context()
 
     def test_get_user_id_from_context(self, wrapper_graph, mock_context):
         """Test user ID extraction from Context.user_id."""
@@ -153,24 +154,22 @@ class TestAutoMemoryWrapperGraph:
             user_id = wrapper_graph._get_user_id_from_context()
         assert user_id == "user-from-context"
 
-    def test_get_user_id_from_header(self, wrapper_graph, mock_context):
-        """Test user ID extraction from X-User-ID header."""
+    def test_get_user_id_does_not_read_raw_header(self, wrapper_graph, mock_context):
+        """Test the wrapper does not trust request metadata directly."""
+        mock_context.user_id = None
         mock_context.metadata = Mock()
         mock_context.metadata.headers = {"x-user-id": "test-user-123"}
-        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
-            wrapper_graph._context = mock_context
-            user_id = wrapper_graph._get_user_id_from_context()
-        assert user_id == "test-user-123"
+        with pytest.raises(RuntimeError, match="No resolved user identity"):
+            wrapper_graph._get_user_id_from_context()
 
-    def test_get_user_id_from_user_manager(self, wrapper_graph, mock_context):
-        """Test user ID extraction from user_manager."""
+    def test_get_user_id_does_not_use_legacy_user_manager(self, wrapper_graph, mock_context):
+        """Test the wrapper consumes only the authoritative runtime identity."""
+        mock_context.user_id = None
         mock_user_manager = Mock()
         mock_user_manager.get_id.return_value = "user-from-manager"
         mock_context.user_manager = mock_user_manager
-        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
-            wrapper_graph._context = mock_context
-            user_id = wrapper_graph._get_user_id_from_context()
-        assert user_id == "user-from-manager"
+        with pytest.raises(RuntimeError, match="No resolved user identity"):
+            wrapper_graph._get_user_id_from_context()
 
     def test_langchain_message_to_nat_message_human(self):
         """Test conversion of HumanMessage to NAT Message."""
@@ -204,7 +203,19 @@ class TestAutoMemoryWrapperGraph:
         items = call_args[0][0]
         assert len(items) == 1
         assert items[0].conversation == [{"role": "user", "content": "Test message"}]
-        assert items[0].user_id == "default_user"
+        assert items[0].user_id == "test-user"
+
+    async def test_user_id_is_resolved_once_per_graph_state(self, wrapper_graph, mock_context, mock_memory_editor):
+        state = AutoMemoryWrapperState(messages=[HumanMessage(content="Remember this")])
+
+        await wrapper_graph.memory_retrieve_node(state)
+        mock_context.user_id = "different-user"
+        await wrapper_graph.capture_user_message_node(state)
+
+        assert state.user_id == "test-user"
+        assert mock_memory_editor.search.call_args.kwargs["user_id"] == "test-user"
+        saved_item = mock_memory_editor.add_items.call_args.args[0][0]
+        assert saved_item.user_id == "test-user"
 
     async def test_capture_user_message_node_disabled(self, mock_inner_agent, mock_memory_editor, mock_context):
         """Test capture_user_message_node when disabled."""

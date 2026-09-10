@@ -17,7 +17,10 @@ limitations under the License.
 
 ![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent Toolkit banner image")
 
-# NVIDIA NeMo Agent Toolkit Subpackage
-This is a subpackage for Redis memory integration in NeMo Agent Toolkit.
+# NVIDIA NeMo Agent Toolkit Redis Compatibility Package
+
+`nvidia-nat-redis` is a compatibility package for the Redis integration in NeMo Agent Toolkit.
+
+The Redis plugin implementation is maintained by Redis in the [`nemo-agent-toolkit-redis`](https://pypi.org/project/nemo-agent-toolkit-redis/) package. Install that package directly for new projects, or install this package when you need the historical `nvidia-nat-redis` distribution name.
 
 For more information about NeMo Agent Toolkit, please visit the [NeMo Agent Toolkit package](https://pypi.org/project/nvidia-nat/).

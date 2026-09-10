@@ -15,6 +15,7 @@
 
 import os
 import sys
+import typing
 from unittest import mock
 
 if sys.version_info >= (3, 12):
@@ -305,6 +306,29 @@ def test_recursive_componentref_discovery():
 
         # Validate discovery of the expected ComponentRef types
         assert len(result_set.difference(expected_result)) == 0
+
+
+def test_recursive_componentref_discovery_bare_generic():
+
+    class TestConfig(FunctionBaseConfig, name="bare_generic"):
+        pass
+
+    instance_config = TestConfig()
+    expected_instance_id = generate_instance_id(instance_config)
+
+    assert list(recursive_componentref_discovery(instance_config, ["x"], typing.List)) == []  # noqa: UP006
+    assert list(recursive_componentref_discovery(instance_config, {"a": "b"}, typing.Dict)) == []  # noqa: UP006
+
+    list_refs = list(recursive_componentref_discovery(instance_config, [FunctionRef("function0")],
+                                                      typing.List))  # noqa: UP006
+    assert list_refs == [(expected_instance_id,
+                          ComponentRefNode(ref_name="function0",
+                                           component_group=ComponentGroup.FUNCTIONS))]  # type: ignore
+
+    dict_refs = list(recursive_componentref_discovery(instance_config, {"k": LLMRef("llm0")},
+                                                      typing.Dict))  # noqa: UP006
+    assert dict_refs == [(expected_instance_id, ComponentRefNode(ref_name="llm0",
+                                                                 component_group=ComponentGroup.LLMS))]  # type: ignore
 
 
 def test_update_dependency_graph(nested_nat_config: Config):

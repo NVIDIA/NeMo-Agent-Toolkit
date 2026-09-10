@@ -15,13 +15,14 @@
 
 import logging
 import time
-import uuid
 
 from nat.data_models.interactive import HumanPrompt
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.interactive import InteractionResponse
 from nat.data_models.interactive import InteractionStatus
+from nat.utils.providers import current_time
+from nat.utils.providers import generate_id
 
 logger = logging.getLogger(__name__)
 
@@ -59,15 +60,15 @@ class UserInteractionManager:
         Returns the user's typed-in answer as a string.
         """
 
-        uuid_req = str(uuid.uuid4())
+        uuid_req = generate_id()
         status = InteractionStatus.IN_PROGRESS
-        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(current_time()))
         sys_human_interaction = InteractionPrompt(id=uuid_req, status=status, timestamp=timestamp, content=content)
 
         resp = await self._context_state.user_input_callback.get()(sys_human_interaction)
 
         # Rebuild a InteractionResponse object with the response
-        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(current_time()))
         status = InteractionStatus.COMPLETED
         sys_human_interaction = InteractionResponse(id=uuid_req, status=status, timestamp=timestamp, content=resp)
 

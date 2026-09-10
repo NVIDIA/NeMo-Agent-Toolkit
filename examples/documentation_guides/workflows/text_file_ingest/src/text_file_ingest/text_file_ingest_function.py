@@ -30,7 +30,7 @@ class TextFileIngestFunctionConfig(FunctionBaseConfig, name="text_file_ingest"):
     ingest_glob: str
     description: str
     chunk_size: int = 1024
-    embedder_name: EmbedderRef = "nvidia/nv-embedqa-e5-v5"
+    embedder_name: EmbedderRef = "nvidia/nemotron-3-embed-1b"
 
 
 @register_function(config_type=TextFileIngestFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])

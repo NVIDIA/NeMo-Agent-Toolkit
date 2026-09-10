@@ -27,6 +27,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 
 from nat.plugins.langchain.agent.base import BaseAgent
+from nat.plugins.langchain.agent.base import _extract_message_text
 from nat.plugins.langchain.agent.base import _format_agent_thoughts_for_log
 
 
@@ -196,6 +197,62 @@ def test_format_agent_thoughts_for_log_uses_reasoning_when_content_empty():
     message = AIMessage(content="\n", additional_kwargs={"reasoning_content": "thinking through the tool choice"})
 
     assert _format_agent_thoughts_for_log(message) == "thinking through the tool choice"
+
+
+@pytest.mark.parametrize(
+    "content, expected",
+    [
+        # Plain string content (OpenAI, NIM, Gemini, etc.) is returned unchanged.
+        ("hello world", "hello world"),
+        ("", ""),
+        # Anthropic / AWS Bedrock (ChatBedrockConverse) return a list of typed blocks.
+        ([{
+            "type": "text", "text": "hello world"
+        }], "hello world"),
+        ([{
+            "type": "text", "text": "There are "
+        }, {
+            "type": "text", "text": "9 datasources"
+        }], "There are 9 datasources"),
+        # Streaming deltas include empty lists before the first token.
+        ([], ""),
+        # Non-text blocks (tool use, reasoning/thinking) are ignored.
+        ([{
+            "type": "tool_use", "name": "search", "input": {}
+        }], ""),
+        ([{
+            "type": "text", "text": "answer"
+        }, {
+            "type": "tool_use", "name": "x", "input": {}
+        }], "answer"),
+        ([{
+            "type": "thinking", "thinking": "deliberating"
+        }], ""),
+        # Blocks without an explicit type but carrying text are treated as text.
+        ([{
+            "text": "untyped"
+        }], "untyped"),
+        # Bare strings inside the list are concatenated.
+        (["a", "b"], "ab"),
+        # Unsupported shapes flatten to an empty string rather than a stringified repr.
+        (None, ""),
+        (42, ""),
+    ],
+)
+def test_extract_message_text(content, expected):
+    """Flatten string and Anthropic/Bedrock list-style content to plain text."""
+    assert _extract_message_text(content) == expected
+
+
+def test_extract_message_text_streamed_blocks_reconstruct_answer():
+    """Regression: streamed Bedrock chunks (list content) must reconstruct to the full answer.
+
+    ChatBedrockConverse yields AIMessageChunk objects whose ``content`` is a list of
+    text blocks. Concatenating ``_extract_message_text`` over the chunks must rebuild
+    the answer; the previous ``isinstance(content, str)`` guard dropped them entirely.
+    """
+    streamed_chunks = [[], [{"type": "text", "text": "NEMO-"}], [{"type": "text", "text": "OK"}], ""]
+    assert "".join(_extract_message_text(c) for c in streamed_chunks) == "NEMO-OK"
 
 
 class TestCallLLM:

@@ -16,6 +16,37 @@
 import pytest
 
 
+@pytest.mark.asyncio
+async def test_batch_summaries_are_reduced_from_parallel_writes():
+    from langgraph.graph import END
+    from langgraph.graph import START
+    from langgraph.graph import StateGraph
+    from langgraph.types import Send
+
+    from nat_automated_description_generation.utils.workflow_utils import BatchState
+    from nat_automated_description_generation.utils.workflow_utils import OverallState
+
+    async def create_batches(state: OverallState) -> dict[str, list[list[str]]]:
+        return {"batches": [["doc1"], ["doc2"], ["doc3"]]}
+
+    async def create_batch_summary(state: BatchState) -> dict[str, list[str]]:
+        return {"summaries": [f"summary:{state['batch'][0]}"]}
+
+    def dispatch_batches(state: OverallState) -> list[Send]:
+        return [Send("create_batch_summary", {"batch": batch}) for batch in state["batches"]]
+
+    graph = StateGraph(OverallState)
+    graph.add_node("create_batches", create_batches)
+    graph.add_node("create_batch_summary", create_batch_summary)
+    graph.add_edge(START, "create_batches")
+    graph.add_conditional_edges("create_batches", dispatch_batches, ["create_batch_summary"])
+    graph.add_edge("create_batch_summary", END)
+
+    result = await graph.compile().ainvoke({"contents": [], "summaries": []})
+
+    assert sorted(result["summaries"]) == ["summary:doc1", "summary:doc2", "summary:doc3"]
+
+
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key", "populate_milvus")

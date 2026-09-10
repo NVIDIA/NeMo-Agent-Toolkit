@@ -234,7 +234,7 @@ class TestTypeIntrospectionMixin:
             _ = instance.input_type
 
     def test_properties_cached(self):
-        """Test that properties are cached using lru_cache"""
+        """Test that properties are cached via instance dictionary"""
         instance = ConcreteDirectClass()
 
         # Access properties multiple times
@@ -257,8 +257,6 @@ class TestTypeIntrospectionMixin:
 
         # Mock to remove __orig_bases__
         with patch.object(instance.__class__, '__orig_bases__', []):
-            # Clear cache to force re-evaluation
-            instance._extract_input_output_types.cache_clear()
             with pytest.raises(ValueError):
                 _ = instance.input_type
 

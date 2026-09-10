@@ -557,7 +557,7 @@ class TestLLMClientGeneratorsFull:
 
         # Create NIM config
         config = NIMModelConfig(api_key="nim-test-key",
-                                model_name="llama-3.1-70b-instruct",
+                                model_name="nvidia/nemotron-3-super-120b-a12b",
                                 base_url="https://integrate.api.nvidia.com/v1")
         builder = Mock(spec=Builder)
 

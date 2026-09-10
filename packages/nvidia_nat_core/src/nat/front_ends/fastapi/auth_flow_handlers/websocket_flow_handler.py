@@ -27,6 +27,7 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client
 
 from nat.authentication.interfaces import FlowHandlerBase
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.data_models.api_server import OAuthMode
 from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.interactive import _HumanPromptOAuthConsent
@@ -42,6 +43,8 @@ class FlowState:
     verifier: str | None = None
     client: AsyncOAuth2Client | None = None
     config: OAuth2AuthCodeFlowProviderConfig | None = None
+    return_url: str | None = None
+    oauth_mode: OAuthMode = OAuthMode.REDIRECT
 
 
 class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
@@ -50,12 +53,22 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
                  add_flow_cb: Callable[[str, FlowState], Awaitable[None]],
                  remove_flow_cb: Callable[[str], Awaitable[None]],
                  web_socket_message_handler: WebSocketMessageHandler,
-                 auth_timeout_seconds: float = 300.0):
+                 auth_timeout_seconds: float = 300.0,
+                 return_url: str | None = None):
 
         self._add_flow_cb: Callable[[str, FlowState], Awaitable[None]] = add_flow_cb
         self._remove_flow_cb: Callable[[str], Awaitable[None]] = remove_flow_cb
         self._web_socket_message_handler: WebSocketMessageHandler = web_socket_message_handler
         self._auth_timeout_seconds: float = auth_timeout_seconds
+        self._return_url: str | None = return_url
+        self._oauth_mode: OAuthMode = OAuthMode.REDIRECT
+        self._current_flow_state: FlowState | None = None
+
+    def set_oauth_mode(self, mode: OAuthMode) -> None:
+        """Record the UI's preferred OAuth presentation mode for this connection."""
+        self._oauth_mode = mode
+        if self._current_flow_state is not None and not self._current_flow_state.future.done():
+            self._current_flow_state.oauth_mode = mode
 
     async def authenticate(
             self,
@@ -114,7 +127,8 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
     async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
 
         state = secrets.token_urlsafe(16)
-        flow_state = FlowState(config=config)
+        flow_state = FlowState(config=config, return_url=self._return_url, oauth_mode=self._oauth_mode)
+        self._current_flow_state = flow_state
 
         flow_state.client = self.create_oauth_client(config)
 
@@ -137,7 +151,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
         except TimeoutError as exc:
             raise RuntimeError(f"Authentication flow timed out after {self._auth_timeout_seconds} seconds.") from exc
         finally:
-
+            self._current_flow_state = None
             await self._remove_flow_cb(state)
 
         return AuthenticatedContext(headers={"Authorization": f"Bearer {token['access_token']}"},

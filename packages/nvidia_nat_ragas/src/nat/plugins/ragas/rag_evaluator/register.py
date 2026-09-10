@@ -75,6 +75,14 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
 
         return values
 
+    @model_validator(mode="after")
+    def reject_vulnerable_metrics(self):
+        """Reject RAGAS metrics disabled due to known security vulnerabilities."""
+        if self.metric_name == "MultiModalFaithfulness":
+            raise ValueError(
+                "RAGAS metric 'MultiModalFaithfulness' is disabled because it is affected by CVE-2026-6587.")
+        return self
+
     @property
     def metric_name(self) -> str:
         """Returns the single metric name."""

@@ -342,7 +342,7 @@ def test_yaml_load_with_base_inheritance():
         base_file.write("""
         llms:
           nim_llm:
-            model_name: meta/llama-3.1-70b-instruct
+            model_name: nvidia/nemotron-3-super-120b-a12b
             temperature: 0.0
             max_tokens: 1024
         workflow:
@@ -367,7 +367,7 @@ def test_yaml_load_with_base_inheritance():
         # Check overridden value
         assert config["llms"]["nim_llm"]["temperature"] == 0.9
         # Check inherited values
-        assert config["llms"]["nim_llm"]["model_name"] == "meta/llama-3.1-70b-instruct"
+        assert config["llms"]["nim_llm"]["model_name"] == "nvidia/nemotron-3-super-120b-a12b"
         assert config["llms"]["nim_llm"]["max_tokens"] == 1024
         assert config["workflow"]["_type"] == "react_agent"
         assert config["workflow"]["verbose"] is True

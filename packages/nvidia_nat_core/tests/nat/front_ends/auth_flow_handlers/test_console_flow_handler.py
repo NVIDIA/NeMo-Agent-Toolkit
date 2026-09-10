@@ -14,16 +14,21 @@
 # limitations under the License.
 
 import asyncio
+import logging
 import socket
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import httpx
 import pytest
+from authlib.integrations.httpx_client import AsyncOAuth2Client
 from httpx import ASGITransport
 from mock_oauth2_server import MockOAuth2Server
 
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from nat.data_models.authentication import AuthFlowType
 from nat.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
+from nat.front_ends.console.console_front_end_plugin import ConsoleFrontEndPlugin
 
 
 # --------------------------------------------------------------------------- #
@@ -158,6 +163,136 @@ async def test_oauth2_flow_in_process(monkeypatch, mock_server):
     assert not handler._flows
 
 
+async def test_console_oauth2_concurrent_flows_use_isolated_clients(monkeypatch, mock_server):
+    """
+    Two OAuth2 flows started concurrently on the *same* handler instance must each
+    redeem their authorization code with the OAuth client that was built for that
+    flow, not whichever client happens to have been constructed most recently.
+
+    Regression test for a shared ``self._oauth_client`` that got overwritten by
+    the second flow before the first flow's redirect callback could use it.
+    """
+    port_a, port_b = _free_port(), _free_port()
+
+    mock_server.register_client(client_id="cid-a", client_secret="secret-a", redirect_base=f"http://localhost:{port_a}")
+    mock_server.register_client(client_id="cid-b", client_secret="secret-b", redirect_base=f"http://localhost:{port_b}")
+
+    def _cfg(client_id: str, secret: str, port: int) -> OAuth2AuthCodeFlowProviderConfig:
+        return OAuth2AuthCodeFlowProviderConfig(
+            client_id=client_id,
+            client_secret=secret,
+            authorization_url="http://testserver/oauth/authorize",
+            token_url="http://testserver/oauth/token",
+            scopes=["read"],
+            use_pkce=True,
+            redirect_uri=f"http://localhost:{port}/auth/redirect",
+        )
+
+    cfg_a = _cfg("cid-a", "secret-a", port_a)
+    cfg_b = _cfg("cid-b", "secret-b", port_b)
+
+    handler = _TestHandler(mock_server)
+
+    # Force the interleaving that exposes the bug: flow A's authorization-code
+    # exchange must not reach the token endpoint until *after* flow B has
+    # constructed its own OAuth client (which is what overwrites the shared
+    # `self._oauth_client` attribute). Gate flow A's redirect leg on flow B's
+    # construct_oauth_client() call instead of relying on incidental scheduling.
+    b_client_ready = asyncio.Event()
+    original_construct = handler.construct_oauth_client
+
+    def _construct_and_signal(cfg):
+        client = original_construct(cfg)
+        if cfg.client_id == "cid-b":
+            b_client_ready.set()
+        return client
+
+    monkeypatch.setattr(handler, "construct_oauth_client", _construct_and_signal)
+
+    # Records which OAuth client (by client_id) actually performed the token
+    # exchange for each flow's redirect callback, keyed by the task driving that
+    # flow's redirect so a corrupted `self._oauth_client` shows up as a mismatch.
+    used_client_ids: dict[asyncio.Task, str] = {}
+    original_fetch_token = AsyncOAuth2Client.fetch_token
+
+    async def _spy_fetch_token(self, *args, **kwargs):
+        task = asyncio.current_task()
+        assert task is not None
+        used_client_ids[task] = self.client_id
+        return await original_fetch_token(self, *args, **kwargs)
+
+    monkeypatch.setattr(AsyncOAuth2Client, "fetch_token", _spy_fetch_token, raising=True)
+
+    drive_task_labels: dict[asyncio.Task, str] = {}
+
+    async def _drive(url: str, *, label: str) -> None:
+        async with httpx.AsyncClient(
+                transport=ASGITransport(app=mock_server._app),
+                base_url="http://testserver",
+                follow_redirects=False,
+                timeout=10,
+        ) as c:
+            r = await c.get(url)
+            assert r.status_code == 302
+            redirect_url = r.headers["location"]
+
+        # Flow A must not redeem its code until flow B's client has overwritten
+        # `self._oauth_client` -- that ordering is exactly what the bug depends on.
+        if label == "A":
+            await b_client_ready.wait()
+
+        while handler.redirect_app is None:
+            await asyncio.sleep(0.01)
+
+        async with httpx.AsyncClient(
+                transport=ASGITransport(app=handler.redirect_app),
+                base_url="http://localhost",
+                follow_redirects=True,
+                timeout=10,
+        ) as c:
+            await c.get(redirect_url)
+
+    # webbrowser.open() is called exactly once per flow, synchronously, from within
+    # that flow's own authenticate() call -- flow A's call happens before flow B's
+    # authenticate() is even started (see the ordering below), so call order reliably
+    # identifies which flow each opened URL belongs to (the URL itself is not a safe
+    # signal: redirect_uri is percent-encoded in the query string).
+    open_calls: list[str] = []
+
+    def _open(url: str, *_):
+        label = "A" if not open_calls else "B"
+        open_calls.append(url)
+        t = asyncio.ensure_future(_drive(url, label=label))
+        drive_task_labels[t] = label
+
+    monkeypatch.setattr("webbrowser.open", _open, raising=True)
+    monkeypatch.setattr("click.echo", lambda *_: None, raising=True)
+
+    # Start flow A and let it run up to (and including) opening its browser, then
+    # do the same for flow B -- flow B's construct_oauth_client() overwrites the
+    # shared `self._oauth_client` attribute before flow A's redirect is allowed
+    # to proceed (via the gate above).
+    task_a = asyncio.ensure_future(handler.authenticate(cfg_a, AuthFlowType.OAUTH2_AUTHORIZATION_CODE))
+    await asyncio.sleep(0)
+    task_b = asyncio.ensure_future(handler.authenticate(cfg_b, AuthFlowType.OAUTH2_AUTHORIZATION_CODE))
+    await asyncio.sleep(0)
+
+    ctx_a, ctx_b = await asyncio.gather(task_a, task_b)
+
+    # Map the recorded fetch_token calls back to "A"/"B" via the drive task that made them.
+    results = {drive_task_labels[task]: client_id for task, client_id in used_client_ids.items()}
+
+    assert results == {
+        "A": "cid-a", "B": "cid-b"
+    }, ("Each flow must redeem its own authorization code with its own OAuth client")
+
+    tok_a = ctx_a.headers["Authorization"].split()[1]
+    tok_b = ctx_b.headers["Authorization"].split()[1]
+    assert tok_a in mock_server.tokens
+    assert tok_b in mock_server.tokens
+    assert tok_a != tok_b
+
+
 # --------------------------------------------------------------------------- #
 # Error Recovery Tests                                                        #
 # --------------------------------------------------------------------------- #
@@ -196,3 +331,83 @@ async def test_console_oauth2_flow_error_handling(monkeypatch, mock_server):
     # Verify the error message contains the original exception information
     error_message = str(exc_info.value)
     assert "Invalid OAuth client configuration" in error_message
+
+
+# ---------------------------------------------------------------------------
+# ConsoleFrontEndPlugin - preflight authentication
+# ---------------------------------------------------------------------------
+
+
+def _sm(auth_providers: dict) -> MagicMock:
+    sm = MagicMock()
+    sm.config.authentication = auth_providers
+    sm.shared_builder.get_auth_provider = AsyncMock()
+    return sm
+
+
+def _cfg(preflight_auth: bool = True) -> MagicMock:
+    cfg = MagicMock()
+    cfg.preflight_auth = preflight_auth
+    return cfg
+
+
+async def _run(sm: MagicMock) -> None:
+    """Call _run_preflight_auth without instantiating the full plugin."""
+    await ConsoleFrontEndPlugin._run_preflight_auth(MagicMock(), sm)
+
+
+async def test_console_preflight_auth_authenticates_single_provider():
+    provider = AsyncMock()
+    sm = _sm({"provider_a": _cfg()})
+    sm.shared_builder.get_auth_provider.return_value = provider
+
+    await _run(sm)
+
+    sm.shared_builder.get_auth_provider.assert_awaited_once_with("provider_a")
+    provider.authenticate.assert_awaited_once()
+
+
+async def test_console_preflight_auth_authenticates_all_preflight_providers():
+    provider_a, provider_b = AsyncMock(), AsyncMock()
+    sm = _sm({"provider_a": _cfg(), "provider_b": _cfg()})
+    sm.shared_builder.get_auth_provider.side_effect = [provider_a, provider_b]
+
+    await _run(sm)
+
+    assert sm.shared_builder.get_auth_provider.await_count == 2
+    provider_a.authenticate.assert_awaited_once()
+    provider_b.authenticate.assert_awaited_once()
+
+
+async def test_console_preflight_auth_skips_non_preflight_providers():
+    provider_a = AsyncMock()
+    sm = _sm({"provider_a": _cfg(), "provider_b": _cfg(preflight_auth=False)})
+    sm.shared_builder.get_auth_provider.return_value = provider_a
+
+    await _run(sm)
+
+    sm.shared_builder.get_auth_provider.assert_awaited_once_with("provider_a")
+
+
+async def test_console_preflight_auth_logs_warning_and_does_not_raise_on_failure(caplog):
+    provider = AsyncMock()
+    provider.authenticate.side_effect = RuntimeError("OAuth server unreachable")
+    sm = _sm({"provider_a": _cfg()})
+    sm.shared_builder.get_auth_provider.return_value = provider
+
+    with caplog.at_level(logging.WARNING):
+        await _run(sm)
+
+    assert any("provider_a" in r.message for r in caplog.records)
+
+
+async def test_console_preflight_auth_continues_remaining_providers_after_one_fails():
+    provider_a, provider_b = AsyncMock(), AsyncMock()
+    provider_a.authenticate.side_effect = RuntimeError("a failed")
+    sm = _sm({"provider_a": _cfg(), "provider_b": _cfg()})
+    sm.shared_builder.get_auth_provider.side_effect = [provider_a, provider_b]
+
+    await _run(sm)
+
+    provider_a.authenticate.assert_awaited_once()
+    provider_b.authenticate.assert_awaited_once()
