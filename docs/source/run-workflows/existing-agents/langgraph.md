@@ -187,7 +187,7 @@ tools:
 embedders:
   text_embedder:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
 
 workflow:
   _type: langgraph_wrapper

@@ -16,6 +16,7 @@
 # flake8: noqa
 
 from nat.middleware.cache import register as register_cache
+from nat.middleware.circuit_breaker import register as register_circuit_breaker
 from nat.middleware.dynamic import register as register_dynamic
 from nat.middleware.logging import register as register_logging
 from nat.middleware.timeout import register as register_timeout

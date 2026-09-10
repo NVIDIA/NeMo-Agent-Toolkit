@@ -81,7 +81,7 @@ Configure this workflow through the `config.yml` file.
 
 This example uses the same LLM setup as the hybrid control flow example:
 
-- `model_name: nvidia/nemotron-3-nano-30b-a3b`
+- `model_name: nvidia/nemotron-3.5-lightning-30b-a3b`
 - `temperature: 0.0`
 - `max_tokens: 4096`
 
@@ -106,7 +106,7 @@ This example uses the same LLM setup as the hybrid control flow example:
 llms:
   nim_llm:
     _type: nim
-    model_name: nvidia/nemotron-3-nano-30b-a3b
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     temperature: 0.0
     max_tokens: 4096
 

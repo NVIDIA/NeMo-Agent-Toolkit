@@ -225,3 +225,6 @@ examples/notebooks/examples/retail_sales_agent/deploy/volumes/
 
 # End of https://www.gitignore.io/api/vim,c++,cmake,python,synology
 /.idea
+
+# PDF file downloaded in examples/frameworks/haystack_deep_research_agent example
+examples/frameworks/haystack_deep_research_agent/src/nat_haystack_deep_research_agent/data/bedrock-ug.pdf

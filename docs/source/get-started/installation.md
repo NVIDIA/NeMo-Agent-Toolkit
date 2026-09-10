@@ -23,7 +23,7 @@ This guide will help you set up your NVIDIA NeMo Agent Toolkit development envir
 
 The following [LLM](../build-workflows/llms/index.md) API providers are supported:
 
-- NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)
+- NIM
 - OpenAI
 - AWS Bedrock
 - Azure OpenAI
@@ -80,7 +80,7 @@ To install these first-party plugin libraries, you can use the full distribution
 | macOS | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested |
 | [Windows (WSL2)](#windows-wsl2) | x86_64 | 3.11, 3.12, 3.13 | ✅ Tested |
 | [Windows (WSL2)](#windows-wsl2) | aarch64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
-| Windows | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
+| Windows | x86_64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
 | Windows | aarch64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
 
 ## Software Prerequisites

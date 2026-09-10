@@ -239,7 +239,7 @@ class NIMDeploymentConfig(BaseModel):
     """
 
     image_name: str = Field(
-        default="nvcr.io/nim/meta/llama-3.1-8b-instruct",
+        default="nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b",
         description="NIM container image name.",
     )
     image_tag: str = Field(

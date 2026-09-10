@@ -14,7 +14,7 @@ The example below is a minimal but complete `workflow.yaml` you can adapt. It us
 llms:
   main_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     base_url: https://integrate.api.nvidia.com/v1
     api_key: $NVIDIA_API_KEY
     temperature: 0.0
@@ -23,7 +23,7 @@ llms:
 
   judge_llm:
     _type: nim
-    model_name: nvidia/llama-3.3-nemotron-super-49b-v1
+    model_name: nvidia/nemotron-3-super-120b-a12b
     base_url: https://integrate.api.nvidia.com/v1
     api_key: $NVIDIA_API_KEY
     temperature: 0.0

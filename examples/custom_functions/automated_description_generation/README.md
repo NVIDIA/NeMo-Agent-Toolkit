@@ -103,14 +103,14 @@ It will then rename the retriever tool for that database with the generated desc
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     max_tokens: 10000
 
 embedders:
   milvus_embedder:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
     temperature: 0.0
     truncate: "END"
 
@@ -205,14 +205,14 @@ Let us see what happens if we use the automated description generate function to
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     max_tokens: 10000
 
 embedders:
   milvus_embedder:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
     temperature: 0.0
     truncate: "END"
 

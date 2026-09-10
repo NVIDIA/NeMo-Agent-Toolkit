@@ -317,7 +317,7 @@ This is useful when you call a remote workflow and want its steps to appear unde
 
 ## Deterministic Identifiers and Timestamps
 
-The runtime stamps workflow runs, intermediate steps, spans, and function invocations with generated identifiers (`uuid.uuid4`) and wall-clock timestamps (`time.time`). For reproducible runs — for example, record or replay style tests, golden-file trace comparison, or runtimes that re-execute workflow code and need identifiers to remain stable across re-executions — install process-wide providers that the runtime uses instead:
+The runtime stamps workflow runs, intermediate steps, spans, function invocations, and interaction prompts and responses with generated identifiers (`uuid.uuid4`) and wall-clock timestamps (`time.time`). For reproducible runs — for example, record or replay style tests, golden-file trace comparison, or runtimes that re-execute workflow code and need identifiers to remain stable across re-executions — install process-wide providers that the runtime uses instead:
 
 ```python
 import itertools

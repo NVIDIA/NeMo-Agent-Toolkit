@@ -63,6 +63,68 @@ to the client.
 - `error`: Error information object with `code` (string, see Error types), `message` (string), and `details` (string)
 - `schema_version`: schema version - `OPTIONAL`
 
+## Reconnecting an Active Conversation
+
+To resume an active workflow, reconnect using the `conversation_id` query parameter for that workflow and an identity credential that resolves to the same user who started the workflow. The server restores the workflow state only when both values match. A connection with another identity, or no identity, does not receive the existing workflow state or the pending Human-in-the-Loop prompt for that workflow.
+
+The server accepts the following identity credentials:
+
+- A `nat-session` cookie or `?session=` query parameter.
+- A JWT Bearer token.
+- An API key supplied as a Bearer token or `X-API-Key` header.
+- HTTP Basic credentials.
+
+Clients can also send a JWT, API key, or Basic credentials through an `auth_message`. Send the message before expecting restoration; restoration occurs after authentication succeeds.
+
+By default, all listed identity credential methods are accepted. To restrict WebSocket identity credentials, set `accepted_identity_credentials` in the FastAPI front-end configuration:
+
+```yaml
+general:
+  front_end:
+    _type: fastapi
+    accepted_identity_credentials:
+      - session_cookie
+      - jwt
+```
+
+Supported values are `session_cookie`, `jwt`, `api_key`, and `basic`. The `api_key` value covers both Bearer API keys and the `X-API-Key` header. An empty list rejects every supplied identity credential. When a client supplies a disabled credential method, the server returns an authentication error and does not restore workflow state.
+
+JWT signature and claim verification is optional. Define one or more named JWT authentication providers, then select them with `identity_authentication` in the FastAPI front-end configuration. Each selected provider verifies JWT tokens from its configured issuer before the server resolves the user identity:
+
+```yaml
+authentication:
+  corporate_jwt:
+    _type: jwt
+    issuer_url: https://identity.example.com
+    jwks_uri: https://identity.example.com/.well-known/jwks.json
+    audience: nemo-agent-toolkit
+    scopes:
+      - workflow:resume
+
+general:
+  front_end:
+    _type: fastapi
+    accepted_identity_credentials:
+      - jwt
+    identity_authentication:
+      - corporate_jwt
+```
+
+Each JWT provider requires `issuer_url`, `jwks_uri`, and `audience`. It can also require `scopes` and configure `timeout` and `leeway`. Add another named provider and select it in `identity_authentication` to accept JWT tokens from another issuer. The issuer claim selects the matching provider; an unknown issuer or a failed signature, time, audience, or scope check returns an authentication error and does not restore workflow state. If `identity_authentication` is omitted, JWT tokens retain the existing decode-only behavior. Configuring `identity_authentication` while excluding `jwt` from `accepted_identity_credentials` is invalid.
+
+For local testing or a deployment where an authenticating reverse proxy is the only service that can reach `nat serve`, the FastAPI front end can instead trust an upstream identity header:
+
+```yaml
+general:
+  front_end:
+    _type: fastapi
+    identity_header: X-User-ID
+```
+
+This setting is secure only if the proxy authenticates every connection, overwrites any client-supplied value, and the server is in an isolated network environment. When enabled, the header is authoritative: the connection is rejected if it is missing, empty, or repeated,
+and an `auth_message` cannot replace the resolved identity. `identity_header` cannot be combined with
+`accepted_identity_credentials` or `identity_authentication`. Do not use this technique if `nat serve` is reachable by untrusted clients.
+
 ## Auth Message
 This message allows clients to authenticate over a WebSocket connection when header-based or
 cookie-based authentication is not feasible (e.g., browser WebSocket APIs that do not support custom headers).

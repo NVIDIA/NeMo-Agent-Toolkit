@@ -20,6 +20,5 @@ base: base-config.yml
 
 llms:
   nim_llm:
-    model_name: meta/llama-3.3-70b-instruct  # Different model version
+    model_name: nvidia/nemotron-3-super-120b-a12b  # Different model version
     temperature: 0.1  # Slightly more variability
-

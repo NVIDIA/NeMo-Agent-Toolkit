@@ -32,6 +32,9 @@
         },
         {
             "pattern": "^https://docs\\.nvidia\\.com/dynamo"
+        },
+        {
+            "pattern": "^https://build\\.nvidia\\.com"
         }
     ]
 }

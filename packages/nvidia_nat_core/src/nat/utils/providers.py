@@ -14,9 +14,10 @@
 # limitations under the License.
 """Process-wide provider hooks for generated identifiers and timestamps.
 
-The runtime stamps workflow runs, intermediate steps, spans, and function invocations with freshly generated
-UUIDs and wall-clock timestamps. By default these come from :func:`uuid.uuid4` and :func:`time.time`, which is
-correct for normal execution but makes two otherwise identical runs produce different identifiers and timings.
+The runtime stamps workflow runs, intermediate steps, spans, function invocations, and interaction prompts and
+responses with freshly generated UUIDs and wall-clock timestamps. By default these come from :func:`uuid.uuid4`
+and :func:`time.time`, which is correct for normal execution but makes two otherwise identical runs produce
+different identifiers and timings.
 
 Integrations that need reproducible runs can install their own providers. Examples include record/replay style
 testing, golden-file trace comparison, and integrations with runtimes that re-execute workflow code and require

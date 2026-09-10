@@ -14,11 +14,18 @@
 # limitations under the License.
 
 import asyncio
+import base64
+import json
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
+from starlette.websockets import WebSocket
 from starlette.websockets import WebSocketDisconnect
 
+from nat.data_models.api_server import ApiKeyAuthPayload
+from nat.data_models.api_server import AuthMessageStatus
+from nat.data_models.api_server import JwtAuthPayload
 from nat.data_models.api_server import OAuthMode
 from nat.data_models.api_server import OAuthModePreferencePayload
 from nat.data_models.api_server import WebSocketAuthMessage
@@ -28,9 +35,20 @@ from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import Web
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 
 
-def _make_message_handler() -> tuple[WebSocketMessageHandler, AsyncMock, WebSocketAuthenticationFlowHandler]:
+def _make_jwt(claims: dict) -> str:
+    """Build a minimal unsigned JWT for exercising the verifier boundary."""
+    header = base64.urlsafe_b64encode(json.dumps({"alg": "none", "typ": "JWT"}).encode()).rstrip(b"=").decode()
+    payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).rstrip(b"=").decode()
+    return f"{header}.{payload}."
+
+
+def _make_message_handler(
+    accepted_identity_credentials=None,
+    jwt_validators=None,
+    identity_header=None,
+) -> tuple[WebSocketMessageHandler, MagicMock, WebSocketAuthenticationFlowHandler]:
     """Build a WebSocketMessageHandler with a mockable socket and a real flow handler."""
-    socket = AsyncMock()
+    socket = MagicMock(spec=WebSocket)
     session_manager = MagicMock()
     session_manager.get_workflow_single_output_schema.return_value = None
     session_manager.get_workflow_streaming_output_schema.return_value = None
@@ -39,6 +57,9 @@ def _make_message_handler() -> tuple[WebSocketMessageHandler, AsyncMock, WebSock
         session_manager=session_manager,
         step_adaptor=MagicMock(),
         worker=MagicMock(),
+        accepted_identity_credentials=accepted_identity_credentials,
+        jwt_validators=jwt_validators,
+        identity_header=identity_header,
     )
     flow_handler = WebSocketAuthenticationFlowHandler(
         add_flow_cb=AsyncMock(),
@@ -47,6 +68,216 @@ def _make_message_handler() -> tuple[WebSocketMessageHandler, AsyncMock, WebSock
     )
     handler.set_flow_handler(flow_handler)
     return handler, socket, flow_handler
+
+
+async def test_context_manager_resolves_connection_identity_before_restoration():
+    """Connection credentials establish the owner before reconnection is attempted."""
+    handler, socket, _ = _make_message_handler()
+    user_info = MagicMock()
+    user_info.get_user_id.return_value = "user-a"
+    restore = AsyncMock()
+    handler._restore_execution_state = restore
+
+    with patch(
+            "nat.front_ends.fastapi.message_handler.UserManager.extract_user_from_connection_with_verification",
+            return_value=user_info,
+    ):
+        await handler.__aenter__()
+
+    socket.accept.assert_awaited_once()
+    assert handler._user_id == "user-a"
+    restore.assert_awaited_once()
+
+
+async def test_context_manager_uses_configured_identity_header():
+    """The configured identity header is passed through the verified connection resolver."""
+    handler, socket, _ = _make_message_handler(identity_header="X-User-ID")
+    user_info = MagicMock()
+    user_info.get_user_id.return_value = "resolved-user"
+
+    with patch(
+            "nat.front_ends.fastapi.message_handler.UserManager.extract_user_from_connection_with_verification",
+            return_value=user_info,
+    ) as resolver:
+        await handler.__aenter__()
+
+    assert resolver.await_args.kwargs["identity_header"] == "X-User-ID"
+    assert handler._user_id == "resolved-user"
+
+
+async def test_auth_message_cannot_replace_trusted_header_identity():
+    """A WebSocket auth message cannot override an upstream-asserted identity."""
+    handler, socket, _ = _make_message_handler(identity_header="X-User-ID")
+    handler._user_id = "resolved-user"
+    msg = WebSocketAuthMessage(
+        type=WebSocketMessageType.AUTH_MESSAGE,
+        payload=ApiKeyAuthPayload(method="api_key", token="replacement-key"),
+    )
+
+    with patch("nat.front_ends.fastapi.message_handler.UserManager.from_auth_payload_with_verification", ) as resolver:
+        await handler._process_auth_message(msg)
+
+    resolver.assert_not_called()
+    assert handler._user_id == "resolved-user"
+    assert socket.send_json.await_args.args[0]["status"] == AuthMessageStatus.ERROR
+
+
+async def test_context_manager_rejects_disabled_connection_credential_without_restoration():
+    """A disabled upgrade credential closes the socket and never attempts state restoration."""
+    handler, socket, _ = _make_message_handler(accepted_identity_credentials=["jwt"])
+    restore = AsyncMock()
+    handler._restore_execution_state = restore
+
+    from nat.runtime.user_manager import IdentityCredentialNotAcceptedError
+
+    with patch(
+            "nat.front_ends.fastapi.message_handler.UserManager.extract_user_from_connection_with_verification",
+            side_effect=IdentityCredentialNotAcceptedError("Identity credential type 'session_cookie' is not accepted"),
+    ):
+        await handler.__aenter__()
+
+    restore.assert_not_awaited()
+    response = socket.send_json.await_args.args[0]
+    assert response["status"] == AuthMessageStatus.ERROR
+    socket.close.assert_awaited_once_with(code=1008, reason="Identity credential was rejected")
+
+
+async def test_context_manager_accepts_verified_connection_jwt_before_restoration():
+    """An active verifier result permits identity resolution and owned-state restoration."""
+    issuer = "https://identity.example.com"
+    jwt_validator = MagicMock()
+    jwt_validator.verify = AsyncMock(return_value=MagicMock(active=True))
+    handler, socket, _ = _make_message_handler(jwt_validators={issuer: jwt_validator})
+    token = _make_jwt({"iss": issuer, "sub": "verified-user"})
+    socket.scope = {"headers": [(b"authorization", f"Bearer {token}".encode())]}
+    socket.query_params = {"conversation_id": "conversation-a"}
+    restore = AsyncMock()
+    handler._restore_execution_state = restore
+
+    await handler.__aenter__()
+
+    jwt_validator.verify.assert_awaited_once_with(token)
+    assert handler._user_id is not None
+    restore.assert_awaited_once()
+
+
+async def test_context_manager_rejects_unverified_connection_jwt_without_restoration():
+    """An inactive verifier result cannot establish identity or restore conversation state."""
+    issuer = "https://identity.example.com"
+    jwt_validator = MagicMock()
+    jwt_validator.verify = AsyncMock(return_value=MagicMock(active=False))
+    handler, socket, _ = _make_message_handler(jwt_validators={issuer: jwt_validator})
+    token = _make_jwt({"iss": issuer, "sub": "unverified-user"})
+    socket.scope = {"headers": [(b"authorization", f"Bearer {token}".encode())]}
+    socket.query_params = {"conversation_id": "conversation-a"}
+    restore = AsyncMock()
+    handler._restore_execution_state = restore
+
+    await handler.__aenter__()
+
+    assert handler._user_id is None
+    restore.assert_not_awaited()
+    response = socket.send_json.await_args.args[0]
+    assert response["status"] == AuthMessageStatus.ERROR
+    socket.close.assert_awaited_once_with(code=1008, reason="Identity credential was rejected")
+
+
+async def test_anonymous_connection_does_not_attempt_conversation_lookup():
+    """A conversation ID cannot restore state without a resolved user identity."""
+    handler, socket, _ = _make_message_handler()
+    socket.query_params = {"conversation_id": "conversation-a"}
+
+    await handler._restore_execution_state()
+
+    handler._worker.get_conversation_handler.assert_not_called()
+
+
+async def test_successful_auth_message_attempts_owned_restoration_once():
+    """Delayed authentication can restore once and cannot retry the lookup."""
+    handler, socket, _ = _make_message_handler()
+    socket.query_params = {"conversation_id": "conversation-a"}
+    handler._worker.get_conversation_handler.return_value = None
+    user_info = MagicMock()
+    user_info.get_user_id.return_value = "user-a"
+    msg = WebSocketAuthMessage(
+        type=WebSocketMessageType.AUTH_MESSAGE,
+        payload=ApiKeyAuthPayload(method="api_key", token="test-api-key"),
+    )
+
+    with patch(
+            "nat.front_ends.fastapi.message_handler.UserManager.from_auth_payload_with_verification",
+            return_value=user_info,
+    ):
+        await handler._process_auth_message(msg)
+        await handler._process_auth_message(msg)
+
+    handler._worker.get_conversation_handler.assert_called_once_with("user-a", "conversation-a")
+
+
+async def test_failed_auth_message_does_not_attempt_restoration():
+    """A failed identity resolution cannot trigger conversation restoration."""
+    handler, socket, _ = _make_message_handler()
+    restore = AsyncMock()
+    handler._restore_execution_state = restore
+    msg = WebSocketAuthMessage(
+        type=WebSocketMessageType.AUTH_MESSAGE,
+        payload=ApiKeyAuthPayload(method="api_key", token="test-api-key"),
+    )
+
+    with patch(
+            "nat.front_ends.fastapi.message_handler.UserManager.from_auth_payload_with_verification",
+            side_effect=ValueError("invalid credential"),
+    ):
+        await handler._process_auth_message(msg)
+
+    restore.assert_not_awaited()
+    response = socket.send_json.await_args.args[0]
+    assert response["status"] == AuthMessageStatus.ERROR
+
+
+async def test_disabled_auth_message_preserves_existing_identity_and_does_not_restore():
+    """A disabled auth message cannot replace identity or trigger restoration."""
+    handler, socket, _ = _make_message_handler(accepted_identity_credentials=["jwt"])
+    handler._user_id = "existing-user"
+    restore = AsyncMock()
+    handler._restore_execution_state = restore
+    msg = WebSocketAuthMessage(
+        type=WebSocketMessageType.AUTH_MESSAGE,
+        payload=ApiKeyAuthPayload(method="api_key", token="test-api-key"),
+    )
+
+    await handler._process_auth_message(msg)
+
+    assert handler._user_id == "existing-user"
+    restore.assert_not_awaited()
+    response = socket.send_json.await_args.args[0]
+    assert response["status"] == AuthMessageStatus.ERROR
+    assert response["payload"]["details"] == "Identity credential type 'api_key' is not accepted"
+
+
+async def test_rejected_auth_message_jwt_preserves_identity_and_does_not_restore():
+    """A rejected JWT auth message cannot replace identity or restore conversation state."""
+    issuer = "https://identity.example.com"
+    jwt_validator = MagicMock()
+    jwt_validator.verify = AsyncMock(return_value=MagicMock(active=False))
+    handler, socket, _ = _make_message_handler(jwt_validators={issuer: jwt_validator})
+    handler._user_id = "existing-user"
+    socket.query_params = {"conversation_id": "conversation-a"}
+    restore = AsyncMock()
+    handler._restore_execution_state = restore
+    token = _make_jwt({"iss": issuer, "sub": "unverified-user"})
+    msg = WebSocketAuthMessage(
+        type=WebSocketMessageType.AUTH_MESSAGE,
+        payload=JwtAuthPayload(method="jwt", token=token),
+    )
+
+    await handler._process_auth_message(msg)
+
+    assert handler._user_id == "existing-user"
+    restore.assert_not_awaited()
+    response = socket.send_json.await_args.args[0]
+    assert response["status"] == AuthMessageStatus.ERROR
+    assert response["payload"]["details"] == "JWT verification failed"
 
 
 async def test_process_auth_message_sets_oauth_mode_and_sends_no_response():

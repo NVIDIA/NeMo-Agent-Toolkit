@@ -29,6 +29,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
+from nat.data_models.api_server import UNKNOWN_MODEL_SENTINEL
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import ChatResponseChunk
@@ -254,7 +255,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                             )
                         ],
                         created=datetime.datetime.now(datetime.UTC),
-                        model="unknown-model",
+                        model=UNKNOWN_MODEL_SENTINEL,
                         object="chat.completion.chunk",
                     )
         except GraphRecursionError:

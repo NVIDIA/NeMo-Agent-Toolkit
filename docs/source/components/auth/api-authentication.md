@@ -120,7 +120,7 @@ authentication:
 
 #### Choosing How the Login Page Opens
 When using the NeMo Agent Toolkit UI, the OAuth 2.0 login page can be presented either in a popup
-window or by redirecting the current tab. This is a UI configuration option — see the
+window or by redirecting the current tab. This is a UI configuration option. Refer to the
 [NeMo Agent Toolkit User Interface](../../run-workflows/launching-ui.md) documentation.
 
 

@@ -28,13 +28,14 @@ from nat.data_models.authentication import BearerTokenCred
 # --------------------------------------------------------------------------- #
 
 
-def _patch_context(monkeypatch: pytest.MonkeyPatch, callback):
+def _patch_context(monkeypatch: pytest.MonkeyPatch, callback, user_id: str | None = None):
     """Replace Context.get() so the exchanger sees *our* callback."""
 
     class _DummyCtx:
 
         def __init__(self, cb):
             self.user_auth_callback = cb
+            self.user_id = user_id
 
     monkeypatch.setattr(Context, "get", staticmethod(lambda: _DummyCtx(callback)), raising=True)
 
@@ -92,6 +93,25 @@ async def test_caching(monkeypatch):
     await exchanger.authenticate("dup")  # should use cached result
 
     assert hits["n"] == 1
+
+
+async def test_uses_resolved_context_identity(monkeypatch):
+    """Authentication caching uses the authoritative runtime identity when no ID is passed."""
+
+    async def cb(cfg, flow):
+        return AuthenticatedContext(
+            headers={"Authorization": "Basic YQ=="},
+            metadata={
+                "username": "a", "password": "b"
+            },
+        )
+
+    _patch_context(monkeypatch, cb, user_id="resolved-user")
+    exchanger = HTTPBasicAuthProvider(HTTPBasicAuthProviderConfig())
+
+    await exchanger.authenticate()
+
+    assert "resolved-user" in exchanger._authenticated_tokens
 
 
 async def test_missing_authorization_header(monkeypatch):

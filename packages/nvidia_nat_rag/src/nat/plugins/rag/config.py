@@ -34,7 +34,8 @@ class RAGPipelineConfig(BaseModel):
 
     # Search behavior
     search_settings: NvidiaRAGRetrieverConfig = Field(default_factory=lambda: NvidiaRAGRetrieverConfig())
-    ranking: NvidiaRAGRankingConfig = Field(default_factory=lambda: NvidiaRAGRankingConfig())
+    ranking: NvidiaRAGRankingConfig = Field(
+        default_factory=lambda: NvidiaRAGRankingConfig(model_name="nvidia/llama-nemotron-rerank-vl-1b-v2"))
 
     # Query preprocessing (optional)
     query_rewriter: NvidiaRAGQueryRewriterConfig | None = Field(

@@ -81,7 +81,14 @@ from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
+from nat.data_models.interactive import BinaryHumanPromptOption
 from nat.data_models.interactive import HumanPrompt
+from nat.data_models.interactive import HumanPromptBinary
+from nat.data_models.interactive import HumanPromptCheckbox
+from nat.data_models.interactive import HumanPromptDropdown
+from nat.data_models.interactive import HumanPromptNotification
+from nat.data_models.interactive import HumanPromptRadio
+from nat.data_models.interactive import HumanPromptText
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import HumanResponseBinary
 from nat.data_models.interactive import HumanResponseCheckbox
@@ -91,6 +98,7 @@ from nat.data_models.interactive import HumanResponseRadio
 from nat.data_models.interactive import HumanResponseText
 from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.interactive import InteractionResponse
+from nat.data_models.interactive import MultipleChoiceOption
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.middleware import FunctionMiddlewareBaseConfig
@@ -105,6 +113,10 @@ from nat.memory.interfaces import MemoryManager
 from nat.memory.interfaces import MemoryReader
 from nat.memory.interfaces import MemoryWriter
 from nat.memory.models import MemoryItem
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerMiddleware
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerOpenError
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerState
+from nat.middleware.circuit_breaker.circuit_breaker_middleware_config import CircuitBreakerMiddlewareConfig
 from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
 from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
 from nat.middleware.function_middleware import FunctionMiddleware
@@ -122,7 +134,12 @@ from nat.retriever.models import RetrieverOutput
 # Public contract: keep this list exact and update docs/source/extend/plugin-api.md plus
 # packages/nvidia_nat_core/tests/nat/test_plugin_api.py whenever symbols are added or removed.
 __all__ = [
+    "BinaryHumanPromptOption",
     "Builder",
+    "CircuitBreakerMiddleware",
+    "CircuitBreakerMiddlewareConfig",
+    "CircuitBreakerOpenError",
+    "CircuitBreakerState",
     "ComponentRef",
     "Context",
     "ContextState",
@@ -150,6 +167,12 @@ __all__ = [
     "HITLMiddleware",
     "HITLMiddlewareConfig",
     "HumanPrompt",
+    "HumanPromptBinary",
+    "HumanPromptCheckbox",
+    "HumanPromptDropdown",
+    "HumanPromptNotification",
+    "HumanPromptRadio",
+    "HumanPromptText",
     "HumanResponse",
     "HumanResponseBinary",
     "HumanResponseCheckbox",
@@ -175,6 +198,7 @@ __all__ = [
     "MemoryWriter",
     "MiddlewareBaseConfig",
     "MiddlewareRef",
+    "MultipleChoiceOption",
     "NoSuchKeyError",
     "ObjectStore",
     "ObjectStoreRef",
