@@ -35,7 +35,7 @@ llms:
     _type: nim
     model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     chat_template_kwargs:
-      enable-thinking: false
+      enable_thinking: false
     temperature: 0.0
     max_tokens: 1024
 
