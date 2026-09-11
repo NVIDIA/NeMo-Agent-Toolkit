@@ -29,6 +29,7 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.server import Context
 from nat.builder.function import Function
 from nat.builder.function_base import FunctionBase
 
@@ -37,6 +38,9 @@ if TYPE_CHECKING:
     from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
+
+# Reserved wrapper parameter for MCP request Context injection.
+INJECTED_CONTEXT_PARAM = "_nat_mcp_context"
 
 _USE_PYDANTIC_DEFAULT = object()
 
@@ -128,6 +132,18 @@ def _build_name_mapping(field_names: list[str]) -> dict[str, str]:
     return name_map
 
 
+def _validate_input_schema_for_context_injection(schema: type[BaseModel], name_map: dict[str, str]) -> None:
+    """Reject schemas whose fields collide with the injected `Context` parameter."""
+    if INJECTED_CONTEXT_PARAM in name_map.values():
+        raise ValueError(
+            f"Workflow input schema cannot declare a field that maps to reserved MCP parameter "
+            f"{INJECTED_CONTEXT_PARAM!r}.", )
+    if "ctx" in schema.model_fields:
+        raise ValueError(
+            "Workflow input schema cannot declare a field named 'ctx'; that name is reserved for "
+            "MCP request context injection.", )
+
+
 def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
     """Determine if a Pydantic field is optional and extract its default value for MCP signatures.
 
@@ -162,6 +178,39 @@ def is_field_optional(field: FieldInfo) -> tuple[bool, Any]:
 
     # Rare corner case: non-required yet no default surfaced
     return True, Parameter.empty
+
+
+async def _run_through_session_manager(session_manager: 'SessionManager',
+                                       payload: BaseModel,
+                                       ctx: Any | None = None,
+                                       memory_profiler: 'MemoryProfiler | None' = None) -> Any:
+    """Execute a payload through SessionManager, including per-user workflows."""
+    try:
+        if session_manager.is_workflow_per_user:
+            from nat.builder.context import Context
+            from nat.runtime.user_manager import UserManager
+
+            user_id = Context.get().user_id
+            http_connection = None
+            if ctx is not None:
+                try:
+                    http_connection = ctx.request_context.request
+                    if user_id is None and http_connection is not None:
+                        user_info = UserManager.extract_user_from_connection(http_connection)
+                        if user_info is not None:
+                            user_id = user_info.get_user_id()
+                except ValueError:
+                    pass
+
+            async with session_manager.session(user_id=user_id, http_connection=http_connection) as session:
+                async with session.run(payload) as runner:
+                    return await runner.result()
+
+        async with session_manager.run(payload) as runner:
+            return await runner.result()
+    finally:
+        if memory_profiler:
+            memory_profiler.on_request_complete()
 
 
 def create_function_wrapper(
@@ -208,6 +257,7 @@ def create_function_wrapper(
         # emit for each declared schema field.
         name_map = _build_name_mapping(list(param_fields.keys()))
         argument_name_map = {safe: orig for orig, safe in name_map.items() if orig != safe}
+        _validate_input_schema_for_context_injection(schema, name_map)
 
         parameters = []
         for name, field in param_fields.items():
@@ -237,34 +287,30 @@ def create_function_wrapper(
                     annotation=field_type,
                 ))
 
-    # Create the function signature WITHOUT the ctx parameter
-    # We'll handle this in the wrapper function internally
+    # Create the function signature WITHOUT the injected Context parameter
+    # Context is declared on the wrapper for FastMCP injection but omitted from __signature__
+    # so it is excluded from the client-facing tool schema.
     sig = Signature(parameters=parameters, return_annotation=str)
 
-    # Define the actual wrapper function that accepts ctx but doesn't expose it
+    # Define the actual wrapper function that accepts injected context but doesn't expose it
     def create_wrapper():
 
-        async def wrapper_with_ctx(**kwargs):
+        async def wrapper_with_ctx(_nat_mcp_context: Context | None = None, **kwargs):
             """Internal wrapper that will be called by MCP.
 
             Uses SessionManager.run() which creates a Runner that automatically handles observability.
             """
-            # MCP will add a ctx parameter, extract it
-            ctx = kwargs.get("ctx")
-
-            # Remove ctx if present
-            if "ctx" in kwargs:
-                del kwargs["ctx"]
-
             # FastMCP applies the wrapper field's factory to omitted arguments.
             # Remove its marker so the declared schema can apply the original
             # default factory and preserve model_fields_set semantics.
             kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
 
             # Process the function call
-            if ctx:
-                ctx.info("Calling function %s with args: %s", function_name, json.dumps(kwargs, default=str))
-                await ctx.report_progress(0, 100)
+            if _nat_mcp_context:
+                _nat_mcp_context.info("Calling function %s with args: %s",
+                                      function_name,
+                                      json.dumps(kwargs, default=str))
+                await _nat_mcp_context.report_progress(0, 100)
 
             try:
                 # Prepare input payload
@@ -287,16 +333,14 @@ def create_function_wrapper(
                 # 3. Execute the function/workflow
                 # 4. Emit WORKFLOW_END/FUNCTION_END events
                 # 5. Stop the exporter manager
-                async with session_manager.run(payload) as runner:
-                    result = await runner.result()
+                result = await _run_through_session_manager(session_manager,
+                                                            payload,
+                                                            ctx=_nat_mcp_context,
+                                                            memory_profiler=memory_profiler)
 
                 # Report completion
-                if ctx:
-                    await ctx.report_progress(100, 100)
-
-                # Track request completion for memory profiling
-                if memory_profiler:
-                    memory_profiler.on_request_complete()
+                if _nat_mcp_context:
+                    await _nat_mcp_context.report_progress(100, 100)
 
                 # Handle different result types for proper formatting
                 if isinstance(result, str):
@@ -305,12 +349,8 @@ def create_function_wrapper(
                     return json.dumps(result, default=str)
                 return str(result)
             except Exception as e:
-                if ctx:
-                    ctx.error("Error calling function %s: %s", function_name, str(e))
-
-                # Track request completion even on error
-                if memory_profiler:
-                    memory_profiler.on_request_complete()
+                if _nat_mcp_context:
+                    _nat_mcp_context.error("Error calling function %s: %s", function_name, str(e))
 
                 raise
 
@@ -319,7 +359,7 @@ def create_function_wrapper(
     # Create the wrapper function
     wrapper = create_wrapper()
 
-    # Set the signature on the wrapper function (WITHOUT ctx)
+    # Set the signature on the wrapper function (WITHOUT injected context)
     wrapper.__signature__ = sig  # type: ignore
     wrapper.__name__ = function_name
 
@@ -388,18 +428,17 @@ def register_function_with_mcp(mcp: FastMCP,
     """
     logger.info("Registering function %s with MCP", function_name)
 
-    # Get the workflow from the session manager
-    workflow = session_manager.workflow
+    if session_manager.is_workflow_per_user:
+        input_schema = session_manager.get_workflow_input_schema()
+        workflow_config = session_manager.config.workflow
+        function_description = getattr(workflow_config, "description", None) or function_name
+    else:
+        workflow = session_manager.workflow
+        target_function = function or workflow
+        input_schema = getattr(target_function, "input_schema", workflow.input_schema)
+        function_description = get_function_description(target_function)
 
-    # Prefer the function's schema/description when available, fall back to workflow
-    target_function = function or workflow
-
-    # Get the input schema from the most specific object available
-    input_schema = getattr(target_function, "input_schema", workflow.input_schema)
     logger.info("Function %s has input schema: %s", function_name, input_schema)
-
-    # Get function description
-    function_description = get_function_description(target_function)
 
     # Create and register the wrapper function with MCP
     wrapper_func = create_function_wrapper(function_name, session_manager, input_schema, memory_profiler)
