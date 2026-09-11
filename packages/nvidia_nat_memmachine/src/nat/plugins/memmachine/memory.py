@@ -89,10 +89,10 @@ async def memmachine_memory_client(
 
     memory_editor = MemMachineEditor(memmachine_instance=memmachine_instance)
 
-    # Apply retry wrapper (config always inherits from RetryMixin)
-    memory_editor = patch_with_retry(memory_editor,
-                                     retries=config.num_retries,
-                                     retry_codes=config.retry_on_status_codes,
-                                     retry_on_messages=config.retry_on_errors)
+    if isinstance(config, RetryMixin) and config.do_auto_retry:
+        memory_editor = patch_with_retry(memory_editor,
+                                         retries=config.num_retries,
+                                         retry_codes=config.retry_on_status_codes,
+                                         retry_on_messages=config.retry_on_errors)
 
     yield memory_editor

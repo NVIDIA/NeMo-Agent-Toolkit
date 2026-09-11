@@ -45,7 +45,7 @@ async def azure_openai_langchain(embedder_config: AzureOpenAIEmbedderModelConfig
             http_async_client=http_clients_dict["async_http_client"],
         )
 
-        if isinstance(embedder_config, RetryMixin):
+        if isinstance(embedder_config, RetryMixin) and embedder_config.do_auto_retry:
             client = patch_with_retry(client,
                                       retries=embedder_config.num_retries,
                                       retry_codes=embedder_config.retry_on_status_codes,
@@ -63,7 +63,7 @@ async def nim_langchain(embedder_config: NIMEmbedderModelConfig, builder: Builde
     client = NVIDIAEmbeddings(
         **embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
-    if isinstance(embedder_config, RetryMixin):
+    if isinstance(embedder_config, RetryMixin) and embedder_config.do_auto_retry:
         client = patch_with_retry(client,
                                   retries=embedder_config.num_retries,
                                   retry_codes=embedder_config.retry_on_status_codes,
@@ -87,7 +87,7 @@ async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: 
             http_async_client=http_clients_dict["async_http_client"],
         )
 
-        if isinstance(embedder_config, RetryMixin):
+        if isinstance(embedder_config, RetryMixin) and embedder_config.do_auto_retry:
             client = patch_with_retry(client,
                                       retries=embedder_config.num_retries,
                                       retry_codes=embedder_config.retry_on_status_codes,
@@ -128,7 +128,7 @@ async def huggingface_langchain(embedder_config: HuggingFaceEmbedderConfig, _bui
             encode_kwargs=encode_kwargs,
         )
 
-    if isinstance(embedder_config, RetryMixin):
+    if isinstance(embedder_config, RetryMixin) and embedder_config.do_auto_retry:
         client = patch_with_retry(client,
                                   retries=embedder_config.num_retries,
                                   retry_codes=embedder_config.retry_on_status_codes,
