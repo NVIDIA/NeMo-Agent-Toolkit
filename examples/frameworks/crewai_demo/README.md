@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-A minimal example using CrewAI showcasing a multi-agent travel planning system where an Itinerary Expert plans activities, a Budget Advisor prices lodging and totals the trip cost, and a Summarizer compiles the final plan. This is the CrewAI counterpart to the [Semantic Kernel example](../semantic_kernel_demo/README.md) — same task, same two tools, different framework — intended to be run side by side with it as a framework-parity check.
+A minimal example using CrewAI showcasing a multi-agent travel planning system where an Itinerary Expert plans activities, a Budget Advisor prices lodging and totals the trip cost, and a Summarizer compiles the final plan.
 
 ## Table of Contents
 

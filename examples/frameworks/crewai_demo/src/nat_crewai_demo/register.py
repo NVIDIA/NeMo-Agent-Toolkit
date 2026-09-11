@@ -33,10 +33,8 @@ logger = logging.getLogger(__name__)
 
 class CrewAITravelPlanningWorkflowConfig(FunctionBaseConfig, name="crewai"):
     """
-    Structural companion to the semantic_kernel_demo example: the same travel-planning task (an itinerary expert,
-    a budget advisor, and a summarizer, each backed by the same two tools), reimplemented against CrewAI instead of
-    Semantic Kernel, so the two examples can be run through a framework-parity harness as comparable canonical
-    workflows.
+    A travel-planning crew: an itinerary expert, a budget advisor, and a summarizer, each backed by the same two
+    NAT-registered tools.
     """
     tool_names: list[FunctionRef] = Field(default_factory=list,
                                           description="The list of tools to provide to the crew.")
