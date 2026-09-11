@@ -36,24 +36,25 @@ class A2AFrontEndPlugin(FrontEndBase[A2AFrontEndConfig]):
         """Run the A2A server.
 
         This method:
-        1. Builds the workflow
+        1. Builds the workflow, unless it is per-user
         2. Creates the agent card from configuration
         3. Creates the agent executor adapter
         4. Sets up the A2A server
         5. Starts the server with uvicorn
         """
-        # Build the workflow
         async with WorkflowBuilder.from_config(config=self.full_config) as builder:
-            workflow = await builder.build()
-
             # Create worker instance
             worker = self._get_worker_instance()
+
+            # Builds the shared workflow, or none at all when it is per-user
+            session_manager = await worker.create_session_manager(builder)
+            workflow = None if session_manager.is_workflow_per_user else session_manager.workflow
 
             # Build agent card from configuration and workflow functions
             agent_card = await worker.create_agent_card(workflow)
 
             # Create agent executor adapter
-            agent_executor = worker.create_agent_executor(workflow, builder)
+            agent_executor = worker.create_agent_executor(session_manager)
 
             # Create A2A server
             a2a_server = worker.create_a2a_server(agent_card, agent_executor)

@@ -31,6 +31,7 @@ from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
 from nat.plugins.a2a.server.agent_executor_adapter import NATWorkflowAgentExecutor
+from nat.plugins.a2a.server.call_context import NATCallContextBuilder
 from nat.plugins.a2a.server.front_end_config import A2AFrontEndConfig
 from nat.runtime.session import SessionManager
 
@@ -55,6 +56,9 @@ class A2AFrontEndPluginWorker:
 
         # HTTP client for push notifications (managed for cleanup)
         self._httpx_client: httpx.AsyncClient | None = None
+
+        # Session manager owning per-user builders (managed for cleanup)
+        self._session_manager: SessionManager | None = None
 
     async def _get_all_functions(self, workflow: Workflow) -> dict[str, Function]:
         """Get all functions from the workflow.
@@ -149,14 +153,15 @@ class A2AFrontEndPluginWorker:
         logger.info("Using derived OAuth endpoints from issuer: %s", issuer)
         return auth_url, token_url
 
-    async def create_agent_card(self, workflow: Workflow) -> AgentCard:
+    async def create_agent_card(self, workflow: Workflow | None) -> AgentCard:
         """Build AgentCard from configuration and workflow functions.
 
         Skills are auto-generated from the workflow's functions, similar to how
         MCP introspects and exposes functions as tools.
 
         Args:
-            workflow: The NAT workflow to extract functions from
+            workflow: The NAT workflow to extract functions from, or None for a
+                per-user workflow, whose functions only exist once a user is known
 
         Returns:
             AgentCard with agent metadata, capabilities, and auto-generated skills
@@ -170,7 +175,7 @@ class A2AFrontEndPluginWorker:
         )
 
         # Auto-generate skills from workflow functions
-        functions = await self._get_all_functions(workflow)
+        functions = await self._get_all_functions(workflow) if workflow is not None else {}
         skills = []
 
         for function_name, function in functions.items():
@@ -231,29 +236,37 @@ class A2AFrontEndPluginWorker:
             return f"{str(config.public_base_url).rstrip('/')}/"
         return f"http://{config.host}:{config.port}/"
 
-    def create_agent_executor(self, workflow: Workflow, builder: WorkflowBuilder) -> NATWorkflowAgentExecutor:
-        """Create agent executor adapter for the workflow.
+    async def create_session_manager(self, builder: WorkflowBuilder) -> SessionManager:
+        """Create the SessionManager that handles concurrent A2A task requests.
 
-        This creates a SessionManager to handle concurrent A2A task requests,
-        similar to how FastAPI handles multiple HTTP requests.
+        `SessionManager.create` builds the shared workflow, or leaves it unset and
+        starts the per-user builder reaper when the workflow is per-user.
 
         Args:
-            workflow: The NAT workflow to expose
-            builder: The workflow builder used to create the workflow
+            builder: The shared workflow builder
 
         Returns:
-            NATWorkflowAgentExecutor that wraps the workflow with a SessionManager
+            The SessionManager, also retained for cleanup
         """
-        # Create SessionManager to handle concurrent requests with proper limits
-        session_manager = SessionManager(
+        self._session_manager = await SessionManager.create(
             config=self.full_config,
             shared_builder=builder,
-            shared_workflow=workflow,
             max_concurrency=self.max_concurrency,
         )
 
         logger.info("Created SessionManager with max_concurrency=%d", self.max_concurrency)
 
+        return self._session_manager
+
+    def create_agent_executor(self, session_manager: SessionManager) -> NATWorkflowAgentExecutor:
+        """Create agent executor adapter for the workflow.
+
+        Args:
+            session_manager: The SessionManager the executor runs requests through
+
+        Returns:
+            NATWorkflowAgentExecutor that wraps the workflow with a SessionManager
+        """
         return NATWorkflowAgentExecutor(session_manager)
 
     def create_a2a_server(
@@ -296,6 +309,7 @@ class A2AFrontEndPluginWorker:
         server = A2AStarletteApplication(
             agent_card=agent_card,
             http_handler=request_handler,
+            context_builder=NATCallContextBuilder(),
         )
 
         logger.info("Created A2A server with DefaultRequestHandler")
@@ -307,6 +321,11 @@ class A2AFrontEndPluginWorker:
 
         This should be called during server shutdown to prevent connection leaks.
         """
+        if self._session_manager is not None:
+            await self._session_manager.shutdown()
+            self._session_manager = None
+            logger.info("Shut down SessionManager")
+
         if self._httpx_client is not None:
             await self._httpx_client.aclose()
             self._httpx_client = None

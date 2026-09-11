@@ -154,6 +154,14 @@ workflow:
 }
 ```
 
+### Per-User Workflows
+
+A per-user workflow can be served over A2A. Each user gets their own workflow instance, built on first use. [MCP authentication](../components/auth/mcp-auth/index.md) and [A2A clients](../build-workflows/a2a-client.md) both require a per-user workflow, such as `per_user_react_agent`.
+
+The user is taken from the token that `server_auth` validates, so configure [`server_auth`](../components/auth/a2a-auth.md) when serving a per-user workflow. Without it there is no user to build for, and requests fail with an error saying the user ID could not be determined.
+
+The Agent Card for a per-user workflow advertises no skills, because the functions belong to a user's instance rather than to a shared one. Clients that read skills from the card, including the NAT [A2A client](../build-workflows/a2a-client.md), see a capability list that is empty.
+
 ### Viewing the Agent Card
 When you start an A2A server, it automatically generates an Agent Card that describes the agent's capabilities. The Agent Card is available at:
 
