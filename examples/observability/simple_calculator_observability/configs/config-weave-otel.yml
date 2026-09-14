@@ -13,31 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+general:
+  telemetry:
+    tracing:
+      weave_otel:
+        _type: weave_otel
+        project: "nat-demo"
+        entity: "your-team-name"
+
+function_groups:
+  calculator:
+    _type: calculator
+
 functions:
-  webpage_query:
-    _type: webpage_query
-    webpage_url: https://docs.smith.langchain.com
-    description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
-    embedder_name: nemotron-3-embed-1b
-    chunk_size: 512
   current_datetime:
     _type: current_datetime
 
 llms:
   nim_llm:
     _type: nim
-    base_url: "http://localhost:8000/v1"
-    model_name: nvidia/nemotron-3-nano
-
-embedders:
-  nemotron-3-embed-1b:
-    _type: nim
-    base_url: "http://localhost:8001/v1"
-    model_name: nvidia/nemotron-3-embed-1b
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
+    chat_template_kwargs:
+      enable_thinking: false
+    temperature: 0.0
+    max_tokens: 1024
 
 workflow:
   _type: react_agent
-  tool_names: [webpage_query, current_datetime]
+  tool_names: [calculator, current_datetime]
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3

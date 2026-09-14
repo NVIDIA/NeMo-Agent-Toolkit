@@ -26,7 +26,7 @@ Use `_type: nim` when connecting to a locally deployed NIM container or self-hos
 llms:
   instruct_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     base_url: ${INSTRUCT_LLM_BASE_URL:-http://nim-llm:8000/v1}
     max_tokens: 20000
@@ -41,7 +41,7 @@ Production agents typically define multiple LLMs — one for fast instruction-fo
 llms:
   instruct_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     base_url: http://instruct-llm:8000/v1
     max_tokens: 20000
@@ -49,7 +49,7 @@ llms:
 
   reasoning_llm:
     _type: nim
-    model_name: nvidia/llama-3.3-nemotron-super-49b-v1.5
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.5
     base_url: http://reasoning-llm:8000/v1
     max_tokens: 5000

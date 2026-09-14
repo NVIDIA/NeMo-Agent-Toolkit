@@ -35,10 +35,10 @@ functions:
 
 ## Included Memory Modules
 The NeMo Agent Toolkit includes four memory module providers, all of which are available as plugins:
-* [Mem0](https://mem0.ai/) which is provided by the [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) plugin.
-* [MemMachine](https://memmachine.ai/) which is provided by the [`nvidia-nat-memmachine`](https://pypi.org/project/nvidia-nat-memmachine/) plugin (**Experimental; not recommended for production use**).
-* [Redis](https://redis.io/) which is provided by the Redis-maintained [`nemo-agent-toolkit-redis`](https://pypi.org/project/nemo-agent-toolkit-redis/) plugin.
-* [Zep](https://www.getzep.com/) which is provided by the [`nvidia-nat-zep-cloud`](https://pypi.org/project/nvidia-nat-zep-cloud/) plugin ([Zep NVIDIA NeMo documentation](https://help.getzep.com/nvidia-nemo)).
+* [Mem0](https://mem0.ai/), provided by the [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) plugin.
+* [MemMachine](https://memmachine.ai/), provided by the [`nvidia-nat-memmachine`](https://pypi.org/project/nvidia-nat-memmachine/) plugin (**Experimental; not recommended for production use**).
+* [Redis](https://redis.io/), provided by the Redis-maintained [`nemo-agent-toolkit-redis`](https://pypi.org/project/nemo-agent-toolkit-redis/) plugin.
+* [Zep](https://www.getzep.com/), provided by the [`nvidia-nat-zep-cloud`](https://pypi.org/project/nvidia-nat-zep-cloud/) plugin ([Zep NVIDIA NeMo documentation](https://help.getzep.com/nvidia-nemo)).
 
 ## Third-Party Memory Plugins
 Additional memory backends are available as community plugins:

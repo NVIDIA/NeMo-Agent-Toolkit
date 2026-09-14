@@ -195,7 +195,7 @@ class TestStrandsAgentE2ENIM:
         from strands.agent import Agent
 
         # Create NIM LLM config
-        llm_config = NIMModelConfig(model_name="meta/llama-3.1-8b-instruct", temperature=0.0, max_tokens=256)
+        llm_config = NIMModelConfig(model_name="nvidia/nemotron-3.5-lightning-30b-a3b", temperature=0.0, max_tokens=256)
 
         # Convert NAT function to Strands tool
         strands_tool = strands_tool_wrapper("echo", echo_function, builder)
@@ -226,7 +226,7 @@ class TestStrandsAgentE2ENIM:
         """Test NIM with reasoning capabilities (basic, no thinking mixin)."""
         from strands.agent import Agent
 
-        llm_config = NIMModelConfig(model_name="meta/llama-3.1-8b-instruct", temperature=0.0, max_tokens=256)
+        llm_config = NIMModelConfig(model_name="nvidia/nemotron-3.5-lightning-30b-a3b", temperature=0.0, max_tokens=256)
 
         strands_tool = strands_tool_wrapper("echo", echo_function, builder)
 
