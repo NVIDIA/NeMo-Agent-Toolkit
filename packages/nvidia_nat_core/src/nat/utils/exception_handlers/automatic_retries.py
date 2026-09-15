@@ -277,25 +277,16 @@ def _retry_decorator(
                 try:
                     _in_retry_context.reset(self._token)
                 except ValueError:
-                    # The token was minted by __enter__ running in a different
-                    # Context than the one __exit__ is running in now. This is
-                    # reachable for _agen_with_retry: if a caller does not fully
-                    # drain the async generator (an early `break`, an exception
-                    # elsewhere, or the caller task being cancelled), CPython's
-                    # async-generator finalizer later resumes this generator's
-                    # `with` block to run GeneratorExit cleanup inside a freshly
-                    # created task that only holds a *copy* of the original
-                    # Context, not the Context object the token belongs to.
-                    # ContextVar.reset() requires that exact Context object, so
-                    # resetting is impossible there. It is also unnecessary: that
-                    # copied context is discarded the moment this cleanup task
-                    # finishes, so leaving its copy of _in_retry_context
-                    # unreset never leaks into any later call chain.
+                    # _agen_with_retry below scopes its context to one anext() call
+                    # and exits before yielding, so this is only still reachable via
+                    # _gen_with_retry's sync generator (or a caller closing one from a
+                    # different thread), where the token is held for the whole `with`.
+                    # Nothing to reset there is unsafe to skip: no later call on this
+                    # instance can see a token minted outside its own context.
                     logger.debug(
                         "Retry context for key %s was entered in a different task's "
-                        "context than the one running cleanup now (likely async-generator "
-                        "finalization after the generator was not fully consumed); skipping "
-                        "the ContextVar reset.",
+                        "context than the one running cleanup now; skipping the "
+                        "ContextVar reset.",
                         self._key,
                     )
 
@@ -337,43 +328,52 @@ def _retry_decorator(
                     raise last_exception
 
         async def _agen_with_retry(*args, **kw):
-            with _RetryContext(args) as already_in_context:
-                if already_in_context:
-                    async for item in fn(*args, **kw):
-                        yield item
-                    return
+            delay = base_delay
+            last_exception = None
 
-                delay = base_delay
-                last_exception = None
-
-                for attempt in range(total_attempts):
-                    if use_shallow_copy:
+            for attempt in range(total_attempts):
+                with _RetryContext(args) as already_in_context:
+                    if already_in_context:
+                        call_args, call_kwargs = args, kw
+                    elif use_shallow_copy:
                         call_args, call_kwargs = _shallow_copy_args(args, kw)
                     else:
                         call_args, call_kwargs = _deep_copy_args(args, kw, skip_first=skip_self_in_deepcopy)
 
-                    try:
-                        async for item in fn(*call_args, **call_kwargs):
-                            yield item
-                        return
-                    except retry_on as exc:
-                        last_exception = exc
+                # The context above is entered and exited around each item advance
+                # below, never held open across a `yield`. A caller can suspend
+                # indefinitely between items, or close/GC the generator from a
+                # different task, without leaving a stale entry in this task's
+                # context that would silently skip retries on its next call.
+                try:
+                    stream = fn(*call_args, **call_kwargs)
+                    while True:
+                        with _RetryContext(args) as already_in_context:
+                            try:
+                                item = await anext(stream)
+                            except StopAsyncIteration:
+                                return
+                        yield item
+                except retry_on as exc:
+                    if already_in_context:
+                        raise
+                    last_exception = exc
 
-                        # Memory cleanup
-                        if clear_tracebacks:
-                            _clear_exception_context(exc)
+                    # Memory cleanup
+                    if clear_tracebacks:
+                        _clear_exception_context(exc)
 
-                        _run_gc_if_needed(attempt, gc_frequency)
+                    _run_gc_if_needed(attempt, gc_frequency)
 
-                        if not _want_retry(exc, code_patterns=retry_codes,
-                                           msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
-                            raise
+                    if not _want_retry(exc, code_patterns=retry_codes,
+                                       msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
+                        raise
 
-                        await asyncio.sleep(delay)
-                        delay *= backoff
+                    await asyncio.sleep(delay)
+                    delay *= backoff
 
-                if last_exception:
-                    raise last_exception
+            if last_exception:
+                raise last_exception
 
         def _gen_with_retry(*args, **kw) -> Iterable[Any]:
             with _RetryContext(args) as already_in_context:

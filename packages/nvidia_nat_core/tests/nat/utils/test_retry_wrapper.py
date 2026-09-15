@@ -877,7 +877,7 @@ async def test_minimal_budget_async_generator_executes_once(retries):
     assert call_count == 1
 
 
-class StreamingService:
+class StreamingService(Service):
     """Service with a public async-generator method, the same shape as the
     streaming methods (e.g. `astream`) that `patch_with_retry` wraps on real
     LLM clients."""
@@ -922,6 +922,52 @@ async def test_agen_cleanup_from_a_different_task_does_not_raise():
     await asyncio.create_task(close_from_other_task())
 
     assert loop_exceptions == []
+
+
+@pytest.mark.parametrize("close_from", ["same_task", "other_task"])
+async def test_agen_close_does_not_disable_later_retries_on_same_instance(close_from):
+    """A closed (or abandoned) stream must not poison retries for later,
+    unrelated calls on the same patched instance and task.
+
+    The nested-call guard used to key `_in_retry_context` for the whole
+    lifetime of the async generator, entered once by the first `__anext__`
+    and exited only when the generator finished or was closed. Closing it
+    from a different task made `__exit__`'s `ContextVar.reset()` fail (see
+    the test above) and, because the reset never ran successfully, left the
+    entry set in the *original* task's context forever: that task's next
+    call on the same instance then read the stale entry, mistook it for a
+    nested call, and skipped its own retry budget entirely."""
+    svc = StreamingService()
+    svc = ar.patch_with_retry(svc, retries=2, base_delay=0)
+
+    agen = svc.stream()
+    assert await agen.__anext__() == 1
+
+    if close_from == "other_task":
+        await asyncio.create_task(agen.aclose())
+    else:
+        await agen.aclose()
+
+    # async_method fails once then succeeds; it must still get its full
+    # retry budget here, on the same instance, in the same task.
+    assert await svc.async_method() == "async-ok"
+    assert svc.calls_async == 2
+
+
+async def test_agen_nested_call_shares_the_outer_retry_budget():
+    """A method called from inside an open stream on the same instance is a
+    nested call: it must not retry on a budget of its own, and a failure
+    there is retried by the stream that holds it, not swallowed."""
+
+    class NestedStreamingService(Service):
+
+        async def stream(self):
+            yield await self.async_method()
+
+    svc = ar.patch_with_retry(NestedStreamingService(), retries=2, base_delay=0)
+
+    assert [item async for item in svc.stream()] == ["async-ok"]
+    assert svc.calls_async == 2
 
 
 @pytest.mark.parametrize("retries", [0, -1, 1])
