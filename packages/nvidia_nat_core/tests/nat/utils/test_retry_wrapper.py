@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
+from collections.abc import AsyncIterator
 from collections.abc import Iterable
 
 import pytest
@@ -972,8 +973,9 @@ async def test_agen_nested_call_shares_the_outer_retry_budget():
 
 @pytest.mark.parametrize("stream_state", ["exhausted", "suspended", "advanced_elsewhere"])
 async def test_agen_cleanup_keeps_later_calls_retrying(stream_state):
-    """A stream must not suppress independent calls in its consumer's task,
-    including after cleanup or advancement from a different task."""
+    """A stream does not suppress independent calls in its consumer's task.
+
+    This holds after cleanup or advancement from a different task."""
     svc = StreamingService()
     svc = ar.patch_with_retry(svc, retries=2, base_delay=0)
     agen = svc.stream()
@@ -991,8 +993,9 @@ async def test_agen_cleanup_keeps_later_calls_retrying(stream_state):
 
 
 async def test_agen_nested_stream_shares_outer_method_retry_budget():
-    """Retry the outermost call, without giving a nested stream or method
-    another retry budget of its own."""
+    """Retry the outermost call only.
+
+    A nested stream or method does not get another retry budget of its own."""
 
     class NestedStreamingService(Service):
 
@@ -1001,11 +1004,11 @@ async def test_agen_nested_stream_shares_outer_method_retry_budget():
             self.stream_calls = 0
             self.outer_calls = 0
 
-        async def stream(self):
+        async def stream(self) -> AsyncIterator[str]:
             self.stream_calls += 1
             yield await self.async_method()
 
-        async def outer(self):
+        async def outer(self) -> list[str]:
             self.outer_calls += 1
             return [item async for item in self.stream()]
 
@@ -1027,7 +1030,7 @@ async def test_concurrent_agen_calls_retry_independently():
         def __init__(self):
             self.calls = {"left": 0, "right": 0}
 
-        async def stream(self, name):
+        async def stream(self, name: str) -> AsyncIterator[str]:
             self.calls[name] += 1
             if name == "left":
                 left_started.set()
@@ -1058,8 +1061,9 @@ async def test_concurrent_agen_calls_retry_independently():
 
 @pytest.mark.parametrize("code,attempts", [(503, 3), (400, 1)])
 async def test_agen_failure_preserves_filters_and_attempt_budget(code, attempts):
-    """Errors after a yield retain the configured filter and total attempt
-    budget, and do not affect a subsequent request."""
+    """Errors after a yield retain the configured filter and attempt budget.
+
+    They do not affect a subsequent request."""
     error = APIError(code)
 
     class FailingStreamService(Service):
@@ -1068,7 +1072,7 @@ async def test_agen_failure_preserves_filters_and_attempt_budget(code, attempts)
             super().__init__()
             self.stream_calls = 0
 
-        async def stream(self):
+        async def stream(self) -> AsyncIterator[int]:
             self.stream_calls += 1
             yield self.stream_calls
             raise error
@@ -1087,8 +1091,9 @@ async def test_agen_failure_preserves_filters_and_attempt_budget(code, attempts)
 
 
 async def test_agen_cancellation_keeps_later_calls_retrying():
-    """Cancellation while awaiting the next item propagates without a retry,
-    and the consumer can recover and make another request."""
+    """Cancellation while awaiting the next item propagates without a retry.
+
+    The consumer can recover and make another request afterward."""
     waiting = asyncio.Event()
     release = asyncio.Event()
     closed = asyncio.Event()
@@ -1099,7 +1104,7 @@ async def test_agen_cancellation_keeps_later_calls_retrying():
             super().__init__()
             self.stream_calls = 0
 
-        async def stream(self):
+        async def stream(self) -> AsyncIterator[int]:
             self.stream_calls += 1
             try:
                 yield 1
