@@ -970,6 +970,171 @@ async def test_agen_nested_call_shares_the_outer_retry_budget():
     assert svc.calls_async == 2
 
 
+@pytest.mark.parametrize("stream_state", ["exhausted", "suspended", "advanced_elsewhere"])
+async def test_agen_cleanup_keeps_later_calls_retrying(stream_state):
+    """A stream must not suppress independent calls in its consumer's task,
+    including after cleanup or advancement from a different task."""
+    svc = StreamingService()
+    svc = ar.patch_with_retry(svc, retries=2, base_delay=0)
+    agen = svc.stream()
+    try:
+        assert await anext(agen) == 1
+        if stream_state == "exhausted":
+            assert [item async for item in agen] == [2, 3]
+        elif stream_state == "advanced_elsewhere":
+            assert await asyncio.create_task(anext(agen)) == 2
+
+        assert await svc.async_method() == "async-ok"
+        assert svc.calls_async == 2
+    finally:
+        await agen.aclose()
+
+
+async def test_agen_nested_stream_shares_outer_method_retry_budget():
+    """Retry the outermost call, without giving a nested stream or method
+    another retry budget of its own."""
+
+    class NestedStreamingService(Service):
+
+        def __init__(self):
+            super().__init__()
+            self.stream_calls = 0
+            self.outer_calls = 0
+
+        async def stream(self):
+            self.stream_calls += 1
+            yield await self.async_method()
+
+        async def outer(self):
+            self.outer_calls += 1
+            return [item async for item in self.stream()]
+
+    svc = ar.patch_with_retry(NestedStreamingService(), retries=2, base_delay=0)
+    result = await svc.outer()
+
+    assert result == ["async-ok"]
+    assert svc.stream_calls == svc.calls_async == 2
+    assert svc.outer_calls == 2
+
+
+async def test_concurrent_agen_calls_retry_independently():
+    """Overlapping streams on one instance each retain their retry budget."""
+    left_started = asyncio.Event()
+    right_started = asyncio.Event()
+
+    class ConcurrentStreamingService:
+
+        def __init__(self):
+            self.calls = {"left": 0, "right": 0}
+
+        async def stream(self, name):
+            self.calls[name] += 1
+            if name == "left":
+                left_started.set()
+                await right_started.wait()
+            else:
+                right_started.set()
+            if self.calls[name] == 1:
+                raise APIError(503)
+            yield name
+
+    svc = ar.patch_with_retry(ConcurrentStreamingService(), retries=2, base_delay=0)
+
+    async def consume(name):
+        return [item async for item in svc.stream(name)]
+
+    left = asyncio.create_task(consume("left"))
+    try:
+        await left_started.wait()
+        assert await consume("right") == ["right"]
+        assert await left == ["left"]
+    finally:
+        if not left.done():
+            left.cancel()
+            await asyncio.gather(left, return_exceptions=True)
+
+    assert svc.calls == {"left": 2, "right": 2}
+
+
+@pytest.mark.parametrize("code,attempts", [(503, 3), (400, 1)])
+async def test_agen_failure_preserves_filters_and_attempt_budget(code, attempts):
+    """Errors after a yield retain the configured filter and total attempt
+    budget, and do not affect a subsequent request."""
+    error = APIError(code)
+
+    class FailingStreamService(Service):
+
+        def __init__(self):
+            super().__init__()
+            self.stream_calls = 0
+
+        async def stream(self):
+            self.stream_calls += 1
+            yield self.stream_calls
+            raise error
+
+    svc = ar.patch_with_retry(FailingStreamService(), retries=3, base_delay=0, retry_codes=["5xx"])
+    received = []
+    with pytest.raises(APIError) as exc_info:
+        async for item in svc.stream():
+            received.append(item)
+
+    assert exc_info.value is error
+    assert received == list(range(1, attempts + 1))
+    assert svc.stream_calls == attempts
+    assert await svc.async_method() == "async-ok"
+    assert svc.calls_async == 2
+
+
+async def test_agen_cancellation_keeps_later_calls_retrying():
+    """Cancellation while awaiting the next item propagates without a retry,
+    and the consumer can recover and make another request."""
+    waiting = asyncio.Event()
+    release = asyncio.Event()
+    closed = asyncio.Event()
+
+    class CancellableStreamService(Service):
+
+        def __init__(self):
+            super().__init__()
+            self.stream_calls = 0
+
+        async def stream(self):
+            self.stream_calls += 1
+            try:
+                yield 1
+                waiting.set()
+                await release.wait()
+            finally:
+                closed.set()
+
+    svc = ar.patch_with_retry(CancellableStreamService(), retries=2, base_delay=0)
+
+    async def consume():
+        agen = svc.stream()
+        try:
+            assert await anext(agen) == 1
+            with pytest.raises(asyncio.CancelledError):
+                await anext(agen)
+            assert await svc.async_method() == "async-ok"
+        finally:
+            await agen.aclose()
+
+    task = asyncio.create_task(consume())
+    try:
+        await waiting.wait()
+        task.cancel()
+        await task
+    finally:
+        if not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+    assert closed.is_set()
+    assert svc.stream_calls == 1
+    assert svc.calls_async == 2
+
+
 @pytest.mark.parametrize("retries", [0, -1, 1])
 def test_minimal_budget_failure_raises_after_single_attempt(retries):
     """A budget of 1 or below makes exactly one attempt and surfaces the failure."""
