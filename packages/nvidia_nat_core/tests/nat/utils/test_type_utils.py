@@ -15,12 +15,19 @@
 
 import typing
 from collections.abc import AsyncGenerator
+from types import NoneType
 from typing import Generic
 from typing import TypeVar
 
 import pytest
 
 from nat.utils.type_utils import DecomposedType
+
+# Both spellings are covered on purpose: the bug only reproduced with the ``typing`` forms.
+OPTIONAL_STR_TYPES = [str | None, typing.Optional[str]]  # noqa: UP045
+OPTIONAL_STR_IDS = ["pep604", "typing.Optional"]
+INT_STR_UNION_TYPES = [int | str, typing.Union[int, str]]  # noqa: UP007
+INT_STR_UNION_IDS = ["pep604", "typing.Union"]
 
 T = TypeVar('T')
 U = TypeVar('U')
@@ -244,3 +251,64 @@ class TestDecomposedTypeBasics:
         """Test is_generic property."""
         assert DecomposedType(list[int]).is_generic is True
         assert DecomposedType(int).is_generic is False
+
+
+class TestIsInstance:
+    """Tests for DecomposedType.is_instance method."""
+
+    def test_plain_type(self):
+        """Test is_instance with plain, non-generic types."""
+        assert DecomposedType(str).is_instance("hi") is True
+        assert DecomposedType(str).is_instance(1) is False
+        assert DecomposedType(int).is_instance(True) is True  # bool is a subclass of int
+
+    def test_any(self):
+        """Test that typing.Any matches every instance."""
+        assert DecomposedType(typing.Any).is_instance("hi") is True
+        assert DecomposedType(typing.Any).is_instance(None) is True
+
+    def test_generic_checks_origin(self):
+        """Test that generics are checked against their origin only."""
+        assert DecomposedType(list[int]).is_instance([1, 2]) is True
+        assert DecomposedType(list[int]).is_instance(["a"]) is True  # element types are not inspected
+        assert DecomposedType(list[int]).is_instance("abc") is False
+
+    def test_none_type(self):
+        """Test is_instance with NoneType."""
+        assert DecomposedType(NoneType).is_instance(None) is True
+        assert DecomposedType(NoneType).is_instance("hi") is False
+
+    @pytest.mark.parametrize("optional_type", OPTIONAL_STR_TYPES, ids=OPTIONAL_STR_IDS)
+    def test_optional(self, optional_type):
+        """Test is_instance with `str | None` and `typing.Optional[str]`."""
+        dt = DecomposedType(optional_type)
+        assert dt.is_instance("hi") is True
+        assert dt.is_instance(None) is True
+        assert dt.is_instance(1) is False
+
+    @pytest.mark.parametrize("union_type", INT_STR_UNION_TYPES, ids=INT_STR_UNION_IDS)
+    def test_union_of_concrete_types(self, union_type):
+        """Test is_instance with a union of two concrete types."""
+        dt = DecomposedType(union_type)
+        assert dt.is_instance(1) is True
+        assert dt.is_instance("hi") is True
+        assert dt.is_instance(None) is False
+        assert dt.is_instance(1.5) is False
+
+    def test_union_with_generic_member(self):
+        """Test is_instance with a union containing a parameterized generic."""
+        dt = DecomposedType(list[int] | None)
+        assert dt.is_instance([1, 2]) is True
+        assert dt.is_instance(None) is True
+        assert dt.is_instance("abc") is False
+
+    def test_union_with_any_member(self):
+        """Test that a union containing typing.Any matches every instance."""
+        assert DecomposedType(int | typing.Any).is_instance("hi") is True
+
+    def test_annotated_union(self):
+        """Test is_instance with a union wrapped in typing.Annotated."""
+        dt = DecomposedType(typing.Annotated[str | None, "meta"])
+        assert dt.is_instance("hi") is True
+        assert dt.is_instance(None) is True
+        assert dt.is_instance(1) is False
