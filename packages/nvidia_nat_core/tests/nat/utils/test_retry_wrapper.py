@@ -13,7 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
+from collections.abc import AsyncIterable
+from collections.abc import AsyncIterator
 from collections.abc import Iterable
+from collections.abc import Iterator
 
 import pytest
 
@@ -839,18 +842,22 @@ class OneShotStreamService:
     """
 
     def __init__(self) -> None:
-        self.async_attempts = 0
-        self.sync_attempts = 0
+        self.async_calls = 0
+        self.sync_calls = 0
+        self.async_items = 0
+        self.sync_items = 0
 
-    async def astream(self, source):
+    async def astream(self, source: AsyncIterable[str]) -> AsyncIterator[str]:
+        self.async_calls += 1
         async for item in source:
-            self.async_attempts += 1
+            self.async_items += 1
             raise Boom429()
             yield item  # unreachable; keeps this an async generator
 
-    def stream(self, source):
+    def stream(self, source: Iterable[str]) -> Iterator[str]:
+        self.sync_calls += 1
         for item in source:
-            self.sync_attempts += 1
+            self.sync_items += 1
             raise Boom429()
             yield item  # unreachable; keeps this a generator
 
@@ -874,8 +881,10 @@ async def test_async_generator_empty_retry_reraises():
         async for _chunk in patched.astream(one_shot_input()):
             pass
 
-    # First attempt hits the provider; later attempts see an exhausted iterator.
-    assert service.async_attempts == 1
+    # First attempt hits the provider; second attempt is dispatched with an
+    # exhausted iterator and produces no items.
+    assert service.async_calls == 2
+    assert service.async_items == 1
 
 
 def test_sync_generator_empty_retry_reraises():
@@ -896,7 +905,8 @@ def test_sync_generator_empty_retry_reraises():
     with pytest.raises(Boom429):
         list(patched.stream(one_shot_input()))
 
-    assert service.sync_attempts == 1
+    assert service.sync_calls == 2
+    assert service.sync_items == 1
 
 
 async def test_async_generator_empty_first_attempt_still_succeeds():
@@ -907,7 +917,6 @@ async def test_async_generator_empty_first_attempt_still_succeeds():
         async def astream(self):
             if False:  # pragma: no cover - keeps this an async generator
                 yield None
-            return
 
     patched = ar.patch_with_retry(EmptyOk(), retries=3, base_delay=0, retry_codes=[429])
     assert [item async for item in patched.astream()] == []
