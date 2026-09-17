@@ -816,3 +816,99 @@ def test_patch_with_retry_zero_budget_still_calls_method():
     with pytest.raises(APIError):
         svc.sync_method()
     assert svc.calls_sync == 1
+
+# ---------------------------------------------------------------------------
+# Empty streaming retry must preserve the original exception (#2223)
+# ---------------------------------------------------------------------------
+
+
+class Boom429(Exception):
+    """Rate-limit style error with a status_code attribute for retry_codes."""
+
+    def __init__(self) -> None:
+        super().__init__("Error code: 429 - rate limit exceeded")
+        self.status_code = 429
+
+
+class OneShotStreamService:
+    """Streaming call whose input is a one-shot async/sync iterator.
+
+    Mirrors LangChain streaming: each step consumes the previous step's
+    iterator once. A retry that replays the spent iterator yields nothing and
+    must not swallow the original exception.
+    """
+
+    def __init__(self) -> None:
+        self.async_attempts = 0
+        self.sync_attempts = 0
+
+    async def astream(self, source):
+        async for item in source:
+            self.async_attempts += 1
+            raise Boom429()
+            yield item  # unreachable; keeps this an async generator
+
+    def stream(self, source):
+        for item in source:
+            self.sync_attempts += 1
+            raise Boom429()
+            yield item  # unreachable; keeps this a generator
+
+
+async def test_async_generator_empty_retry_reraises():
+    """Retries that produce no chunks after a prior failure re-raise it (#2223)."""
+
+    async def one_shot_input():
+        yield "prompt"
+
+    service = OneShotStreamService()
+    patched = ar.patch_with_retry(
+        service,
+        retries=3,
+        base_delay=0,
+        retry_codes=[429],
+        retry_on_messages=None,
+    )
+
+    with pytest.raises(Boom429):
+        async for _chunk in patched.astream(one_shot_input()):
+            pass
+
+    # First attempt hits the provider; later attempts see an exhausted iterator.
+    assert service.async_attempts == 1
+
+
+def test_sync_generator_empty_retry_reraises():
+    """Sync generator path matches the async empty-retry behavior (#2223)."""
+
+    def one_shot_input():
+        yield "prompt"
+
+    service = OneShotStreamService()
+    patched = ar.patch_with_retry(
+        service,
+        retries=3,
+        base_delay=0,
+        retry_codes=[429],
+        retry_on_messages=None,
+    )
+
+    with pytest.raises(Boom429):
+        list(patched.stream(one_shot_input()))
+
+    assert service.sync_attempts == 1
+
+
+async def test_async_generator_empty_first_attempt_still_succeeds():
+    """A genuinely empty successful stream (no prior failure) still completes."""
+
+    class EmptyOk:
+
+        async def astream(self):
+            if False:  # pragma: no cover - keeps this an async generator
+                yield None
+            return
+
+    patched = ar.patch_with_retry(EmptyOk(), retries=3, base_delay=0, retry_codes=[429])
+    assert [item async for item in patched.astream()] == []
+
