@@ -305,6 +305,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         messages: list[dict[str, str]] = ([{"role": "user", "content": input_text}] if input_text else [])
 
         async def upstream() -> AsyncIterator[str]:
+            """Convert upstream chunks to reply text for streaming output rails."""
             async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs):
                 yield str(GlobalTypeConverter.try_convert(chunk, str))
 

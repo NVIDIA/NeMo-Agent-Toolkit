@@ -769,6 +769,7 @@ async def test_stream_evaluates_response_text(stream_output_rails: bool, chunk_k
     inspected: list[str] = []
 
     async def inspect_stream(*, messages, generator):
+        """Record the text received by output rails and pass it through."""
         async for value in generator:
             inspected.append(value)
             yield value
@@ -800,12 +801,14 @@ async def test_stream_propagates_upstream_error(stream_output_rails: bool) -> No
     middleware = _make_middleware(config=config)
 
     async def inspect_stream(*, messages, generator):
+        """Consume the upstream stream without intercepting its exceptions."""
         async for value in generator:
             yield value
 
     middleware._llm_rails.stream_async = MagicMock(side_effect=inspect_stream)
 
     async def failing_stream(*args, **kwargs):
+        """Simulate an upstream provider failing after its first chunk."""
         yield "partial"
         raise RuntimeError("upstream unavailable")
 
