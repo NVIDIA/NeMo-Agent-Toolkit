@@ -14,8 +14,8 @@
 # limitations under the License.
 """Call context construction for the A2A server.
 
-Bridges the user identity that NeMo Agent Toolkit middleware resolves into the
-`ServerCallContext` the A2A server hands to per-user workflows.
+Bridges the user identity that NVIDIA NeMo Agent Toolkit middleware resolves
+into the `ServerCallContext` the A2A server hands to per-user workflows.
 """
 
 import logging
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class AuthenticatedUser(User):
-    """An A2A user carrying NAT's user ID for an authenticated request."""
+    """An A2A user carrying the toolkit's user ID for an authenticated request."""
 
     def __init__(self, user_id: str):
         self._user_id = user_id
@@ -46,12 +46,13 @@ class AuthenticatedUser(User):
 
 
 class NATCallContextBuilder(DefaultCallContextBuilder):
-    """Builds the A2A call context from a request NAT has already authenticated.
+    """Build the A2A call context from a request the toolkit already authenticated.
 
     The default builder reads `request.user`, which only exists when Starlette's
-    `AuthenticationMiddleware` is installed. NAT authenticates with its own
-    `OAuth2ValidationMiddleware` instead, so without this the call context is
-    always unauthenticated and a per-user workflow has no user to build for.
+    `AuthenticationMiddleware` is installed. NeMo Agent Toolkit authenticates
+    with its own `OAuth2ValidationMiddleware` instead, so without this the call
+    context is always unauthenticated and a per-user workflow has no user to
+    build for.
     """
 
     def build(self, request: Request) -> ServerCallContext:

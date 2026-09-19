@@ -321,12 +321,16 @@ class A2AFrontEndPluginWorker:
 
         This should be called during server shutdown to prevent connection leaks.
         """
-        if self._session_manager is not None:
-            await self._session_manager.shutdown()
+        try:
+            if self._session_manager is not None:
+                await self._session_manager.shutdown()
+                logger.info("Shut down SessionManager")
+        finally:
             self._session_manager = None
-            logger.info("Shut down SessionManager")
 
-        if self._httpx_client is not None:
-            await self._httpx_client.aclose()
-            self._httpx_client = None
-            logger.info("Closed httpx client for push notifications")
+            if self._httpx_client is not None:
+                try:
+                    await self._httpx_client.aclose()
+                    logger.info("Closed httpx client for push notifications")
+                finally:
+                    self._httpx_client = None

@@ -202,6 +202,35 @@ class TestPerUserWorkflowStartup:
 
             assert cleanup_task.done()
 
+    async def test_setup_failure_shuts_down_the_per_user_session_manager(self, per_user_config, monkeypatch):
+        """A failure after session setup must not leave the builder reaper running."""
+        worker = A2AFrontEndPluginWorker(per_user_config)
+        plugin = A2AFrontEndPlugin(full_config=per_user_config)
+
+        monkeypatch.setattr(plugin, "_get_worker_instance", lambda: worker)
+        monkeypatch.setattr(worker, "create_agent_card", AsyncMock(side_effect=RuntimeError("setup failed")))
+
+        with pytest.raises(RuntimeError, match="setup failed"):
+            await plugin.run()
+
+        assert worker._session_manager is None
+
+    async def test_cleanup_closes_the_http_client_when_session_shutdown_fails(self, per_user_config):
+        """A session shutdown failure must not leak the push-notification client."""
+        worker = A2AFrontEndPluginWorker(per_user_config)
+        worker._session_manager = MagicMock()
+        worker._session_manager.shutdown = AsyncMock(side_effect=RuntimeError("shutdown failed"))
+        httpx_client = MagicMock()
+        httpx_client.aclose = AsyncMock()
+        worker._httpx_client = httpx_client
+
+        with pytest.raises(RuntimeError, match="shutdown failed"):
+            await worker.cleanup()
+
+        assert worker._session_manager is None
+        httpx_client.aclose.assert_awaited_once()
+        assert worker._httpx_client is None
+
     async def test_agent_card_without_shared_workflow_advertises_no_skills(self, per_user_config):
         """A per-user workflow has no shared instance to introspect for skills."""
         agent_card = await A2AFrontEndPluginWorker(per_user_config).create_agent_card(None)
