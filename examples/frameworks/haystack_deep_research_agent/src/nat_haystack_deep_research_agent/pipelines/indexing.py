@@ -32,7 +32,11 @@ def _gather_sources(base_dir: Path) -> tuple[list[Path], list[Path]]:
     return pdfs, texts
 
 
-def _build_indexing_pipeline(document_store, embedder_model: str) -> Pipeline:
+def _build_indexing_pipeline(
+    document_store,
+    embedder_model: str,
+    embedder_api_url: str | None = None,
+) -> Pipeline:
     p = Pipeline()
     p.add_component("joiner", DocumentJoiner())
     p.add_component("cleaner", DocumentCleaner())
@@ -42,10 +46,15 @@ def _build_indexing_pipeline(document_store, embedder_model: str) -> Pipeline:
         "splitter",
         DocumentSplitter(split_by="word", split_length=200, split_overlap=30),
     )
-    p.add_component(
-        "embedder",
-        NvidiaDocumentEmbedder(model=embedder_model, truncate="END"),
-    )
+    if embedder_api_url:
+        document_embedder = NvidiaDocumentEmbedder(
+            model=embedder_model,
+            api_url=embedder_api_url,
+            truncate="END",
+        )
+    else:
+        document_embedder = NvidiaDocumentEmbedder(model=embedder_model, truncate="END")
+    p.add_component("embedder", document_embedder)
     p.add_component(
         "writer",
         DocumentWriter(document_store=document_store, policy=DuplicatePolicy.SKIP),
@@ -59,6 +68,7 @@ def run_startup_indexing(
     logger,
     *,
     embedder_model: str,
+    embedder_api_url: str | None = None,
 ) -> None:
     try:
         if not embedder_model:
@@ -92,7 +102,11 @@ def run_startup_indexing(
                 len(text_sources),
             )
 
-            indexing_pipeline = _build_indexing_pipeline(document_store, embedder_model)
+            indexing_pipeline = _build_indexing_pipeline(
+                document_store,
+                embedder_model,
+                embedder_api_url,
+            )
 
             pipeline_data = {}
             if len(pdf_sources) > 0:

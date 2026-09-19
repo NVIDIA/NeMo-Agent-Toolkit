@@ -15,8 +15,8 @@
 """
 Content Safety Guard Middleware.
 
-This middleware uses guard models to classify content as safe or harmful
-with simple Yes/No answers.
+This middleware uses guard models to classify content as safe, unsafe, or
+controversial.
 """
 
 import json
@@ -50,13 +50,19 @@ class ContentSafetyGuardMiddlewareConfig(DefenseMiddlewareConfig, name="content_
 
     llm_name: str = Field(description="Name of the guard model LLM (must be defined in llms section)")
 
+    max_content_length: int = Field(
+        default=32000,
+        gt=0,
+        description="Maximum number of characters sent to the guard model. Content exceeding this limit stops "
+        "protected execution instead of being truncated or sent to the model.")
+
 
 class ContentSafetyGuardMiddleware(DefenseMiddleware):
     """Safety guard middleware using guard models to classify content as safe or unsafe.
 
     This middleware analyzes content using guard models (e.g., NVIDIA Nemoguard, Qwen Guard)
-    that return "Safe" or "Unsafe" classifications. The middleware extracts safety categories
-    when unsafe content is detected.
+    that return "Safe", "Unsafe", or "Controversial" classifications. The middleware extracts
+    safety categories when unsafe content is detected.
 
     Streaming Behavior:
         For 'refusal' and 'redirection' actions, chunks are buffered and checked
@@ -144,11 +150,10 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
     def _parse_guard_response(self, response_text: str) -> GuardResponseResult:
         """Parse guard model response.
 
-        Searches for Safe or Unsafe keywords anywhere in the response (case-insensitive).
-        Works with any guard model format (JSON, structured text, or plain text).
-        Also extracts safety categories from both JSON and text formats.
-        If neither keyword is found, falls back to implicit refusal detection.
-        Prioritizes Unsafe if both keywords are present.
+        Accepts exact Safe, Unsafe, or Controversial verdicts from supported JSON,
+        Qwen Guard text, or plain-text response formats. Also extracts safety
+        categories from JSON and text formats. Treats Controversial, malformed,
+        and unrecognized responses as unsafe.
 
         Args:
             response_text: Raw response from guard model.
@@ -156,43 +161,60 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         Returns:
             GuardResponseResult with is_safe boolean, categories list, and raw response.
         """
-        cleaned_text = re.sub(r'[*_]+', '', response_text).strip()
-        response_lower = cleaned_text.lower()
-
-        # Search for "Unsafe" or "Safe" anywhere in the response (case-insensitive)
-        # Prioritize "Unsafe" if both are present
-        if re.search(r'\bunsafe\b', response_lower):
-            is_safe = False
-        elif re.search(r'\bsafe\b', response_lower):
-            is_safe = True
-        else:
-            # Detect implicit refusals (model refuses = harmful content detected)
-            refusal_indicators = [
-                "i cannot",
-                "i can't",
-                "i won't",
-                "i will not",
-                "i'm unable",
-                "i am unable",
-                "i refuse",
-                "cannot provide",
-                "can't provide",
-                "won't provide",
-                "illegal",
-                "harmful",
-                "dangerous",
-                "inappropriate"
-            ]
-
-            if any(indicator in response_lower for indicator in refusal_indicators):
-                is_safe = False  # Model refused = harmful detected
-            else:
-                is_safe = True  # Default to safe if unclear
+        verdict = self._extract_guard_verdict(response_text)
+        is_safe = verdict == "safe"
 
         # Extract categories only if unsafe
         categories = self._extract_unsafe_categories(response_text, is_safe)
 
         return GuardResponseResult(is_safe=is_safe, categories=categories, raw_response=response_text)
+
+    @staticmethod
+    def _extract_guard_verdict(response_text: str) -> str | None:
+        """Extract an exact verdict from a supported guard response format.
+
+        Args:
+            response_text: Raw guard response.
+
+        Returns:
+            A lowercase ``safe``, ``unsafe``, or ``controversial`` verdict when recognized; otherwise ``None``.
+        """
+
+        def reject_duplicate_keys(pairs):
+            json_object = {}
+            for key, value in pairs:
+                if key in json_object:
+                    raise ValueError(f"Duplicate JSON field: {key}")
+                json_object[key] = value
+            return json_object
+
+        try:
+            json_data = json.loads(response_text.strip(), object_pairs_hook=reject_duplicate_keys)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            json_data = None
+
+        if isinstance(json_data, dict):
+            verdict_fields = ("User Safety", "Safety", "user_safety", "safety")
+            candidates = [str(json_data[field]).strip().lower() for field in verdict_fields if field in json_data]
+            valid_verdicts = {"safe", "unsafe", "controversial"}
+            if not candidates or any(candidate not in valid_verdicts for candidate in candidates):
+                return None
+            return candidates[0] if len(set(candidates)) == 1 else None
+
+        response_lines = [line.strip() for line in response_text.splitlines() if line.strip()]
+        first_line = response_lines[0].strip("*_").strip() if response_lines else ""
+        match = re.fullmatch(r'(?:Safety\s*:\s*)?(Safe|Unsafe|Controversial)', first_line, re.IGNORECASE)
+        if match is None:
+            return None
+
+        for line in response_lines[1:]:
+            cleaned_line = line.strip("*_").strip()
+            if re.fullmatch(r'(?:Safety\s*:\s*)?(Safe|Unsafe|Controversial)', cleaned_line, re.IGNORECASE):
+                return None
+            if re.match(r'Safety\s*:', cleaned_line, re.IGNORECASE):
+                return None
+
+        return match.group(1).lower()
 
     def _should_refuse(self, parsed_result: GuardResponseResult) -> bool:
         """Determine if content should be refused.
@@ -218,45 +240,40 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
 
         Returns:
             Safety classification result with should_refuse flag
+
+        Raises:
+            ValueError: If content exceeds ``max_content_length``.
+            Exception: Propagates guard loading and invocation failures so protected execution stops.
         """
-        try:
-            # Get the guard model LLM
-            llm = await self._get_llm()
+        content_str = str(content)
+        if len(content_str) > self.config.max_content_length:
+            raise ValueError(f"Content Safety Guard input length {len(content_str)} exceeds configured "
+                             f"max_content_length={self.config.max_content_length}")
 
-            content_str = str(content)
+        llm = await self._get_llm()
 
-            # Call the guard model using messages format to ensure chat template is applied
-            # Format matches: messages = [{"role": "user", "content": prompt}]
-            messages = [{"role": "user", "content": content_str}]
-            response = await llm.ainvoke(messages)
+        # Call the guard model using messages format to ensure chat template is applied
+        # Format matches: messages = [{"role": "user", "content": prompt}]
+        messages = [{"role": "user", "content": content_str}]
+        response = await llm.ainvoke(messages)
 
-            # Extract text from response
-            if hasattr(response, 'content'):
-                response_text = response.content.strip()
-            elif isinstance(response, str):
-                response_text = response.strip()
-            else:
-                response_text = str(response).strip()
-            # Parse the guard model response
+        # Extract text from response
+        if hasattr(response, 'content'):
+            response_text = response.content.strip()
+        elif isinstance(response, str):
+            response_text = response.strip()
+        else:
+            response_text = str(response).strip()
 
-            parsed = self._parse_guard_response(response_text)
-            should_refuse = self._should_refuse(parsed)
+        parsed = self._parse_guard_response(response_text)
+        should_refuse = self._should_refuse(parsed)
 
-            return ContentAnalysisResult(is_safe=parsed.is_safe,
-                                         categories=parsed.categories,
-                                         raw_response=parsed.raw_response,
-                                         should_refuse=should_refuse,
-                                         error=False,
-                                         error_message=None)
-
-        except Exception as e:
-            logger.exception("Content Safety Guard analysis failed: %s", e)
-            return ContentAnalysisResult(is_safe=True,
-                                         categories=[],
-                                         raw_response="",
-                                         should_refuse=False,
-                                         error=True,
-                                         error_message=str(e))
+        return ContentAnalysisResult(is_safe=parsed.is_safe,
+                                     categories=parsed.categories,
+                                     raw_response=parsed.raw_response,
+                                     should_refuse=should_refuse,
+                                     error=False,
+                                     error_message=None)
 
     async def _handle_threat(self,
                              content: Any,
@@ -361,8 +378,10 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
                                                                           func_ctx,
                                                                           original_input=original_input)
             return context
-        except Exception as e:
-            logger.error("Failed to apply content safety guard to function %s: %s", func_ctx.name, e, exc_info=True)
+        except Exception as error:
+            logger.error("Failed to apply content safety guard to function %s (%s); protected execution stopped",
+                         func_ctx.name,
+                         type(error).__name__)
             raise
 
     async def function_middleware_stream(self,
@@ -396,17 +415,23 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         try:
             buffer_chunks = self.config.action in ("refusal", "redirection")
             accumulated_chunks: list[Any] = []
+            serialized_chunks: list[str] = []
+            accumulated_length = 0
 
             async for chunk in call_next(value, *args[1:], **kwargs):
-                if buffer_chunks:
-                    accumulated_chunks.append(chunk)
-                else:
+                serialized_chunk = chunk if isinstance(chunk, str) else str(chunk)
+                accumulated_length += len(serialized_chunk)
+                if accumulated_length > self.config.max_content_length:
+                    raise ValueError(f"Content Safety Guard input length {accumulated_length} exceeds configured "
+                                     f"max_content_length={self.config.max_content_length}")
+
+                accumulated_chunks.append(chunk)
+                serialized_chunks.append(serialized_chunk)
+                if not buffer_chunks:
                     # partial_compliance: stream through, but still accumulate for analysis/logging
                     yield chunk
-                    accumulated_chunks.append(chunk)
 
-            # Join chunks efficiently (only convert to string if needed)
-            full_output = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
+            full_output = "".join(serialized_chunks)
 
             processed_output = await self._process_content_safety_detection(full_output, context, original_input=value)
 
@@ -421,10 +446,10 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
                 for chunk in accumulated_chunks:
                     yield chunk
 
-        except Exception:
+        except Exception as error:
             logger.error(
-                "Failed to apply content safety guard to streaming function %s",
+                "Failed to apply content safety guard to streaming function %s (%s); protected execution stopped",
                 context.name,
-                exc_info=True,
+                type(error).__name__,
             )
             raise

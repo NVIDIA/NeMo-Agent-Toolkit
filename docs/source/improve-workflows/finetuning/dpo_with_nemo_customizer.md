@@ -174,7 +174,7 @@ This provides:
 llms:
   inference_llm:
     _type: openai
-    model_name: meta/llama-3.1-8b-instruct
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     base_url: https://integrate.api.nvidia.com/v1
     api_key: ${NVIDIA_API_KEY}
     temperature: 0.7
@@ -216,7 +216,7 @@ trainer_adapters:
     datastore_host: https://datastore.example.com
     namespace: my-dpo-project
     dataset_name: dpo-training-data
-    customization_config: meta/llama-3.1-8b-instruct@v1.0.0+A100
+    customization_config: nvidia/nemotron-3.5-lightning-30b-a3b@v1.0.0+A100
     create_namespace_if_missing: true
     use_full_message_history: true
     hyperparameters:
@@ -344,7 +344,7 @@ trainer_adapters:
     create_namespace_if_missing: true
 
     # Customization Job
-    customization_config: meta/llama-3.1-8b-instruct@v1.0.0+A100
+    customization_config: nvidia/nemotron-3.5-lightning-30b-a3b@v1.0.0+A100
     hyperparameters:
       training_type: dpo
       finetuning_type: all_weights
@@ -363,7 +363,7 @@ trainer_adapters:
     # Deployment
     deploy_on_completion: false
     deployment_config:
-      image_name: nvcr.io/nim/meta/llama-3.1-8b-instruct
+      image_name: nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b
       image_tag: latest
       gpu: 1
       deployment_name: null
@@ -395,7 +395,7 @@ trainer_adapters:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `customization_config` | `str` | **required** | Model configuration string (e.g., `meta/llama-3.1-8b-instruct@v1.0.0+A100`). Available `configs` can be listed via NeMo Customizer API. |
+| `customization_config` | `str` | **required** | Model configuration string (e.g., `nvidia/nemotron-3.5-lightning-30b-a3b@v1.0.0+A100`). Available `configs` can be listed via NeMo Customizer API. |
 
 #### Hyperparameters
 
@@ -427,7 +427,7 @@ trainer_adapters:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `deploy_on_completion` | `bool` | `false` | If `true`, automatically deploy the trained model after job completion. |
-| `deployment_config.image_name` | `str` | `"nvcr.io/nim/meta/llama-3.1-8b-instruct"` | NIM container image name. |
+| `deployment_config.image_name` | `str` | `"nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b"` | NIM container image name. |
 | `deployment_config.image_tag` | `str` | `"latest"` | NIM container image tag. |
 | `deployment_config.gpu` | `int` | `1` | Number of GPUs for deployment. |
 | `deployment_config.deployment_name` | `str \| null` | `null` | Name for deployment. If `null`, auto-generated. |
@@ -811,7 +811,7 @@ trainer_adapters:
   nemo_adapter:
     deploy_on_completion: true
     deployment_config:
-      image_name: nvcr.io/nim/meta/llama-3.1-8b-instruct
+      image_name: nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b
       image_tag: latest
       gpu: 2
       deployment_name: my-dpo-model

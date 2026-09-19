@@ -33,7 +33,7 @@ functions:
     _type: webpage_query
     webpage_url: https://docs.smith.langchain.com
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
-    embedder_name: nv-embedqa-e5-v5
+    embedder_name: nemotron-3-embed-1b
     chunk_size: 512
   current_datetime:
     _type: current_datetime
@@ -41,13 +41,13 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
 
 embedders:
-  nv-embedqa-e5-v5:
+  nemotron-3-embed-1b:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
 
 workflow:
   _type: react_agent
@@ -59,15 +59,15 @@ workflow:
 
 This workflow configuration is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. The `functions` section contains the tools used in the workflow, while `llms` and `embedders` define the models used in the workflow, and lastly the `workflow` section ties the other sections together and defines the workflow itself.
 
-#### The `functions` section
+#### The `functions` Section
 
 In this workflow, the `webpage_query` tool queries the LangSmith User Guide, and the `current_datetime` tool gets the current date and time. The `description` entry instructs the LLM when and how to use the tool. In this case, the workflow explicitly defines `description` for the `webpage_query` tool.
 
-#### The `llms` and `embedders` sections
+#### The `llms` and `embedders` Sections
 
-The `webpage_query` tool uses the `nv-embedqa-e5-v5` embedder, which is defined in the `embedders` section.
+The `webpage_query` tool uses the `nemotron-3-embed-1b` embedder, which is defined in the `embedders` section.
 
-#### The `workflow` section
+#### The `workflow` Section
 
 The workflow itself is typically an agent, however any NeMo Agent Toolkit function can be used as a workflow. Refer to the [Agents](../components/agents/index.md) documentation for more details on the agents that are included in NeMo Agent Toolkit.
 
@@ -101,12 +101,12 @@ Control flow components are offered by NeMo Agent Toolkit to direct how a workfl
 
 The following are [agents](../components/agents/index.md) offered by NeMo Agent Toolkit. Choose the approach that best fits your needs.
 
-- [Automatic Memory Wrapper Agent](../components/agents/auto-memory-wrapper/index.md) — **Best for**: wrapping any agent to provide automatic memory capture and retrieval without requiring the LLM to invoke memory tools explicitly.
-- [ReAct Agent](../components/agents/react-agent/index.md) — **Best for**: performing ReAct (Reasoning and Acting) reasoning between tool calls.
-- [Reasoning Agent](../components/agents/reasoning-agent/index.md) — **Best for**: reasoning ahead of time through planning rather than between steps (requires an LLM that supports reasoning).
-- [ReWOO Agent](../components/agents/rewoo-agent/index.md) — **Best for**: decoupling reasoning from observations to improve tool usage and token efficiency for reasoning tasks.
-- [Responses API and Agent](../components/agents/responses-api-and-agent/index.md) — **Best for**: tool use with OpenAI's Responses API, including built-in tools, MCP remote tools, and NeMo Agent Toolkit tools.
-- [Tool Calling Agent](../components/agents/tool-calling-agent/index.md) — **Best for**: directly invoking external tools based on structured function definitions (requires an LLM with tool-calling support).
+- [Automatic Memory Wrapper Agent](../components/agents/auto-memory-wrapper/index.md) — Wraps any agent to provide automatic memory capture and retrieval without requiring the LLM to invoke memory tools explicitly.
+- [ReAct Agent](../components/agents/react-agent/index.md) — Performs ReAct (Reasoning and Acting) reasoning between tool calls.
+- [Reasoning Agent](../components/agents/reasoning-agent/index.md) — Reasons ahead of time through planning rather than between steps (requires an LLM that supports reasoning).
+- [ReWOO Agent](../components/agents/rewoo-agent/index.md) — Decouples reasoning from observations to improve tool usage and token efficiency for reasoning tasks.
+- [Responses API and Agent](../components/agents/responses-api-and-agent/index.md) — Use tool with OpenAI's Responses API, including built-in tools, MCP remote tools, and NeMo Agent Toolkit tools.
+- [Tool Calling Agent](../components/agents/tool-calling-agent/index.md) — Directly invokes external tools based on structured function definitions (requires an LLM with tool-calling support).
 
 ## Decision Factors
 

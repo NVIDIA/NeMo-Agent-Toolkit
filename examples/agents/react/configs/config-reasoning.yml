@@ -17,7 +17,7 @@
 llms:
   nim_llm:
     _type: nim
-    model_name: nvidia/nemotron-3-nano-30b-a3b
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
     temperature: 0.0
     max_tokens: 1024
     chat_template_kwargs:
@@ -25,7 +25,7 @@ llms:
 
   nemotron_model:
     _type: nim
-    model_name: nvidia/llama-3.3-nemotron-super-49b-v1
+    model_name: nvidia/nemotron-3-super-120b-a12b
     thinking: true
     temperature: 0.0
     max_tokens: 2000

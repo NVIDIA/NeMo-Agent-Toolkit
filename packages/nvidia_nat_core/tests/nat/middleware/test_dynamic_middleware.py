@@ -20,7 +20,10 @@ from unittest.mock import Mock
 import pytest
 
 from nat.authentication.interfaces import AuthProviderBase
+from nat.builder.builder import Builder
 from nat.builder.function import Function
+from nat.builder.function import FunctionInfo
+from nat.builder.function import LambdaFunction
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.authentication import AuthResult
 from nat.data_models.component import ComponentGroup
@@ -28,6 +31,7 @@ from nat.data_models.function import FunctionBaseConfig
 from nat.memory.interfaces import MemoryEditor
 from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
 from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
+from nat.middleware.middleware import InvocationContext
 from nat.middleware.utils.workflow_inventory import DiscoveredComponent
 from nat.middleware.utils.workflow_inventory import DiscoveredFunction
 from nat.object_store.interfaces import ObjectStore
@@ -578,6 +582,43 @@ async def test_patch_add_function_group_skips_patch_when_no_workflow_functions_c
 
 
 # ==================== Registration Tests ====================
+
+
+class _CountingDynamicMiddleware(DynamicFunctionMiddleware):
+    """Records how many times its `pre_invoke` hook actually executes."""
+
+    def __init__(self, config: DynamicMiddlewareConfig, builder: Builder):
+        super().__init__(config=config, builder=builder)
+        self.pre_invoke_calls: list[bool] = []
+
+    async def pre_invoke(self, context: InvocationContext) -> None:
+        self.pre_invoke_calls.append(True)
+
+
+async def test_register_function_does_not_duplicate_middleware_already_in_chain():
+    """Regression test for #2093: when a function is explicitly configured with a dynamic
+    middleware instance and the dynamic registration later appends the same instance, the
+    chain must contain the instance only once and it must execute once per invocation.
+    """
+    config = DynamicMiddlewareConfig(register_workflow_functions=True)
+    middleware = _CountingDynamicMiddleware(config=config, builder=Mock(_functions={}))
+
+    async def work(value: int) -> int:
+        return value
+
+    info = FunctionInfo.from_fn(work, description="example function")
+    func = LambdaFunction.from_info(config=FunctionBaseConfig(), info=info, instance_name="example_function")
+
+    # Explicit per-function middleware configuration (as WorkflowBuilder does when building functions)
+    func.configure_middleware([middleware])
+
+    discovered = DiscoveredFunction(name="example_function", config=FunctionBaseConfig(), instance=func)
+    middleware._register_function(discovered)
+
+    assert func.middleware == (middleware, ), "middleware instance must not appear twice in the chain"
+
+    await func._middlewared_single(1)
+    assert len(middleware.pre_invoke_calls) == 1, "middleware must execute exactly once per invocation"
 
 
 def test_register_function_prevents_duplicates(mock_function):

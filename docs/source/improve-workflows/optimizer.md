@@ -262,7 +262,7 @@ For example:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     optimizable_params:
       - temperature
@@ -280,7 +280,7 @@ You can override the search space for any optimizable parameter directly in your
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     optimizable_params: [temperature, top_p]
     search_space:
