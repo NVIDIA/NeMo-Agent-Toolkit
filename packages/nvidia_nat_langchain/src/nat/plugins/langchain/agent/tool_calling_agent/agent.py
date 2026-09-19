@@ -52,6 +52,31 @@ class ToolCallAgentGraphState(BaseModel):
     messages: list[BaseMessage] = Field(default_factory=list)  # input and output of the Agent
 
 
+def extract_token_usage(response: BaseMessage) -> UsageMetadata | None:
+    """Extract token usage from a message, checking both LangChain and OpenAI formats.
+
+    Returns ``None`` when the message reports no usage at all, so a caller can tell "no usage
+    reported" from a genuine zero - the streaming endpoint must not fabricate a usage frame, and
+    the graph treats an absent value as zeros.
+    """
+    usage_meta: UsageMetadata | None = getattr(response, "usage_metadata", None)
+    if usage_meta:
+        return UsageMetadata(
+            input_tokens=usage_meta.get("input_tokens", 0),
+            output_tokens=usage_meta.get("output_tokens", 0),
+            total_tokens=usage_meta.get("total_tokens", 0),
+        )
+    resp_meta: dict = getattr(response, "response_metadata", {})
+    openai_usage: dict = resp_meta.get("usage", {})
+    if openai_usage:
+        return UsageMetadata(
+            input_tokens=openai_usage.get("prompt_tokens", 0),
+            output_tokens=openai_usage.get("completion_tokens", 0),
+            total_tokens=openai_usage.get("total_tokens", 0),
+        )
+    return None
+
+
 class ToolCallAgentGraph(DualNodeAgent):
     """Configurable LangGraph Tool Calling Agent. A Tool Calling Agent requires an LLM which supports tool calling.
     A tool Calling Agent utilizes the tool input parameters to select the optimal tool.  Supports handling tool errors.
@@ -164,22 +189,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             UsageMetadata with ``input_tokens``, ``output_tokens``, ``total_tokens``
             (values default to 0 if unavailable).
         """
-        usage_meta: UsageMetadata | None = getattr(response, "usage_metadata", None)
-        if usage_meta:
-            return UsageMetadata(
-                input_tokens=usage_meta.get("input_tokens", 0),
-                output_tokens=usage_meta.get("output_tokens", 0),
-                total_tokens=usage_meta.get("total_tokens", 0),
-            )
-        resp_meta: dict = getattr(response, "response_metadata", {})
-        openai_usage: dict = resp_meta.get("usage", {})
-        if openai_usage:
-            return UsageMetadata(
-                input_tokens=openai_usage.get("prompt_tokens", 0),
-                output_tokens=openai_usage.get("completion_tokens", 0),
-                total_tokens=openai_usage.get("total_tokens", 0),
-            )
-        return UsageMetadata(input_tokens=0, output_tokens=0, total_tokens=0)
+        return extract_token_usage(response) or UsageMetadata(input_tokens=0, output_tokens=0, total_tokens=0)
 
     async def _validate_llm_response(self, response: AIMessage, state: ToolCallAgentGraphState) -> AIMessage:
         """Validate the LLM response and attempt recovery if configured.

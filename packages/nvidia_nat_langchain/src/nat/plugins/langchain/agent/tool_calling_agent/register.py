@@ -114,6 +114,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
     from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
     from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
     from nat.plugins.langchain.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
+    from nat.plugins.langchain.agent.tool_calling_agent.agent import extract_token_usage
 
     prompt = create_tool_calling_agent_prompt(config)
     # we can choose an LLM for the ReAct agent in the config file
@@ -234,11 +235,11 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
 
                 # Each agent LLM call reports its own usage; a turn can make several (one per tool
                 # round), so they are summed rather than overwritten.
-                usage_metadata = getattr(msg, "usage_metadata", None)
-                if usage_metadata:
-                    usage_totals["prompt_tokens"] += usage_metadata.get("input_tokens") or 0
-                    usage_totals["completion_tokens"] += usage_metadata.get("output_tokens") or 0
-                    usage_totals["total_tokens"] += usage_metadata.get("total_tokens") or 0
+                usage = extract_token_usage(msg)
+                if usage is not None:
+                    usage_totals["prompt_tokens"] += usage["input_tokens"]
+                    usage_totals["completion_tokens"] += usage["output_tokens"]
+                    usage_totals["total_tokens"] += usage["total_tokens"]
                     saw_usage = True
 
                 chunk_text = _extract_message_text(msg.content)
