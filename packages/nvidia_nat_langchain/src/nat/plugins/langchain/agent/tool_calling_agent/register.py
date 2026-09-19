@@ -37,6 +37,7 @@ from nat.data_models.api_server import ChatResponseChunkChoice
 from nat.data_models.api_server import ChoiceDelta
 from nat.data_models.api_server import ChoiceDeltaToolCall
 from nat.data_models.api_server import ChoiceDeltaToolCallFunction
+from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.utils.type_converter import GlobalTypeConverter
@@ -207,6 +208,12 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
         chunk_id = str(uuid.uuid4())
         try:
             message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
+            # OpenAI sends one extra chunk carrying usage, with no choices, after the last content
+            # chunk, and only when the caller asked for it. The streaming LLM reports its own
+            # usage (stream_usage=True), so that is what the chunk carries - not an estimate.
+            include_usage = bool((message.stream_options or {}).get("include_usage"))
+            usage_totals = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+            saw_usage = False
 
             messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in message.messages],
                                                         max_tokens=config.max_history,
@@ -224,6 +231,15 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                     continue
                 if metadata.get("langgraph_node") != "agent":
                     continue
+
+                # Each agent LLM call reports its own usage; a turn can make several (one per tool
+                # round), so they are summed rather than overwritten.
+                usage_metadata = getattr(msg, "usage_metadata", None)
+                if usage_metadata:
+                    usage_totals["prompt_tokens"] += usage_metadata.get("input_tokens") or 0
+                    usage_totals["completion_tokens"] += usage_metadata.get("output_tokens") or 0
+                    usage_totals["total_tokens"] += usage_metadata.get("total_tokens") or 0
+                    saw_usage = True
 
                 chunk_text = _extract_message_text(msg.content)
                 if chunk_text:
@@ -258,6 +274,16 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                         model=UNKNOWN_MODEL_SENTINEL,
                         object="chat.completion.chunk",
                     )
+
+            if include_usage and saw_usage:
+                yield ChatResponseChunk(
+                    id=chunk_id,
+                    choices=[],
+                    created=datetime.datetime.now(datetime.UTC),
+                    model=UNKNOWN_MODEL_SENTINEL,
+                    object="chat.completion.chunk",
+                    usage=Usage(**usage_totals),
+                )
         except GraphRecursionError:
             logger.warning(
                 "%s Tool Calling Agent reached its maximum iteration limit (%d) without producing a final answer. "
