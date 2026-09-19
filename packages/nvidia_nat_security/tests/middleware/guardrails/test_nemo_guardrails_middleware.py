@@ -29,6 +29,7 @@ from nemoguardrails.rails.llm.options import GenerationLog
 from nemoguardrails.rails.llm.options import GenerationResponse
 from pydantic import BaseModel
 
+from nat.data_models.api_server import ChatResponseChunk
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware import _DEFAULT_REFUSAL
@@ -739,3 +740,101 @@ def test_finalize_guardrails_rejects_invalid_policy_root() -> None:
             workflow_functions=["test_fn"],
             guardrails_root="not_a_real_policy_directory",
         )
+
+
+@pytest.mark.parametrize("stream_output_rails", [False, True], ids=["buffered", "live"])
+@pytest.mark.parametrize("chunk_kind", ["strings", "chat-chunks", "empty", "fallback"])
+async def test_stream_evaluates_response_text(stream_output_rails: bool, chunk_kind: str) -> None:
+    """Both rail modes inspect and return text, not structured chunk representations."""
+    config = GuardrailsMiddlewareConfig(
+        workflow_functions=["test_fn"],
+        stream_output_rails=stream_output_rails,
+        guardrails=_rails_policy(),
+    )
+    middleware = _make_middleware(config=config)
+    values = ["Hello", "", " world"]
+    source: list[Any] = values
+    expected = "Hello world"
+    if chunk_kind == "empty":
+        source = []
+        expected = ""
+    elif chunk_kind == "fallback":
+        source = [42]
+        expected = "42"
+    elif chunk_kind == "chat-chunks":
+        source = [ChatResponseChunk.create_streaming_chunk(value) for value in values]
+        # Providers also send metadata-only chunks without choices or text content.
+        source.append(ChatResponseChunk(id="metadata", created=0, choices=[]))
+        source.append(ChatResponseChunk(id="metadata", created=0, choices=[{"index": 0, "delta": {}}]))
+    inspected: list[str] = []
+
+    async def inspect_stream(*, messages, generator):
+        async for value in generator:
+            inspected.append(value)
+            yield value
+
+    middleware._llm_rails.stream_async = MagicMock(side_effect=inspect_stream)
+    call_next = MagicMock(return_value=_async_iter(source))
+    output = [
+        chunk async for chunk in middleware.function_middleware_stream("hello", call_next=call_next,
+                                                                       context=_invocation_context().function_context)
+    ]
+
+    assert "".join(output) == expected
+    if stream_output_rails:
+        assert "".join(inspected) == expected
+        assert all(isinstance(value, str) for value in inspected)
+    elif expected:
+        calls = middleware._llm_rails.generate_async.await_args_list
+        assert calls[-1].kwargs["messages"][-1] == {"role": "assistant", "content": expected}
+
+
+@pytest.mark.parametrize("stream_output_rails", [False, True], ids=["buffered", "live"])
+async def test_stream_propagates_upstream_error(stream_output_rails: bool) -> None:
+    """A broken upstream stream must not appear to complete successfully."""
+    config = GuardrailsMiddlewareConfig(
+        workflow_functions=["test_fn"],
+        stream_output_rails=stream_output_rails,
+        guardrails=_rails_policy(),
+    )
+    middleware = _make_middleware(config=config)
+
+    async def inspect_stream(*, messages, generator):
+        async for value in generator:
+            yield value
+
+    middleware._llm_rails.stream_async = MagicMock(side_effect=inspect_stream)
+
+    async def failing_stream(*args, **kwargs):
+        yield "partial"
+        raise RuntimeError("upstream unavailable")
+
+    with pytest.raises(RuntimeError, match="upstream unavailable"):
+        _ = [
+            chunk async for chunk in middleware.function_middleware_stream(
+                "hello", call_next=failing_stream, context=_invocation_context().function_context)
+        ]
+
+
+@pytest.mark.parametrize("blocked", [False, True], ids=["rewrite", "block"])
+async def test_buffered_structured_stream_honors_output_rails(blocked: bool) -> None:
+    """Extracted text still goes through output rewriting and blocking before release."""
+    replacement = "Content removed."
+    middleware = _make_middleware(generate_side_effect=[
+        _generation_response(),
+        _generation_response(
+            activated_rails=[ActivatedRail(type="output", name="content safety", stop=True)] if blocked else [],
+            response=replacement,
+        ),
+    ])
+    source = [ChatResponseChunk.create_streaming_chunk("sensitive content")]
+    output = [
+        chunk async for chunk in middleware.function_middleware_stream(
+            "hello",
+            call_next=MagicMock(return_value=_async_iter(source)),
+            context=_invocation_context().function_context, )
+    ]
+
+    assert output == [replacement]
+    messages = middleware._llm_rails.generate_async.await_args.kwargs["messages"]
+    assert messages[-1] == {"role": "assistant", "content": "sensitive content"}
