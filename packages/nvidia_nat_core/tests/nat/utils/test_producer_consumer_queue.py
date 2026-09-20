@@ -21,7 +21,6 @@ from nat.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
 from nat.utils.producer_consumer_queue import QueueClosed
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("producers", [False, True])
 @pytest.mark.parametrize("cancel_first", [False, True])
 async def test_close_wakes_all_waiters(producers, cancel_first):
@@ -51,7 +50,6 @@ async def test_close_wakes_all_waiters(producers, cancel_first):
         await asyncio.gather(*tasks, return_exceptions=True)
 
 
-@pytest.mark.asyncio
 async def test_close_preserves_buffered_items_and_join():
     queue = AsyncIOProducerConsumerQueue()
     await queue.put("first")
@@ -76,7 +74,6 @@ async def test_close_preserves_buffered_items_and_join():
         await asyncio.gather(joined, return_exceptions=True)
 
 
-@pytest.mark.asyncio
 async def test_close_empty_queue_finishes_iteration_and_join():
     queue = AsyncIOProducerConsumerQueue()
     await queue.close()
