@@ -33,6 +33,7 @@ from nat.runtime.session import SessionManager
 
 @pytest.fixture(name="logging_workflow")
 def logging_workflow_fixture(tmp_path: Path, registry: TypeRegistry) -> Path:
+    """Provide a model-free workflow that can fail while writing a real log record."""
 
     class LoggingWorkflowConfig(FunctionBaseConfig, name="file_logging_lifetime_test"):
         pass
