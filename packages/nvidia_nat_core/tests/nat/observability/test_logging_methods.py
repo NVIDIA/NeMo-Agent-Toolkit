@@ -31,8 +31,8 @@ from nat.runtime.loader import load_workflow
 from nat.runtime.session import SessionManager
 
 
-@pytest.fixture
-def logging_workflow(tmp_path: Path, registry: TypeRegistry) -> Path:
+@pytest.fixture(name="logging_workflow")
+def logging_workflow_fixture(tmp_path: Path, registry: TypeRegistry) -> Path:
 
     class LoggingWorkflowConfig(FunctionBaseConfig, name="file_logging_lifetime_test"):
         pass
