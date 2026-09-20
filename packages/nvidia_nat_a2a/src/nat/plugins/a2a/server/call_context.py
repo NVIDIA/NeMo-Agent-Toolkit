@@ -69,18 +69,16 @@ class NATCallContextBuilder(DefaultCallContextBuilder):
         context = super().build(request)
 
         # Only trust a request OAuth2ValidationMiddleware has already verified.
-        if getattr(request.state, "oauth_user", None) is None:
+        subject = getattr(request.state, "oauth_user", None)
+        if subject is None:
             return context
 
         try:
-            user_info = UserManager.extract_user_from_connection(request)
+            user_info = UserManager.user_info_from_subject(subject)
         except ValueError:
-            # A credential that cannot be resolved leaves the context unauthenticated
+            # A validated subject that cannot be resolved leaves the context unauthenticated
             # rather than failing the request here.
             logger.exception("Could not resolve a user identity from an authenticated request")
-            return context
-
-        if user_info is None:
             return context
 
         context.user = AuthenticatedUser(user_info.get_user_id())

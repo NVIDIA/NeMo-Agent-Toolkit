@@ -71,14 +71,15 @@ def _jwt(subject: str) -> str:
     return f"{segment({'alg': 'none', 'typ': 'JWT'})}.{segment({'sub': subject})}.c2lnbmF0dXJl"
 
 
-def _request(subject: str | None) -> Request:
+def _request(subject: str | None, token: str | None = None) -> Request:
     """Build a request shaped like one OAuth2ValidationMiddleware has passed."""
+    bearer_token = token or _jwt(SUBJECT)
     scope = {
         "type": "http",
         "method": "POST",
         "path": "/",
         "query_string": b"",
-        "headers": [(b"authorization", f"Bearer {_jwt(SUBJECT)}".encode())],
+        "headers": [(b"authorization", f"Bearer {bearer_token}".encode())],
         "state": {},
     }
     request = Request(scope)
@@ -304,6 +305,16 @@ class TestPerUserRequestIdentity:
         assert context.user.is_authenticated
         assert context.user.user_name == expected
         assert context.user.user_name != SUBJECT
+
+    def test_call_context_builder_uses_stable_subject_for_opaque_tokens(self):
+        """Token rotation must not create a second per-user workflow for one subject."""
+        first_context = NATCallContextBuilder().build(_request(SUBJECT, "opaque-token-one"))
+        second_context = NATCallContextBuilder().build(_request(SUBJECT, "opaque-token-two"))
+
+        expected = UserManager.user_info_from_subject(SUBJECT).get_user_id()
+
+        assert first_context.user.user_name == expected
+        assert second_context.user.user_name == expected
 
     def test_call_context_builder_leaves_unverified_requests_alone(self):
         """A request the middleware has not verified stays unauthenticated.
