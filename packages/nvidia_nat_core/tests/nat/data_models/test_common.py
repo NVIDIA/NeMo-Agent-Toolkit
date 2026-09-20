@@ -45,6 +45,39 @@ def test_hashable_base_model_is_hashable():
     assert h3 in configs
 
 
+def test_hashable_base_model_compares_with_other_types():
+    """Comparing with a value that is not a HashableBaseModel must not raise, even when that value is unhashable."""
+    h1 = ԊashableTĕstModel(apples=2, pair=(4, 5))
+
+    # Unhashable operands used to raise TypeError from other.__hash__().
+    assert h1 != {"apples": 2, "pair": (4, 5)}
+    assert not (h1 == {"apples": 2, "pair": (4, 5)})
+    assert h1 != [2, (4, 5)]
+    assert h1 not in [{"apples": 2}, [1, 2]]
+
+    # Hashable but unrelated operands.
+    assert h1 != "ԊashableTĕstModel"
+    assert h1 != 42
+    assert h1 is not None and h1 != None  # noqa: E711 - exercises __eq__/__ne__ with None
+
+    # Ordering against something that is not a HashableBaseModel is undefined, as for any other Python type.
+    with pytest.raises(TypeError):
+        _ = h1 < {"apples": 2}
+    with pytest.raises(TypeError):
+        _ = h1 > 42
+
+
+def test_hashable_base_model_compares_with_hashable_base_model():
+    h1 = ԊashableTĕstModel(apples=2, pair=(4, 5))
+    h2 = ԊashableTĕstModel(apples=3, pair=(4, 5))
+    h3 = ԊashableTĕstModel(apples=2, pair=(4, 5))
+
+    assert h1 == h3
+    assert h1 != h2
+    assert (h1 < h2) != (h1 > h2)
+    assert sorted([h2, h1]) == sorted([h1, h2])
+
+
 def test_hashable_base_model_write_json_schema(tmp_path: Path):
     schema_path = tmp_path / "test_schema.json"
     ԊashableTĕstModel.write_json_schema(schema_path)
