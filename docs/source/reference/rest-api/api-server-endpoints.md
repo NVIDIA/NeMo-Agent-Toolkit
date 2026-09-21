@@ -91,7 +91,7 @@ nat serve --config_file examples/getting_started/simple_calculator/configs/confi
 - **Description:** A liveness and readiness probe for the running server. It is registered automatically
   whenever you start `nat serve`, returns immediately without executing a workflow, and requires no
   model or API credentials. This makes it suitable for reverse proxies, process supervisors, Docker
-  health checks, and Kubernetes-style readiness and liveness probes.
+  health checks, and Kubernetes-style readiness probes.
 - **HTTP Request Example:**
   ```bash
   curl -s http://localhost:8000/health
