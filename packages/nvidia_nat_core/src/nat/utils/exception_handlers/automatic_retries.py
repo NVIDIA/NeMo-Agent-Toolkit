@@ -319,9 +319,10 @@ def _retry_decorator(
                         call_args, call_kwargs = _deep_copy_args(args, kw, skip_first=skip_self_in_deepcopy)
 
                     try:
+                        yielded = False
                         async for item in fn(*call_args, **call_kwargs):
+                            yielded = True
                             yield item
-                        return
                     except retry_on as exc:
                         last_exception = exc
 
@@ -337,6 +338,14 @@ def _retry_decorator(
 
                         await asyncio.sleep(delay)
                         delay *= backoff
+                    else:
+                        # A completed attempt that produced no chunks after a prior
+                        # failure usually means a one-shot async iterator was already
+                        # exhausted on retry (common in LangChain streaming). Re-raise
+                        # outside the except so we do not burn remaining attempts.
+                        if last_exception is not None and not yielded:
+                            raise last_exception
+                        return
 
                 if last_exception:
                     raise last_exception
@@ -357,8 +366,10 @@ def _retry_decorator(
                         call_args, call_kwargs = _deep_copy_args(args, kw, skip_first=skip_self_in_deepcopy)
 
                     try:
-                        yield from fn(*call_args, **call_kwargs)
-                        return
+                        yielded = False
+                        for item in fn(*call_args, **call_kwargs):
+                            yielded = True
+                            yield item
                     except retry_on as exc:
                         last_exception = exc
 
@@ -374,6 +385,12 @@ def _retry_decorator(
 
                         time.sleep(delay)
                         delay *= backoff
+                    else:
+                        # Same empty-retry guard as the async-generator path: do not
+                        # treat a zero-item completion after a prior failure as success.
+                        if last_exception is not None and not yielded:
+                            raise last_exception
+                        return
 
                 if last_exception:
                     raise last_exception
