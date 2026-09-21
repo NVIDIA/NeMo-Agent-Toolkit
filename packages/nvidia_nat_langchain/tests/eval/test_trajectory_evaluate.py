@@ -19,6 +19,8 @@ from unittest.mock import patch
 
 import pytest
 from langchain_core.language_models import BaseChatModel
+from langchain_core.language_models import FakeListChatModel
+from langchain_core.runnables import ConfigurableField
 from langchain_core.tools import BaseTool
 
 from nat.atif import ATIFAgentConfig
@@ -56,6 +58,17 @@ def fixture_mock_tools():
 @pytest.fixture(name="trajectory_evaluator")
 def fixture_trajectory_evaluator(mock_llm, mock_tools):
     return TrajectoryEvaluator(llm=mock_llm, tools=mock_tools, max_concurrency=4)
+
+
+def test_trajectory_evaluator_accepts_configurable_chat_model(mock_tools):
+    chat_model = FakeListChatModel(responses=["Score: 1"])
+    configurable_model = chat_model.configurable_fields(responses=ConfigurableField(id="model_name"))
+
+    assert not isinstance(configurable_model, BaseChatModel)
+
+    evaluator = TrajectoryEvaluator(llm=configurable_model, tools=mock_tools, max_concurrency=4)
+
+    assert evaluator.traj_eval_chain.eval_chain.llm is configurable_model
 
 
 @pytest.fixture(name="rag_eval_input")

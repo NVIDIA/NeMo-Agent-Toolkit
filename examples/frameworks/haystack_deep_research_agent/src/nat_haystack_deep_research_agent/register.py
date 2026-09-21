@@ -75,6 +75,7 @@ async def haystack_deep_research_agent_workflow(config: HaystackDeepResearchWork
 
     embedder_config = builder.get_embedder_config(config.embedder_name)
     embedder_model = getattr(embedder_config, "model", None) or getattr(embedder_config, "model_name", None)
+    embedder_api_url = getattr(embedder_config, "base_url", None)
     if not embedder_model:
         raise ValueError("Embedder configuration must define a model name.")
 
@@ -93,9 +94,12 @@ async def haystack_deep_research_agent_workflow(config: HaystackDeepResearchWork
             data_dir=config.data_dir,
             logger=logger,
             embedder_model=str(embedder_model),
+            embedder_api_url=embedder_api_url,
         )
 
     def _nim_to_haystack_generator(cfg: NIMModelConfig) -> NvidiaChatGenerator:
+        if cfg.base_url:
+            return NvidiaChatGenerator(model=cfg.model_name, api_base_url=cfg.base_url)
         return NvidiaChatGenerator(model=cfg.model_name)
 
     # Instantiate LLMs via builder configs (expecting NIM)
@@ -113,6 +117,7 @@ async def haystack_deep_research_agent_workflow(config: HaystackDeepResearchWork
         top_k=config.rag_top_k,
         generator=rag_generator,
         embedder_model=str(embedder_model),
+        embedder_api_url=embedder_api_url,
     )
 
     # Create the agent

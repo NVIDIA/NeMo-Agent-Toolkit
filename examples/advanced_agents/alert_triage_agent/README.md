@@ -240,7 +240,7 @@ Example:
 llms:
   ata_agent_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.2
     max_tokens: 2048
 ```

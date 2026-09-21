@@ -29,6 +29,7 @@ def create_rag_tool(
     top_k: int = 15,
     generator: NvidiaChatGenerator | None = None,
     embedder_model: str,
+    embedder_api_url: str | None = None,
 ) -> tuple[ComponentTool, Pipeline]:
     """
     Build a RAG tool composed of OpenSearch retriever and NvidiaChatGenerator.
@@ -38,6 +39,7 @@ def create_rag_tool(
         top_k: Number of documents to retrieve for RAG.
         generator: Pre-configured NvidiaChatGenerator created from builder LLM config.
         embedder_model: The name of the embedding model to use for query encoding.
+        embedder_api_url: Optional API URL for the embedding model.
 
     Returns:
         (ComponentTool, Pipeline): The tool and underlying pipeline.
@@ -49,7 +51,10 @@ def create_rag_tool(
         raise ValueError("An embedder model name must be provided for the RAG tool.")
 
     retriever = OpenSearchEmbeddingRetriever(document_store=document_store, top_k=top_k)
-    query_embedder = NvidiaTextEmbedder(model=embedder_model)
+    if embedder_api_url:
+        query_embedder = NvidiaTextEmbedder(model=embedder_model, api_url=embedder_api_url)
+    else:
+        query_embedder = NvidiaTextEmbedder(model=embedder_model)
     if generator is None:
         raise ValueError("NvidiaChatGenerator instance must be provided via builder-configured LLM.")
 

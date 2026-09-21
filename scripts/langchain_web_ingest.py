@@ -40,7 +40,7 @@ async def main(*,
                collection_name: str,
                clean_cache: bool = True,
                drop_collection: bool = False,
-               embedding_model: str = "nvidia/nv-embedqa-e5-v5",
+               embedding_model: str = "nvidia/nemotron-3-embed-1b",
                base_path: str = "./.tmp/data") -> list[str]:
 
     if drop_collection:
@@ -146,7 +146,7 @@ if __name__ == "__main__":
                         default=False,
                         help="Drop existing collection before ingesting",
                         action="store_true")
-    parser.add_argument("--embedding_model", "-e", default="nvidia/nv-embedqa-e5-v5", help="Embedding model to use")
+    parser.add_argument("--embedding_model", "-e", default="nvidia/nemotron-3-embed-1b", help="Embedding model to use")
     args = parser.parse_args()
 
     if len(args.urls) == 0:

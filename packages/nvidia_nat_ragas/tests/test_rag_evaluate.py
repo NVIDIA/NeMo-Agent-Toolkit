@@ -21,6 +21,7 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
+from pydantic import ValidationError
 from ragas.metrics.result import MetricResult
 
 langchain_exceptions = pytest.importorskip("langchain_core.exceptions")
@@ -384,6 +385,30 @@ def test_extract_input_obj_base_model_without_field(rag_evaluator, rag_evaluator
     assert extracted_with_field == "json hello"
     assert extracted_default != extracted_with_field
     assert '"content":"json hello"' in extracted_default  # basic sanity check on JSON output
+
+
+@pytest.mark.parametrize(
+    "metric",
+    [
+        "MultiModalFaithfulness",
+        {
+            "MultiModalFaithfulness": {
+                "kwargs": {}
+            }
+        },
+        {
+            "MultiModalFaithfulness": {
+                "skip": True
+            }
+        },
+    ],
+)
+def test_multimodal_faithfulness_is_disabled(metric):
+    """Ensure CVE-2026-6587 cannot be reached through RAGAS evaluator configuration."""
+    from nat.plugins.ragas.rag_evaluator.register import RagasEvaluatorConfig
+
+    with pytest.raises(ValidationError, match="CVE-2026-6587"):
+        RagasEvaluatorConfig(llm_name="judge", metric=metric)
 
 
 async def test_register_ragas_evaluator_atif_lane_disabled_by_default():

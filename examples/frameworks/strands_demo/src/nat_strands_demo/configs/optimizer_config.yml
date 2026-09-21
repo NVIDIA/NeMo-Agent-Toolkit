@@ -28,7 +28,7 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     max_tokens: 4096
     # Enable optimization for these parameters
@@ -49,14 +49,14 @@ llms:
   # Optimizer LLM (used for prompt optimization)
   optimizer_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     max_tokens: 4096
   
   # Evaluator LLM (used for evaluation metrics)
   evaluator_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     max_tokens: 8192  
 
@@ -140,4 +140,3 @@ optimizer:
   
   multi_objective_combination_mode: sum  
   target: null                # Run all trials (set to 0.92 for early stopping)
-
