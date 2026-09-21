@@ -49,11 +49,20 @@ def test_hashable_base_model_compares_with_other_types():
     """Comparing with a value that is not a HashableBaseModel must not raise, even when that value is unhashable."""
     h1 = ԊashableTĕstModel(apples=2, pair=(4, 5))
 
-    # Unhashable operands used to raise TypeError from other.__hash__().
-    assert h1 != {"apples": 2, "pair": (4, 5)}
-    assert not (h1 == {"apples": 2, "pair": (4, 5)})
-    assert h1 != [2, (4, 5)]
-    assert h1 not in [{"apples": 2}, [1, 2]]
+    class PlainModel(pydantic.BaseModel):
+        apples: int
+        pair: tuple[int, int]
+
+    # Unhashable operands used to raise TypeError from other.__hash__(): dict, list, set and a
+    # non-frozen pydantic model, which is unhashable as well.
+    for other in ({"apples": 2, "pair": (4, 5)}, [2, (4, 5)], {2, (4, 5)}, PlainModel(apples=2, pair=(4, 5))):
+        assert h1 != other
+        assert not (h1 == other)
+        assert h1 not in [other]
+        with pytest.raises(TypeError):
+            _ = h1 < other
+        with pytest.raises(TypeError):
+            _ = h1 > other
 
     # Hashable but unrelated operands.
     assert h1 != "ԊashableTĕstModel"
