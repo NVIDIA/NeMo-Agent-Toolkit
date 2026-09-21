@@ -45,7 +45,7 @@ async def zep_memory_client(config: ZepMemoryClientConfig, builder: Builder):
                           follow_redirects=config.follow_redirects)
     memory_editor = ZepEditor(zep_client)
 
-    if isinstance(config, RetryMixin):
+    if isinstance(config, RetryMixin) and config.do_auto_retry:
         memory_editor = patch_with_retry(memory_editor,
                                          retries=config.num_retries,
                                          retry_codes=config.retry_on_status_codes,
