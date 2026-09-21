@@ -28,6 +28,27 @@ from nat.data_models.api_server import UserMessageContentRoleType
 from nat.plugins.langchain.langgraph_workflow import LanggraphWrapperFunction
 from nat.plugins.langchain.langgraph_workflow import LanggraphWrapperInput
 from nat.plugins.langchain.langgraph_workflow import LanggraphWrapperOutput
+from nat.plugins.langchain.langgraph_workflow import split_graph_path
+
+
+@pytest.mark.parametrize(
+    ("graph", "expected"),
+    [
+        ("/path/to/module.py:graph_name", ("/path/to/module.py", "graph_name")),
+        (r"C:\\path\\to\\module.py:graph", (r"C:\\path\\to\\module.py", "graph")),
+        ("relative.py:graph", ("relative.py", "graph")),
+    ],
+)
+def test_split_graph_path(graph, expected):
+    """Graph references split at the final colon, including Windows drive paths."""
+    assert split_graph_path(graph) == expected
+
+
+@pytest.mark.parametrize("graph", ["module.py", ":graph", "module.py:", ""])
+def test_split_graph_path_rejects_missing_parts(graph):
+    """Graph references require both a module path and graph name."""
+    with pytest.raises(ValueError, match="non-empty module path"):
+        split_graph_path(graph)
 
 
 class TestConvertChatRequest:
