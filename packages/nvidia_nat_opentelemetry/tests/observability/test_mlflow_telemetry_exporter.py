@@ -123,7 +123,8 @@ async def test_mlflow_factory_merges_headers_with_precedence(monkeypatch):
         pass
     headers = created[0]["headers"]
     assert headers["x-mlflow-experiment-id"] == "42"
-    assert headers["Authorization"] == "Bearer cfg-token"
+    auth_values = [v for k, v in headers.items() if k.lower() == "authorization"]
+    assert auth_values == ["Bearer cfg-token"]
     assert headers["x-extra"] == "cfg-value"
 
 
@@ -136,7 +137,7 @@ async def test_mlflow_factory_env_fallbacks(monkeypatch):
     config, created = _build_mlflow_headers(monkeypatch, {})
     async with otel_register.mlflow_telemetry_exporter(config, builder=None):
         pass
-    assert created[0]["headers"]["Authorization"] == "Bearer env-token"
+    assert created[0]["headers"]["authorization"] == "Bearer env-token"
 
 
 async def test_mlflow_factory_incomplete_basic_auth_raises(monkeypatch):
@@ -177,3 +178,52 @@ def test_warn_on_cleartext_credentials(caplog):
             headers={"Authorization": "Bearer creds"},
         )
     assert [r for r in caplog.records if r.name == logger]
+
+
+def test_merge_headers_case_insensitive_precedence():
+    """Case-variant header names collapse to one key; later layers win."""
+    merged = otel_register._merge_headers(
+        {
+            "Authorization": "Bearer env-value", "X-Extra": "env"
+        },
+        {
+            "authorization": "Bearer cfg-value", "x-extra": "cfg"
+        },
+        {"Authorization": "Bearer auth-value"},
+    )
+    assert merged == {"authorization": "Bearer auth-value", "x-extra": "cfg"}
+
+
+def test_warn_on_cleartext_credentials_case_insensitive_scheme(caplog):
+    """Lowercase bearer/basic schemes still trigger the cleartext warning."""
+    import logging
+
+    logger = "nat.plugins.opentelemetry.register"
+    with caplog.at_level(logging.WARNING, logger=logger):
+        otel_register._warn_on_cleartext_credentials(
+            endpoint="http://mlflow.internal:5000/v1/traces",
+            headers={"authorization": "bearer abc"},
+        )
+        otel_register._warn_on_cleartext_credentials(
+            endpoint="http://mlflow.internal:5000/v1/traces",
+            headers={"AUTHORIZATION": "basic dXNlcjpwYXNz"},
+        )
+    assert len([r for r in caplog.records if r.name == logger]) == 2
+
+
+async def test_mlflow_factory_mixed_case_authorization_collapses(monkeypatch):
+    """Env 'Authorization', config 'authorization', and auth config yield one effective value: the auth config's."""
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_HEADERS", "Authorization=Bearer env-value")
+    config, created = _build_mlflow_headers(
+        monkeypatch,
+        {
+            "experiment_id": "42",
+            "token": "cfg-token",
+            "headers": {"authorization": "Bearer cfg-value"},
+        },
+    )
+    async with otel_register.mlflow_telemetry_exporter(config, builder=None):
+        pass
+    headers = created[0]["headers"]
+    auth_values = [v for k, v in headers.items() if k.lower() == "authorization"]
+    assert auth_values == ["Bearer cfg-token"]

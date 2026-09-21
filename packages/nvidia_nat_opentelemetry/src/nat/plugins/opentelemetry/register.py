@@ -324,12 +324,29 @@ def _warn_on_cleartext_credentials(*, endpoint: str, headers: dict[str, str]) ->
         is_loopback = host in {"localhost", ""}
     if is_loopback:
         return
-    if any(v.startswith(("Bearer ", "Basic ")) for k, v in headers.items() if k.lower() == "authorization"):
+    if any(v.lower().startswith(("bearer ", "basic ")) for k, v in headers.items() if k.lower() == "authorization"):
         logger.warning(
             "MLflow telemetry exporter sends credentials over unencrypted HTTP to %s; "
             "use an HTTPS endpoint for non-local tracking servers.",
             endpoint,
         )
+
+
+def _merge_headers(*layers: dict[str, str] | None) -> dict[str, str]:
+    """Merge header layers with case-insensitive names; later layers win.
+
+    HTTP header names are case-insensitive, but a plain-dict merge keeps both
+    case variants (e.g. ``Authorization`` and ``authorization``). A later
+    consumer such as ``requests``' ``CaseInsensitiveDict`` would then keep
+    only the last-inserted variant, silently breaking the intended precedence.
+    Normalizing names at the merge boundary keeps the documented precedence:
+    OTEL env < config headers < auth headers < experiment-id routing header.
+    """
+    merged: dict[str, str] = {}
+    for layer in layers:
+        for name, value in (layer or {}).items():
+            merged[name.lower()] = value
+    return merged
 
 
 def _mlflow_auth_headers(*, token: str | None, username: str, password: str | None) -> dict[str, str]:
@@ -407,9 +424,12 @@ async def mlflow_telemetry_exporter(config: MLflowTelemetryExporter, builder: Bu
     username = (config.username or os.environ.get("MLFLOW_TRACKING_USERNAME") or "").strip()
     password = get_secret_value(config.password) if config.password else os.environ.get("MLFLOW_TRACKING_PASSWORD")
 
-    headers = {**_parse_otel_env_headers(), **(config.headers or {})}
-    headers.update(_mlflow_auth_headers(token=token, username=username, password=password))
-    headers.update(_mlflow_experiment_headers(experiment_id))
+    headers = _merge_headers(
+        _parse_otel_env_headers(),
+        config.headers,
+        _mlflow_auth_headers(token=token, username=username, password=password),
+        _mlflow_experiment_headers(experiment_id),
+    )
 
     _warn_on_cleartext_credentials(endpoint=config.endpoint, headers=headers)
 
