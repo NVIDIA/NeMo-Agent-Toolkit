@@ -148,7 +148,7 @@ class TestNIMStrands:
     def nim_config(self):
         """Create a NIMModelConfig instance."""
         return NIMModelConfig(
-            model_name="meta/llama-3.1-8b-instruct",
+            model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
             api_key="test-api-key",
             base_url="https://integrate.api.nvidia.com/v1",
         )
@@ -157,7 +157,7 @@ class TestNIMStrands:
     def nim_config_wrong_api(self):
         """Create a NIMModelConfig with wrong API type."""
         return NIMModelConfig(
-            model_name="meta/llama-3.1-8b-instruct",
+            model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
             api_key="test-api-key",
             base_url="https://integrate.api.nvidia.com/v1",
             api_type=APITypeEnum.RESPONSES,
@@ -199,7 +199,7 @@ class TestNIMStrands:
             call_kwargs["client"] == mock_oai
 
             # Verify model_id
-            assert call_kwargs["model_id"] == "meta/llama-3.1-8b-instruct"
+            assert call_kwargs["model_id"] == "nvidia/nemotron-3.5-lightning-30b-a3b"
 
     @pytest.mark.asyncio
     async def test_nim_strands_with_env_var(self, mock_builder, mock_oai_clients):

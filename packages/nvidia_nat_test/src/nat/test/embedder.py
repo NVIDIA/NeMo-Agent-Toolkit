@@ -26,7 +26,7 @@ from nat.data_models.embedder import EmbedderBaseConfig
 class EmbedderTestConfig(EmbedderBaseConfig, name="test_embedder"):
     model_config = ConfigDict(protected_namespaces=())
 
-    model_name: str = "nvidia/nv-embedqa-e5-v5"
+    model_name: str = "nvidia/nemotron-3-embed-1b"
     embedding_size: int = 768
 
 

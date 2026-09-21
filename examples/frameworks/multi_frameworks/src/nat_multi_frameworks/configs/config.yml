@@ -23,7 +23,7 @@ functions:
   llama_index_rag:
     _type: llama_index_rag
     llm_name: nim_llm
-    model_name : meta/llama-3.3-70b-instruct
+    model_name : nvidia/nemotron-3-super-120b-a12b
     embedding_name : nim_embedder
     data_dir : ./examples/frameworks/multi_frameworks/README.md
   langchain_researcher_tool:
@@ -32,18 +32,18 @@ functions:
     llm_name: nim_llm
   haystack_chitchat_agent:
     _type: haystack_chitchat_agent
-    llm_name: meta/llama-3.1-70b-instruct
+    llm_name: nvidia/nemotron-3-super-120b-a12b
 
 llms:
   nim_llm:
     _type: nim
-    model_name : meta/llama-3.3-70b-instruct
+    model_name : nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
 
 embedders:
   nim_embedder:
     _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
+    model_name: nvidia/nemotron-3-embed-1b
     truncate: END
 
 workflow:
