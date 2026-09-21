@@ -487,6 +487,19 @@ def test_publish_eval_input_unstructured_string_and_json():
     assert output[3] == 42
 
 
+@pytest.mark.parametrize("config_kwargs", [{}, {"filter": {}}, {"filter": None}], ids=["omitted", "empty", "null"])
+def test_get_eval_input_from_dataset_without_filters(tmp_path: Path, mock_input_df, config_kwargs):
+    dataset_path = tmp_path / "dataset.json"
+    mock_input_df.to_json(dataset_path, orient="records")
+    config = EvalDatasetJsonConfig(file_path=dataset_path, **config_kwargs)
+    dataset_handler = DatasetHandler(config, reps=1, concurrency=1)
+
+    eval_input = dataset_handler.get_eval_input_from_dataset("")
+
+    assert [item.input_obj for item in eval_input.eval_input_items] == mock_input_df["question"].tolist()
+    assert [item.expected_output_obj for item in eval_input.eval_input_items] == mock_input_df["answer"].tolist()
+
+
 def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
     dataset_handler = DatasetHandler(custom_dataset_config, reps=1, concurrency=1)
 
