@@ -17,6 +17,7 @@ import inspect
 import typing
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
+from collections.abc import Sequence
 from types import NoneType
 
 import pytest
@@ -25,6 +26,7 @@ from pydantic import Field
 
 from nat.builder.function_info import FunctionDescriptor
 from nat.builder.function_info import FunctionInfo
+from nat.data_models.streaming import Streaming
 
 
 def _compare_dicts_partial(test_dict: dict, valid_dict: dict):
@@ -57,6 +59,31 @@ class MultipleInputModel(BaseModel):
 # Int to String functions
 async def fn_int_to_str(param: int) -> str:
     return str(param)
+
+
+async def fn_no_args_to_str() -> str:
+    return "no args"
+
+
+async def fn_no_args_to_str_stream() -> AsyncGenerator[str]:
+    yield "no args stream"
+
+
+def collect_strings(values: Sequence[str]) -> str:
+    """Combine streamed strings into one result.
+
+    Args:
+        values: The streamed string values.
+
+    Returns:
+        The concatenated string.
+    """
+    return "".join(values)
+
+
+async def fn_no_args_streaming() -> typing.Annotated[AsyncGenerator[str], Streaming(convert=collect_strings)]:
+    """Yield values from a zero-argument streaming function."""
+    yield "streaming"
 
 
 async def fn_int_annotated_to_str(param: typing.Annotated[int, ...]) -> str:
@@ -831,6 +858,38 @@ async def test_create_and_from_fn_description():
 
     assert info_from_fn.description == "Test Description"
     assert info_create.description == "Test Description"
+
+
+async def test_create_and_from_fn_no_args():
+    single_info = FunctionInfo.from_fn(fn_no_args_to_str)
+    assert single_info.input_schema.model_fields == {}
+    assert await single_info.single_fn(single_info.input_schema()) == "no args"
+
+    stream_info = FunctionInfo.from_fn(fn_no_args_to_str_stream)
+    assert stream_info.input_schema.model_fields == {}
+    values = [value async for value in stream_info.stream_fn(stream_info.input_schema())]
+    assert values == ["no args stream"]
+
+    streaming_info = FunctionInfo.from_fn(fn_no_args_streaming)
+    assert await streaming_info.single_fn(streaming_info.input_schema()) == "streaming"
+
+
+async def test_create_no_args_conversions():
+
+    async def convert_to_stream(value: str) -> AsyncGenerator[int]:
+        yield len(value)
+
+    single_to_stream_info = FunctionInfo.create(single_fn=fn_no_args_to_str, single_to_stream_fn=convert_to_stream)
+    assert await single_to_stream_info.single_fn(single_to_stream_info.input_schema()) == "no args"
+    values = [value async for value in single_to_stream_info.stream_fn(single_to_stream_info.input_schema())]
+    assert values == [len("no args")]
+
+    async def convert_to_single(values: AsyncGenerator[str]) -> int:
+        return len("".join([value async for value in values]))
+
+    stream_to_single_info = FunctionInfo.create(stream_fn=fn_no_args_to_str_stream,
+                                                stream_to_single_fn=convert_to_single)
+    assert await stream_to_single_info.single_fn(stream_to_single_info.input_schema()) == len("no args stream")
 
 
 async def test_create_and_from_fn_input_schema():
