@@ -23,7 +23,7 @@ This guide will help you set up your NVIDIA NeMo Agent Toolkit development envir
 
 The following [LLM](../build-workflows/llms/index.md) API providers are supported:
 
-- NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)
+- NIM
 - OpenAI
 - AWS Bedrock
 - Azure OpenAI
@@ -51,7 +51,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[openpipe-art]` or `nvidia-nat-openpipe-art` - [Agent Reinforcement Trainer](https://art.openpipe.ai/getting-started/about) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[crewai]`.
 - `nvidia-nat[opentelemetry]` or `nvidia-nat-opentelemetry` - [OpenTelemetry](https://opentelemetry.io/) (includes the `arize_ax` exporter for [Arize AX](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel))
 - `nvidia-nat[phoenix]` or `nvidia-nat-phoenix` - [Arize Phoenix](https://arize.com/docs/phoenix)
-- `nvidia-nat[redis]` or `nvidia-nat-redis` - [Redis](https://redis.io/)
+- `nvidia-nat[redis]` or `nemo-agent-toolkit-redis` - [Redis](https://redis.io/). The historical `nvidia-nat-redis` distribution remains as a compatibility package.
 - `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
 - `nvidia-nat[security]` or `nvidia-nat-security` - Red-team CLI and evaluators (`nat red-team`)
 - `nvidia-nat[defense]` or `nvidia-nat-security[defense]` - Built-in defense middleware (`pii_defense`, `content_safety_guard`, etc.)
@@ -80,7 +80,7 @@ To install these first-party plugin libraries, you can use the full distribution
 | macOS | aarch64 | 3.11, 3.12, 3.13 | ✅ Tested |
 | [Windows (WSL2)](#windows-wsl2) | x86_64 | 3.11, 3.12, 3.13 | ✅ Tested |
 | [Windows (WSL2)](#windows-wsl2) | aarch64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
-| Windows | x86_64 | 3.11, 3.12, 3.13 | ❓ Untested, Should Work |
+| Windows | x86_64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
 | Windows | aarch64 | 3.11, 3.12, 3.13 | ❌ Unsupported |
 
 ## Software Prerequisites

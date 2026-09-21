@@ -68,17 +68,49 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
     @staticmethod
     def _extract_token_usage(response: ChatResponse) -> TokenUsageBaseModel:
         token_usage = TokenUsageBaseModel()
+
+        def get_value(source: Any, *names: str) -> Any:
+            for name in names:
+                value = source.get(name) if isinstance(source, dict) else getattr(source, name, None)
+                if value is not None:
+                    return value
+            return None
+
         try:
-            if response and response.additional_kwargs and "usage" in response.additional_kwargs:
-                usage = response.additional_kwargs["usage"] if "usage" in response.additional_kwargs else {}
-                token_usage.prompt_tokens = usage.input_tokens if hasattr(usage, "input_tokens") else 0
-                token_usage.completion_tokens = usage.output_tokens if hasattr(usage, "output_tokens") else 0
+            additional_kwargs = response.additional_kwargs if response and response.additional_kwargs else {}
+            raw_usage = get_value(get_value(response, "raw"), "usage") if response else None
+            usage_sources = [raw_usage, additional_kwargs.get("usage"), additional_kwargs]
 
-                if hasattr(usage, "input_tokens_details") and hasattr(usage.input_tokens_details, "cached_tokens"):
-                    token_usage.cached_tokens = usage.input_tokens_details.cached_tokens
+            def first_value(*names: str) -> Any:
+                for source in usage_sources:
+                    if source is not None and (value := get_value(source, *names)) is not None:
+                        return value
+                return None
 
-                if hasattr(usage, "output_tokens_details") and hasattr(usage.output_tokens_details, "reasoning_tokens"):
-                    token_usage.reasoning_tokens = usage.output_tokens_details.reasoning_tokens
+            def first_nested_value(container_names: tuple[str, ...], *names: str) -> Any:
+                for source in usage_sources:
+                    container = get_value(source, *container_names) if source is not None else None
+                    if container is not None and (value := get_value(container, *names)) is not None:
+                        return value
+                return None
+
+            usage_fields = {
+                "prompt_tokens": ("prompt_tokens", "input_tokens"),
+                "completion_tokens": ("completion_tokens", "output_tokens"),
+                "total_tokens": ("total_tokens", ),
+            }
+            for field, names in usage_fields.items():
+                if (value := first_value(*names)) is not None:
+                    setattr(token_usage, field, value)
+
+            cached_tokens = first_nested_value(("prompt_tokens_details", "input_tokens_details"), "cached_tokens")
+            if cached_tokens is not None:
+                token_usage.cached_tokens = cached_tokens
+
+            reasoning_tokens = first_nested_value(("completion_tokens_details", "output_tokens_details"),
+                                                  "reasoning_tokens")
+            if reasoning_tokens is not None:
+                token_usage.reasoning_tokens = reasoning_tokens
 
         except Exception as e:
             logger.debug("Error extracting token usage: %s", e, exc_info=True)

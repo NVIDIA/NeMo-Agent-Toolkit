@@ -111,8 +111,8 @@ def write_jsonl(events: list[Event], path: str | Path) -> None:
 
     Each event is serialized as a single JSON line. The file ends with a
     trailing newline. Optional fields with ``None`` values are emitted as
-    explicit ``null`` on the wire (matching the spec wire envelope example
-    in atof-event-format.md §1).
+    explicit ``null`` on the wire (matching the ATOF Core Specification wire
+    envelope example in §1).
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

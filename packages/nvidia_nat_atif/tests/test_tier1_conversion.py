@@ -17,8 +17,8 @@
 Verifies that a strict tier-1 ATOF stream (all ``category: "unknown"``)
 produces a non-empty ATIF trajectory via the reference converter.
 
-Tier-1 is the raw pass-through enrichment level (``atof-event-format.md``
-§1.1): producers know nothing semantic, so every scope carries
+Tier-1 is the raw pass-through enrichment level (ATOF Core Specification §1.1):
+producers know nothing semantic, so every scope carries
 ``category: "unknown"``, ``category_profile: null``, and opaque raw JSON
 in ``data``. The converter materialises tier-1 streams under the
 **boundary-promotion default** introduced by quick task 260501-1ko:

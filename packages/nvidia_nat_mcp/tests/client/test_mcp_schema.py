@@ -176,6 +176,98 @@ def test_schema_missing_required_fields_raises(sample_schema):
     assert 'required_int_field' in missing_fields
 
 
+def test_schema_generation_preserves_constraints_and_rejects_invalid_values():
+    """MCP JSON Schema constraints should survive client-side model conversion."""
+    schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "page": {
+                "type": "integer", "minimum": 1, "maximum": 2000
+            },
+            "score": {
+                "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1, "multipleOf": 0.1
+            },
+            "query": {
+                "type": "string", "minLength": 2, "maxLength": 20
+            },
+            "tags": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 3,
+                "items": {
+                    "type": "string", "minLength": 2
+                },
+            },
+        },
+        "required": ["page", "score", "query", "tags"],
+    }
+
+    model = model_from_mcp_schema("constrained_tool", schema)
+    generated_schema = model.model_json_schema()
+
+    assert generated_schema["additionalProperties"] is False
+    assert generated_schema["properties"]["page"]["minimum"] == 1
+    assert generated_schema["properties"]["page"]["maximum"] == 2000
+    assert generated_schema["properties"]["score"]["exclusiveMinimum"] == 0
+    assert generated_schema["properties"]["score"]["exclusiveMaximum"] == 1
+    assert generated_schema["properties"]["score"]["multipleOf"] == 0.1
+    assert generated_schema["properties"]["query"]["minLength"] == 2
+    assert generated_schema["properties"]["query"]["maxLength"] == 20
+    assert generated_schema["properties"]["tags"]["minItems"] == 1
+    assert generated_schema["properties"]["tags"]["maxItems"] == 3
+    assert generated_schema["properties"]["tags"]["items"]["minLength"] == 2
+
+    valid = model.model_validate({"page": 1, "score": 0.5, "query": "valid", "tags": ["ok"]})
+    assert valid.page == 1
+
+    invalid_payloads = [
+        {
+            "page": 0, "score": 0.5, "query": "valid", "tags": ["ok"]
+        },
+        {
+            "page": 1, "score": 0, "query": "valid", "tags": ["ok"]
+        },
+        {
+            "page": 1, "score": 0.5, "query": "A", "tags": ["ok"]
+        },
+        {
+            "page": 1, "score": 0.5, "query": "valid", "tags": []
+        },
+        {
+            "page": 1, "score": 0.5, "query": "valid", "tags": ["x"]
+        },
+        {
+            "page": 1, "score": 0.5, "query": "valid", "tags": ["ok"], "unexpected": True
+        },
+    ]
+    for payload in invalid_payloads:
+        with pytest.raises(ValidationError):
+            model.model_validate(payload)
+
+
+def test_schema_generation_ignores_constraints_for_other_json_types():
+    """JSON Schema keywords should apply only to their defined instance types."""
+    schema = {
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string", "minimum": 1
+            },
+            "page": {
+                "type": "integer", "minLength": 2
+            },
+        },
+        "required": ["query", "page"],
+    }
+
+    model = model_from_mcp_schema("mixed_constraints", schema)
+    result = model.model_validate({"query": "ok", "page": 1})
+
+    assert result.query == "ok"
+    assert result.page == 1
+
+
 def test_anyof_array_and_null():
     """Test that anyOf with array and null is correctly handled"""
     schema = {

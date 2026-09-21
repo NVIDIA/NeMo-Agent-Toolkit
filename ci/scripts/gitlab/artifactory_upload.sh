@@ -21,32 +21,13 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
-GIT_TAG=$(get_git_tag)
-IS_TAGGED=$(is_current_commit_release_tagged)
+export GIT_TAG=$(get_git_tag)
+export IS_TAGGED=$(is_current_commit_release_tagged)
 echo "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
-# change this to ready to publish. this should be done programmatically once
-# the release process is finalized.
-if [[ "${CI_CRON_NIGHTLY}" == "1" || ${IS_TAGGED} == "1" || "${CI_COMMIT_BRANCH}" == "main" ]]; then
-    RELEASE_STATUS=ready
-else
-    RELEASE_STATUS=preview
-fi
-
-# Define variables
-NAT_ARCH="any"
-NAT_OS="any"
-
-# nvidia-nat itself and all of the plugins are under "nvidia-nat", while the compatibility packages are under "nat"
-NAT_COMPONENTS=("nvidia-nat" "nat")
-
-# We need to fix the name of the component in artifactory to aiqtoolkit
-ARTIFACTORY_COMPONENT_FIXED_NAME="aiqtoolkit"
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 
-# Define the subdirectories to be exclude
-EXCLUDE_SUBDIRS=("examples")
 
 # Exit if required secrets are not set
 if [[ -z "${URM_USER}" || -z "${URM_API_KEY}" ]]; then
@@ -83,47 +64,8 @@ fi
 
 # Upload wheels if enabled
 if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
-    for NAT_COMPONENT_NAME  in ${NAT_COMPONENTS[@]}; do
-        WHEELS_DIR="${WHEELS_BASE_DIR}/${NAT_COMPONENT_NAME}"
-        echo "NAT Component : ${NAT_COMPONENT_NAME} Dir : ${WHEELS_DIR}"
-
-        for SUBDIR in $(find "${WHEELS_DIR}" -mindepth 1 -maxdepth 1 -type d); do
-            SUBDIR_NAME=$(basename "${SUBDIR}")
-
-            # Skip directories listed in EXCLUDE_SUBDIRS
-            if [[ " ${EXCLUDE_SUBDIRS[@]} " =~ " ${SUBDIR_NAME} " ]]; then
-                echo "Skipping excluded directory: ${SUBDIR_NAME}"
-                continue
-            fi
-
-            echo "Uploading wheels from ${SUBDIR} to Artifactory..."
-
-            # Find all .whl files in the current subdirectory (no depth limit)
-            find "${SUBDIR}" -type f -name "*.whl" | while read -r WHEEL_FILE; do
-                # Extract relative path to preserve directory structure, but replacing the first dir with aiqtoolkit
-                # as this is an already established path in artifactory
-                RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
-                RELATIVE_PATH=$(echo "${RELATIVE_PATH}" | sed -e 's|^nvidia-nat/|aiqtoolkit/|' | sed -e 's|^nat/|aiqtoolkit/|')
-                ARTIFACTORY_PATH="${NAT_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
-
-                echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
-
-                CI=true jf rt u --fail-no-op --url="${NAT_ARTIFACTORY_URL}" \
-                    --user="${URM_USER}" --password="${URM_API_KEY}" \
-                    --flat=false "${WHEEL_FILE}" "${ARTIFACTORY_PATH}" \
-                    --target-props "arch=${NAT_ARCH};os=${NAT_OS};branch=${GIT_TAG};component_name=${ARTIFACTORY_COMPONENT_FIXED_NAME};version=${GIT_TAG};release_approver=${RELEASE_APPROVER};release_status=${RELEASE_STATUS}"
-            done
-        done
-    done
-    echo "All wheels uploaded to Artifactory."
+    echo "Uploading wheels to Artifactory (${NAT_ARTIFACTORY_NAME}) for ${GIT_TAG}..."
+    python ${GITLAB_SCRIPT_DIR}/artifactory_upload.py
 else
     echo "UPLOAD_TO_ARTIFACTORY is set to 'false'. Skipping upload."
-fi
-
-# List Artifactory contents (disabled by default as the output is very verbose)
-if [[ "${LIST_ARTIFACTORY_CONTENTS}" == "true" ]]; then
-    echo "Listing contents of Artifactory (${NAT_ARTIFACTORY_NAME}):"
-    CI=true jf rt s --url="${NAT_ARTIFACTORY_URL}" \
-        --user="${URM_USER}" --password="${URM_API_KEY}" \
-        "${NAT_ARTIFACTORY_NAME}/*/${GIT_TAG}/" --recursive
 fi

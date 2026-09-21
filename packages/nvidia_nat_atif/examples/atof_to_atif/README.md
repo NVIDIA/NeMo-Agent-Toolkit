@@ -17,18 +17,16 @@ limitations under the License.
 
 # ATOF-to-ATIF Examples
 
-End-to-end examples exercising the ATOF v0.1 reference implementation. Six scenarios cover the two enrichment tiers, the `mark` event kind, and three real-world LLM payload shapes (OpenAI chat-completions, Anthropic Messages, Gemini `generateContent`) plus a heterogeneous orchestrator that mixes all three in a single stream. See spec §1.1 in [`../../atof-event-format.md`](../../atof-event-format.md) for tier definitions and §3 for event kinds.
+End-to-end examples exercising the ATOF v0.1 reference implementation. Six scenarios cover the two enrichment tiers, the `mark` event kind, and three real-world LLM payload shapes (OpenAI chat-completions, Anthropic Messages, Gemini `generateContent`) plus a heterogeneous orchestrator that mixes all three in a single stream. Refer to §1.1 of the [ATOF Core Specification](https://docs.nvidia.com/nemo/relay/dev/reference/atof-event-format#11-two-producer-enrichment-tiers) for tier definitions and §3 for event kinds.
 
 This README doubles as the ATOF → ATIF conversion reference: the mapping table, dispatch conventions, and known limitations live in the [Conversion reference](#conversion-reference) section at the bottom.
 
 ## Scripts
 
-<!-- markdown-link-check-disable -->
 <!-- path-check-skip-begin -->
 - `generate_atof_examples.py` — produces `./output/exmpNN_atof.jsonl` for each scenario using the v0.1 public API (`scope` / `mark` event models, `write_jsonl`).
 - `convert_atof_examples_to_atif.py` — reads each regenerated JSONL, runs the ATOF→ATIF converter (`nat.atof.scripts.atof_to_atif_converter.convert_file`), and writes `./output/exmpNN_atif.json` as a formatted ATIF `Trajectory`.
 <!-- path-check-skip-end -->
-<!-- markdown-link-check-enable -->
 
 ## The scenarios
 
@@ -56,7 +54,7 @@ Converts to a rich ATIF trajectory with user / agent / observation steps, with `
 
 ### EXMP-03 — mark events (in-line guardrail)
 
-A short chat agent that fires a single in-line `mark` event mid-trajectory. The mark is `category: "guardrail"` (a first-class spec category per [`atof-event-format.md`](../../atof-event-format.md) §4), parented under the agent scope, and fires AFTER the agent scope-start and BEFORE the LLM scope-start — riding alongside the agent's lifecycle rather than bracketing it. The mark records an input-safety policy check (`{"check": "input_safety", "passed": true, "policies": ["prompt_injection", "pii"]}`).
+A short chat agent that fires a single in-line `mark` event mid-trajectory. The mark is `category: "guardrail"` (a first-class category in §4 of the [ATOF Core Specification](https://docs.nvidia.com/nemo/relay/dev/reference/atof-event-format#4-category-vocabulary)), parented under the agent scope, and fires AFTER the agent scope-start and BEFORE the LLM scope-start — riding alongside the agent's lifecycle rather than bracketing it. The mark records an input-safety policy check (`{"check": "input_safety", "passed": true, "policies": ["prompt_injection", "pii"]}`).
 
 Because the mark's `data` shape doesn't match a role-extraction heuristic, the converter takes the JSON-blob fall-through arm at [`atof_to_atif_converter.py`](../../src/nat/atof/scripts/atof_to_atif_converter.py) lines 622-651: the mark surfaces as a `source: "system"` step whose `message` is the compact-JSON serialization of the mark's `data`. The single LLM turn produces the user / agent pair. Phoenix's native ATIF helper renders pre-LLM `source: "system"` steps inline as `llm.input_messages` on the LLM span. Trailing system steps after the only LLM call have nowhere to attach and are not surfaced in the UI — input-side guardrails are also more common in production (rejected prompts skip the LLM cost), so this position is doubly justified. The Phoenix view shows the workflow span with the `input_safety_check` guardrail folded into the LLM span's `llm.input_messages` alongside the user message, demonstrating that marks are in-line lifecycle checkpoints, not session brackets.
 
@@ -66,9 +64,7 @@ Because the mark's `data` shape doesn't match a role-extraction heuristic, the c
 
 ### EXMP-04 — Anthropic Messages
 
-<!-- markdown-link-check-disable -->
 A document-summarization workflow where Claude calls a `read_file` tool and then formulates a summary. LLM payloads use Anthropic's Messages API shape — `messages[].content` is polymorphic string-or-block-list on input; `content[]` is a typed-block list on output, mixing `text` and `tool_use` blocks. Every LLM scope declares `data_schema = {"name": "anthropic/messages", "version": "1"}`, dispatching to a registered Anthropic-specific extractor.
-<!-- markdown-link-check-enable -->
 
 Demonstrates that the converter handles polymorphic content shapes through the registered extractor's normalization hooks. Tool calls extracted from `content[].tool_use` blocks resolve correctly into ATIF `tool_calls[]` with the matching observation results.
 
@@ -78,9 +74,7 @@ Demonstrates that the converter handles polymorphic content shapes through the r
 
 ### EXMP-05 — Gemini `generateContent`
 
-<!-- markdown-link-check-disable -->
 A timezone lookup workflow where Gemini calls a `get_current_time` function and then answers. LLM payloads use Gemini's `contents[].parts[]` request shape and `candidates[0].content.parts[]` response shape. Every LLM scope declares `data_schema = {"name": "gemini/generate-content", "version": "1"}`.
-<!-- markdown-link-check-enable -->
 
 Demonstrates two Gemini-specific quirks the registered extractor smooths over: role aliasing (Gemini's `"model"` role maps to `"assistant"`) and tool-call-id synthesis (Gemini omits IDs, so the extractor synthesizes `<function-name>__<index>` to keep ATIF observation-result correlation intact).
 
@@ -90,9 +84,7 @@ Demonstrates two Gemini-specific quirks the registered extractor smooths over: r
 
 ### EXMP-06 — Heterogeneous router
 
-<!-- markdown-link-check-disable -->
 A multi-provider orchestrator that receives a single user request, routes pieces to three specialist LLMs from different providers (OpenAI, Anthropic, Gemini), and combines their responses. The single ATOF stream carries three LLM scope events, each declaring a different `data_schema` — `openai/chat-completions@1`, `anthropic/messages@1`, and `gemini/generate-content@1` in turn.
-<!-- markdown-link-check-enable -->
 
 This is the strongest end-to-end evidence that the converter dispatches **per event** by schema, not per stream. Each LLM span in the Phoenix tree below was parsed by a different registered extractor, yet they coexist under a single trajectory and trace.
 
@@ -104,7 +96,6 @@ Per-step `step.model_name` (ATIF v1.7) describes which provider produced each ag
 
 ## Running
 
-<!-- markdown-link-check-disable -->
 <!-- path-check-skip-begin -->
 ```bash
 cd NeMo-Agent-Toolkit/packages/nvidia_nat_atif/examples/atof_to_atif
@@ -113,7 +104,6 @@ python convert_atof_examples_to_atif.py
 # Outputs in output/
 ```
 <!-- path-check-skip-end -->
-<!-- markdown-link-check-enable -->
 
 ## Verifying in Phoenix
 
@@ -234,7 +224,6 @@ Built-in defaults:
 
 The `data_schema` field is optional (spec §2), but declaring it is what activates validation and custom extractor dispatch.
 
-<!-- markdown-link-check-disable -->
 ```python
 from nat.atof import ScopeEvent
 
@@ -250,13 +239,11 @@ ScopeEvent(
     data_schema={"name": "anthropic/messages", "version": "1"},
 )
 ```
-<!-- markdown-link-check-enable -->
 
 #### Step 2: Register a JSON Schema
 
 Register the schema before calling `convert()`. The pre-pass validates every event carrying `data_schema = (name, version)` against the registered schema.
 
-<!-- markdown-link-check-disable -->
 ```python
 from nat.atof import register_schema
 
@@ -273,7 +260,6 @@ register_schema(
     },
 )
 ```
-<!-- markdown-link-check-enable -->
 
 
 A validation failure raises `DataSchemaViolationError` with the offending event UUID, the declared schema, the JSON-pointer path to the failure, and the underlying `validator` message.
@@ -284,7 +270,6 @@ Unregistered `data_schema` values log a `WARNING` and skip validation — the co
 
 Extractors are duck-typed against the protocols in `nat.atof.extractors`:
 
-<!-- markdown-link-check-disable -->
 ```python
 from nat.atof import register_llm_extractor
 
@@ -304,7 +289,6 @@ class AnthropicMessagesV1Extractor:
 
 register_llm_extractor("anthropic/messages", "1", AnthropicMessagesV1Extractor())
 ```
-<!-- markdown-link-check-enable -->
 
 `register_tool_extractor` and `register_mark_extractor` work the same way for `tool` scope-ends and `mark` events. The full protocol signatures are in `nat.atof.extractors`:
 
@@ -365,7 +349,7 @@ Both return a Pydantic-validated `nat.atif.trajectory.Trajectory` (the Toolkit-s
 
 ## See also
 
-- [`../../atof-event-format.md`](../../atof-event-format.md) — canonical ATOF v0.1 spec (wire format, categories, event kinds)
+- [ATOF Core Specification](https://docs.nvidia.com/nemo/relay/dev/reference/atof-event-format) — canonical ATOF v0.1 wire format, categories, and event kinds
 - [`../../src/nat/atof/scripts/atof_to_atif_converter.py`](../../src/nat/atof/scripts/atof_to_atif_converter.py) — reference converter implementation
 - [`../../src/nat/atof/schemas.py`](../../src/nat/atof/schemas.py) — JSON Schema registry and `register_schema` helper
 - [`../../src/nat/atof/extractors.py`](../../src/nat/atof/extractors.py) — pluggable extractor protocols and registries

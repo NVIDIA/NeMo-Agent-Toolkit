@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypeVar
 
+from langchain_core.runnables import ConfigurableField
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
@@ -53,6 +55,21 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 ModelType = TypeVar("ModelType")
+
+# Azure: model_name is tracing metadata only; the deployment controls which model runs.
+# HuggingFace: local pipeline has the model loaded into RAM; cannot hot-swap at inference time.
+_NO_RUNTIME_MODEL_OVERRIDE: frozenset[str] = frozenset({"AzureChatOpenAI", "AsyncChatHuggingFace"})
+
+
+def _get_model_configurable_field(client: Any) -> str | None:
+    """Return the Pydantic field name for model selection, or None if not supported."""
+    if type(client).__name__ in _NO_RUNTIME_MODEL_OVERRIDE:
+        return None
+    fields = getattr(type(client), "model_fields", {})
+    for candidate in ("model_name", "model", "model_id"):
+        if candidate in fields:
+            return candidate
+    return None
 
 
 def _get_langchain_oci_chat_model():
@@ -107,6 +124,10 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: "LLMBaseConfig") -
                     messages.insert(0, SystemMessage(content=self.system_prompt))
                 return FunctionArgumentWrapper(messages, *args, **kwargs)
             raise ValueError(f"Unsupported message type: {type(messages)}")
+
+    model_field = _get_model_configurable_field(client)
+    if model_field is not None:
+        client = client.configurable_fields(**{model_field: ConfigurableField(id="model_name")})
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,

@@ -21,6 +21,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import anyio
 import pytest
 import uvicorn
 from mcp.client.session import ClientSession
@@ -630,6 +631,142 @@ async def test_is_connected_false_after_reconnect_failure():
         with pytest.raises(MCPConnectionError):
             await client.get_tools()
         assert client.is_connected is False
+
+
+class TransportChildFailureMockClient(MCPBaseClient):
+    """Mock client whose connect_to_server mirrors the real transports' structure (#2111).
+
+    Every MCP transport enters an ``anyio.create_task_group()`` and spawns background
+    child tasks with ``start_soon`` (streamable_http/sse/stdio). That task group is hosted
+    by the lifecycle worker. This mock reproduces exactly that shape: a background child
+    that raises once on command, so a single transient transport error cancels the parked
+    worker. Prior to the fix this permanently bricked the client.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.fire_blip = asyncio.Event()
+        self.connect_call_count = 0
+        # Only the first connection's child parks awaiting the blip; connections
+        # made after recovery get a benign child so the transport closes cleanly.
+        self._arm_blip = True
+
+    async def _background_child(self):
+        # Models the transport's background POST/read task (e.g. handle_request_async).
+        if not self._arm_blip:
+            return
+        self._arm_blip = False
+        await self.fire_blip.wait()
+        raise ConnectionError("INJECTED transient transport error")
+
+    @asynccontextmanager
+    async def connect_to_server(self):  # type: ignore
+        self.connect_call_count += 1
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(self._background_child)
+            session = AsyncMock(spec=ClientSession)
+            session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
+            yield session
+
+
+async def test_transport_child_failure_does_not_brick_client():
+    """A transient transport-child failure must not permanently brick the client (#2111).
+
+    Regression for the uncovered path: the failure originates in a transport background
+    child task while the lifecycle worker is parked, cancelling the worker. The client
+    must report itself disconnected (not stale-connected) and recover on reconnect.
+    """
+    client = TransportChildFailureMockClient(
+        transport="streamable-http",
+        reconnect_enabled=True,
+        reconnect_max_attempts=2,
+        reconnect_initial_backoff=0.01,
+        reconnect_max_backoff=0.02,
+    )
+
+    async with client:
+        assert client.is_connected is True
+        worker_before = client._lifecycle_task
+
+        # Fire exactly one transient transport error while the worker is parked.
+        client.fire_blip.set()
+        with anyio.fail_after(5):  # deterministic: wait for the cancellation, bounded
+            while not worker_before.done():
+                await asyncio.sleep(0.005)
+
+        # The worker that hosted the transport was cancelled by the child...
+        assert worker_before.done()
+        # ...and is_connected must NOT be stale-True (the core #2111 symptom).
+        assert client.is_connected is False
+
+        # The transport is healthy again: reconnect must succeed and re-establish
+        # the connection instead of raising "MCPBaseClient not initialized" forever.
+        await client._reconnect()
+        assert client.is_connected is True
+        assert client._lifecycle_task is not worker_before  # a fresh worker was spawned
+
+
+class HangingConnectMockClient(MCPBaseClient):
+    """Mock client whose second connect parks until released, exposing the mid-command race.
+
+    Used to hold the lifecycle worker inside a command (its future still pending) so a
+    test can cancel the worker at exactly that point — the race where the transport child
+    dies after ``_run_lifecycle_command``'s liveness check but before the future resolves.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.connect_started = asyncio.Event()
+        self._park_next_connect = False
+
+    def arm_parking(self):
+        self._park_next_connect = True
+
+    @asynccontextmanager
+    async def connect_to_server(self):  # type: ignore
+        if self._park_next_connect:
+            self._park_next_connect = False
+            self.connect_started.set()
+            await asyncio.Event().wait()  # park until cancelled
+        session = AsyncMock(spec=ClientSession)
+        session.list_tools = AsyncMock(return_value=MagicMock(tools=[]))
+        yield session
+
+
+async def test_worker_death_mid_command_raises_instead_of_hanging():
+    """A worker cancelled while a command is in flight must fail that command, not hang it.
+
+    Covers the race past the ``_ensure_lifecycle_worker`` liveness check: the command's
+    future is pending when the worker dies, so without watching the worker task the
+    caller would await forever. The command must fail with a retryable error and the
+    client must still recover afterwards.
+    """
+    client = HangingConnectMockClient(
+        transport="streamable-http",
+        reconnect_enabled=True,
+        reconnect_max_attempts=2,
+        reconnect_initial_backoff=0.01,
+        reconnect_max_backoff=0.02,
+    )
+
+    async with client:
+        worker = client._lifecycle_task
+        client.arm_parking()
+        command = asyncio.create_task(client._run_lifecycle_command("reconnect"))
+
+        # Wait until the worker is inside the command (future pending), then kill it —
+        # the same effect as the transport child cancelling the worker mid-command.
+        with anyio.fail_after(5):
+            await client.connect_started.wait()
+        worker.cancel()
+
+        with anyio.fail_after(5):  # before the fix this await hung forever
+            with pytest.raises(ConnectionError, match="exited while running"):
+                await command
+
+        # The abandoned command must not brick the client: recovery still works.
+        await client._reconnect()
+        assert client.is_connected is True
 
 
 class TestMCPToolClient:

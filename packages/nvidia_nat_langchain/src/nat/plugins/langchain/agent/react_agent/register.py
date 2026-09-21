@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import re
 import uuid
 from collections.abc import AsyncGenerator
 
@@ -25,6 +26,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
+from nat.data_models.api_server import UNKNOWN_MODEL_SENTINEL
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import ChatResponse
@@ -39,6 +41,21 @@ from nat.utils.io.model_processing import remove_r1_think_tags
 from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
+
+_MODEL_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._/:@\- ]{0,254}$")
+
+
+def _build_lc_config(max_tool_calls: int, model: str | None, *, supports_override: bool = True) -> dict:
+    lc_config: dict = {"recursion_limit": (max_tool_calls + 1) * 2}
+    if model is not None and model != UNKNOWN_MODEL_SENTINEL:
+        if not _MODEL_NAME_RE.match(model):
+            raise ValueError(f"Invalid model name: {model!r}")
+        if not supports_override:
+            raise ValueError(f"The configured inference backend does not support per-request model selection. "
+                             f"Remove the 'model' field from the request or switch to a supported backend "
+                             f"(e.g. NIM, OpenAI, Bedrock). Requested: {model!r}")
+        lc_config["configurable"] = {"model_name": model}
+    return lc_config
 
 
 class ReActAgentWorkflowConfig(AgentBaseConfig, OptimizableMixin, name="react_agent"):
@@ -99,6 +116,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from langchain_core.messages import AIMessageChunk
     from langchain_core.messages import BaseMessage
     from langchain_core.messages import trim_messages
+    from langchain_core.runnables.configurable import RunnableConfigurableFields
     from langgraph.errors import GraphRecursionError
     from langgraph.graph.state import CompiledStateGraph
 
@@ -113,6 +131,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
 
     # we can choose an LLM for the ReAct agent in the config file
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    _supports_model_override = isinstance(llm, RunnableConfigurableFields)
     # the agent can run any installed tool, simply install the tool and add it to the config file
     # the sample tool provided can easily be copied or changed
     tools = await builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -161,7 +180,10 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             state = ReActGraphState(messages=messages)
 
             # run the ReAct Agent Graph
-            state = await graph.ainvoke(state, config={'recursion_limit': (config.max_tool_calls + 1) * 2})
+            state = await graph.ainvoke(state,
+                                        config=_build_lc_config(config.max_tool_calls,
+                                                                message.model,
+                                                                supports_override=_supports_model_override))
             # setting recursion_limit: 4 allows 1 tool call
             #   - allows the ReAct Agent to perform 1 cycle / call 1 single tool,
             #   - but stops the agent when it tries to call a tool a second time
@@ -212,10 +234,12 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             buffer = ""
             found_final_answer = False
 
-            async for msg, metadata in graph.astream(
-                    state,
-                    config={'recursion_limit': (config.max_tool_calls + 1) * 2},
-                    stream_mode="messages"):
+            async for msg, metadata in graph.astream(state,
+                                                     config=_build_lc_config(
+                                                         config.max_tool_calls,
+                                                         message.model,
+                                                         supports_override=_supports_model_override),
+                                                     stream_mode="messages"):
                 if not isinstance(msg, AIMessageChunk):
                     continue
                 if not isinstance(metadata, dict) or metadata.get("langgraph_node") != "agent":

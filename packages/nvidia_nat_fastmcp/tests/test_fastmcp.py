@@ -15,6 +15,7 @@
 """Tests for FastMCP CLI and server wiring."""
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -226,6 +227,18 @@ async def test_fastmcp_nat_token_verifier_rejects_inactive_result(monkeypatch: p
     monkeypatch.setattr(verifier._bearer_token_validator, "verify", verify)
 
     assert await verifier.verify_token("token-value") is None
+
+
+async def test_fastmcp_function_workflow_config_without_alias_uses_type():
+    config = Config(general=GeneralConfig(front_end=FastMCPFrontEndConfig()))
+    worker = FastMCPFrontEndPluginWorker(config)
+    workflow = SimpleNamespace(functions={},
+                               function_groups={},
+                               config=SimpleNamespace(workflow=SimpleNamespace(type="langgraph_wrapper")))
+
+    functions = await worker._get_all_functions(workflow)
+
+    assert functions == {"langgraph_wrapper": workflow}
 
 
 def test_fastmcp_debug_route_lists_tools():

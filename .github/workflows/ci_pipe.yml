@@ -55,6 +55,7 @@ defaults:
 env:
   GIT_COMMIT: "${{ github.sha }}"
   BASE_SHA: "${{ inputs.base_sha }}"
+  IS_PULL_REQUEST: "${{ inputs.base_sha != '' }}"
   BUILD_NAT_COMPAT: "true"
   WORKSPACE: "${{ github.workspace }}/nat"
   WORKSPACE_TMP: "${{ github.workspace }}/tmp"

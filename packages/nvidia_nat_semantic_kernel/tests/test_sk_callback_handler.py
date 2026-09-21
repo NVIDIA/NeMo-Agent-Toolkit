@@ -13,9 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from types import SimpleNamespace
+from unittest.mock import Mock
+
 import pytest
 
 from nat.utils.reactive.subject import Subject
+
+
+async def test_semantic_kernel_handler_deduplicates_llm_patch_methods(reactive_stream: Subject,
+                                                                      monkeypatch: pytest.MonkeyPatch):
+    """Test that multiple OpenAI LLMs do not wrap the same SK methods repeatedly."""
+    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
+
+    handler = SemanticKernelProfilerHandler(
+        workflow_llms={
+            "llm_a": SimpleNamespace(provider_type="openai"),
+            "llm_b": SimpleNamespace(provider_type="openai"),
+            "llm_other": SimpleNamespace(provider_type="anthropic"),
+        })
+    build_llm_call_patch = Mock(side_effect=lambda original: original)
+    monkeypatch.setattr(handler, "_build_llm_call_patch", build_llm_call_patch)
+    monkeypatch.setattr(handler, "_build_tool_call_patch", lambda original: original)
+
+    handler.instrument()
+
+    assert build_llm_call_patch.call_count == 2
 
 
 @pytest.mark.slow

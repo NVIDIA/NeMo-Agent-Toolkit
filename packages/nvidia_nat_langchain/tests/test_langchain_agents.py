@@ -38,7 +38,7 @@ async def test_nim_langchain_agent():
 
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
 
-    llm_config = NIMModelConfig(model_name="meta/llama-3.1-70b-instruct", temperature=0.0)
+    llm_config = NIMModelConfig(model_name="nvidia/nemotron-3-super-120b-a12b", temperature=0.0)
 
     async with WorkflowBuilder() as builder:
         await builder.add_llm("nim_llm", llm_config)

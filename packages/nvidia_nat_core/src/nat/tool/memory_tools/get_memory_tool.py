@@ -20,22 +20,20 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
-from nat.data_models.component_ref import MemoryRef
-from nat.data_models.function import FunctionBaseConfig
-from nat.memory.models import SearchMemoryInput
+
+from .common import GetMemoryInput
+from .common import MemoryToolConfigBase
+from .common import resolve_memory_user_id
 
 logger = logging.getLogger(__name__)
 
 
-class GetToolConfig(FunctionBaseConfig, name="get_memory"):
+class GetToolConfig(MemoryToolConfigBase, name="get_memory"):
     """Function to get memory to a hosted memory platform."""
 
     description: str = Field(default=("Tool to retrieve a memory about a user's "
                                       "interactions to help answer questions in a personalized way."),
                              description="The description of this function's use for tool calling agents.")
-    memory: MemoryRef = Field(default=MemoryRef("saas_memory"),
-                              description=("Instance name of the memory client instance from the workflow "
-                                           "configuration object."))
 
 
 @register_function(config_type=GetToolConfig)
@@ -51,7 +49,7 @@ async def get_memory_tool(config: GetToolConfig, builder: Builder):
     # First, retrieve the memory client
     memory_editor = await builder.get_memory_client(config.memory)
 
-    async def _arun(search_input: SearchMemoryInput) -> str:
+    async def _arun(search_input: GetMemoryInput) -> str:
         """
         Asynchronous execution of collection of memories.
         """
@@ -59,7 +57,7 @@ async def get_memory_tool(config: GetToolConfig, builder: Builder):
             memories = await memory_editor.search(
                 query=search_input.query,
                 top_k=search_input.top_k,
-                user_id=search_input.user_id,
+                user_id=await resolve_memory_user_id(config),
             )
 
             memory_str = f"Memories as a JSON: \n{json.dumps([mem.model_dump(mode='json') for mem in memories])}"

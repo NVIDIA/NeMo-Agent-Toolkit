@@ -19,6 +19,11 @@ limitations under the License.
 
 # Installing Dynamo from Source
 
+> [!WARNING]
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+>
+> **Requires [Dynamo](https://github.com/ai-dynamo/dynamo) >= 1.1.0**, where `dynamo.sglang` rejects `--schedule-low-priority-values-first` and normalizes request priority so higher values are higher priority. Earlier releases use different priority semantics. (End-to-end tested against the NGC `sglang-runtime` 1.1.1 and 1.2.1 images; no stable 1.3.0 is published yet.)
+
 This guide walks through building and installing Dynamo from source on a
 fresh machine. Every command is explicit so you can copy-paste your way
 through it. If you already have some of the prerequisites installed, skip
@@ -52,8 +57,10 @@ Tested on Ubuntu 22.04 and 24.04 (x86_64).
 
 ## Step 0 — Clone the repository
 
+Pin to a tested release tag — `v1.2.1` is the latest release validated for this demo (see the requirement note above).
+
 ```bash
-git clone https://github.com/ai-dynamo/dynamo.git
+git clone --branch v1.2.1 https://github.com/ai-dynamo/dynamo.git
 cd dynamo
 ```
 
@@ -268,8 +275,8 @@ source "$HOME/.cargo/env"
 # uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Clone and enter repo
-git clone https://github.com/ai-dynamo/dynamo.git
+# Clone and enter repo (pin to a tested release tag)
+git clone --branch v1.2.1 https://github.com/ai-dynamo/dynamo.git
 cd dynamo
 
 # Virtual environment

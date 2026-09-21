@@ -20,17 +20,24 @@ from pathlib import Path
 
 import click
 
+from nat.cli.cli_utils.config_override import load_and_override_config
+from nat.data_models.config import Config
 from nat.data_models.finetuning import FinetuneRunConfig
 from nat.finetuning.finetuning_runtime import run_finetuning_sync
+from nat.runtime.loader import PluginTypes
+from nat.runtime.loader import discover_and_register_plugins
+from nat.utils.data_models.schema_validator import validate_schema
 
 logger = logging.getLogger(__name__)
 
 
 @click.command(name="finetune", help="Run finetuning on a workflow using collected trajectories.")
-@click.option("--config_file",
-              required=True,
-              type=click.Path(exists=True, path_type=Path, resolve_path=True),
-              help="Path to the configuration file containing finetuning settings")
+@click.option(
+    "--config_file",
+    required=True,
+    type=click.Path(exists=True, path_type=Path, resolve_path=True),
+    help="Path to the configuration file containing finetuning settings",
+)
 @click.option(
     "--dataset",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
@@ -109,13 +116,17 @@ def finetune_command(
     # Apply overrides if provided
     if override:
         logger.info("Applying config overrides: %s", override)
-        # TODO: Implement config override logic similar to other commands
 
     try:
+        # Resolve config with overrides
+        discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
+        config_dict = load_and_override_config(config_file, override)
+        config = validate_schema(config_dict, Config)
+
         # Run the finetuning process
         run_finetuning_sync(
             FinetuneRunConfig(
-                config_file=config_file,
+                config_file=config,
                 dataset=dataset,
                 result_json_path=result_json_path,
                 endpoint=endpoint,

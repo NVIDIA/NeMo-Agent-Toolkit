@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 import typing
-import uuid
 from enum import StrEnum
 from typing import Literal
 
@@ -28,6 +26,8 @@ from pydantic import model_validator
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.token_usage import TokenUsageBaseModel
+from nat.utils.providers import current_time
+from nat.utils.providers import generate_id
 
 
 class IntermediateStepCategory(StrEnum):
@@ -157,8 +157,8 @@ class IntermediateStepPayload(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     event_type: IntermediateStepType
-    # Create an event timestamp field with the default being a lambda that returns the current time
-    event_timestamp: float = Field(default_factory=lambda: time.time())
+    # The default event timestamp is resolved lazily through the installed time provider
+    event_timestamp: float = Field(default_factory=current_time)
     span_event_timestamp: float | None = None  # Used for tracking the start time of a task if this is end
     framework: LLMFrameworkEnum | None = None
     name: str | None = None
@@ -166,7 +166,7 @@ class IntermediateStepPayload(BaseModel):
     metadata: dict[str, typing.Any] | TraceMetadata | None = None
     data: SerializeAsAny[StreamEventData] | None = None
     usage_info: UsageInfo | None = None
-    UUID: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    UUID: str = Field(default_factory=generate_id)
 
     @property
     def event_category(self) -> IntermediateStepCategory:

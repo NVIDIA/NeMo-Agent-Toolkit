@@ -661,6 +661,50 @@ class TestSpanExporterFunctionality:
         # Span name should fall back to event type string
         assert span.name == str(IntermediateStepType.WORKFLOW_START)
 
+    def test_user_id_emitted_as_span_attribute(self, span_exporter):
+        """user_id from ContextState is emitted as nat.user.id and user.id span attributes."""
+        from nat.builder.context import ContextState
+
+        ctx_state = ContextState.get()
+        token = ctx_state.user_id.set("USER-42")
+        try:
+            event = create_intermediate_step(event_type=IntermediateStepType.LLM_START,
+                                             framework=LLMFrameworkEnum.LANGCHAIN,
+                                             name="test_llm",
+                                             event_timestamp=datetime.now().timestamp(),
+                                             data=StreamEventData(input="hi"),
+                                             metadata={})
+
+            span_exporter.export(event)
+            span = span_exporter._outstanding_spans[event.payload.UUID]
+
+            assert span.attributes.get("nat.user.id") == "USER-42"
+            assert span.attributes.get("user.id") == "USER-42"
+        finally:
+            ctx_state.user_id.reset(token)
+
+    def test_user_id_absent_when_not_set(self, span_exporter):
+        """When user_id is not set, user.id is not added as a span attribute."""
+        from nat.builder.context import ContextState
+
+        ctx_state = ContextState.get()
+        token = ctx_state.user_id.set(None)
+        try:
+            event = create_intermediate_step(event_type=IntermediateStepType.LLM_START,
+                                             framework=LLMFrameworkEnum.LANGCHAIN,
+                                             name="test_llm",
+                                             event_timestamp=datetime.now().timestamp(),
+                                             data=StreamEventData(input="hi"),
+                                             metadata={})
+
+            span_exporter.export(event)
+            span = span_exporter._outstanding_spans[event.payload.UUID]
+
+            assert span.attributes.get("nat.user.id") == "unknown"
+            assert "user.id" not in span.attributes
+        finally:
+            ctx_state.user_id.reset(token)
+
 
 class TestToJsonStringSerialization:
     """Tests for _to_json_string ensuring OTLP-compatible serialization."""

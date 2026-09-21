@@ -45,14 +45,15 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
     per-component configuration.
     """
 
-    def __init__(self, config: DynamicMiddlewareConfig, builder: Builder):
+    def __init__(self, config: DynamicMiddlewareConfig, builder: Builder, *, is_final: bool = False):
         """Initialize middleware and discover workflow functions.
 
         Args:
             config: Middleware configuration
             builder: Workflow builder
+            is_final: When True, marks this middleware as the terminal boundary for a function.
         """
-        super().__init__()
+        super().__init__(is_final=is_final)
         self._config = config
         self._builder = builder
 

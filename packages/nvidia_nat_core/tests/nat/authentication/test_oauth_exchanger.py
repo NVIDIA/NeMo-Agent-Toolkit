@@ -37,12 +37,14 @@ from nat.data_models.authentication import BearerTokenCred
 def _patch_context(
     monkeypatch: pytest.MonkeyPatch,
     callback: Callable[[OAuth2AuthCodeFlowProviderConfig, AuthFlowType], Awaitable[AuthenticatedContext]],
+    user_id: str | None = None,
 ) -> None:
 
     class _DummyCtx:
 
         def __init__(self, cb):
             self.user_auth_callback = cb
+            self.user_id = user_id
 
     monkeypatch.setattr(Context, "get", staticmethod(lambda: _DummyCtx(callback)), raising=True)
 
@@ -136,6 +138,20 @@ async def test_authenticate_caches(monkeypatch, cfg):
     await client.authenticate("dup")  # cached
 
     assert calls["n"] == 1
+
+
+async def test_authenticate_uses_resolved_context_identity(monkeypatch, cfg):
+    """Token storage uses the authoritative runtime identity when no ID is passed."""
+
+    async def cb(conf, flow):
+        return _bearer_ctx(token="tok", expires_at=datetime.now(UTC) + timedelta(minutes=10))
+
+    _patch_context(monkeypatch, cb, user_id="resolved-user")
+    client = OAuth2AuthCodeFlowProvider(cfg)
+
+    await client.authenticate()
+
+    assert await client._token_storage.retrieve("resolved-user") is not None
 
 
 # --------------------------------------------------------------------------- #

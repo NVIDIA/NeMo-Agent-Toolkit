@@ -83,12 +83,12 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
         """
         import semantic_kernel
 
-        functions_to_patch = []
+        functions_to_patch = set()
 
         # Gather the appropriate modules/functions based on your builder config
         for llm in self._builder_llms:
             if self._builder_llms[llm].provider_type == 'openai':
-                functions_to_patch.extend(["openai_non_streaming", "openai_streaming"])
+                functions_to_patch.update(["openai_non_streaming", "openai_streaming"])
 
         # Grab original reference for the tool call
         self._original_tool_call = getattr(semantic_kernel.Kernel, "invoke_function_call", None)

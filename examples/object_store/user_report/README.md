@@ -160,6 +160,8 @@ docker compose -f examples/deploy/docker-compose.mysql.yml up -d
 
 #### Setting up Redis
 
+The Redis object store is provided by the Redis-maintained [`nemo-agent-toolkit-redis`](https://pypi.org/project/nemo-agent-toolkit-redis/) plugin, which this example installs directly.
+
 If you want to use a Redis server, you can use the [docker-compose.redis.yml](../../deploy/docker-compose.redis.yml) file to start a Redis server in a local docker container.
 
 ```bash

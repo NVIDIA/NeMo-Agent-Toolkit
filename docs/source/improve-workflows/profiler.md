@@ -228,6 +228,10 @@ This will, based on the above configuration, produce the following files in the 
 
 ## Prediction Trie and Dynamo Routing Hints
 
+```{note}
+The Dynamo integration is experimental and requires **Dynamo >= 1.1.0**. See [NVIDIA Dynamo (experimental)](../build-workflows/llms/index.md#nvidia-dynamo-experimental).
+```
+
 The prediction trie is a hierarchical data structure built from profiling traces that captures per-LLM-call-position statistics for your workflow. When deployed with a `Dynamo` LLM backend, these statistics are injected as routing hints to optimize `KV` cache management and request scheduling.
 
 ### What the Prediction Trie Captures
@@ -399,6 +403,9 @@ We also we see the `evaluators` section, which includes the following metrics:
 - `relevance`: Evaluates the relevance of the context retrieved by the workflow against the question.
 
 ### Running the Profiler
+
+> *Note*: The models used in the following sections were models available at the time of writing on [`build.nvidia.com`](https://build.nvidia.com) some of these have been deprecated and are no longer available. Use the models that are available to you at the time of running the profiler.
+
 To run the profiler, simply run the `nat eval` command with the workflow configuration file. The profiler will collect usage statistics and store them in the output directory specified in the configuration file.
 
 

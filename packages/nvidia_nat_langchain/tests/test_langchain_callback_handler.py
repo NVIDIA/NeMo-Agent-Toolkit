@@ -17,10 +17,20 @@ import asyncio
 import logging
 from uuid import uuid4
 
+import pytest
+
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
 from nat.plugins.langchain.callback_handler import _extract_tools_schema
 from nat.utils.reactive.subject import Subject
+
+
+@pytest.fixture(name="chain_handler_fixture")
+def fixture_chain_handler(reactive_stream: Subject):
+    all_stats = []
+    handler = LangchainProfilerHandler()
+    _ = reactive_stream.subscribe(all_stats.append)
+    return handler, all_stats
 
 
 async def test_langchain_handler(reactive_stream: Subject):
@@ -89,6 +99,108 @@ async def test_langchain_handler(reactive_stream: Subject):
     assert all_stats[3].payload.usage_info.token_usage.prompt_tokens == 15  # Will not populate usage
     assert all_stats[3].payload.usage_info.token_usage.completion_tokens == 15
     assert all_stats[3].payload.data.output == "Hello back!"
+
+
+async def test_langchain_handler_tracks_chain_runnable_events(chain_handler_fixture):
+    """
+    Test that LangChain Runnable/chain callbacks produce paired function stats.
+
+      - on_chain_start -> usage stat with event_type=FUNCTION_START
+      - on_chain_end -> usage stat with event_type=FUNCTION_END
+    """
+
+    handler, all_stats = chain_handler_fixture
+
+    run_id = uuid4()
+    serialized = {
+        "id": ["langchain", "schema", "runnable", "RunnableLambda"],
+        "name": "RunnableLambda",
+    }
+    inputs = {"question": "What is NAT?"}
+    outputs = {"answer": "NeMo Agent Toolkit"}
+    metadata = {"component": "unit-test"}
+    tags = ["chain-test"]
+
+    await handler.on_chain_start(serialized=serialized, inputs=inputs, run_id=run_id, tags=tags, metadata=metadata)
+    await asyncio.sleep(0.01)
+    await handler.on_chain_end(outputs=outputs, run_id=run_id, tags=tags)
+
+    assert len(all_stats) == 2
+    assert all_stats[0].event_type == IntermediateStepType.FUNCTION_START
+    assert all_stats[1].event_type == IntermediateStepType.FUNCTION_END
+    assert all_stats[0].UUID == str(run_id)
+    assert all_stats[1].UUID == str(run_id)
+    assert all_stats[0].payload.name == "RunnableLambda"
+    assert all_stats[1].payload.name == "RunnableLambda"
+    assert all_stats[0].payload.tags == tags
+    assert all_stats[1].payload.tags == tags
+    assert all_stats[0].payload.data.input == inputs
+    assert all_stats[0].payload.data.payload == serialized
+    assert all_stats[0].payload.metadata.span_inputs == inputs
+    assert all_stats[0].payload.metadata.provided_metadata == metadata
+    assert all_stats[1].payload.data.input == inputs
+    assert all_stats[1].payload.data.output == outputs
+    assert all_stats[1].payload.data.payload == outputs
+    assert all_stats[1].payload.metadata.span_outputs == outputs
+    assert all_stats[1].span_event_timestamp is not None
+    assert all_stats[1].span_event_timestamp <= all_stats[1].event_timestamp
+    assert str(run_id) not in handler._run_id_to_chain_input
+    assert str(run_id) not in handler._run_id_to_chain_name
+    assert str(run_id) not in handler._run_id_to_start_time
+
+
+async def test_langchain_handler_tracks_chain_events_with_default_metadata(chain_handler_fixture):
+    """Test chain callback stats when tags and metadata are omitted."""
+
+    handler, all_stats = chain_handler_fixture
+
+    run_id = uuid4()
+    inputs = {"input": "hello"}
+    outputs = {"output": "world"}
+
+    await handler.on_chain_start(
+        serialized={"id": ["langchain", "schema", "runnable", "RunnableSequence"]},
+        inputs=inputs,
+        run_id=run_id,
+    )
+    await handler.on_chain_end(outputs=outputs, run_id=run_id)
+
+    assert len(all_stats) == 2
+    assert all_stats[0].event_type == IntermediateStepType.FUNCTION_START
+    assert all_stats[1].event_type == IntermediateStepType.FUNCTION_END
+    assert all_stats[0].payload.name == "RunnableSequence"
+    assert all_stats[1].payload.name == "RunnableSequence"
+    assert all_stats[0].payload.tags is None
+    assert all_stats[1].payload.tags is None
+    assert all_stats[0].payload.data.input == inputs
+    assert all_stats[0].payload.metadata.span_inputs == inputs
+    assert all_stats[0].payload.metadata.provided_metadata is None
+    assert all_stats[1].payload.data.input == inputs
+    assert all_stats[1].payload.data.output == outputs
+    assert all_stats[1].payload.metadata.span_outputs == outputs
+    assert str(run_id) not in handler._run_id_to_chain_input
+    assert str(run_id) not in handler._run_id_to_chain_name
+    assert str(run_id) not in handler._run_id_to_start_time
+
+
+async def test_langchain_handler_clears_chain_state_on_error(chain_handler_fixture):
+    """Test that failed LangChain Runnable/chain callbacks do not leak run state."""
+
+    handler, all_stats = chain_handler_fixture
+
+    run_id = uuid4()
+    await handler.on_chain_start(
+        serialized={"name": "FailingRunnable"},
+        inputs={"question": "boom?"},
+        run_id=run_id,
+    )
+    await handler.on_chain_error(RuntimeError("boom"), run_id=run_id)
+
+    assert len(all_stats) == 1
+    assert all_stats[0].event_type == IntermediateStepType.FUNCTION_START
+    assert str(run_id) not in handler._run_id_to_chain_input
+    assert str(run_id) not in handler._run_id_to_chain_name
+    assert str(run_id) not in handler._run_id_to_start_time
 
 
 def test_extract_tools_schema_openai_format():

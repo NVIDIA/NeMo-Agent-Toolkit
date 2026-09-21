@@ -17,6 +17,7 @@ import importlib.metadata
 import inspect
 import logging
 import typing
+import weakref
 from enum import StrEnum
 from functools import lru_cache
 from types import ModuleType
@@ -34,6 +35,9 @@ if TYPE_CHECKING:
     from nat.data_models.common import TypedBaseModelT
 
 logger = logging.getLogger(__name__)
+
+_module_distro_cache = weakref.WeakKeyDictionary()
+_config_type_distro_cache = weakref.WeakKeyDictionary()
 
 
 class DiscoveryStatusEnum(StrEnum):
@@ -100,7 +104,6 @@ class DiscoveryMetadata(BaseModel):
         return distro_name if distro_name else root_package_name
 
     @staticmethod
-    @lru_cache
     def get_distribution_name_from_module(module: ModuleType | None) -> str:
         """Get the distribution name from the config type using the mapping of module names to distro names.
 
@@ -114,6 +117,12 @@ class DiscoveryMetadata(BaseModel):
 
         if module is None:
             return "nvidia-nat"
+
+        try:
+            if module in _module_distro_cache:
+                return _module_distro_cache[module]
+        except TypeError:
+            pass
 
         # Get the mapping of module names to distro names
         mapping = get_all_entrypoints_distro_mapping()
@@ -130,12 +139,19 @@ class DiscoveryMetadata(BaseModel):
             candidate_module_name = ".".join(module_package_parts[0:part_idx])
             candidate_distro_name = mapping.get(candidate_module_name, None)
             if candidate_distro_name is not None:
+                try:
+                    _module_distro_cache[module] = candidate_distro_name
+                except TypeError:
+                    pass
                 return candidate_distro_name
 
+        try:
+            _module_distro_cache[module] = "nvidia-nat"
+        except TypeError:
+            pass
         return "nvidia-nat"
 
     @staticmethod
-    @lru_cache
     def get_distribution_name_from_config_type(config_type: type["TypedBaseModelT"]) -> str:
         """Get the distribution name from the config type using the mapping of module names to distro names.
 
@@ -145,8 +161,21 @@ class DiscoveryMetadata(BaseModel):
         Returns:
             str: The distribution name of the NAT component.
         """
+        try:
+            if config_type in _config_type_distro_cache:
+                return _config_type_distro_cache[config_type]
+        except TypeError:
+            pass
+
         module = inspect.getmodule(config_type)
-        return DiscoveryMetadata.get_distribution_name_from_module(module)
+        distro_name = DiscoveryMetadata.get_distribution_name_from_module(module)
+
+        try:
+            _config_type_distro_cache[config_type] = distro_name
+        except TypeError:
+            pass
+
+        return distro_name
 
     @staticmethod
     def from_config_type(config_type: type["TypedBaseModelT"],

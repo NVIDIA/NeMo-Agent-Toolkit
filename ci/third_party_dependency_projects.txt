@@ -1,0 +1,5 @@
+# Projects in this repository that install provider-managed third-party plugin code.
+# CI may inspect and lock their metadata, but must not install or execute these projects.
+packages/nvidia_nat_redis
+examples/memory/redis
+examples/object_store/user_report

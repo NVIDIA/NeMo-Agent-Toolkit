@@ -95,7 +95,7 @@ class TestNIMDeploymentConfig:
         """Test default deployment config values."""
         config = NIMDeploymentConfig()
 
-        assert config.image_name == "nvcr.io/nim/meta/llama-3.1-8b-instruct"
+        assert config.image_name == "nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b"
         assert config.image_tag == "latest"
         assert config.gpu == 1
         assert config.deployment_name is None
@@ -104,14 +104,14 @@ class TestNIMDeploymentConfig:
     def test_custom_values(self):
         """Test custom deployment config values."""
         config = NIMDeploymentConfig(
-            image_name="nvcr.io/nim/meta/llama-3.1-8b-instruct",
+            image_name="nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b",
             image_tag="v1.0.0",
             gpu=4,
             deployment_name="my-deployment",
             description="Custom deployment",
         )
 
-        assert config.image_name == "nvcr.io/nim/meta/llama-3.1-8b-instruct"
+        assert config.image_name == "nvcr.io/nim/nvidia/nemotron-3.5-lightning-30b-a3b"
         assert config.image_tag == "v1.0.0"
         assert config.gpu == 4
         assert config.deployment_name == "my-deployment"

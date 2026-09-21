@@ -13,8 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import subprocess
 import sys
+import threading
+import time
+from collections.abc import Sequence
+from importlib.machinery import ModuleSpec
+from types import ModuleType
 from unittest import mock
 
 import pytest
@@ -44,17 +50,22 @@ async def test_upload_directory_success(output_config):
     """Test that the upload_directory uploads the directory to S3 successfully."""
     uploader = OutputUploader(output_config)
 
-    mock_client = mock.AsyncMock()
-    mock_session = mock.AsyncMock()
-    mock_session.__aenter__.return_value = mock_client
-
-    with mock.patch("aioboto3.Session.client", return_value=mock_session):
+    mock_client = mock.Mock()
+    with mock.patch("boto3.client", return_value=mock_client) as mock_boto3_client:
         await uploader.upload_directory()
 
     expected_key = "my-remote/output.txt"
     local_path = output_config.dir / "output.txt"
 
+    mock_boto3_client.assert_called_once_with(
+        "s3",
+        endpoint_url=output_config.s3.endpoint_url,
+        region_name=None,
+        aws_access_key_id=output_config.s3.access_key.get_secret_value(),
+        aws_secret_access_key=output_config.s3.secret_key.get_secret_value(),
+    )
     mock_client.upload_file.assert_called_once_with(str(local_path), output_config.s3.bucket, expected_key)
+    mock_client.close.assert_called_once_with()
 
 
 async def test_upload_directory_missing_config(tmp_path):
@@ -63,8 +74,7 @@ async def test_upload_directory_missing_config(tmp_path):
     uploader = OutputUploader(config)
 
     # Should skip uploading and not raise
-    with mock.patch("aioboto3.Session.client") as mock_client:
-        mock_client.return_value = mock.AsyncMock()
+    with mock.patch("boto3.client") as mock_client:
         await uploader.upload_directory()
 
         mock_client.assert_not_called()
@@ -74,28 +84,68 @@ async def test_upload_directory_upload_failure(output_config):
     """Test that the upload_directory raises an exception if the upload fails."""
     uploader = OutputUploader(output_config)
 
-    mock_client = mock.AsyncMock()
+    mock_client = mock.Mock()
     mock_client.upload_file.side_effect = Exception("Upload failed")
 
-    mock_session = mock.AsyncMock()
-    mock_session.__aenter__.return_value = mock_client
-
-    with mock.patch("aioboto3.Session.client", return_value=mock_session):
+    with mock.patch("boto3.client", return_value=mock_client):
         with pytest.raises(Exception, match="failed"):
             await uploader.upload_directory()
+    mock_client.close.assert_called_once_with()
 
 
-async def test_upload_directory_missing_aioboto3_has_install_hint(monkeypatch, output_config):
+async def test_upload_directory_waits_for_cancelled_uploads_before_closing(output_config):
+    """The S3 client remains open until cancelled upload workers finish."""
+    pending_path = output_config.dir / "pending.txt"
+    pending_path.write_text("pending content")
+
+    uploader = OutputUploader(output_config)
+    mock_client = mock.Mock()
+    upload_count = 2
+    started_count = 0
+    started_lock = threading.Lock()
+    all_started = threading.Event()
+    completed_paths = set()
+
+    def upload_file(local_path, _bucket, _s3_key):
+        nonlocal started_count
+        with started_lock:
+            started_count += 1
+            if started_count == upload_count:
+                all_started.set()
+        time.sleep(0.05)
+        completed_paths.add(local_path)
+
+    def close_client():
+        assert completed_paths == {str(output_config.dir / "output.txt"), str(pending_path)}
+
+    mock_client.upload_file.side_effect = upload_file
+    mock_client.close.side_effect = close_client
+    with mock.patch("boto3.client", return_value=mock_client):
+        upload_task = asyncio.create_task(uploader.upload_directory())
+        while not all_started.is_set():
+            await asyncio.sleep(0)
+        upload_task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await upload_task
+
+    mock_client.close.assert_called_once_with()
+
+
+async def test_upload_directory_missing_boto3_has_install_hint(monkeypatch, output_config):
     """S3 upload should fail with install guidance when optional S3 dependencies are missing."""
 
-    class BlockAioboto3:
+    class BlockBoto3:
 
-        def find_spec(self, fullname, path=None, target=None):  # noqa: ANN001
-            if fullname == "aioboto3" or fullname.startswith("aioboto3."):
-                raise ModuleNotFoundError("No module named 'aioboto3'")
+        def find_spec(self,
+                      fullname: str,
+                      path: Sequence[str] | None = None,
+                      target: ModuleType | None = None) -> ModuleSpec | None:
+            if fullname == "boto3" or fullname.startswith("boto3."):
+                raise ModuleNotFoundError("No module named 'boto3'")
+            return None
 
-    monkeypatch.setitem(sys.modules, "aioboto3", None)
-    monkeypatch.setattr(sys, "meta_path", [BlockAioboto3(), *sys.meta_path])
+    monkeypatch.setitem(sys.modules, "boto3", None)
+    monkeypatch.setattr(sys, "meta_path", [BlockBoto3(), *sys.meta_path])
 
     with pytest.raises(ModuleNotFoundError, match=r'nvidia-nat-eval\[full\]'):
         await OutputUploader(output_config).upload_directory()

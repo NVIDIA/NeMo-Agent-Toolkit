@@ -15,7 +15,9 @@
 """Convert NeMo Agent Toolkit functions to FastMCP tools."""
 
 import json
+import keyword
 import logging
+import re
 from inspect import Parameter
 from inspect import Signature
 from typing import Any
@@ -33,6 +35,71 @@ logger = logging.getLogger(__name__)
 
 # Sentinel: marks "optional; let Pydantic supply default/factory"
 _USE_PYDANTIC_DEFAULT = object()
+
+
+def _sanitize_parameter_name(name: str) -> str:
+    """Sanitize a JSON schema property name into a valid Python identifier.
+
+    The MCP specification places no restriction on property names, but Python's
+    ``inspect.Parameter`` requires valid identifiers.  This function:
+
+    1. Replaces non-alphanumeric/underscore characters with ``_``.
+    2. Prepends ``_`` when the result starts with a digit.
+    3. Appends ``_`` when the result is a Python keyword (PEP 8 convention).
+
+    Args:
+        name: The original property name from the MCP tool schema.
+
+    Returns:
+        A valid Python identifier derived from *name*.
+    """
+    safe = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+    if not safe or safe[0].isdigit():
+        safe = '_' + safe
+    if keyword.iskeyword(safe):
+        safe = safe + '_'
+    return safe
+
+
+def _build_name_mapping(field_names: list[str]) -> dict[str, str]:
+    """Map each original schema field name to a unique, valid Python identifier.
+
+    Handles collisions by appending numeric suffixes when multiple original names
+    sanitize to the same Python identifier (e.g. ``from`` and ``from_`` both
+    sanitize to ``from_``; the second one becomes ``from_2``).
+
+    Names that are already valid Python identifiers map to themselves.
+
+    Args:
+        field_names: Original field names from the Pydantic model.
+
+    Returns:
+        A dict mapping ``{original_name: safe_name}`` for every field.
+    """
+    name_map: dict[str, str] = {}
+    used: set[str] = set()
+
+    # First pass: reserve names that need no sanitization
+    for name in field_names:
+        safe = _sanitize_parameter_name(name)
+        if safe == name:
+            name_map[name] = name
+            used.add(name)
+
+    # Second pass: assign safe names for fields that need sanitization
+    for name in field_names:
+        if name in name_map:
+            continue
+        safe = _sanitize_parameter_name(name)
+        candidate = safe
+        suffix = 2
+        while candidate in used:
+            candidate = f"{safe}{suffix}"
+            suffix += 1
+        name_map[name] = candidate
+        used.add(candidate)
+
+    return name_map
 
 
 def _safe_json_schema(schema: Any) -> dict[str, Any]:
@@ -53,25 +120,34 @@ def _get_field_default(field_info: FieldInfo) -> Any:
     return _USE_PYDANTIC_DEFAULT
 
 
-def _build_signature_from_schema(schema: Any) -> Signature:
-    """Build a function signature from a Pydantic schema if possible."""
+def _build_signature_from_schema(schema: Any) -> tuple[Signature, dict[str, str]]:
+    """Build a function signature from a Pydantic schema if possible.
+
+    Returns:
+        A tuple of (Signature, alias_map) where alias_map maps sanitized
+        parameter names back to original schema names for names that changed.
+    """
     if _is_chat_request_schema(schema):
         return Signature(parameters=[
             Parameter(name="query", kind=Parameter.KEYWORD_ONLY, annotation=str),
-        ])
+        ]), {}
     if not hasattr(schema, "model_fields"):
-        return Signature()
+        return Signature(), {}
+
+    name_map = _build_name_mapping(list(schema.model_fields.keys()))
+    alias_map = {safe: orig for orig, safe in name_map.items() if orig != safe}
 
     params: list[Parameter] = []
     for name, field_info in schema.model_fields.items():  # type: ignore[attr-defined]
         annotation = field_info.annotation or Any
         default = _get_field_default(field_info)
+        safe_name = name_map[name]
         if default is _USE_PYDANTIC_DEFAULT:
-            params.append(Parameter(name, Parameter.KEYWORD_ONLY, annotation=annotation))
+            params.append(Parameter(safe_name, Parameter.KEYWORD_ONLY, annotation=annotation))
         else:
-            params.append(Parameter(name, Parameter.KEYWORD_ONLY, default=default, annotation=annotation))
+            params.append(Parameter(safe_name, Parameter.KEYWORD_ONLY, default=default, annotation=annotation))
 
-    return Signature(parameters=params)
+    return Signature(parameters=params), alias_map
 
 
 def _build_input_schema(schema: Any) -> Any:
@@ -95,9 +171,11 @@ def _build_annotations_from_schema(schema: Any) -> dict[str, Any]:
     if not hasattr(schema, "model_fields"):
         return {}
 
+    name_map = _build_name_mapping(list(schema.model_fields.keys()))
     annotations: dict[str, Any] = {}
     for name, field_info in schema.model_fields.items():  # type: ignore[attr-defined]
-        annotations[name] = field_info.annotation or Any
+        safe_name = name_map[name]
+        annotations[safe_name] = field_info.annotation or Any
     return annotations
 
 
@@ -120,7 +198,7 @@ def create_function_wrapper(
         session_manager: The session manager for the workflow.
         input_schema: Input schema for the workflow/function.
     """
-    signature = _build_signature_from_schema(input_schema)
+    signature, alias_map = _build_signature_from_schema(input_schema)
 
     async def wrapper_func(**kwargs: Any) -> Any:
         if _is_chat_request_schema(input_schema):
@@ -130,6 +208,9 @@ def create_function_wrapper(
             payload = ChatRequest.from_string(query)
         else:
             cleaned_kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
+            # Reverse-map sanitized parameter names to original schema names
+            if alias_map:
+                cleaned_kwargs = {alias_map.get(k, k): v for k, v in cleaned_kwargs.items()}
             payload = input_schema.model_validate(cleaned_kwargs) if hasattr(input_schema,
                                                                              "model_validate") else cleaned_kwargs
 

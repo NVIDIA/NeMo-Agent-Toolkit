@@ -1,0 +1,30 @@
+--- a/website/routes.py
++++ b/website/routes.py
+@@ -105,7 +105,7 @@
+     if not user and "username" in request.form:
+         username = request.form.get("username")
+         user = User.query.filter_by(username=username).first()
+-    if request.form["confirm"]:
++    if request.form.get("confirm") == "yes":
+         grant_user = user
+     else:
+         grant_user = None
+--- a/website/templates/authorize.html
++++ b/website/templates/authorize.html
+@@ -9,14 +9,11 @@
+ <form action="" method="post">
+-  <label>
+-    <input type="checkbox" name="confirm">
+-    <span>Consent?</span>
+-  </label>
+   {% if not user %}
+   <p>You haven't logged in. Log in with:</p>
+   <div>
+     <input type="text" name="username">
+   </div>
+   {% endif %}
+   <br>
+-  <button>Submit</button>
++  <button type="submit" name="confirm" value="yes">Authorize</button>
++  <button type="submit" name="confirm" value="no">Cancel</button>
+ </form>

@@ -16,9 +16,11 @@
 import json
 from enum import Enum
 from functools import cache
+from typing import Annotated
 from typing import Any
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import create_model
 
@@ -111,7 +113,35 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
     def _generate_valid_classname(class_name: str):
         return class_name.replace('_', ' ').replace('-', ' ').title().replace(' ', '')
 
-    def _resolve_schema_type(schema: dict[str, Any], name: str) -> Any:
+    def _constraint_kwargs(schema: dict[str, Any]) -> dict[str, Any]:
+        """Translate supported JSON Schema constraints to Pydantic Field arguments."""
+        schema_type = schema.get("type")
+        schema_types = {schema_type} if isinstance(schema_type, str) else set(schema_type or [])
+        constraint_mapping = {
+            "minimum": ("ge", {"integer", "number"}),
+            "maximum": ("le", {"integer", "number"}),
+            "exclusiveMinimum": ("gt", {"integer", "number"}),
+            "exclusiveMaximum": ("lt", {"integer", "number"}),
+            "multipleOf": ("multiple_of", {"integer", "number"}),
+            "minLength": ("min_length", {"string"}),
+            "maxLength": ("max_length", {"string"}),
+            "minItems": ("min_length", {"array"}),
+            "maxItems": ("max_length", {"array"}),
+        }
+        return {
+            field_argument: schema[schema_keyword]
+            for schema_keyword, (field_argument, applicable_types) in constraint_mapping.items()
+            if schema_keyword in schema and schema_types & applicable_types
+        }
+
+    def _apply_constraints(field_type: Any, schema: dict[str, Any]) -> Any:
+        """Apply supported JSON Schema validation keywords to a nested Python type."""
+        constraints = _constraint_kwargs(schema)
+        if not constraints:
+            return field_type
+        return Annotated[field_type, Field(**constraints)]
+
+    def _resolve_schema_type(schema: dict[str, Any], name: str, apply_constraints: bool = True) -> Any:
         """
         Recursively resolve a JSON schema to a Python type.
         Handles nested anyOf/oneOf, arrays, objects, enums, and primitive types.
@@ -136,7 +166,8 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
                         # If we encounter null, combine with None at the end
                         resolved_type = resolved_type | None if resolved_type else type(None)
 
-            return resolved_type if resolved_type is not None else Any
+            resolved_type = resolved_type if resolved_type is not None else Any
+            return _apply_constraints(resolved_type, schema) if apply_constraints else resolved_type
 
         # Handle enum values
         enum_vals = schema.get("enum")
@@ -150,7 +181,8 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
                 enum_name = f"{name.capitalize()}Enum"
                 enum_type: Any = _get_or_create_enum(enum_name, frozenset(non_null_vals))
                 # If enum had null, make it a union with None
-                return enum_type | None if has_null else enum_type
+                resolved_enum = enum_type | None if has_null else enum_type
+                return _apply_constraints(resolved_enum, schema) if apply_constraints else resolved_enum
             elif has_null:
                 # Enum only contains null
                 return type(None)
@@ -182,7 +214,8 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
                     mapped = _type_map.get(t, Any)
 
                 list_type = mapped if list_type is None else list_type | mapped
-            return list_type if list_type is not None else Any
+            list_type = list_type if list_type is not None else Any
+            return _apply_constraints(list_type, schema) if apply_constraints else list_type
 
         # Handle null type
         if schema_type == "null":
@@ -197,11 +230,13 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
             item_schema = schema.get("items", {})
             # Recursively resolve item type (handles nested anyOf/oneOf)
             item_type = _resolve_schema_type(item_schema, name)
-            return list[item_type]
+            resolved_array = list[item_type]
+            return _apply_constraints(resolved_array, schema) if apply_constraints else resolved_array
 
         # Handle primitive types
         if schema_type is not None:
-            return _type_map.get(schema_type, Any)
+            resolved_primitive = _type_map.get(schema_type, Any)
+            return _apply_constraints(resolved_primitive, schema) if apply_constraints else resolved_primitive
 
         return Any
 
@@ -243,7 +278,7 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
         Uses _resolve_schema_type for type resolution and handles field-specific logic.
         """
         # Resolve the field type using the unified resolver
-        field_type = _resolve_schema_type(field_properties, field_name)
+        field_type = _resolve_schema_type(field_properties, field_name, apply_constraints=False)
 
         # Check if the type includes null
         has_null = _has_null_in_type(field_properties)
@@ -279,8 +314,14 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
 
         description = field_properties.get("description", "")
 
-        return field_type, Field(default=default_value, description=description)
+        return field_type, Field(default=default_value, description=description, **_constraint_kwargs(field_properties))
 
     for field_name, field_props in properties.items():
         schema_dict[field_name] = _generate_field(field_name=field_name, field_properties=field_props)
-    return create_model(f"{_generate_valid_classname(name)}InputSchema", **schema_dict)
+    model_config = None
+    if mcp_input_schema.get("additionalProperties") is False:
+        model_config = ConfigDict(extra="forbid")
+    elif mcp_input_schema.get("additionalProperties") is True:
+        model_config = ConfigDict(extra="allow")
+
+    return create_model(f"{_generate_valid_classname(name)}InputSchema", __config__=model_config, **schema_dict)

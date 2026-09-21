@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pathlib
+import tomllib
+
 import pytest
 
 
@@ -24,6 +27,17 @@ class _BlockModules:
     def find_spec(self, fullname, path=None, target=None):  # noqa: ANN001
         if any(fullname == root or fullname.startswith(f"{root}.") for root in self._module_roots):
             raise ModuleNotFoundError(f"No module named '{fullname}'")
+
+
+def test_full_extra_uses_boto3_without_aioboto3():
+    pyproject_path = pathlib.Path(__file__).parents[2] / "pyproject.toml"
+    with pyproject_path.open("rb") as pyproject_file:
+        optional_dependencies = tomllib.load(
+            pyproject_file)["tool"]["setuptools_dynamic_dependencies"]["optional-dependencies"]
+
+    for extra in ("full", "test"):
+        assert "boto3~=1.35" in optional_dependencies[extra]
+        assert not any(dependency.startswith("aioboto3") for dependency in optional_dependencies[extra])
 
 
 def test_runtime_full_dependency_error_includes_install_hint():

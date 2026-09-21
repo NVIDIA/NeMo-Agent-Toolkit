@@ -593,8 +593,8 @@ class TestDynamoTransport:
         assert agent_hints["total_requests"] == 10
         assert agent_hints["osl"] == 512
         assert agent_hints["iat"] == 750
-        # Default latency_sensitivity=2, max_sensitivity=1000 -> priority=998
-        assert agent_hints["priority"] == 998
+        # Dynamo uses higher value = higher priority, so priority == latency_sensitivity (default 2)
+        assert agent_hints["priority"] == 2
 
         # Cleanup
         DynamoPrefixContext.clear()
@@ -779,7 +779,7 @@ class TestDynamoTransport:
         assert agent_hints["iat"] == 250
         # Standard Dynamo AgentHints fields
         assert agent_hints["osl"] == 512
-        assert agent_hints["priority"] == 998  # 1000 - 2
+        assert agent_hints["priority"] == 2  # == latency_sensitivity (higher = higher priority)
         assert agent_hints["latency_sensitivity"] == 2.0
 
         DynamoPrefixContext.clear()
@@ -816,8 +816,8 @@ class TestDynamoTransport:
         assert "agent_hints" in body["nvext"]
         agent_hints = body["nvext"]["agent_hints"]
         assert agent_hints["latency_sensitivity"] == 2.0
-        # priority = max_sensitivity(1000) - latency_sensitivity(2) = 998
-        assert agent_hints["priority"] == 998
+        # priority == latency_sensitivity(2): Dynamo treats higher value as higher priority
+        assert agent_hints["priority"] == 2
 
         DynamoPrefixContext.clear()
 
@@ -1051,7 +1051,7 @@ class TestDynamoTransport:
 
         # Auto sensitivity=4 should be used (no manual decorator active)
         assert agent_hints["latency_sensitivity"] == 4.0
-        assert agent_hints["priority"] == 1000 - 4
+        assert agent_hints["priority"] == 4
 
         DynamoPrefixContext.clear()
 
@@ -1103,7 +1103,7 @@ class TestDynamoTransport:
 
         # Manual sensitivity=7 should win over auto sensitivity=4
         assert agent_hints["latency_sensitivity"] == 7.0
-        assert agent_hints["priority"] == 1000 - 7
+        assert agent_hints["priority"] == 7
 
         DynamoPrefixContext.clear()
 
@@ -1150,7 +1150,7 @@ class TestDynamoTransport:
 
         # Should use context default (2)
         assert agent_hints["latency_sensitivity"] == 2.0
-        assert agent_hints["priority"] == 1000 - 2
+        assert agent_hints["priority"] == 2
 
         DynamoPrefixContext.clear()
 

@@ -109,7 +109,7 @@ def set_framework_profiler_handler(
 
             if LLMFrameworkEnum.CREWAI in frameworks and not _library_instrumented["crewai"]:
                 try:
-                    from nat.plugins.crewai.callback_handler import CrewAIProfilerHandler
+                    from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
                     handler = CrewAIProfilerHandler()
                     handler.instrument()
                     _library_instrumented["crewai"] = True

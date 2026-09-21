@@ -35,9 +35,10 @@ class TestAuthMethodEnum:
         assert AuthMethod.JWT == "jwt"
         assert AuthMethod.API_KEY == "api_key"
         assert AuthMethod.BASIC == "basic"
+        assert AuthMethod.OAUTH_MODE_PREFERENCE == "oauth_mode_preference"
 
     def test_membership(self):
-        assert set(AuthMethod) == {"jwt", "api_key", "basic"}
+        assert set(AuthMethod) == {"jwt", "api_key", "basic", "oauth_mode_preference"}
 
 
 class TestJwtAuthPayload:

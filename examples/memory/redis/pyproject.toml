@@ -31,7 +31,8 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[langchain,redis,phoenix,test] == {version}",
+  "nemo-agent-toolkit-redis>=0.2.0,<2.0.0",
+  "nvidia-nat[langchain,phoenix,test] == {version}",
 ]
 
 [tool.uv.sources]

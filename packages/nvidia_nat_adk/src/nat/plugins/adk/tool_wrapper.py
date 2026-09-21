@@ -127,11 +127,20 @@ def google_adk_tool_wrapper(
             if description is not None:
                 func_to_wrap.__doc__ = description
 
-            # Set signature only if input_schema is provided
+            # Set signature only if input_schema is provided.
+            # Use model_fields instead of __annotations__ so that types are
+            # always resolved Python objects even when the defining module uses
+            # "from __future__ import annotations" (PEP 563), which would
+            # otherwise leave annotations as strings and cause a KeyError in
+            # ADK's deferred-annotation handling.
             params: list[inspect.Parameter] = []
             if input_schema is not None:
-                annotations = getattr(input_schema, "__annotations__", {}) or {}
-                for param_name, param_annotation in annotations.items():
+                model_fields = getattr(input_schema, "model_fields", None)
+                if model_fields is not None:
+                    field_items = ((n, f.annotation) for n, f in model_fields.items())
+                else:
+                    field_items = getattr(input_schema, "__annotations__", {}).items()
+                for param_name, param_annotation in field_items:
                     params.append(
                         inspect.Parameter(
                             param_name,
