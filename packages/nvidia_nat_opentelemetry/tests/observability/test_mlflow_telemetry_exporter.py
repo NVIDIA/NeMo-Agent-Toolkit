@@ -84,6 +84,12 @@ def test_parse_otel_env_headers_empty(monkeypatch):
     assert otel_register._parse_otel_env_headers() == {}
 
 
+def test_parse_otel_env_headers_decodes_percent_encoded_values(monkeypatch):
+    """Percent-encoded keys/values decode per the W3C Baggage encoding of OTEL_EXPORTER_OTLP_HEADERS."""
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_HEADERS", "x-%41uth=hello%20world")
+    assert otel_register._parse_otel_env_headers() == {"x-Auth": "hello world"}
+
+
 def _build_mlflow_headers(monkeypatch, config_kwargs):
     """Run the mlflow exporter factory with a stubbed exporter and return the headers it used."""
     import nat.plugins.opentelemetry as otel_pkg
@@ -136,7 +142,38 @@ async def test_mlflow_factory_env_fallbacks(monkeypatch):
 async def test_mlflow_factory_incomplete_basic_auth_raises(monkeypatch):
     """The factory surfaces the incomplete basic-auth configuration error."""
     monkeypatch.delenv("OTEL_EXPORTER_OTLP_HEADERS", raising=False)
+    monkeypatch.delenv("MLFLOW_TRACKING_TOKEN", raising=False)
+    monkeypatch.delenv("MLFLOW_TRACKING_USERNAME", raising=False)
+    monkeypatch.delenv("MLFLOW_TRACKING_PASSWORD", raising=False)
     config, _ = _build_mlflow_headers(monkeypatch, {"username": "user"})
     with pytest.raises(ValueError, match="username and password"):
         async with otel_register.mlflow_telemetry_exporter(config, builder=None):
             pass
+
+
+def test_warn_on_cleartext_credentials(caplog):
+    """Credentials over non-loopback plain HTTP warn; loopback, HTTPS, and credential-less endpoints stay silent."""
+    import logging
+
+    logger = "nat.plugins.opentelemetry.register"
+    with caplog.at_level(logging.WARNING, logger=logger):
+        otel_register._warn_on_cleartext_credentials(
+            endpoint="http://localhost:5000/v1/traces",
+            headers={"Authorization": "Bearer creds"},
+        )
+        otel_register._warn_on_cleartext_credentials(
+            endpoint="https://mlflow.example.com/v1/traces",
+            headers={"Authorization": "Bearer creds"},
+        )
+        otel_register._warn_on_cleartext_credentials(
+            endpoint="http://mlflow.internal:5000/v1/traces",
+            headers={"x-mlflow-experiment-id": "0"},
+        )
+    assert not [r for r in caplog.records if r.name == logger]
+
+    with caplog.at_level(logging.WARNING, logger=logger):
+        otel_register._warn_on_cleartext_credentials(
+            endpoint="http://mlflow.internal:5000/v1/traces",
+            headers={"Authorization": "Bearer creds"},
+        )
+    assert [r for r in caplog.records if r.name == logger]

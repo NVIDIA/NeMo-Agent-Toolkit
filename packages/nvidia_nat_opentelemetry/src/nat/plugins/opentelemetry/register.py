@@ -14,9 +14,12 @@
 # limitations under the License.
 
 import base64
+import ipaddress
 import logging
 import os
 from typing import Literal
+from urllib.parse import unquote
+from urllib.parse import urlparse
 
 from pydantic import Field
 
@@ -290,6 +293,9 @@ def _mlflow_experiment_headers(experiment_id: str) -> dict[str, str]:
 def _parse_otel_env_headers() -> dict[str, str]:
     """Parse OTEL_EXPORTER_OTLP_HEADERS (comma-separated key=value pairs) into a header dict.
 
+    The OTEL spec encodes these headers like W3C Baggage, so percent-encoded keys
+    and values are decoded (e.g. ``Authorization=Bearer%20token``).
+
     These are the lowest-precedence layer: explicit exporter config wins on key conflict.
     """
     parsed: dict[str, str] = {}
@@ -297,8 +303,33 @@ def _parse_otel_env_headers() -> dict[str, str]:
         key, sep, value = pair.partition("=")
         key = key.strip()
         if key and sep:
-            parsed[key] = value.strip()
+            parsed[unquote(key)] = unquote(value.strip())
     return parsed
+
+
+def _warn_on_cleartext_credentials(*, endpoint: str, headers: dict[str, str]) -> None:
+    """Warn when bearer/basic credentials would travel over non-loopback plain HTTP.
+
+    The documented local loopback default stays silent and keeps working. A warning
+    (rather than a hard rejection) preserves existing internal-network HTTP tracking
+    servers while surfacing the cleartext-credential risk (CWE-319).
+    """
+    parsed = urlparse(endpoint)
+    if parsed.scheme != "http":
+        return
+    host = (parsed.hostname or "").lower()
+    try:
+        is_loopback = ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        is_loopback = host in {"localhost", ""}
+    if is_loopback:
+        return
+    if any(v.startswith(("Bearer ", "Basic ")) for k, v in headers.items() if k.lower() == "authorization"):
+        logger.warning(
+            "MLflow telemetry exporter sends credentials over unencrypted HTTP to %s; "
+            "use an HTTPS endpoint for non-local tracking servers.",
+            endpoint,
+        )
 
 
 def _mlflow_auth_headers(*, token: str | None, username: str, password: str | None) -> dict[str, str]:
@@ -379,6 +410,8 @@ async def mlflow_telemetry_exporter(config: MLflowTelemetryExporter, builder: Bu
     headers = {**_parse_otel_env_headers(), **(config.headers or {})}
     headers.update(_mlflow_auth_headers(token=token, username=username, password=password))
     headers.update(_mlflow_experiment_headers(experiment_id))
+
+    _warn_on_cleartext_credentials(endpoint=config.endpoint, headers=headers)
 
     yield OTLPSpanAdapterExporter(
         endpoint=config.endpoint,
