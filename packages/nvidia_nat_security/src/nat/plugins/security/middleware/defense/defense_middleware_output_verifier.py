@@ -33,6 +33,7 @@ from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 from nat.plugins.security.middleware.defense.defense_middleware import DefenseMiddleware
 from nat.plugins.security.middleware.defense.defense_middleware import DefenseMiddlewareConfig
+from nat.plugins.security.middleware.defense.defense_middleware import stream_chunk_to_text
 from nat.plugins.security.middleware.defense.defense_middleware_data_models import OutputVerificationResult
 
 logger = logging.getLogger(__name__)
@@ -403,7 +404,7 @@ Respond ONLY with valid JSON in this exact format:
                     yield chunk
                     accumulated_chunks.append(chunk)
 
-            full_output_str = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
+            full_output_str = "".join(stream_chunk_to_text(chunk) for chunk in accumulated_chunks)
 
             # Process output verification (handles field extraction, analysis, and application)
             processed_output = await self._process_output_verification(full_output_str, context, inputs=value)
