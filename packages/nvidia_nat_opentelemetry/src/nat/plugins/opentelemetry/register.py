@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import base64
 import logging
 import os
 from typing import Literal
@@ -68,8 +69,6 @@ class LangfuseTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, n
 
 @register_telemetry_exporter(config_type=LangfuseTelemetryExporter)
 async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder: Builder):
-
-    import base64
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
 
@@ -288,6 +287,35 @@ def _mlflow_experiment_headers(experiment_id: str) -> dict[str, str]:
     return {"x-mlflow-experiment-id": experiment_id}
 
 
+def _parse_otel_env_headers() -> dict[str, str]:
+    """Parse OTEL_EXPORTER_OTLP_HEADERS (comma-separated key=value pairs) into a header dict.
+
+    These are the lowest-precedence layer: explicit exporter config wins on key conflict.
+    """
+    parsed: dict[str, str] = {}
+    for pair in os.environ.get("OTEL_EXPORTER_OTLP_HEADERS", "").split(","):
+        key, sep, value = pair.partition("=")
+        key = key.strip()
+        if key and sep:
+            parsed[key] = value.strip()
+    return parsed
+
+
+def _mlflow_auth_headers(*, token: str | None, username: str, password: str | None) -> dict[str, str]:
+    """Build the Authorization header for the MLflow exporter.
+
+    Bearer token takes precedence over basic auth, matching the MLflow Python client.
+    """
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    if username or password:
+        if not username or not password:
+            raise ValueError("username and password are both required for MLflow basic auth")
+        credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
+        return {"Authorization": f"Basic {credentials}"}
+    return {}
+
+
 class MLflowTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="mlflow"):
     """Export traces to an MLflow tracking server over OTLP/HTTP.
 
@@ -295,6 +323,12 @@ class MLflowTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, nam
     experiment via the ``x-mlflow-experiment-id`` header. Point ``endpoint`` at that path and set
     ``experiment_id`` to the target experiment. The tracking server must run with a database backend
     store for trace ingestion.
+
+    When the tracking server sits behind authentication, provide ``token`` (bearer, mirroring
+    MLflow's MLFLOW_TRACKING_TOKEN) or ``username`` and ``password`` (basic, mirroring MLflow's
+    MLFLOW_TRACKING_USERNAME/MLFLOW_TRACKING_PASSWORD). A token takes precedence over basic auth.
+    Extra headers can be supplied via ``headers``; they are merged with (not replaced by)
+    OTEL_EXPORTER_OTLP_HEADERS and the experiment-id routing header.
     """
 
     endpoint: str = Field(
@@ -306,6 +340,28 @@ class MLflowTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, nam
         description="MLflow experiment ID that traces are routed to. If empty, uses the MLFLOW_EXPERIMENT_ID "
         "environment variable, otherwise the default experiment (\"0\").",
     )
+    token: SerializableSecretStr = Field(
+        default_factory=lambda: SerializableSecretStr(""),
+        description="Bearer token for tracking servers behind authentication. "
+        "If empty, uses the MLFLOW_TRACKING_TOKEN environment variable.",
+    )
+    username: str = Field(
+        default="",
+        description="Username for basic auth against tracking servers behind authentication. "
+        "If empty, uses the MLFLOW_TRACKING_USERNAME environment variable. "
+        "Both username and password must be set.",
+    )
+    password: SerializableSecretStr = Field(
+        default_factory=lambda: SerializableSecretStr(""),
+        description="Password for basic auth against tracking servers behind authentication. "
+        "If empty, uses the MLFLOW_TRACKING_PASSWORD environment variable. "
+        "Both username and password must be set.",
+    )
+    headers: dict[str, str] = Field(
+        default_factory=dict,
+        description="Extra HTTP headers sent to the tracking server. Merged with the "
+        "experiment-id routing header, the auth headers above, and OTEL_EXPORTER_OTLP_HEADERS.",
+    )
 
 
 @register_telemetry_exporter(config_type=MLflowTelemetryExporter)
@@ -316,9 +372,17 @@ async def mlflow_telemetry_exporter(config: MLflowTelemetryExporter, builder: Bu
 
     experiment_id = (config.experiment_id or os.environ.get("MLFLOW_EXPERIMENT_ID") or "0").strip()
 
+    token = get_secret_value(config.token) if config.token else os.environ.get("MLFLOW_TRACKING_TOKEN")
+    username = (config.username or os.environ.get("MLFLOW_TRACKING_USERNAME") or "").strip()
+    password = get_secret_value(config.password) if config.password else os.environ.get("MLFLOW_TRACKING_PASSWORD")
+
+    headers = {**_parse_otel_env_headers(), **(config.headers or {})}
+    headers.update(_mlflow_auth_headers(token=token, username=username, password=password))
+    headers.update(_mlflow_experiment_headers(experiment_id))
+
     yield OTLPSpanAdapterExporter(
         endpoint=config.endpoint,
-        headers=_mlflow_experiment_headers(experiment_id),
+        headers=headers,
         batch_size=config.batch_size,
         flush_interval=config.flush_interval,
         max_queue_size=config.max_queue_size,
