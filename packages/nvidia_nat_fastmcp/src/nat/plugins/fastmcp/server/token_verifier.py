@@ -24,6 +24,7 @@ class NATFastMCPTokenVerifier(TokenVerifier):
     """FastMCP token verifier that delegates validation to BearerTokenValidator."""
 
     def __init__(self, config: OAuth2ResourceServerConfig, *, base_url: str):
+        """Initialize the verifier with OAuth2 configuration and a public base URL."""
         super().__init__(base_url=base_url, required_scopes=config.scopes or [])
         self._bearer_token_validator = BearerTokenValidator(
             issuer=config.issuer_url,
