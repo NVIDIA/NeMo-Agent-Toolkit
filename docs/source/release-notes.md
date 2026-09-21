@@ -20,18 +20,20 @@ This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 
 ## Release v1.9.0
 ### Summary
+* Add `HITLMiddleware` for human-in-the-loop function interception
+* Enable preflight authentication for applicable authentication providers
+* Track LangChain Runnable callbacks
+* Add MLflow OTLP telemetry exporter, docs, and example
+* Export runtime context and interactive HITL models
+* Add opt-in provider hooks for generated ids and timestamps
+* Export the interactive prompt content models
+* Route interaction prompt ids and timestamps via providers
+* Add CircuitBreakerMiddleware for tool fault tolerance
+* Remove `local_sandbox`
+* Don't expose the `user_id` parameter to the LLM
+* Improved user identity resolution
 
-* Migrated Redis memory and object store support out of the NeMo Agent Toolkit repository and into the Redis-maintained [`nemo-agent-toolkit-redis`](https://pypi.org/project/nemo-agent-toolkit-redis/) plugin. The `nvidia-nat[redis]` extra, historical `nvidia-nat-redis` distribution, Python imports, and Redis component configuration names remain compatible through the no-code shim. New projects should install the external package directly. The external plugin requires `redis>=5.0.0,<6.0.0`; environments constrained to an earlier Redis Python client must update that constraint. Refer to the [migration guide](./resources/migration-guide.md#redis-package-migration) for details.
-
-## Release v1.8.0
-### Summary
-
-* Added Guardrails support
-* Added Experimental coding-agent adapters with NeMo-Relay telemetry
-* Added Microsoft Agent 365 integration plugin
-* Added Windows WSL2 setup instructions
-
-Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.8/CHANGELOG.md) for the complete list of changes.
+Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.9/CHANGELOG.md) for the complete list of changes.
 
 ## Known Issues
 - Refer to [https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) for an up to date list of current issues.
