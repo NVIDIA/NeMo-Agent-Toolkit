@@ -34,8 +34,31 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.middleware import FunctionMiddlewareBaseConfig
 from nat.middleware.common import TargetLocation
 from nat.middleware.function_middleware import FunctionMiddleware
+from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
+
+
+def stream_chunk_to_text(chunk: Any) -> str:
+    """Render one streamed chunk as text for defense analysis.
+
+    Streamed outputs are typed (for example, ``ChatResponseChunk`` yielded by the
+    built-in agents); the global type converter renders each supported type as text. Values
+    without a text representation keep their ``str()`` rendering.
+
+    Args:
+        chunk: One item from the wrapped function's output stream.
+
+    Returns:
+        Text representation of the chunk.
+    """
+    if isinstance(chunk, str):
+        return chunk
+    try:
+        converted: Any = GlobalTypeConverter.get().convert(chunk, to_type=str)
+    except ValueError:
+        return str(chunk)
+    return converted if isinstance(converted, str) else str(chunk)
 
 
 class MultipleTargetFieldMatchesError(ValueError):

@@ -138,6 +138,24 @@ def test_yaml_loads_leaves_embedded_dollar_identifiers_in_string_values():
     assert flows == ["content safety check input $model=content_safety"]
 
 
+def test_yaml_loads_does_not_expand_variables_inside_env_values(monkeypatch: pytest.MonkeyPatch):
+    """An environment variable's value is used verbatim, even when it looks like a "${...}" reference itself."""
+    monkeypatch.setenv("NAT_TEST_TEMPLATE", "Hello ${NAT_TEST_NAME}, token ${NAT_TEST_TOKEN:-none}")
+    monkeypatch.setenv("NAT_TEST_NAME", "world")
+    monkeypatch.setenv("NAT_TEST_PASSWORD", "pa$$word${NAT_TEST_NAME}")
+
+    yaml_str = """
+    prompt: ${NAT_TEST_TEMPLATE}
+    password: ${NAT_TEST_PASSWORD}
+    name: ${NAT_TEST_NAME}
+    """
+
+    config: dict = yaml_loads(yaml_str, Path("."))
+    assert config["prompt"] == "Hello ${NAT_TEST_NAME}, token ${NAT_TEST_TOKEN:-none}"
+    assert config["password"] == "pa$$word${NAT_TEST_NAME}"
+    assert config["name"] == "world"
+
+
 def test_yaml_load(env_vars: dict):
     # Create a temporary YAML file
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:

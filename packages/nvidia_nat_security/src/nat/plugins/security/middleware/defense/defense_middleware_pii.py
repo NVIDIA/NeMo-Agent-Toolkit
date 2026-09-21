@@ -31,6 +31,7 @@ from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 from nat.plugins.security.middleware.defense.defense_middleware import DefenseMiddleware
 from nat.plugins.security.middleware.defense.defense_middleware import DefenseMiddlewareConfig
+from nat.plugins.security.middleware.defense.defense_middleware import stream_chunk_to_text
 from nat.plugins.security.middleware.defense.defense_middleware_data_models import PIIAnalysisResult
 
 logger = logging.getLogger(__name__)
@@ -308,7 +309,7 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                     accumulated_chunks.append(chunk)
 
             # Analyze the full function output for PII
-            full_output = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
+            full_output = "".join(stream_chunk_to_text(chunk) for chunk in accumulated_chunks)
             processed_output = self._process_pii_detection(full_output, context)
 
             processed_str = str(processed_output)

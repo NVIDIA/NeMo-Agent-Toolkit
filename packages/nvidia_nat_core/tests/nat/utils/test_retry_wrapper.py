@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
+from collections.abc import AsyncIterator
 from collections.abc import Iterable
 
 import pytest
@@ -372,6 +373,98 @@ def test_multiple_instances_dont_interfere():
     assert result2 == "inner-ok"
     assert svc1.inner_calls == 3  # Each instance retries independently
     assert svc2.inner_calls == 3
+
+
+class ConcurrentService:
+    """Service whose async method lets a test control task interleaving explicitly."""
+
+    def __init__(self):
+        self.calls_b = 0
+        self.a_started = asyncio.Event()
+        self.b_done = asyncio.Event()
+
+    async def call_a(self):
+        """Hold the retry context open across an await point.
+
+        Simulates an in-flight request on a client instance shared with a
+        concurrent caller."""
+        self.a_started.set()
+        await self.b_done.wait()
+        return "a-ok"
+
+    async def call_b(self):
+        """Fails once with a retryable error, then succeeds."""
+        self.calls_b += 1
+        if self.calls_b == 1:
+            raise APIError(429, "Too Many Requests")
+        return "b-ok"
+
+
+async def test_concurrent_calls_on_shared_instance_retry_independently():
+    """Two concurrent requests sharing one patched instance must not share retry context.
+
+    Request A stays mid-attempt (past its first await point) while request B
+    starts, fails once, and must still be retried on its own budget."""
+    svc = ConcurrentService()
+    svc = ar.patch_with_retry(svc, retries=3, base_delay=0, retry_codes=["4xx"])
+
+    async def call_b_once_a_is_in_flight():
+        await svc.a_started.wait()
+        result = await svc.call_b()
+        svc.b_done.set()
+        return result
+
+    result_a, result_b = await asyncio.gather(svc.call_a(), call_b_once_a_is_in_flight())
+
+    assert result_a == "a-ok"
+    assert result_b == "b-ok"
+    assert svc.calls_b == 2  # failed once, retried, succeeded
+
+
+class SpawningService:
+    """Service whose method spawns a child task calling a wrapped sibling method."""
+
+    def __init__(self):
+        self.child_calls = 0
+        self.spawned_task = None
+
+    async def call_child(self):
+        """Fail once with a retryable error, then succeed."""
+        self.child_calls += 1
+        if self.child_calls == 1:
+            raise APIError(429, "Too Many Requests")
+        return "child-ok"
+
+    async def call_parent(self):
+        """Spawn a child task calling a wrapped sibling method, without awaiting it.
+
+        The task is awaited by the caller, after this call (and the retry
+        context it opened) has already returned, so a failure in the child
+        can only be explained by the child's own retry budget, never by this
+        method's."""
+        self.spawned_task = asyncio.create_task(self.call_child())
+        return "parent-ok"
+
+
+async def test_child_task_created_inside_retry_context_still_retries():
+    """A task spawned via asyncio.create_task() from inside a retry-wrapped call
+    must not inherit the parent's already-retrying entry for the same instance.
+
+    contextvars.ContextVar copies the parent's value into the child task at
+    creation time, so without an owner check the child's own wrapped call on the
+    same instance would see itself as nested and skip its own retries. The child
+    task is awaited only after call_parent has returned, so its retry behavior
+    cannot be explained by call_parent's own retry loop catching the failure."""
+    svc = SpawningService()
+    svc = ar.patch_with_retry(svc, retries=3, base_delay=0, retry_codes=["4xx"])
+
+    result = await svc.call_parent()
+    assert result == "parent-ok"
+
+    child_result = await svc.spawned_task
+
+    assert child_result == "child-ok"
+    assert svc.child_calls == 2  # failed once, retried, succeeded
 
 
 def test_exception_propagation_in_nested_calls():
@@ -783,6 +876,268 @@ async def test_minimal_budget_async_generator_executes_once(retries):
 
     assert [item async for item in agen()] == [0, 1, 2]
     assert call_count == 1
+
+
+class StreamingService(Service):
+    """Service with a public async-generator method, the same shape as the
+    streaming methods (e.g. `astream`) that `patch_with_retry` wraps on real
+    LLM clients."""
+
+    async def stream(self):
+        yield 1
+        yield 2
+        yield 3
+
+
+async def test_agen_cleanup_from_a_different_task_does_not_raise():
+    """Closing a wrapped async generator from a task other than the one that
+    started iterating it must not raise out of the retry context's cleanup.
+
+    A caller that does not fully drain an `instance_context_aware`-wrapped
+    async generator (an early `break`, an exception elsewhere, or simply
+    letting it be garbage-collected) has its `GeneratorExit` cleanup driven by
+    asyncio's async-generator finalizer, which runs inside a freshly created
+    task holding only a *copy* of the original Context. `ContextVar.reset()`
+    requires the exact Context object the token was minted in, so without a
+    guard this raises `ValueError: ... was created in a different Context`
+    from inside asyncio's own finalizer machinery, where nothing in ordinary
+    calling code can catch it: it surfaces as an unhandled "Task exception was
+    never retrieved" error on the event loop instead."""
+    svc = StreamingService()
+    svc = ar.patch_with_retry(svc, retries=2, base_delay=0)
+
+    loop = asyncio.get_running_loop()
+    loop_exceptions = []
+    loop.set_exception_handler(lambda _loop, context: loop_exceptions.append(context))
+
+    agen = svc.stream()
+    assert await agen.__anext__() == 1
+
+    async def close_from_other_task():
+        await agen.aclose()
+
+    # asyncio.create_task() copies the current Context; even though the copy's
+    # values match, it is a distinct Context object from the one __enter__ ran
+    # in above, reproducing the same mismatch the async-generator finalizer
+    # hits in the wild.
+    await asyncio.create_task(close_from_other_task())
+
+    assert loop_exceptions == []
+
+
+@pytest.mark.parametrize("close_from", ["same_task", "other_task"])
+async def test_agen_close_does_not_disable_later_retries_on_same_instance(close_from):
+    """A closed (or abandoned) stream must not poison retries for later,
+    unrelated calls on the same patched instance and task.
+
+    The nested-call guard used to key `_in_retry_context` for the whole
+    lifetime of the async generator, entered once by the first `__anext__`
+    and exited only when the generator finished or was closed. Closing it
+    from a different task made `__exit__`'s `ContextVar.reset()` fail (see
+    the test above) and, because the reset never ran successfully, left the
+    entry set in the *original* task's context forever: that task's next
+    call on the same instance then read the stale entry, mistook it for a
+    nested call, and skipped its own retry budget entirely."""
+    svc = StreamingService()
+    svc = ar.patch_with_retry(svc, retries=2, base_delay=0)
+
+    agen = svc.stream()
+    assert await agen.__anext__() == 1
+
+    if close_from == "other_task":
+        await asyncio.create_task(agen.aclose())
+    else:
+        await agen.aclose()
+
+    # async_method fails once then succeeds; it must still get its full
+    # retry budget here, on the same instance, in the same task.
+    assert await svc.async_method() == "async-ok"
+    assert svc.calls_async == 2
+
+
+async def test_agen_nested_call_shares_the_outer_retry_budget():
+    """A method called from inside an open stream on the same instance is a
+    nested call: it must not retry on a budget of its own, and a failure
+    there is retried by the stream that holds it, not swallowed."""
+
+    class NestedStreamingService(Service):
+
+        async def stream(self):
+            yield await self.async_method()
+
+    svc = ar.patch_with_retry(NestedStreamingService(), retries=2, base_delay=0)
+
+    assert [item async for item in svc.stream()] == ["async-ok"]
+    assert svc.calls_async == 2
+
+
+@pytest.mark.parametrize("stream_state", ["exhausted", "suspended", "advanced_elsewhere"])
+async def test_agen_cleanup_keeps_later_calls_retrying(stream_state):
+    """A stream does not suppress independent calls in its consumer's task.
+
+    This holds after cleanup or advancement from a different task."""
+    svc = StreamingService()
+    svc = ar.patch_with_retry(svc, retries=2, base_delay=0)
+    agen = svc.stream()
+    try:
+        assert await anext(agen) == 1
+        if stream_state == "exhausted":
+            assert [item async for item in agen] == [2, 3]
+        elif stream_state == "advanced_elsewhere":
+            assert await asyncio.create_task(anext(agen)) == 2
+
+        assert await svc.async_method() == "async-ok"
+        assert svc.calls_async == 2
+    finally:
+        await agen.aclose()
+
+
+async def test_agen_nested_stream_shares_outer_method_retry_budget():
+    """Retry the outermost call only.
+
+    A nested stream or method does not get another retry budget of its own."""
+
+    class NestedStreamingService(Service):
+
+        def __init__(self):
+            super().__init__()
+            self.stream_calls = 0
+            self.outer_calls = 0
+
+        async def stream(self) -> AsyncIterator[str]:
+            self.stream_calls += 1
+            yield await self.async_method()
+
+        async def outer(self) -> list[str]:
+            self.outer_calls += 1
+            return [item async for item in self.stream()]
+
+    svc = ar.patch_with_retry(NestedStreamingService(), retries=2, base_delay=0)
+    result = await svc.outer()
+
+    assert result == ["async-ok"]
+    assert svc.stream_calls == svc.calls_async == 2
+    assert svc.outer_calls == 2
+
+
+async def test_concurrent_agen_calls_retry_independently():
+    """Overlapping streams on one instance each retain their retry budget."""
+    left_started = asyncio.Event()
+    right_started = asyncio.Event()
+
+    class ConcurrentStreamingService:
+
+        def __init__(self):
+            self.calls = {"left": 0, "right": 0}
+
+        async def stream(self, name: str) -> AsyncIterator[str]:
+            self.calls[name] += 1
+            if name == "left":
+                left_started.set()
+                await right_started.wait()
+            else:
+                right_started.set()
+            if self.calls[name] == 1:
+                raise APIError(503)
+            yield name
+
+    svc = ar.patch_with_retry(ConcurrentStreamingService(), retries=2, base_delay=0)
+
+    async def consume(name):
+        return [item async for item in svc.stream(name)]
+
+    left = asyncio.create_task(consume("left"))
+    try:
+        await left_started.wait()
+        assert await consume("right") == ["right"]
+        assert await left == ["left"]
+    finally:
+        if not left.done():
+            left.cancel()
+            await asyncio.gather(left, return_exceptions=True)
+
+    assert svc.calls == {"left": 2, "right": 2}
+
+
+@pytest.mark.parametrize("code,attempts", [(503, 3), (400, 1)])
+async def test_agen_failure_preserves_filters_and_attempt_budget(code, attempts):
+    """Errors after a yield retain the configured filter and attempt budget.
+
+    They do not affect a subsequent request."""
+    error = APIError(code)
+
+    class FailingStreamService(Service):
+
+        def __init__(self):
+            super().__init__()
+            self.stream_calls = 0
+
+        async def stream(self) -> AsyncIterator[int]:
+            self.stream_calls += 1
+            yield self.stream_calls
+            raise error
+
+    svc = ar.patch_with_retry(FailingStreamService(), retries=3, base_delay=0, retry_codes=["5xx"])
+    received = []
+    with pytest.raises(APIError) as exc_info:
+        async for item in svc.stream():
+            received.append(item)
+
+    assert exc_info.value is error
+    assert received == list(range(1, attempts + 1))
+    assert svc.stream_calls == attempts
+    assert await svc.async_method() == "async-ok"
+    assert svc.calls_async == 2
+
+
+async def test_agen_cancellation_keeps_later_calls_retrying():
+    """Cancellation while awaiting the next item propagates without a retry.
+
+    The consumer can recover and make another request afterward."""
+    waiting = asyncio.Event()
+    release = asyncio.Event()
+    closed = asyncio.Event()
+
+    class CancellableStreamService(Service):
+
+        def __init__(self):
+            super().__init__()
+            self.stream_calls = 0
+
+        async def stream(self) -> AsyncIterator[int]:
+            self.stream_calls += 1
+            try:
+                yield 1
+                waiting.set()
+                await release.wait()
+            finally:
+                closed.set()
+
+    svc = ar.patch_with_retry(CancellableStreamService(), retries=2, base_delay=0)
+
+    async def consume():
+        agen = svc.stream()
+        try:
+            assert await anext(agen) == 1
+            with pytest.raises(asyncio.CancelledError):
+                await anext(agen)
+            assert await svc.async_method() == "async-ok"
+        finally:
+            await agen.aclose()
+
+    task = asyncio.create_task(consume())
+    try:
+        await waiting.wait()
+        task.cancel()
+        await task
+    finally:
+        if not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+
+    assert closed.is_set()
+    assert svc.stream_calls == 1
+    assert svc.calls_async == 2
 
 
 @pytest.mark.parametrize("retries", [0, -1, 1])
