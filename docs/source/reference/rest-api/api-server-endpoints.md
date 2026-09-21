@@ -88,7 +88,7 @@ nat serve --config_file examples/getting_started/simple_calculator/configs/confi
 ## Health Check Endpoint
 - **Route:** `/health`
 - **Method:** GET
-- **Description:** A liveness and readiness probe for the running server. It is registered automatically
+- **Description:** A health probe for the running server. It is registered automatically
   whenever you start `nat serve`, returns immediately without executing a workflow, and requires no
   model or API credentials. This makes it suitable for reverse proxies, process supervisors, Docker
   health checks, and Kubernetes-style readiness probes.
