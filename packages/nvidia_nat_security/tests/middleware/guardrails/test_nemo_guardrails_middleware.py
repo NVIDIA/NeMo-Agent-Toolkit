@@ -30,6 +30,8 @@ from nemoguardrails.rails.llm.options import GenerationResponse
 from pydantic import BaseModel
 
 from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import ChatRequestOrMessage
+from nat.data_models.api_server import Message
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware import _DEFAULT_REFUSAL
@@ -315,6 +317,42 @@ async def test_no_selection_does_not_descend_into_nested_models() -> None:
     assert product.summary == "ping me at <EMAIL_ADDRESS>"
     assert product.reviews[0].review == "a@x.com"
     assert middleware._llm_rails.generate_async.await_count == 1
+
+
+async def test_pre_invoke_no_selection_guards_last_user_message_of_chat_messages() -> None:
+    """With no field selection, the current turn of a ``messages`` chat request is guarded."""
+    arg = ChatRequestOrMessage(messages=[
+        Message(role="user", content="earlier question"),
+        Message(role="assistant", content="earlier answer"),
+        Message(role="user", content="reach me at a@x.com"),
+    ])
+    middleware = _make_middleware(generate_side_effect=[_generation_response(response="reach me at <EMAIL_ADDRESS>")])
+    context = _invocation_context(input_arg=arg)
+
+    result = await middleware.pre_invoke(context)
+
+    assert result is context
+    assert middleware._llm_rails.generate_async.await_count == 1
+    assert middleware._llm_rails.generate_async.await_args.kwargs["prompt"] == "reach me at a@x.com"
+    assert [m.content for m in arg.messages] == ["earlier question", "earlier answer", "reach me at <EMAIL_ADDRESS>"]
+
+
+async def test_pre_invoke_block_on_last_user_message_of_chat_messages() -> None:
+    """A blocking input rail on the current turn of a ``messages`` chat request skips the workflow."""
+    arg = ChatRequestOrMessage(messages=[Message(role="user", content="off-topic request")])
+    block_message = "I'm sorry, I can't respond to that."
+    middleware = _make_middleware(generate_side_effect=[
+        _generation_response(
+            activated_rails=[ActivatedRail(type="input", name="self check input", stop=True)],
+            output_data={"bot_message": block_message},
+        ),
+    ])
+    context = _invocation_context(input_arg=arg)
+
+    result = await middleware.pre_invoke(context)
+
+    assert result is context
+    assert context.output == block_message
 
 
 async def test_post_invoke_masks_selected_path_in_place_and_preserves_structure() -> None:

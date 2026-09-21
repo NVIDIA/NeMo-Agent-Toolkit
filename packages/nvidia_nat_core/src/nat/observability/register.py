@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import logging
+from collections.abc import AsyncGenerator
+from contextlib import closing
 
 from pydantic import Field
 
@@ -97,20 +99,17 @@ class FileLoggingMethod(LoggingBaseConfig, name="file"):
 
 
 @register_logging_method(config_type=FileLoggingMethod)
-async def file_logging_method(config: FileLoggingMethod, builder: Builder):
-    """
-    Build and return a FileHandler for file-based logging.
-    """
+async def file_logging_method(config: FileLoggingMethod, builder: Builder) -> AsyncGenerator[logging.FileHandler, None]:
+    """Yield a file handler and close it when the workflow's logging context exits."""
     level = getattr(logging, config.level.upper(), logging.INFO)
     mode = "w" if config.mode == FileMode.OVERWRITE else "a"
-    handler = logging.FileHandler(filename=config.path, mode=mode, encoding="utf-8")
-    handler.setLevel(level)
+    with closing(logging.FileHandler(filename=config.path, mode=mode, encoding="utf-8")) as handler:
+        handler.setLevel(level)
 
-    # Set formatter to match the default CLI format
-    formatter = logging.Formatter(
-        fmt="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    handler.setFormatter(formatter)
+        formatter = logging.Formatter(
+            fmt="%(asctime)s - %(levelname)-8s - %(name)s:%(lineno)d - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        handler.setFormatter(formatter)
 
-    yield handler
+        yield handler
