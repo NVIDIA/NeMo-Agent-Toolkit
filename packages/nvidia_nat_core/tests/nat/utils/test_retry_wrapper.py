@@ -921,3 +921,58 @@ async def test_async_generator_empty_first_attempt_still_succeeds():
     patched = ar.patch_with_retry(EmptyOk(), retries=3, base_delay=0, retry_codes=[429])
     assert [item async for item in patched.astream()] == []
 
+
+async def test_async_generator_empty_retry_preserves_traceback():
+    """The re-raised ``last_exception`` must keep the original traceback (#2223)."""
+
+    async def one_shot_input():
+        yield "prompt"
+
+    service = OneShotStreamService()
+    patched = ar.patch_with_retry(
+        service,
+        retries=3,
+        base_delay=0,
+        retry_codes=[429],
+        retry_on_messages=None,
+        clear_tracebacks=True,
+    )
+
+    with pytest.raises(Boom429) as excinfo:
+        async for _chunk in patched.astream(one_shot_input()):
+            pass
+
+    assert excinfo.value.__traceback__ is not None
+    frames = [tb.tb_frame.f_code.co_name for tb in _walk_traceback(excinfo.value.__traceback__)]
+    assert "astream" in frames
+
+
+def test_sync_generator_empty_retry_preserves_traceback():
+    """Sync generator path must also keep the original traceback (#2223)."""
+
+    def one_shot_input():
+        yield "prompt"
+
+    service = OneShotStreamService()
+    patched = ar.patch_with_retry(
+        service,
+        retries=3,
+        base_delay=0,
+        retry_codes=[429],
+        retry_on_messages=None,
+        clear_tracebacks=True,
+    )
+
+    with pytest.raises(Boom429) as excinfo:
+        list(patched.stream(one_shot_input()))
+
+    assert excinfo.value.__traceback__ is not None
+    frames = [tb.tb_frame.f_code.co_name for tb in _walk_traceback(excinfo.value.__traceback__)]
+    assert "stream" in frames
+
+
+def _walk_traceback(tb):
+    while tb is not None:
+        yield tb
+        tb = tb.tb_next
+

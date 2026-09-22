@@ -324,11 +324,13 @@ def _retry_decorator(
                             yielded = True
                             yield item
                     except retry_on as exc:
+                        # Clear the previous attempt's traceback (breaks reference
+                        # cycles) but keep the current exception intact so a later
+                        # ``raise last_exception`` in the ``else`` branch preserves
+                        # its traceback (#2223).
+                        if clear_tracebacks and last_exception is not None:
+                            _clear_exception_context(last_exception)
                         last_exception = exc
-
-                        # Memory cleanup
-                        if clear_tracebacks:
-                            _clear_exception_context(exc)
 
                         _run_gc_if_needed(attempt, gc_frequency)
 
@@ -371,11 +373,12 @@ def _retry_decorator(
                             yielded = True
                             yield item
                     except retry_on as exc:
+                        # Same traceback-preservation as the async-generator path:
+                        # only clear the superseded ``last_exception`` so the fresh
+                        # ``exc`` keeps its traceback for any later re-raise (#2223).
+                        if clear_tracebacks and last_exception is not None:
+                            _clear_exception_context(last_exception)
                         last_exception = exc
-
-                        # Memory cleanup
-                        if clear_tracebacks:
-                            _clear_exception_context(exc)
 
                         _run_gc_if_needed(attempt, gc_frequency)
 
