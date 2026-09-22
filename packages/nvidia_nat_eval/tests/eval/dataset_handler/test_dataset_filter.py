@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
+
 import pandas as pd
 import pytest
 
@@ -106,11 +108,13 @@ def test_apply_filters_combined(sample_df, combined_filter):
 
 def test_apply_filters_none(sample_df):
     """A missing filter configuration should leave the dataset unchanged."""
+    original_df = copy.deepcopy(sample_df)
     dataset_filter = DatasetFilter(None)
 
     filtered_df = dataset_filter.apply_filters(sample_df)
 
-    pd.testing.assert_frame_equal(filtered_df, sample_df)
+    pd.testing.assert_frame_equal(filtered_df, original_df)
+    pd.testing.assert_frame_equal(sample_df, original_df)
 
 
 def test_wildcard_pattern_allowlist(sample_df):

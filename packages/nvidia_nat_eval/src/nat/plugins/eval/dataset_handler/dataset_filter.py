@@ -32,7 +32,7 @@ class DatasetFilter:
     filter configuration.
     """
 
-    def __init__(self, filter_config: EvalFilterConfig | None):
+    def __init__(self, filter_config: EvalFilterConfig | None) -> None:
 
         self.filter_config = (
             filter_config if filter_config is not None else EvalFilterConfig()
