@@ -32,9 +32,11 @@ class DatasetFilter:
     filter configuration.
     """
 
-    def __init__(self, filter_config: EvalFilterConfig):
+    def __init__(self, filter_config: EvalFilterConfig | None):
 
-        self.filter_config = filter_config
+        self.filter_config = (
+            filter_config if filter_config is not None else EvalFilterConfig()
+        )
 
     @staticmethod
     def _match_wildcard_patterns(series: pd.Series, patterns: list[str | int | float]) -> pd.Series:

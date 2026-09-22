@@ -104,6 +104,15 @@ def test_apply_filters_combined(sample_df, combined_filter):
     assert set(filtered_df["repo"]) == {"iproute2", "vxlan"}, "Only repo 'iproute2' and 'vxlan' should remain"
 
 
+def test_apply_filters_none(sample_df):
+    """A missing filter configuration should leave the dataset unchanged."""
+    dataset_filter = DatasetFilter(None)
+
+    filtered_df = dataset_filter.apply_filters(sample_df)
+
+    pd.testing.assert_frame_equal(filtered_df, sample_df)
+
+
 def test_wildcard_pattern_allowlist(sample_df):
     """Test that wildcard patterns work correctly in allowlist filters."""
     filter_config = EvalFilterConfig(allowlist=EvalFilterEntryConfig(field={"instance_id": ["iproute2_*"]}),
