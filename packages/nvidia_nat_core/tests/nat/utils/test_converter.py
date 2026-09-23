@@ -782,3 +782,18 @@ def test_try_convert_returns_original_when_no_path_exists(basic_converter):
     """`try_convert` still hands back the input it could not convert."""
     sentinel = object()
     assert basic_converter.try_convert(sentinel, int) is sentinel
+
+
+def test_registered_converter_returning_none_is_not_a_miss():
+    """A converter may legitimately produce `None`; that is a result, not a missing path."""
+
+    class Box:
+        pass
+
+    def box_to_optional_str(value: Box) -> str | None:
+        return None
+
+    converter = TypeConverter([box_to_optional_str])
+
+    assert converter.convert(Box(), str | None) is None
+    assert converter.try_convert(Box(), str | None) is None

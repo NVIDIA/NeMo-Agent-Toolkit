@@ -133,12 +133,12 @@ class TypeConverter:
 
         # 2) Attempt direct in *this* converter
         direct_result = self._try_direct_conversion(data, root)
-        if direct_result is not None:
+        if not isinstance(direct_result, _NoConversion):
             return direct_result
 
         # 3) If direct fails entirely, do indirect in *this* converter
         indirect_result = self._try_indirect_convert(data, to_type)
-        if indirect_result is not None:
+        if not isinstance(indirect_result, _NoConversion):
             return indirect_result
 
         # 4) If we still haven't succeeded, report that there is no path
@@ -202,7 +202,7 @@ class TypeConverter:
     # -------------------------------------------------
     # INTERNAL DIRECT CONVERSION (with parent fallback)
     # -------------------------------------------------
-    def _try_direct_conversion(self, data: typing.Any, target_root_type: type) -> typing.Any | None:
+    def _try_direct_conversion(self, data: typing.Any, target_root_type: type) -> typing.Any:
         """
         Tries direct conversion in *this* converter's registry.
         If no match here, we forward to parent's direct conversion
@@ -225,20 +225,20 @@ class TypeConverter:
         if self._parent is not None:
             return self._parent._try_direct_conversion(data, target_root_type)
 
-        return None
+        return _NO_CONVERSION
 
     # -------------------------------------------------
     # INTERNAL INDIRECT CONVERSION (with parent fallback)
     # -------------------------------------------------
-    def _try_indirect_convert(self, data: typing.Any, to_type: type[_T]) -> _T | None:
+    def _try_indirect_convert(self, data: typing.Any, to_type: type[_T]) -> _T | _NoConversion:
         """
         Attempt indirect conversion (DFS) in *this* converter.
         If no success, fallback to parent's indirect attempt.
         """
-        visited = set()
+        visited: set[type] = set()
         final = self._try_indirect_conversion(data, to_type, visited)
         src_type = type(data)
-        if final is not None:
+        if not isinstance(final, _NoConversion):
             # Warn once if found a chain
             self._maybe_warn_indirect(src_type, to_type)
             return final
@@ -246,13 +246,13 @@ class TypeConverter:
         # If no success, try parent's indirect
         if self._parent is not None:
             parent_final = self._parent._try_indirect_convert(data, to_type)
-            if parent_final is not None:
+            if not isinstance(parent_final, _NoConversion):
                 self._maybe_warn_indirect(src_type, to_type)
                 return parent_final
 
-        return None
+        return _NO_CONVERSION
 
-    def _try_indirect_conversion(self, data: typing.Any, to_type: type[_T], visited: set[type]) -> _T | None:
+    def _try_indirect_conversion(self, data: typing.Any, to_type: type[_T], visited: set[type]) -> _T | _NoConversion:
         """
         DFS attempt to find a chain of conversions from type(data) to to_type,
         ignoring parent. If not found, returns None.
@@ -264,7 +264,7 @@ class TypeConverter:
 
         current_type = type(data)
         if current_type in visited:
-            return None
+            return _NO_CONVERSION
 
         visited.add(current_type)
 
@@ -287,12 +287,12 @@ class TypeConverter:
                             return next_data
                         # else keep going
                         deeper = self._try_indirect_conversion(next_data, to_type, visited)
-                        if deeper is not None:
+                        if not isinstance(deeper, _NoConversion):
                             return deeper
                     except ConvertException:
                         pass
 
-        return None
+        return _NO_CONVERSION
 
     def _maybe_warn_indirect(self, source_type: type, to_type: type):
         """
