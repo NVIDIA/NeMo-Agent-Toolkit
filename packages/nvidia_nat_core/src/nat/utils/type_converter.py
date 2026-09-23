@@ -30,6 +30,31 @@ class ConvertException(Exception):
     pass
 
 
+class _NoConversion:
+    """Sentinel for "no conversion path was found".
+
+    `None` cannot serve here: it is also a perfectly valid converted value
+    (`str | None`, `None` itself), and using it for both made a successful
+    conversion to `None` indistinguishable from a failure.
+    """
+
+    _instance: "_NoConversion | None" = None
+
+    def __new__(cls) -> "_NoConversion":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __repr__(self) -> str:
+        return "<no conversion>"
+
+    def __bool__(self) -> bool:
+        return False
+
+
+_NO_CONVERSION = _NoConversion()
+
+
 class TypeConverter:
     _global_initialized = False
 
@@ -83,9 +108,12 @@ class TypeConverter:
         self._converters.setdefault(to_type, OrderedDict())[from_type] = converter
         # to do(MDD): If needed, sort by specificity here.
 
-    def _convert(self, data: typing.Any, to_type: type[_T]) -> _T | None:
+    def _convert(self, data: typing.Any, to_type: type[_T]) -> _T | _NoConversion:
         """
-        Attempts to convert `data` into `to_type`. Returns None if no path is found.
+        Attempts to convert `data` into `to_type`.
+
+        Returns `_NO_CONVERSION` when no path is found, so that a value which
+        legitimately converts to `None` is not read as a failure.
         """
         decomposed = DecomposedType(to_type)
 
@@ -97,24 +125,24 @@ class TypeConverter:
         if decomposed.is_union:
             for union_type in decomposed.args:
                 result = self._convert(data, union_type)
-                if result is not None:
+                if not isinstance(result, _NoConversion):
                     return result
-            return None
+            return _NO_CONVERSION
 
         root = decomposed.root
 
         # 2) Attempt direct in *this* converter
         direct_result = self._try_direct_conversion(data, root)
-        if direct_result is not None:
+        if not isinstance(direct_result, _NoConversion):
             return direct_result
 
         # 3) If direct fails entirely, do indirect in *this* converter
         indirect_result = self._try_indirect_convert(data, to_type)
-        if indirect_result is not None:
+        if not isinstance(indirect_result, _NoConversion):
             return indirect_result
 
-        # 4) If we still haven't succeeded, return None
-        return None
+        # 4) If we still haven't succeeded, report that there is no path
+        return _NO_CONVERSION
 
     def convert(self, data: typing.Any, to_type: type[_T]) -> _T:
         """
@@ -139,11 +167,11 @@ class TypeConverter:
             If the value cannot be converted to the specified type.
         """
         result = self._convert(data, to_type)
-        if result is None and self._parent:
+        if isinstance(result, _NoConversion) and self._parent:
             # fallback on parent entirely
             return self._parent.convert(data, to_type)
 
-        if result is not None:
+        if not isinstance(result, _NoConversion):
             return result
         raise ValueError(f"Cannot convert type {type(data)} to {to_type}. No match found.")
 
@@ -174,7 +202,7 @@ class TypeConverter:
     # -------------------------------------------------
     # INTERNAL DIRECT CONVERSION (with parent fallback)
     # -------------------------------------------------
-    def _try_direct_conversion(self, data: typing.Any, target_root_type: type) -> typing.Any | None:
+    def _try_direct_conversion(self, data: typing.Any, target_root_type: type) -> typing.Any:
         """
         Tries direct conversion in *this* converter's registry.
         If no match here, we forward to parent's direct conversion
@@ -197,20 +225,20 @@ class TypeConverter:
         if self._parent is not None:
             return self._parent._try_direct_conversion(data, target_root_type)
 
-        return None
+        return _NO_CONVERSION
 
     # -------------------------------------------------
     # INTERNAL INDIRECT CONVERSION (with parent fallback)
     # -------------------------------------------------
-    def _try_indirect_convert(self, data: typing.Any, to_type: type[_T]) -> _T | None:
+    def _try_indirect_convert(self, data: typing.Any, to_type: type[_T]) -> _T | _NoConversion:
         """
         Attempt indirect conversion (DFS) in *this* converter.
         If no success, fallback to parent's indirect attempt.
         """
-        visited = set()
+        visited: set[type] = set()
         final = self._try_indirect_conversion(data, to_type, visited)
         src_type = type(data)
-        if final is not None:
+        if not isinstance(final, _NoConversion):
             # Warn once if found a chain
             self._maybe_warn_indirect(src_type, to_type)
             return final
@@ -218,13 +246,13 @@ class TypeConverter:
         # If no success, try parent's indirect
         if self._parent is not None:
             parent_final = self._parent._try_indirect_convert(data, to_type)
-            if parent_final is not None:
+            if not isinstance(parent_final, _NoConversion):
                 self._maybe_warn_indirect(src_type, to_type)
                 return parent_final
 
-        return None
+        return _NO_CONVERSION
 
-    def _try_indirect_conversion(self, data: typing.Any, to_type: type[_T], visited: set[type]) -> _T | None:
+    def _try_indirect_conversion(self, data: typing.Any, to_type: type[_T], visited: set[type]) -> _T | _NoConversion:
         """
         DFS attempt to find a chain of conversions from type(data) to to_type,
         ignoring parent. If not found, returns None.
@@ -236,7 +264,7 @@ class TypeConverter:
 
         current_type = type(data)
         if current_type in visited:
-            return None
+            return _NO_CONVERSION
 
         visited.add(current_type)
 
@@ -259,12 +287,12 @@ class TypeConverter:
                             return next_data
                         # else keep going
                         deeper = self._try_indirect_conversion(next_data, to_type, visited)
-                        if deeper is not None:
+                        if not isinstance(deeper, _NoConversion):
                             return deeper
                     except ConvertException:
                         pass
 
-        return None
+        return _NO_CONVERSION
 
     def _maybe_warn_indirect(self, source_type: type, to_type: type):
         """
