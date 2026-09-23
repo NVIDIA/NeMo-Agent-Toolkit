@@ -236,7 +236,7 @@ class FileExportMixin(ResourceConflictMixin):
                 else:
                     file_mode = "a"
 
-                async with aiofiles.open(self._current_file_path, mode=file_mode) as f:
+                async with aiofiles.open(self._current_file_path, mode=file_mode, encoding="utf-8") as f:
                     if isinstance(item, list):
                         # Handle list of strings
                         for single_item in item:
