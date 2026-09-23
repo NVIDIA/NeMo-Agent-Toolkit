@@ -30,6 +30,31 @@ class ConvertException(Exception):
     pass
 
 
+class _NoConversion:
+    """Sentinel for "no conversion path was found".
+
+    `None` cannot serve here: it is also a perfectly valid converted value
+    (`str | None`, `None` itself), and using it for both made a successful
+    conversion to `None` indistinguishable from a failure.
+    """
+
+    _instance: "_NoConversion | None" = None
+
+    def __new__(cls) -> "_NoConversion":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __repr__(self) -> str:
+        return "<no conversion>"
+
+    def __bool__(self) -> bool:
+        return False
+
+
+_NO_CONVERSION = _NoConversion()
+
+
 class TypeConverter:
     _global_initialized = False
 
@@ -83,9 +108,12 @@ class TypeConverter:
         self._converters.setdefault(to_type, OrderedDict())[from_type] = converter
         # to do(MDD): If needed, sort by specificity here.
 
-    def _convert(self, data: typing.Any, to_type: type[_T]) -> _T | None:
+    def _convert(self, data: typing.Any, to_type: type[_T]) -> _T | _NoConversion:
         """
-        Attempts to convert `data` into `to_type`. Returns None if no path is found.
+        Attempts to convert `data` into `to_type`.
+
+        Returns `_NO_CONVERSION` when no path is found, so that a value which
+        legitimately converts to `None` is not read as a failure.
         """
         decomposed = DecomposedType(to_type)
 
@@ -97,9 +125,9 @@ class TypeConverter:
         if decomposed.is_union:
             for union_type in decomposed.args:
                 result = self._convert(data, union_type)
-                if result is not None:
+                if not isinstance(result, _NoConversion):
                     return result
-            return None
+            return _NO_CONVERSION
 
         root = decomposed.root
 
@@ -113,8 +141,8 @@ class TypeConverter:
         if indirect_result is not None:
             return indirect_result
 
-        # 4) If we still haven't succeeded, return None
-        return None
+        # 4) If we still haven't succeeded, report that there is no path
+        return _NO_CONVERSION
 
     def convert(self, data: typing.Any, to_type: type[_T]) -> _T:
         """
@@ -139,11 +167,11 @@ class TypeConverter:
             If the value cannot be converted to the specified type.
         """
         result = self._convert(data, to_type)
-        if result is None and self._parent:
+        if isinstance(result, _NoConversion) and self._parent:
             # fallback on parent entirely
             return self._parent.convert(data, to_type)
 
-        if result is not None:
+        if not isinstance(result, _NoConversion):
             return result
         raise ValueError(f"Cannot convert type {type(data)} to {to_type}. No match found.")
 

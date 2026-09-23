@@ -754,3 +754,31 @@ def test_union_type_bidirectional_conversion():
     # Note: This tests that union return types don't break conversion
     result = converter.convert(TargetSchema(value="test"), str)
     assert result == "test"
+
+
+def test_convert_none_to_optional_returns_none(basic_converter):
+    """`None` is a valid value for an optional target, not a failed conversion.
+
+    `_convert` used `None` both for "converted value" and for "no path found",
+    so `convert` read the success as a failure and raised.
+    """
+    assert basic_converter.convert(None, str | None) is None
+    assert basic_converter.convert(None, int | None) is None
+    assert basic_converter.convert(None, type(None)) is None
+
+
+def test_convert_none_to_optional_via_parent(child_converter):
+    """The parent fallback must not treat a converted `None` as a miss either."""
+    assert child_converter.convert(None, str | None) is None
+
+
+def test_convert_still_raises_when_no_path_exists(basic_converter):
+    """A genuine miss keeps raising, so the sentinel did not widen conversion."""
+    with pytest.raises(ValueError, match="No match found"):
+        basic_converter.convert(object(), int)
+
+
+def test_try_convert_returns_original_when_no_path_exists(basic_converter):
+    """`try_convert` still hands back the input it could not convert."""
+    sentinel = object()
+    assert basic_converter.try_convert(sentinel, int) is sentinel
