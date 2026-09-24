@@ -25,7 +25,6 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Discriminator
 from pydantic import Field
-from pydantic import conlist
 from pydantic import field_serializer
 from pydantic import field_validator
 from pydantic import model_validator
@@ -146,7 +145,7 @@ class ChatRequest(BaseModel):
     """
 
     # Required fields
-    messages: typing.Annotated[list[Message], conlist(Message, min_length=1)]
+    messages: typing.Annotated[list[Message], Field(min_length=1)]
 
     # Optional fields (OpenAI Chat Completions API compatible)
     model: str | None = Field(default=None, description="name of the model to use")
@@ -274,7 +273,7 @@ class ChatRequestOrMessage(BaseModel):
         },
     )
 
-    messages: typing.Annotated[list[Message] | None, conlist(Message, min_length=1)] = Field(
+    messages: typing.Annotated[list[Message], Field(min_length=1)] | None = Field(
         default=None, description="A non-empty conversation of messages to process.")
 
     input_message: str | None = Field(
