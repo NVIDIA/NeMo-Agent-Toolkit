@@ -55,6 +55,21 @@ class UserManager:
     """Stateless resolver that creates ``UserInfo`` from HTTP/WebSocket connections."""
 
     @classmethod
+    def user_info_from_subject(cls, subject: str) -> UserInfo:
+        """Create a user identity from a subject an authentication layer validated.
+
+        Args:
+            subject: The stable subject identifier supplied by the identity provider.
+
+        Returns:
+            A user identity whose ID is derived from the validated subject.
+
+        Raises:
+            ValueError: If `subject` is empty.
+        """
+        return cls._user_info_from_jwt({"sub": subject})
+
+    @classmethod
     def extract_user_from_connection(
         cls,
         connection: Request | WebSocket,
