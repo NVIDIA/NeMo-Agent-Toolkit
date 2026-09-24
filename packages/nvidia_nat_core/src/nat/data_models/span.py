@@ -187,7 +187,7 @@ class SpanContext(BaseModel):
 
 class Span(BaseModel):
     name: str = Field(description="The name of the span.")
-    context: SpanContext | None = Field(default=None, description="The context of the span.")
+    context: SpanContext | None = Field(default_factory=SpanContext, description="The context of the span.")
     parent: "Span | None" = Field(default=None, description="The parent span of the span.")
     start_time: int = Field(default_factory=current_time_ns, description="The start time of the span.")
     end_time: int | None = Field(default=None, description="The end time of the span.")
