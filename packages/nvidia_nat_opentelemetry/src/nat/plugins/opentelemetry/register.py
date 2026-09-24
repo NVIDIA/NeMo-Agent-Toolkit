@@ -288,6 +288,24 @@ def _mlflow_experiment_headers(experiment_id: str) -> dict[str, str]:
     return {"x-mlflow-experiment-id": experiment_id}
 
 
+def _mlflow_auth_headers(*, token: str | None, username: str, password: str | None) -> dict[str, str]:
+    """Build the Authorization header for an authenticated MLflow tracking server.
+
+    Mirrors MLflow's own client (MLFLOW_TRACKING_TOKEN / MLFLOW_TRACKING_USERNAME /
+    MLFLOW_TRACKING_PASSWORD): a token uses bearer auth and takes precedence over
+    username/password basic auth.
+    """
+    import base64
+
+    headers: dict[str, str] = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    elif username and password:
+        credentials = f"{username}:{password}".encode()
+        headers["Authorization"] = f"Basic {base64.b64encode(credentials).decode('utf-8')}"
+    return headers
+
+
 class MLflowTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="mlflow"):
     """Export traces to an MLflow tracking server over OTLP/HTTP.
 
@@ -295,6 +313,10 @@ class MLflowTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, nam
     experiment via the ``x-mlflow-experiment-id`` header. Point ``endpoint`` at that path and set
     ``experiment_id`` to the target experiment. The tracking server must run with a database backend
     store for trace ingestion.
+
+    For tracking servers behind authentication, set ``token`` for bearer auth or ``username``/``password``
+    for basic auth (mirroring MLflow's MLFLOW_TRACKING_TOKEN / MLFLOW_TRACKING_USERNAME /
+    MLFLOW_TRACKING_PASSWORD environment variables). The token takes precedence over basic auth.
     """
 
     endpoint: str = Field(
@@ -306,6 +328,21 @@ class MLflowTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, nam
         description="MLflow experiment ID that traces are routed to. If empty, uses the MLFLOW_EXPERIMENT_ID "
         "environment variable, otherwise the default experiment (\"0\").",
     )
+    token: SerializableSecretStr = Field(
+        default_factory=lambda: SerializableSecretStr(""),
+        description="MLflow tracking token for bearer authentication. If empty, uses the MLFLOW_TRACKING_TOKEN "
+        "environment variable. Takes precedence over username/password.",
+    )
+    username: str = Field(
+        default="",
+        description="MLflow tracking username for basic authentication. If empty, uses the "
+        "MLFLOW_TRACKING_USERNAME environment variable.",
+    )
+    password: SerializableSecretStr = Field(
+        default_factory=lambda: SerializableSecretStr(""),
+        description="MLflow tracking password for basic authentication. If empty, uses the "
+        "MLFLOW_TRACKING_PASSWORD environment variable.",
+    )
 
 
 @register_telemetry_exporter(config_type=MLflowTelemetryExporter)
@@ -316,9 +353,20 @@ async def mlflow_telemetry_exporter(config: MLflowTelemetryExporter, builder: Bu
 
     experiment_id = (config.experiment_id or os.environ.get("MLFLOW_EXPERIMENT_ID") or "0").strip()
 
+    token = get_secret_value(config.token) if config.token else None
+    token = token or os.environ.get("MLFLOW_TRACKING_TOKEN")
+    username = config.username or os.environ.get("MLFLOW_TRACKING_USERNAME") or ""
+    password = get_secret_value(config.password) if config.password else None
+    password = password or os.environ.get("MLFLOW_TRACKING_PASSWORD")
+
+    headers = {
+        **_mlflow_experiment_headers(experiment_id),
+        **_mlflow_auth_headers(token=token, username=username, password=password),
+    }
+
     yield OTLPSpanAdapterExporter(
         endpoint=config.endpoint,
-        headers=_mlflow_experiment_headers(experiment_id),
+        headers=headers,
         batch_size=config.batch_size,
         flush_interval=config.flush_interval,
         max_queue_size=config.max_queue_size,
