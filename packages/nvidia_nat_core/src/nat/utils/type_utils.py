@@ -377,7 +377,13 @@ class DecomposedType:
             True if the current type is an instance of the specified instance, False otherwise
         """
 
-        root = self.get_base_type().root
+        base_type = self.get_base_type()
+        if base_type.is_union:
+            # The union's root is the `typing.Union` / `types.UnionType` class itself, not a usable
+            # `isinstance` target, and union members such as `list[int]` are parameterized generics
+            # that `isinstance` rejects, so check each member through `DecomposedType` instead.
+            return any(DecomposedType(arg).is_instance(instance) for arg in base_type.args)
+        root = base_type.root
         if root is typing.Any:
             return True
         return isinstance(instance, root)
