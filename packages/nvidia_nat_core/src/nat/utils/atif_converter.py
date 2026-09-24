@@ -118,7 +118,7 @@ def _extract_user_input(value: Any) -> str:
     if hasattr(value, "model_dump"):
         obj = value.model_dump()
     if isinstance(obj, dict):
-        if obj.get("input_message"):
+        if obj.get("input_message") is not None:
             return str(obj["input_message"])
         msgs = obj.get("messages")
         if msgs and isinstance(msgs, list):
@@ -185,6 +185,13 @@ def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
             pass
 
         return {"input": raw_input} if raw_input else {}
+    if hasattr(raw_input, "model_dump"):
+        try:
+            dumped = raw_input.model_dump(mode="json")
+        except Exception:
+            dumped = None
+        if isinstance(dumped, dict):
+            return dumped
     if raw_input is not None:
         return {"input": str(raw_input)}
     return {}
