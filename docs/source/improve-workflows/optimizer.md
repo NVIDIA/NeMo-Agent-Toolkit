@@ -149,8 +149,9 @@ functions:
 
 **Rules:**
 
-- Only fields whose key ends with `prompt` (case-insensitive) are eligible
+- Any string field can reference a file, regardless of its name
 - The value must start with `file://`
+- Values inside lists are not resolved
 - Relative paths are resolved from the configuration file's directory
 - Allowed extensions: `.txt`, `.md`, `.j2`, `.jinja2`, `.jinja`, `.prompt`, `.tpl`, `.template`
 

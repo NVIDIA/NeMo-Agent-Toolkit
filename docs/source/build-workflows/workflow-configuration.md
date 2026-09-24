@@ -209,6 +209,7 @@ functions:
 The file loading follows these rules:
 
 - **Value format**: The value must start with `file://`
+- **Lists**: Values inside lists are not resolved and are kept as the literal `file://` string
 - **Path resolution**: Relative paths are resolved from the configuration file's directory. Absolute paths are also supported
 - **Allowed extensions**: For security, only these file extensions are permitted: `.txt`, `.md`, `.j2`, `.jinja2`, `.jinja`, `.prompt`, `.tpl`, `.template`
 
