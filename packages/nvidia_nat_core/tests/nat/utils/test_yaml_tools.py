@@ -321,6 +321,23 @@ def test_yaml_loads_with_invalid_yaml():
         yaml_loads(malformed_yaml, Path("."))
 
 
+@pytest.mark.parametrize("config_str, type_name",
+                         [("", "NoneType"), ("# only a comment\n", "NoneType"), ("- a\n- b\n", "list"),
+                          ("just a string", "str")])
+def test_yaml_loads_with_non_mapping_yaml(config_str: str, type_name: str):
+    with pytest.raises(ValueError, match=f"must be a mapping, got {type_name}"):
+        yaml_loads(config_str, Path("."))
+
+
+def test_yaml_load_with_empty_file():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        config_file = Path(temp_dir) / "empty.yml"
+        config_file.write_text("", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="must be a mapping, got NoneType"):
+            yaml_load(config_file)
+
+
 def test_deep_merge():
     # Test basic merge
     base = {"a": 1, "b": 2}
