@@ -49,8 +49,9 @@ workflow:
 
 ### Rules
 
-- Field name must end with `prompt` (case-insensitive)
+- Any string field can reference a file, regardless of its name
 - Value must start with `file://`
+- Values inside lists are not resolved
 - Paths are relative to the config file
 - Allowed extensions: `.txt`, `.md`, `.j2`, `.jinja2`, `.jinja`, `.prompt`, `.tpl`, `.template`
 
