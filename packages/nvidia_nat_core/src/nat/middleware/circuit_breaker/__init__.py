@@ -12,10 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Circuit breaker middleware package."""
 
-from nat.utils.url_utils import url_join
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerMiddleware
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerOpenError
+from nat.middleware.circuit_breaker.circuit_breaker_middleware import CircuitBreakerState
+from nat.middleware.circuit_breaker.circuit_breaker_middleware_config import CircuitBreakerMiddlewareConfig
 
-
-def test_url_join_basic():
-    result = url_join("http://example.com", "api", "v1")
-    assert result == "http://example.com/api/v1"
+__all__ = [
+    "CircuitBreakerMiddleware",
+    "CircuitBreakerMiddlewareConfig",
+    "CircuitBreakerOpenError",
+    "CircuitBreakerState",
+]

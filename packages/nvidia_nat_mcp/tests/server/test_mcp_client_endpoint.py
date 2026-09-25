@@ -231,7 +231,8 @@ async def test_mcp_client_tool_list_per_user_success(app_worker):
         assert group["total_tools"] == 1
         assert group["available_tools"] == 1
         assert group["tools"][0]["name"] == "alias_tool"
-        assert per_user_manager._user_ids == ["alice"]
+        # The caller-controlled query parameter is ignored; identity comes from the request session.
+        assert per_user_manager._user_ids == [None]
 
 
 async def test_mcp_client_tool_list_per_user_missing_config(app_worker):

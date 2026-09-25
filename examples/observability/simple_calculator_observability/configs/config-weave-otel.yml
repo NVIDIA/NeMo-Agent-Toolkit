@@ -14,14 +14,34 @@
 # limitations under the License.
 
 
-def url_join(*parts):
-    """
-    Functionally similar to `os.path.join` but for URLs. This function will join the parts of a URL together, ensuring
-    that the resulting URL is valid and all `/` have been deduped.
+general:
+  telemetry:
+    tracing:
+      weave_otel:
+        _type: weave_otel
+        project: "nat-demo"
+        entity: "your-team-name"
 
-    Returns
-    -------
-    str
-        The joined URL.
-    """
-    return "/".join(str(part).strip("/") for part in parts)
+function_groups:
+  calculator:
+    _type: calculator
+
+functions:
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3.5-lightning-30b-a3b
+    chat_template_kwargs:
+      enable_thinking: false
+    temperature: 0.0
+    max_tokens: 1024
+
+workflow:
+  _type: react_agent
+  tool_names: [calculator, current_datetime]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3

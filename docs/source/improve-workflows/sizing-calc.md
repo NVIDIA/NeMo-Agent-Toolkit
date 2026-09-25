@@ -80,7 +80,7 @@ llms:
   nim_llm:
     _type: nim
     base_url: "http://localhost:8000/v1"
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
 ```
 
 ### Step 1: Gather Metrics

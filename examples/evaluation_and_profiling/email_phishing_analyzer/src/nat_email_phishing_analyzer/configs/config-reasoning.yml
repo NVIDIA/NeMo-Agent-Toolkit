@@ -54,26 +54,32 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     max_tokens: 512
+    chat_template_kwargs:
+      enable_thinking: false
   nim_rag_eval_llm:
     _type: nim
     model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
   nemotron_model:
     _type: nim
-    model_name: nvidia/llama-3.3-nemotron-super-49b-v1
-    thinking: true
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.6
     max_tokens: 2000
+    chat_template_kwargs:
+      enable_thinking: false
   nim_trajectory_eval_llm:
     _type: nim
-    model_name: nvidia/llama-3.3-nemotron-super-49b-v1.5
+    model_name: nvidia/nemotron-3-super-120b-a12b
     temperature: 0.0
     max_tokens: 1024
-
+    chat_template_kwargs:
+      enable_thinking: false
 
 
 workflow:

@@ -148,7 +148,7 @@ class TestNIMStrands:
     def nim_config(self):
         """Create a NIMModelConfig instance."""
         return NIMModelConfig(
-            model_name="meta/llama-3.1-8b-instruct",
+            model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
             api_key="test-api-key",
             base_url="https://integrate.api.nvidia.com/v1",
         )
@@ -157,7 +157,7 @@ class TestNIMStrands:
     def nim_config_wrong_api(self):
         """Create a NIMModelConfig with wrong API type."""
         return NIMModelConfig(
-            model_name="meta/llama-3.1-8b-instruct",
+            model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
             api_key="test-api-key",
             base_url="https://integrate.api.nvidia.com/v1",
             api_type=APITypeEnum.RESPONSES,
@@ -199,7 +199,7 @@ class TestNIMStrands:
             call_kwargs["client"] == mock_oai
 
             # Verify model_id
-            assert call_kwargs["model_id"] == "meta/llama-3.1-8b-instruct"
+            assert call_kwargs["model_id"] == "nvidia/nemotron-3.5-lightning-30b-a3b"
 
     @pytest.mark.asyncio
     async def test_nim_strands_with_env_var(self, mock_builder, mock_oai_clients):
@@ -418,6 +418,21 @@ class TestPatchLLMBasedOnConfig:
                                                  retry_codes=[500, 502],
                                                  retry_on_messages=["timeout"])
         assert result == mock_patched_client
+
+    @patch("nat.plugins.strands.llm.patch_with_retry")
+    def test_patch_llm_with_retry_mixin_disabled(self, mock_patch_retry: MagicMock, mock_client: MagicMock):
+        """Test client is not patched when do_auto_retry is False."""
+        from nat.data_models.retry_mixin import RetryMixin
+
+        class TestConfigWithRetry(OpenAIModelConfig, RetryMixin):
+            pass
+
+        config = TestConfigWithRetry(model_name="gpt-4", do_auto_retry=False)
+
+        result = _patch_llm_based_on_config(mock_client, config)
+
+        mock_patch_retry.assert_not_called()
+        assert result == mock_client
 
     @patch("nat.plugins.strands.llm.patch_with_thinking")
     def test_patch_llm_with_thinking_mixin(self, mock_patch_thinking, mock_client):

@@ -89,6 +89,17 @@ class TestPatchAutoGenClient:
                                                  retry_on_messages=["timeout", "connection"])
         assert result == mock_patched_client
 
+    @patch('nat.plugins.autogen.llm.patch_with_retry')
+    def test_patch_with_retry_mixin_disabled(self, mock_patch_retry: Mock):
+        """Test client is not patched when do_auto_retry is False."""
+        mock_client = Mock()
+        retry_config = MockRetryConfig(do_auto_retry=False)
+
+        result = _patch_autogen_client_based_on_config(mock_client, retry_config)
+
+        mock_patch_retry.assert_not_called()
+        assert result == mock_client
+
     @patch('nat.plugins.autogen.llm.patch_with_thinking')
     def test_patch_with_thinking_mixin(self, mock_patch_thinking):
         """Test patching client with thinking mixin."""
@@ -557,7 +568,7 @@ class TestLLMClientGeneratorsFull:
 
         # Create NIM config
         config = NIMModelConfig(api_key="nim-test-key",
-                                model_name="llama-3.1-70b-instruct",
+                                model_name="nvidia/nemotron-3-super-120b-a12b",
                                 base_url="https://integrate.api.nvidia.com/v1")
         builder = Mock(spec=Builder)
 

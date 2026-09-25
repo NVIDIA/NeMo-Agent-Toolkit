@@ -14,11 +14,13 @@
 # limitations under the License.
 
 from typing import Any
+from typing import ClassVar
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
+from pydantic import Field
 
 from nat.plugins.adk.tool_wrapper import google_adk_tool_wrapper
 from nat.plugins.adk.tool_wrapper import resolve_type
@@ -30,6 +32,13 @@ from nat.plugins.adk.tool_wrapper import resolve_type
 
 class DummyInput(BaseModel):
     value: int
+
+
+class OptionalInput(BaseModel):
+    """Input model with one required and one optional field."""
+
+    optional_value: int = 42
+    required_value: str
 
 
 class DummyOutput(BaseModel):
@@ -195,6 +204,122 @@ async def test_google_adk_tool_wrapper_nested_function(mock_function_tool):
 
 
 @patch('google.adk.tools.function_tool.FunctionTool')
+def test_google_adk_tool_wrapper_preserves_field_defaults(mock_function_tool):
+    """Optional input fields must remain optional in the ADK signature."""
+    import inspect
+
+    class OptionalFunction:
+        description = "Optional ADK function"
+        has_single_output = True
+        has_streaming_output = False
+        input_schema = OptionalInput
+
+        async def acall_invoke(self, *_args, **_kwargs):
+            return None
+
+    google_adk_tool_wrapper("optional_adk_func", OptionalFunction(), MagicMock())
+
+    callable_tool = mock_function_tool.call_args[0][0]
+    signature = inspect.signature(callable_tool)
+
+    assert list(signature.parameters) == ["required_value", "optional_value"]
+    assert signature.parameters["required_value"].default is inspect.Parameter.empty
+    assert signature.parameters["optional_value"].default == 42
+
+
+@patch('google.adk.tools.function_tool.FunctionTool')
+def test_google_adk_tool_wrapper_does_not_evaluate_default_factories(mock_function_tool):
+    """Default factories remain deferred until Pydantic validates the input model."""
+    import inspect
+
+    factory_calls = []
+
+    def generate_value():
+        factory_calls.append("called")
+        return ["generated"]
+
+    class FactoryInput(BaseModel):
+        required_value: str
+        generated: list[str] = Field(default_factory=generate_value)
+        derived: str = Field(default_factory=lambda data: data["required_value"])
+
+    class FactoryFunction:
+        description = "Factory ADK function"
+        has_single_output = True
+        has_streaming_output = False
+        input_schema = FactoryInput
+
+        async def acall_invoke(self, *_args, **_kwargs):
+            return None
+
+    google_adk_tool_wrapper("factory_adk_func", FactoryFunction(), MagicMock())
+
+    signature = inspect.signature(mock_function_tool.call_args[0][0])
+
+    assert list(signature.parameters) == ["required_value", "generated", "derived"]
+    assert signature.parameters["generated"].default is None
+    assert signature.parameters["derived"].default is None
+    assert factory_calls == []
+
+    first = FactoryInput(required_value="first")
+    second = FactoryInput(required_value="second")
+    assert factory_calls == ["called", "called"]
+    assert first.generated == ["generated"]
+    assert second.generated == ["generated"]
+    assert first.derived == "first"
+    assert second.derived == "second"
+
+
+@patch('google.adk.tools.function_tool.FunctionTool')
+def test_google_adk_tool_wrapper_supports_legacy_and_annotation_fields(mock_function_tool):
+    """Legacy Pydantic and annotation-only schemas must preserve defaults."""
+    import inspect
+
+    class LegacyField:
+        annotation = int
+        outer_type_ = int
+        required = False
+        default = 7
+        default_factory = None
+
+    class LegacyInput:
+        __fields__: ClassVar[dict[str, object]] = {
+            "required_value": type("RequiredField", (), {
+                "annotation": str, "outer_type_": str, "required": True
+            })(),
+            "optional_value": LegacyField(),
+        }
+
+    class AnnotationInput:
+        __annotations__ = {"required_value": str, "optional_value": int}
+        optional_value = 7
+
+    class LegacyFunction:
+        description = "Legacy ADK function"
+        has_single_output = True
+        has_streaming_output = False
+        input_schema = LegacyInput
+
+        async def acall_invoke(self, *_args, **_kwargs):
+            return None
+
+    class AnnotationFunction(LegacyFunction):
+        input_schema = AnnotationInput
+
+    google_adk_tool_wrapper("legacy_adk_func", LegacyFunction(), MagicMock())
+    legacy_signature = inspect.signature(mock_function_tool.call_args[0][0])
+    assert list(legacy_signature.parameters) == ["required_value", "optional_value"]
+    assert legacy_signature.parameters["required_value"].default is inspect.Parameter.empty
+    assert legacy_signature.parameters["optional_value"].default == 7
+
+    google_adk_tool_wrapper("annotation_adk_func", AnnotationFunction(), MagicMock())
+    annotation_signature = inspect.signature(mock_function_tool.call_args[0][0])
+    assert list(annotation_signature.parameters) == ["required_value", "optional_value"]
+    assert annotation_signature.parameters["required_value"].default is inspect.Parameter.empty
+    assert annotation_signature.parameters["optional_value"].default == 7
+
+
+@patch('google.adk.tools.function_tool.FunctionTool')
 @pytest.mark.asyncio
 async def test_google_adk_tool_wrapper_streaming_function(mock_function_tool):
     """Test the ADK tool wrapper with streaming function."""
@@ -261,3 +386,76 @@ async def test_callable_ainvoke_functionality():
         assert len(results) == 2
         assert results[0].result == 10  # 10 + 0
         assert results[1].result == 11  # 10 + 1
+
+
+# ----------------------------
+# Regression: PEP 563 (from __future__ import annotations)
+# ----------------------------
+
+
+@patch('google.adk.tools.function_tool.FunctionTool')
+async def test_google_adk_tool_wrapper_pep563_annotations(mock_function_tool):
+    """Regression test for GitHub issue #2161.
+
+    When a tool's input schema is defined in a module that uses
+    ``from __future__ import annotations`` (PEP 563), all annotations are
+    stored as strings rather than evaluated types.  The wrapper must still
+    build a signature with real type objects so that Google ADK does not raise
+    a KeyError when it inspects the signature.
+    """
+    import sys
+    import types
+
+    # Build a module whose __annotations__ look exactly as they would when
+    # "from __future__ import annotations" is in effect: string values.
+    # We exec the class body inside that synthetic module so Pydantic sees it
+    # during class creation, just as it would in a real PEP-563 module.
+    pep563_module = types.ModuleType("_test_pep563_module")
+    pep563_module.__annotations__ = {}
+    sys.modules[pep563_module.__name__] = pep563_module
+    try:
+        exec(  # noqa: S102  (safe: controlled test-only string)
+            "from pydantic import BaseModel\n"
+            "class PEP563Input(BaseModel):\n"
+            "    text: str\n"
+            "    count: int\n",
+            pep563_module.__dict__,
+        )
+        PEP563Input = pep563_module.PEP563Input  # type: ignore[attr-defined]
+        # Simulate PEP 563: overwrite __annotations__ with string values so the
+        # precondition matches what the real future-import would produce.
+        PEP563Input.__annotations__ = {"text": "str", "count": "int"}
+    finally:
+        sys.modules.pop(pep563_module.__name__, None)
+
+    # Sanity-check: model_fields still has the real types.
+    assert PEP563Input.model_fields["text"].annotation is str
+    assert PEP563Input.model_fields["count"].annotation is int
+    # And __annotations__ has strings (the trigger for the original bug).
+    assert PEP563Input.__annotations__ == {"text": "str", "count": "int"}
+
+    class PEP563Function:
+        description = "PEP 563 test function"
+        has_single_output = True
+        has_streaming_output = False
+        input_schema = PEP563Input
+        single_output_schema = None
+        streaming_output_schema = None
+
+        async def acall_invoke(self, *args, **kwargs):
+            return {}
+
+    mock_function_tool.return_value = MagicMock()
+    google_adk_tool_wrapper("pep563_func", PEP563Function(), MagicMock())
+
+    call_args = mock_function_tool.call_args[0][0]
+    sig = call_args.__signature__
+
+    # All parameters must carry real type objects, not strings.
+    for param in sig.parameters.values():
+        assert not isinstance(param.annotation,
+                              str), (f"Parameter '{param.name}' has a string annotation '{param.annotation}'; "
+                                     "expected a resolved type object.")
+
+    assert sig.parameters["text"].annotation is str
+    assert sig.parameters["count"].annotation is int

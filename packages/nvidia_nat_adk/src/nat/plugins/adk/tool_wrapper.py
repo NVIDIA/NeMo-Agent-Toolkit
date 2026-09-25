@@ -68,6 +68,18 @@ def google_adk_tool_wrapper(
     """
     import inspect
 
+    def _field_default(field: Any) -> Any:
+        """Return a Pydantic field's default for an inspect signature."""
+        is_required = getattr(field, "is_required", None)
+        if is_required is not None and is_required():
+            return inspect.Parameter.empty
+        if getattr(field, "required", False):
+            return inspect.Parameter.empty
+        default_factory = getattr(field, "default_factory", None)
+        if default_factory is not None:
+            return None
+        return getattr(field, "default", inspect.Parameter.empty)
+
     async def callable_ainvoke(*args: Any, **kwargs: Any) -> Any:
         """Async function to invoke the NAT function.
 
@@ -127,17 +139,34 @@ def google_adk_tool_wrapper(
             if description is not None:
                 func_to_wrap.__doc__ = description
 
-            # Set signature only if input_schema is provided
+            # Set signature only if input_schema is provided.
+            # Use model_fields instead of __annotations__ so that types are
+            # always resolved Python objects even when the defining module uses
+            # "from __future__ import annotations" (PEP 563), which would
+            # otherwise leave annotations as strings and cause a KeyError in
+            # ADK's deferred-annotation handling.
             params: list[inspect.Parameter] = []
             if input_schema is not None:
-                annotations = getattr(input_schema, "__annotations__", {}) or {}
-                for param_name, param_annotation in annotations.items():
+                model_fields = getattr(input_schema, "model_fields", None)
+                if model_fields is not None:
+                    field_items = ((n, f.annotation, _field_default(f)) for n, f in model_fields.items())
+                else:
+                    legacy_fields = getattr(input_schema, "__fields__", None)
+                    if legacy_fields is not None:
+                        field_items = ((n, getattr(f, "outer_type_", f.annotation), _field_default(f))
+                                       for n, f in legacy_fields.items())
+                    else:
+                        field_items = ((n, a, getattr(input_schema, n, inspect.Parameter.empty))
+                                       for n, a in getattr(input_schema, "__annotations__", {}).items())
+                for param_name, param_annotation, default in field_items:
                     params.append(
                         inspect.Parameter(
                             param_name,
                             inspect.Parameter.POSITIONAL_OR_KEYWORD,
                             annotation=resolve_type(param_annotation),
+                            default=default,
                         ))
+            params.sort(key=lambda param: param.default is not inspect.Parameter.empty)
             setattr(func_to_wrap, "__signature__", inspect.Signature(parameters=params))
 
             return func_to_wrap
