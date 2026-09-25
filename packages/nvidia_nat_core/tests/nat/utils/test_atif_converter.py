@@ -18,6 +18,7 @@ import datetime
 
 import pytest
 from pydantic import BaseModel
+from pydantic import RootModel
 
 from nat.atif import ATIFTrajectory
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -166,6 +167,13 @@ def test_parse_tool_arguments_pydantic_model():
     parsed = atif_converter_module._parse_tool_arguments(SearchInput(query="nemo", top_k=3))
 
     assert parsed == {"query": "nemo", "top_k": 3}
+
+
+def test_parse_tool_arguments_pydantic_root_model():
+    """A root model whose root value is not a dict is wrapped like other non-dict inputs."""
+    parsed = atif_converter_module._parse_tool_arguments(RootModel[list[str]](["a", "b"]))
+
+    assert parsed == {"input": ["a", "b"]}
 
 
 def test_parse_tool_arguments_unhashable_literal_key():

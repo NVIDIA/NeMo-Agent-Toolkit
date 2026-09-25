@@ -169,7 +169,9 @@ def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
     if isinstance(raw_input, dict):
         return raw_input
     if isinstance(raw_input, BaseModel):
-        return raw_input.model_dump(mode="json")
+        dumped = raw_input.model_dump(mode="json")
+        # a RootModel dumps to its root value, which may not be a dict
+        return dumped if isinstance(dumped, dict) else {"input": dumped}
     if isinstance(raw_input, str):
         import ast
         import json
