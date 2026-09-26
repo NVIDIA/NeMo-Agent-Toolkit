@@ -228,6 +228,7 @@ def yaml_loads(config: str, base_path: Path) -> dict:
 
     Args:
         config (str): The YAML string to load.
+        base_path (Path): The base directory for resolving relative file references.
 
     Returns:
         dict: The processed configuration dictionary.
