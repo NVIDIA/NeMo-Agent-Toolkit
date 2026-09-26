@@ -15,6 +15,9 @@
 """OAuth 2.0 Token Introspection verifier implementation for MCP servers."""
 
 import logging
+from typing import Any
+
+from pydantic import Field
 
 from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.provider import TokenVerifier
@@ -22,6 +25,12 @@ from nat.authentication.credential_validator.bearer_token_validator import Beare
 from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 
 logger = logging.getLogger(__name__)
+
+
+class _AccessTokenWithClaims(AccessToken):
+    """SDK access token plus the identity claims the verifier already checked."""
+
+    claims: dict[str, Any] = Field(default_factory=dict)
 
 
 class IntrospectionTokenVerifier(TokenVerifier):
@@ -65,8 +74,20 @@ class IntrospectionTokenVerifier(TokenVerifier):
         validation_result = await self._bearer_token_validator.verify(token)
 
         if validation_result.active:
-            return AccessToken(token=token,
-                               expires_at=validation_result.expires_at,
-                               scopes=validation_result.scopes or [],
-                               client_id=validation_result.client_id or "")
+            claims = {
+                "aud": validation_result.audience,
+                "sub": validation_result.subject,
+                "iss": validation_result.issuer,
+                "jti": validation_result.jti,
+                "username": validation_result.username,
+                "token_type": validation_result.token_type,
+                "iat": validation_result.iat,
+                "nbf": validation_result.nbf,
+            }
+            claims = {key: value for key, value in claims.items() if value is not None}
+            return _AccessTokenWithClaims(token=token,
+                                          expires_at=validation_result.expires_at,
+                                          scopes=validation_result.scopes or [],
+                                          client_id=validation_result.client_id or "",
+                                          claims=claims)
         return None
