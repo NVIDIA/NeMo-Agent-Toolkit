@@ -304,6 +304,7 @@ def test_yaml_load_with_function(env_vars: dict):
 
 
 def test_yaml_loads_with_invalid_yaml():
+    """Reject malformed YAML with a descriptive loading error."""
     # Test with invalid YAML syntax
     invalid_yaml = """
     workflow:
@@ -321,7 +322,27 @@ def test_yaml_loads_with_invalid_yaml():
         yaml_loads(malformed_yaml, Path("."))
 
 
+@pytest.mark.parametrize("config_str, type_name",
+                         [("", "NoneType"), ("# only a comment\n", "NoneType"), ("- a\n- b\n", "list"),
+                          ("just a string", "str")])
+def test_yaml_loads_with_non_mapping_yaml(config_str: str, type_name: str):
+    """Reject non-mapping YAML and report the parsed top-level type."""
+    with pytest.raises(ValueError, match=f"must be a mapping, got {type_name}"):
+        yaml_loads(config_str, Path("."))
+
+
+def test_yaml_load_with_empty_file():
+    """Reject an empty YAML file with a descriptive mapping error."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        config_file = Path(temp_dir) / "empty.yml"
+        config_file.write_text("", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="must be a mapping, got NoneType"):
+            yaml_load(config_file)
+
+
 def test_deep_merge():
+    """Merge nested mappings, replace conflicting values, and accept empty overrides."""
     # Test basic merge
     base = {"a": 1, "b": 2}
     override = {"b": 3, "c": 4}

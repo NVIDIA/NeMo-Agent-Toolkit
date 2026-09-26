@@ -228,9 +228,13 @@ def yaml_loads(config: str, base_path: Path) -> dict:
 
     Args:
         config (str): The YAML string to load.
+        base_path (Path): The base directory for resolving relative file references.
 
     Returns:
         dict: The processed configuration dictionary.
+
+    Raises:
+        ValueError: If the YAML is invalid or its top level is not a mapping.
     """
     config_text: str = expand(config, surrounded_vars_only=True)
 
@@ -244,7 +248,8 @@ def yaml_loads(config: str, base_path: Path) -> dict:
         logger.error("Error loading YAML: %s", config_text)
         raise ValueError(f"Error loading YAML: {e}") from e
 
-    assert isinstance(config_data, dict)
+    if not isinstance(config_data, dict):
+        raise ValueError(f"Error loading YAML: the top level must be a mapping, got {type(config_data).__name__}")
 
     # Variables were already expanded on the YAML text above. Expanding the parsed values a second
     # time would also expand any "${...}" that came from an environment variable's own value.
