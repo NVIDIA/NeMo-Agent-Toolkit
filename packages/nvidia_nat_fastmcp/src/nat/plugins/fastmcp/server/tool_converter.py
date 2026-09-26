@@ -214,6 +214,35 @@ def _validate_input_schema_for_context_injection(input_schema: Any) -> None:
             "MCP request context injection.", )
 
 
+def _http_request_from_ctx(ctx: Any) -> Any | None:
+    """Return the HTTP request carried by an MCP context, or None when absent."""
+    if ctx is None:
+        return None
+    try:
+        request_context = ctx.request_context
+    except (LookupError, ValueError):
+        return None
+    if request_context is None:
+        return None
+    try:
+        return request_context.request
+    except (LookupError, ValueError, AttributeError):
+        return None
+
+
+def _verified_access_token(request: Any) -> Any | None:
+    """Return the access token accepted for this request, if server auth ran."""
+    from nat.runtime.user_manager import UserManager
+
+    access_token = UserManager.verified_access_token_from_connection(request)
+    if access_token is not None:
+        return access_token
+
+    from fastmcp.server.dependencies import get_access_token
+
+    return get_access_token()
+
+
 def _append_context_parameter(signature: Signature) -> Signature:
     """Append the FastMCP `Context` parameter used for request injection."""
     param_names = {param.name for param in signature.parameters.values()}
@@ -238,16 +267,16 @@ async def _run_through_session_manager(session_manager: "SessionManager", payloa
         from nat.runtime.user_manager import UserManager
 
         user_id = Context.get().user_id
-        http_connection = None
-        if ctx is not None:
-            try:
-                http_connection = ctx.request_context.request
-                if user_id is None and http_connection is not None:
-                    user_info = UserManager.extract_user_from_connection(http_connection)
-                    if user_info is not None:
-                        user_id = user_info.get_user_id()
-            except ValueError:
-                pass
+        http_connection = _http_request_from_ctx(ctx)
+        if http_connection is not None:
+            access_token = _verified_access_token(http_connection)
+            if access_token is not None:
+                # A validated principal wins. Do not let nat-session override it.
+                user_id = UserManager.user_id_from_verified_access_token(http_connection, access_token)
+            elif user_id is None:
+                user_info = UserManager.extract_user_from_connection(http_connection)
+                if user_info is not None:
+                    user_id = user_info.get_user_id()
 
         async with session_manager.session(user_id=user_id, http_connection=http_connection) as session:
             async with session.run(payload) as runner:

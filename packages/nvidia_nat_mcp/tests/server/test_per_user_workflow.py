@@ -13,12 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import base64
+import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
 import pytest
+from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
+from mcp.server.auth.provider import AccessToken
 from pydantic import BaseModel
+from starlette.requests import Request
 
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
@@ -31,7 +37,10 @@ from nat.data_models.function import FunctionBaseConfig
 from nat.plugins.mcp.server.front_end_config import MCPFrontEndConfig
 from nat.plugins.mcp.server.front_end_plugin import MCPFrontEndPlugin
 from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorker
+from nat.runtime.session import SESSION_COOKIE_NAME
+from nat.runtime.session import PerUserBuilderInfo
 from nat.runtime.session import SessionManager
+from nat.runtime.user_manager import UserManager
 
 
 class _Input(BaseModel):
@@ -237,3 +246,80 @@ class TestPerUserRequestIdentity:
 
         assert result == "ok"
         session_manager.session.assert_called_once_with(user_id="bob", http_connection=request)
+
+
+def _unsigned_jwt(claims: dict) -> str:
+    header = base64.urlsafe_b64encode(json.dumps({"alg": "none", "typ": "JWT"}).encode()).rstrip(b"=").decode()
+    payload = base64.urlsafe_b64encode(json.dumps(claims).encode()).rstrip(b"=").decode()
+    return f"{header}.{payload}."
+
+
+def _authenticated_request(token: str, cookie: str | None) -> Request:
+    headers = [(b"authorization", f"Bearer {token}".encode())]
+    if cookie is not None:
+        headers.append((b"cookie", f"{SESSION_COOKIE_NAME}={cookie}".encode()))
+    return Request({
+        "type": "http",
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": "/mcp",
+        "raw_path": b"/mcp",
+        "query_string": b"",
+        "headers": headers,
+        "client": ("127.0.0.1", 1234),
+        "server": ("testserver", 80),
+        "root_path": "",
+        "user": AuthenticatedUser(AccessToken(token=token, client_id="alice-client", scopes=["execute"])),
+    })
+
+
+class TestVerifiedPrincipalIsolation:
+    """A valid bearer token must not select another user's builder via nat-session."""
+
+    async def test_alice_token_does_not_build_bob_workflow(self, per_user_config, monkeypatch):
+        from nat.plugins.mcp.server.tool_converter import _run_through_session_manager
+
+        alice_token = _unsigned_jwt({"sub": "alice"})
+        alice_id = UserManager._user_info_from_jwt({"sub": "alice"}).get_user_id()
+        built: list[str] = []
+
+        async def _install_builder(user_id: str):
+            built.append(user_id)
+            workflow = MagicMock()
+            runner = MagicMock()
+            runner.result = AsyncMock(return_value="ok")
+            workflow.run.return_value.__aenter__ = AsyncMock(return_value=runner)
+            workflow.run.return_value.__aexit__ = AsyncMock(return_value=False)
+            builder = MagicMock()
+            builder.__aexit__ = AsyncMock()
+            session_manager._per_user_builders[user_id] = PerUserBuilderInfo(
+                builder=builder,
+                workflow=workflow,
+                semaphore=asyncio.Semaphore(1),
+            )
+            return builder, workflow
+
+        monkeypatch.setattr("nat.builder.context.Context.get", lambda: SimpleNamespace(user_id=None))
+
+        async with WorkflowBuilder.from_config(config=per_user_config) as builder:
+            session_manager = await SessionManager.create(config=per_user_config, shared_builder=builder)
+            monkeypatch.setattr(session_manager, "_get_or_create_per_user_builder", _install_builder)
+            try:
+                assert session_manager._identity_header is None
+
+                conflict = SimpleNamespace(request_context=SimpleNamespace(
+                    request=_authenticated_request(alice_token, cookie="bob")))
+                with pytest.raises(ValueError, match="nat-session cookie does not match"):
+                    await _run_through_session_manager(session_manager, _Input(message="hello"), ctx=conflict)
+                assert built == []
+
+                allowed = SimpleNamespace(request_context=SimpleNamespace(
+                    request=_authenticated_request(alice_token, cookie=None)))
+                result = await _run_through_session_manager(session_manager, _Input(message="hello"), ctx=allowed)
+            finally:
+                await session_manager.shutdown()
+
+        assert result == "ok"
+        assert built == [alice_id]
+        assert alice_id != UserManager._user_info_from_jwt({"sub": "bob"}).get_user_id()
