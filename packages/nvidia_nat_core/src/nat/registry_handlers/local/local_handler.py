@@ -14,11 +14,11 @@
 # limitations under the License.
 
 import logging
-import subprocess
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from nat.registry_handlers.package_utils import build_package_metadata
+from nat.registry_handlers.process_utils import run_command
 from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from nat.registry_handlers.schemas.package import PackageNameVersionList
 from nat.registry_handlers.schemas.publish import Artifact
@@ -154,8 +154,7 @@ class LocalRegistryHandler(AbstractRegistryHandler):
 
         try:
             for package_name in packages.packages:
-                result = subprocess.run(["uv", "pip", "uninstall", package_name.name], check=True)
-                result.check_returncode()
+                await run_command("uv", "pip", "uninstall", package_name.name)
 
             validated_remove_response = RemoveResponse(status={
                 "status": StatusEnum.SUCCESS, "message": "", "action": ActionEnum.REMOVE

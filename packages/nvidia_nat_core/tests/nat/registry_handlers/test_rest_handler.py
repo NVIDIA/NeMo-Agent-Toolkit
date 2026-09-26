@@ -17,6 +17,7 @@ import base64
 import json
 import typing
 from contextlib import AsyncExitStack
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -85,7 +86,7 @@ async def test_rest_handler_publish(rest_registry_channel: dict,
     assert publish_response.status.status == expected
 
 
-@patch("nat.registry_handlers.rest.rest_handler.subprocess.run")
+@patch("nat.registry_handlers.rest.rest_handler.run_command", new_callable=AsyncMock)
 @pytest.mark.parametrize("url, route, return_value, expected",
                          [
                              (None, "/pull", 0, "success"),
