@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import subprocess
 from contextlib import AsyncExitStack
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -27,10 +29,10 @@ from nat.registry_handlers.schemas.search import SearchQuery
 from nat.settings.global_settings import Settings
 
 
-@patch.object(PypiRegistryHandler, "_upload_to_pypi")
+@patch.object(PypiRegistryHandler, "_upload_to_pypi", new_callable=AsyncMock)
 @pytest.mark.parametrize("return_value, expected", [
     (0, "success"),
-    (1, "success"),
+    (1, "error"),
 ])
 @pytest.mark.asyncio
 async def test_pypi_handler_publish(mock_run: MagicMock,
@@ -40,8 +42,13 @@ async def test_pypi_handler_publish(mock_run: MagicMock,
                                     return_value: int,
                                     expected: str):
 
-    mock_stdout = MagicMock()
-    mock_stdout.configure_mock(**{"method.return_value": return_value})
+    if return_value:
+        mock_run.side_effect = subprocess.CalledProcessError(return_value, ("twine", "upload"))
+    else:
+        mock_run.return_value = subprocess.CompletedProcess(args=("twine", "upload"),
+                                                           returncode=0,
+                                                           stdout="",
+                                                           stderr="")
 
     package_root = "."
 
@@ -60,10 +67,10 @@ async def test_pypi_handler_publish(mock_run: MagicMock,
     assert publish_response.status.status == expected
 
 
-@patch("nat.registry_handlers.pypi.pypi_handler.subprocess.run")
+@patch("nat.registry_handlers.pypi.pypi_handler.run_command", new_callable=AsyncMock)
 @pytest.mark.parametrize("return_value, expected", [
     (0, "success"),
-    (1, "success"),
+    (1, "error"),
 ])
 @pytest.mark.asyncio
 async def test_pypi_handler_pull(mock_run: MagicMock,
@@ -73,8 +80,13 @@ async def test_pypi_handler_pull(mock_run: MagicMock,
                                  return_value: int,
                                  expected: str):
 
-    mock_stdout = MagicMock()
-    mock_stdout.configure_mock(**{"method.return_value": return_value})
+    if return_value:
+        mock_run.side_effect = subprocess.CalledProcessError(return_value, ("uv", "pip", "install"))
+    else:
+        mock_run.return_value = subprocess.CompletedProcess(args=("uv", "pip", "install"),
+                                                           returncode=0,
+                                                           stdout="",
+                                                           stderr="")
 
     pull_request_pkgs_dict = {
         "packages": [
@@ -102,10 +114,10 @@ async def test_pypi_handler_pull(mock_run: MagicMock,
     assert pull_response.status.status == expected
 
 
-@patch("nat.registry_handlers.pypi.pypi_handler.subprocess.run")
+@patch("nat.registry_handlers.pypi.pypi_handler.run_command", new_callable=AsyncMock)
 @pytest.mark.parametrize("return_value, expected", [
     (0, "success"),
-    (1, "success"),
+    (1, "error"),
 ])
 @pytest.mark.asyncio
 async def test_pypi_handler_search(mock_run: MagicMock,
@@ -115,8 +127,13 @@ async def test_pypi_handler_search(mock_run: MagicMock,
                                    return_value: int,
                                    expected: str):
 
-    mock_stdout = MagicMock()
-    mock_stdout.configure_mock(**{"method.return_value": return_value})
+    if return_value:
+        mock_run.side_effect = subprocess.CalledProcessError(return_value, ("pip", "search"))
+    else:
+        mock_run.return_value = subprocess.CompletedProcess(args=("pip", "search"),
+                                                           returncode=0,
+                                                           stdout="",
+                                                           stderr="")
 
     search_query_dict = {"query": "*", "fields": ["all"], "component_types": ["function"], "top_k": -1}
 

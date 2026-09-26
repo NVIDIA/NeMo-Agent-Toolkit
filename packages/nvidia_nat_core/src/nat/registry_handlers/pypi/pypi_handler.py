@@ -14,11 +14,11 @@
 # limitations under the License.
 
 import logging
-import subprocess
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from nat.data_models.component import ComponentEnum
+from nat.registry_handlers.process_utils import run_command
 from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from nat.registry_handlers.schemas.package import PackageNameVersionList
 from nat.registry_handlers.schemas.publish import Artifact
@@ -71,8 +71,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
         """
 
         try:
-            result = self._upload_to_pypi(wheel_path=artifact.whl_path)
-            result.check_returncode()
+            await self._upload_to_pypi(wheel_path=artifact.whl_path)
 
             validated_publish_response = PublishResponse(status={
                 "status": StatusEnum.SUCCESS, "message": "", "action": ActionEnum.PUBLISH
@@ -92,11 +91,18 @@ class PypiRegistryHandler(AbstractRegistryHandler):
         finally:
             logger.info("Execution complete.")
 
-    def _upload_to_pypi(self, wheel_path: str) -> None:
+    async def _upload_to_pypi(self, wheel_path: str) -> None:
+        """Upload a wheel to the remote index.
 
-        return subprocess.run(
-            ["twine", "upload", "--repository-url", f"{self._endpoint}/{self._publish_route}", f"{wheel_path}"],
-            check=True)
+        ``twine upload`` is a network call that can take a long time, so it is
+        awaited rather than run synchronously inside the async ``publish`` path.
+        """
+
+        await run_command("twine",
+                          "upload",
+                          "--repository-url",
+                          f"{self._endpoint}/{self._publish_route}",
+                          f"{wheel_path}")
 
     @asynccontextmanager
     async def pull(self, packages: PullRequestPackages) -> AsyncGenerator[PullResponse]:
@@ -125,18 +131,13 @@ class PypiRegistryHandler(AbstractRegistryHandler):
 
             versioned_packages_str = " ".join(versioned_packages)
 
-            result = subprocess.run([
-                "uv",
-                "pip",
-                "install",
-                "--prerelease=allow",
-                "--index-url",
-                f"{self._endpoint}/{self._pull_route}/",
-                versioned_packages_str
-            ],
-                                    check=True)
-
-            result.check_returncode()
+            await run_command("uv",
+                              "pip",
+                              "install",
+                              "--prerelease=allow",
+                              "--index-url",
+                              f"{self._endpoint}/{self._pull_route}/",
+                              versioned_packages_str)
 
             validated_pull_response = PullResponse(status={
                 "status": StatusEnum.SUCCESS, "message": "", "action": ActionEnum.PULL
@@ -169,10 +170,12 @@ class PypiRegistryHandler(AbstractRegistryHandler):
         """
 
         try:
-            completed_process = subprocess.run(["pip", "search", "--index", f"{self._endpoint}", query.query],
-                                               text=True,
-                                               capture_output=True,
-                                               check=True)
+            completed_process = await run_command("pip",
+                                                  "search",
+                                                  "--index",
+                                                  f"{self._endpoint}",
+                                                  query.query,
+                                                  text=True)
             search_response_list = []
             search_results = completed_process.stdout
             package_results = search_results.split("\n")
