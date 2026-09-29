@@ -579,6 +579,40 @@ def mock_parser():
     return ReActOutputParser()
 
 
+async def test_output_parser_json_object_action(mock_react_output_parser):
+    # A JSON object with quoted keys used to fall through to the direct-answer path (#2274)
+    mock_react_agent_output = ('{"Thought": "I should check the account", "Action": "clinical_limits", '
+                               '"Action Input": {"query": "limits"}}')
+    test_output = await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "clinical_limits"
+    assert test_output.tool_input == '{"query": "limits"}'
+    assert test_output.log == mock_react_agent_output
+
+
+async def test_output_parser_json_object_action_snake_case_keys(mock_react_output_parser):
+    mock_react_agent_output = '{"action": "internet_agent", "action_input": "who won?"}'
+    test_output = await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "internet_agent"
+    assert test_output.tool_input == "who won?"
+
+
+async def test_output_parser_json_object_action_missing_input(mock_react_output_parser):
+    mock_react_agent_output = '{"Thought": "check the account", "Action": "clinical_limits"}'
+    with pytest.raises(ReActOutputParserException) as ex:
+        await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert ex.value.missing_action_input
+    assert ex.value.observation == MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE
+
+
+async def test_output_parser_json_object_without_action_is_not_an_action(mock_react_output_parser):
+    mock_react_agent_output = '{"result": "42"}'
+    with pytest.raises(ReActOutputParserException) as ex:
+        await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert ex.value.missing_action
+
+
 async def test_output_parser_no_observation(mock_react_output_parser):
     mock_input = ("Thought: I should search the internet for information on Djikstra.\nAction: internet_agent\n"
                   "Action Input: {'input_message': 'Djikstra'}\nObservation")
