@@ -175,7 +175,8 @@ class ReActOutputParser(AgentOutputParser):
             otherwise None (including JSON objects without one).
 
         Raises:
-            ReActOutputParserException: When the JSON object has an ``Action`` key but no action input.
+            ReActOutputParserException: When the JSON object has an ``Action`` key with an unusable
+                value, or carries no action input.
         """
         stripped = text.strip()
         if not stripped.startswith("{"):
@@ -188,6 +189,7 @@ class ReActOutputParser(AgentOutputParser):
             return None
 
         action: typing.Any = None
+        action_present = False
         action_input: typing.Any = None
         fallback_input: typing.Any = None
         for key, value in parsed.items():
@@ -195,14 +197,20 @@ class ReActOutputParser(AgentOutputParser):
                 continue
             normalized_key = key.strip().lower().replace("_", " ")
             if normalized_key == "action":
+                action_present = True
                 action = value
             elif normalized_key == "action input":
                 action_input = value
             elif normalized_key == "input" and fallback_input is None:
                 fallback_input = value
 
-        if action is None:
+        if not action_present:
             return None
+        # An Action key with a null, blank, or non-string value is still a failed parse, not a
+        # direct answer, so raise a retry-compatible error instead of falling through.
+        if not isinstance(action, str) or not action.strip():
+            raise ReActOutputParserException("Could not parse LLM output", llm_output=text)
+        action = action.strip()
         if action_input is None:
             action_input = fallback_input
         if action_input is None:
@@ -211,7 +219,7 @@ class ReActOutputParser(AgentOutputParser):
                                              llm_output=text)
 
         tool_input = action_input if isinstance(action_input, str) else json.dumps(action_input)
-        return AgentAction(str(action), tool_input, text)
+        return AgentAction(action, tool_input, text)
 
     @property
     def _type(self) -> str:
