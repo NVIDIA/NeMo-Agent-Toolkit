@@ -94,6 +94,12 @@ def test_ns_timestamp_precision_loss():
     assert isinstance(result, int)
 
 
+@pytest.mark.parametrize("seconds, expected", [(1.001, 1_001_000_000), (-1.001, -1_001_000_000)])
+def test_ns_timestamp_rounds_subsecond_float_artifacts(seconds, expected):
+    """Do not truncate a nanosecond lost to binary floating-point representation."""
+    assert ns_timestamp(seconds) == expected
+
+
 def test_ns_timestamp_unix_epoch():
     """Test timestamp conversion with typical Unix epoch timestamps."""
     # January 1, 2024 00:00:00 UTC (approximate)
