@@ -28,4 +28,5 @@ def ns_timestamp(seconds_float: float) -> int:
     Returns:
         int: The timestamp in nanoseconds (as an integer).
     """
-    return int(seconds_float * 1e9)
+    # int() truncates 1.001 * 1e9 (1000999999.9999999) to 1000999999.
+    return round(seconds_float * 1e9)
