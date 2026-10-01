@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import json
 import uuid
 from pathlib import Path
@@ -202,6 +203,54 @@ async def test_run_workflow_remote_single_with_connection_error(rag_eval_input):
     # Should fail gracefully: no output, no trajectory
     assert item.output_obj is None
     assert item.trajectory == []
+
+
+@pytest.mark.parametrize("stall_mid_stream", [False, True], ids=["before-headers", "mid-stream"])
+async def test_endpoint_timeout_fails_only_the_slow_item(rag_eval_input, stall_mid_stream):
+    """
+    Test that a request exceeding endpoint_timeout fails only that item instead of aborting the whole run.
+    """
+    slow_item, fast_item = rag_eval_input.eval_input_items
+    release_slow_item = asyncio.Event()
+
+    async def slow_or_fast_response(request):
+        question = (await request.json())["input_message"]
+        is_slow = question == slow_item.input_obj
+
+        resp = web.StreamResponse(status=200, headers={"Content-Type": "text/event-stream"})
+        if is_slow and not stall_mid_stream:
+            await release_slow_item.wait()
+        await resp.prepare(request)
+        await resp.write(f"data: {json.dumps({'value': f'answer to {question}'})}\n\n".encode())
+        if is_slow and stall_mid_stream:
+            await release_slow_item.wait()
+        await resp.write_eof()
+        return resp
+
+    app = web.Application()
+    app.router.add_post("/generate/full", slow_or_fast_response)
+    server = TestServer(app)
+    await server.start_server()
+
+    eval_run_config = EvaluationRunConfig(endpoint=str(server.make_url("")).rstrip("/"),
+                                          endpoint_timeout=1,
+                                          config_file=Path(__file__),
+                                          dataset=None,
+                                          result_json_path="",
+                                          skip_workflow=False,
+                                          skip_completed_entries=False,
+                                          reps=1)
+
+    handler = EvaluationRemoteWorkflowHandler(config=eval_run_config, max_concurrency=2)
+    await handler.run_workflow_remote(rag_eval_input)
+
+    release_slow_item.set()
+    await server.close()
+
+    # The slow item fails on its own, dropping any partial answer streamed before the timeout
+    assert slow_item.output_obj is None
+    assert slow_item.trajectory == []
+    assert fast_item.output_obj == f"answer to {fast_item.input_obj}"
 
 
 @pytest.mark.parametrize("status_code", [429, 500, 502, 503, 504])
