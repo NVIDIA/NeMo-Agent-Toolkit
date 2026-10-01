@@ -37,6 +37,7 @@ from nat.data_models.api_server import ChatResponseChunkChoice
 from nat.data_models.api_server import ChoiceDelta
 from nat.data_models.api_server import ChoiceDeltaToolCall
 from nat.data_models.api_server import ChoiceDeltaToolCallFunction
+from nat.data_models.api_server import PromptTokensDetails
 from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
@@ -214,6 +215,11 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             # usage (stream_usage=True), so that is what the chunk carries - not an estimate.
             include_usage = bool((message.stream_options or {}).get("include_usage"))
             usage_totals = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+            # Tracked separately from `saw_usage`: a provider can report prompt/completion tokens
+            # without reporting which of them were cached, and the two absences mean different
+            # things to a cost estimate.
+            cached_total = 0
+            saw_cached = False
             saw_usage = False
 
             messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in message.messages],
@@ -240,6 +246,10 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                     usage_totals["prompt_tokens"] += usage["input_tokens"]
                     usage_totals["completion_tokens"] += usage["output_tokens"]
                     usage_totals["total_tokens"] += usage["total_tokens"]
+                    cached = (usage.get("input_token_details") or {}).get("cache_read")
+                    if cached is not None:
+                        cached_total += cached
+                        saw_cached = True
                     saw_usage = True
 
                 chunk_text = _extract_message_text(msg.content)
@@ -283,7 +293,10 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                     created=datetime.datetime.now(datetime.UTC),
                     model=UNKNOWN_MODEL_SENTINEL,
                     object="chat.completion.chunk",
-                    usage=Usage(**usage_totals),
+                    usage=Usage(
+                        **usage_totals,
+                        prompt_tokens_details=PromptTokensDetails(cached_tokens=cached_total) if saw_cached else None,
+                    ),
                 )
         except GraphRecursionError:
             logger.warning(

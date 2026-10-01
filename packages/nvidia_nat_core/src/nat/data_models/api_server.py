@@ -356,10 +356,24 @@ class ChatResponseChunkChoice(ChoiceBase):
 Choice = ChatResponseChoice
 
 
+class PromptTokensDetails(BaseModel):
+    """Breakdown of the prompt tokens, in the shape OpenAI defines.
+
+    ``cached_tokens`` is the subset of ``prompt_tokens`` the provider served from its prompt cache.
+    It is carried because it is what the cache actually saved: a cost estimate built from
+    ``prompt_tokens`` alone prices cached input at the uncached rate, and overstates the bill by
+    whatever the cache absorbed. ``None`` means the provider did not report it, which is distinct
+    from a reported zero.
+    """
+
+    cached_tokens: int | None = None
+
+
 class Usage(BaseModel):
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
     total_tokens: int | None = None
+    prompt_tokens_details: PromptTokensDetails | None = None
 
 
 class ResponseSerializable(abc.ABC):

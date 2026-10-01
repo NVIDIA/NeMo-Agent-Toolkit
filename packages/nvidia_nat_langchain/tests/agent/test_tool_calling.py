@@ -36,6 +36,7 @@ from nat.plugins.langchain.agent.base import AgentDecision
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
 from nat.plugins.langchain.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
+from nat.plugins.langchain.agent.tool_calling_agent.agent import extract_token_usage
 from nat.plugins.langchain.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
 from nat.plugins.langchain.agent.tool_calling_agent.register import TruncationRetryConfig
 
@@ -776,3 +777,53 @@ async def test_retry_on_empty_exhausted(error_mock_llm, mock_tool):
     with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=still_empty):
         with pytest.raises(RuntimeError, match="empty responses after 2 retries"):
             await agent._retry_on_empty_response(state, first_meta)
+
+
+def test_extract_token_usage_carries_langchain_cached_tokens():
+    """LangChain reports the cache as `input_token_details.cache_read` and it must survive.
+
+    The extractor rebuilds the UsageMetadata from three scalars, so a details dict it does not
+    copy is a details dict the caller never sees - which is how the cached count was being lost.
+    """
+    message = AIMessage(
+        content="x",
+        usage_metadata={
+            "input_tokens": 100, "output_tokens": 20, "total_tokens": 120,
+            "input_token_details": {"cache_read": 80},
+        },
+    )
+    usage = extract_token_usage(message)
+    assert usage is not None
+    assert usage["input_token_details"]["cache_read"] == 80
+
+
+def test_extract_token_usage_carries_openai_cached_tokens():
+    """OpenAI names the same number differently, and both must land on one key."""
+    message = AIMessage(
+        content="x",
+        response_metadata={
+            "usage": {
+                "prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120,
+                "prompt_tokens_details": {"cached_tokens": 80},
+            }
+        },
+    )
+    usage = extract_token_usage(message)
+    assert usage is not None
+    assert usage["input_token_details"]["cache_read"] == 80
+
+
+def test_extract_token_usage_omits_cached_tokens_when_unreported():
+    """Absent and zero are different facts, and only one of them is a claim about the cache."""
+    message = AIMessage(
+        content="x",
+        response_metadata={"usage": {"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120}},
+    )
+    usage = extract_token_usage(message)
+    assert usage is not None
+    assert "input_token_details" not in usage
+
+
+def test_extract_token_usage_returns_none_without_any_usage():
+    """No usage at all stays None, so a caller can tell it from a genuine zero."""
+    assert extract_token_usage(AIMessage(content="x")) is None

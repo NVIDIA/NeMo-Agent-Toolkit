@@ -52,6 +52,23 @@ class ToolCallAgentGraphState(BaseModel):
     messages: list[BaseMessage] = Field(default_factory=list)  # input and output of the Agent
 
 
+def cached_input_details(details: dict | None) -> dict:
+    """Normalise a provider's cache breakdown onto ``input_token_details``.
+
+    The two shapes in play name the same number differently: LangChain reports
+    ``input_token_details.cache_read``, OpenAI reports ``prompt_tokens_details.cached_tokens``.
+    Keeping only the normalised form means the caller reads one key regardless of which client
+    produced the message.
+
+    Returns an empty dict when the provider did not report it. That is deliberate: an absent count
+    and a reported zero are different facts, and a cache that was not reported must not be recorded
+    as a cache that saved nothing.
+    """
+    details = details or {}
+    cached = details.get("cache_read", details.get("cached_tokens"))
+    return {"input_token_details": {"cache_read": cached}} if cached is not None else {}
+
+
 def extract_token_usage(response: BaseMessage) -> UsageMetadata | None:
     """Extract token usage from a message, checking both LangChain and OpenAI formats.
 
@@ -65,6 +82,7 @@ def extract_token_usage(response: BaseMessage) -> UsageMetadata | None:
             input_tokens=usage_meta.get("input_tokens", 0),
             output_tokens=usage_meta.get("output_tokens", 0),
             total_tokens=usage_meta.get("total_tokens", 0),
+            **cached_input_details(usage_meta.get("input_token_details")),
         )
     resp_meta: dict = getattr(response, "response_metadata", {})
     openai_usage: dict = resp_meta.get("usage", {})
@@ -73,6 +91,7 @@ def extract_token_usage(response: BaseMessage) -> UsageMetadata | None:
             input_tokens=openai_usage.get("prompt_tokens", 0),
             output_tokens=openai_usage.get("completion_tokens", 0),
             total_tokens=openai_usage.get("total_tokens", 0),
+            **cached_input_details(openai_usage.get("prompt_tokens_details")),
         )
     return None
 
