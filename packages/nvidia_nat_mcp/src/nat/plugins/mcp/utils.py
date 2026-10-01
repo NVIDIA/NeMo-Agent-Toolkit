@@ -28,7 +28,7 @@ _ORDER_INSENSITIVE_SCHEMA_ARRAY_KEYS = frozenset({"enum", "required"})
 
 
 @cache
-def _get_or_create_enum(name: str, values: frozenset[str]) -> type[Enum]:
+def _get_or_create_enum(name: str, typed_values: frozenset[tuple[type, Any]]) -> type[Enum]:
     """
     Get a cached enum class or create a new one.
 
@@ -40,12 +40,21 @@ def _get_or_create_enum(name: str, values: frozenset[str]) -> type[Enum]:
 
     Args:
         name: The name for the enum class
-        values: Frozenset of enum values (frozenset is hashable for caching)
+        typed_values: Frozenset of (type, value) pairs. The type keeps 1, True and 1.0 apart, since they
+            are equal as set members and would otherwise share one cached class.
 
     Returns:
         An Enum class (cached or newly created)
     """
-    return Enum(name, {item: item for item in values})
+    values = [value for _, value in typed_values]
+    try:
+        return Enum(name, {item: item for item in values})
+    except (TypeError, ValueError):
+        # Non-string values (e.g. 1, True) and strings that are not valid member names (e.g. "", "mro")
+        # cannot be used as member names, so generate the names and keep the original values.
+        return Enum(name,
+                    [(f"VALUE_{index}", item)
+                     for index, item in enumerate(sorted(values, key=lambda v: (type(v).__name__, v)))])
 
 
 def _schema_cache_sort_key(value: Any) -> str:
@@ -179,7 +188,7 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
 
             if non_null_vals:
                 enum_name = f"{name.capitalize()}Enum"
-                enum_type: Any = _get_or_create_enum(enum_name, frozenset(non_null_vals))
+                enum_type: Any = _get_or_create_enum(enum_name, frozenset((type(v), v) for v in non_null_vals))
                 # If enum had null, make it a union with None
                 resolved_enum = enum_type | None if has_null else enum_type
                 return _apply_constraints(resolved_enum, schema) if apply_constraints else resolved_enum

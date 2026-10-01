@@ -940,6 +940,106 @@ def test_required_nullable_field_with_enum():
     assert m1.enum_field is None
 
 
+@pytest.mark.parametrize(
+    "enum_values, invalid_value",
+    [
+        ([1, 2, 3], 4),
+        ([True, False], "yes"),
+        ([0.5, 1.5], 2.5),
+        (["", "a"], "b"),
+        (["mro", "_x_", "__init__"], "init"),
+        (["low", 1], "1"),
+    ],
+    ids=["integer", "boolean", "number", "empty_string", "reserved_names", "mixed"],
+)
+def test_enum_values_that_are_not_valid_member_names(enum_values, invalid_value):
+    """Test that enum values which cannot be Enum member names validate and dump the raw value"""
+    schema = {
+        'type': 'object',
+        'properties': {
+            'choice': {
+                'description': 'Field with enum values', 'enum': enum_values
+            }
+        },
+        'required': ['choice']
+    }
+
+    _model = model_from_mcp_schema("test_enum_values_not_member_names", schema)
+
+    # Every enum value should validate and dump back to the raw value
+    for value in enum_values:
+        dumped = _model.model_validate({"choice": value}).model_dump(mode="json")
+        assert dumped == {"choice": value}
+        assert type(dumped["choice"]) is type(value)
+
+    # Values outside the enum should be rejected
+    with pytest.raises(ValidationError):
+        _model.model_validate({"choice": invalid_value})
+
+
+def test_integer_enum_class_is_reused_regardless_of_value_order():
+    """Test that integer enums with the same values in a different order reuse the same enum class"""
+    first_schema = {
+        'type': 'object', 'properties': {
+            'level': {
+                'type': 'integer', 'enum': [1, 2, 3]
+            }
+        }, 'required': ['level']
+    }
+    second_schema = {
+        'type': 'object', 'properties': {
+            'level': {
+                'type': 'integer', 'enum': [3, 1, 2]
+            }
+        }, 'required': ['level']
+    }
+
+    first_model = model_from_mcp_schema("test_integer_enum_order_first", first_schema)
+    second_model = model_from_mcp_schema("test_integer_enum_order_second", second_schema)
+
+    assert second_model.model_fields["level"].annotation is first_model.model_fields["level"].annotation
+
+
+def test_equal_enum_values_of_different_types_do_not_share_a_class():
+    """Test that 0/1, False/True and 0.0/1.0 enums on the same field name keep their own value types"""
+    models = {
+        json_type:
+            model_from_mcp_schema(
+                f"test_enum_type_{json_type}", {
+                    'type': 'object', 'properties': {
+                        'flag': {
+                            'type': json_type, 'enum': values
+                        }
+                    }, 'required': ['flag']
+                })
+        for json_type, values in (("integer", [0, 1]), ("boolean", [False, True]), ("number", [0.0, 1.0]))
+    }
+
+    assert models["integer"].model_fields["flag"].annotation is not models["boolean"].model_fields["flag"].annotation
+    assert models["integer"].model_fields["flag"].annotation is not models["number"].model_fields["flag"].annotation
+    for json_type, value in (("integer", 1), ("boolean", True), ("number", 1.0)):
+        dumped = models[json_type].model_validate({"flag": value}).model_dump(mode="json")
+        assert type(dumped["flag"]) is type(value)
+
+
+def test_string_enum_keeps_values_as_member_names():
+    """Test that string enums which are valid member names keep the values as member names"""
+    schema = {
+        'type': 'object',
+        'properties': {
+            'sort_by': {
+                'type': 'string', 'enum': ['updated', 'hottest']
+            }
+        },
+        'required': ['sort_by']
+    }
+
+    _model = model_from_mcp_schema("test_string_enum_member_names", schema)
+
+    enum_type = _model.model_fields["sort_by"].annotation
+    assert {member.name: member.value for member in enum_type} == {"updated": "updated", "hottest": "hottest"}
+
+
 def test_required_nullable_field_with_const_null():
     """Test that const: null is detected correctly for required fields"""
     schema = {
