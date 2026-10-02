@@ -18,6 +18,7 @@ from enum import Enum
 from functools import cache
 from typing import Annotated
 from typing import Any
+from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -28,7 +29,7 @@ _ORDER_INSENSITIVE_SCHEMA_ARRAY_KEYS = frozenset({"enum", "required"})
 
 
 @cache
-def _get_or_create_enum(name: str, typed_values: frozenset[tuple[type, Any]]) -> type[Enum]:
+def _get_or_create_enum(name: str, typed_values: frozenset[tuple[type, Any]]) -> Any:
     """
     Get a cached enum class or create a new one.
 
@@ -44,17 +45,17 @@ def _get_or_create_enum(name: str, typed_values: frozenset[tuple[type, Any]]) ->
             are equal as set members and would otherwise share one cached class.
 
     Returns:
-        An Enum class (cached or newly created)
+        An Enum class (cached or newly created), or a Literal of the raw values when they cannot be
+        Enum member names
     """
     values = [value for _, value in typed_values]
     try:
         return Enum(name, {item: item for item in values})
     except (TypeError, ValueError):
         # Non-string values (e.g. 1, True) and strings that are not valid member names (e.g. "", "mro")
-        # cannot be used as member names, so generate the names and keep the original values.
-        return Enum(name,
-                    [(f"VALUE_{index}", item)
-                     for index, item in enumerate(sorted(values, key=lambda v: (type(v).__name__, v)))])
+        # cannot be member names. A Literal of the raw values validates them as given, so numeric
+        # constraints still apply and equal values of different types (1 and True) stay distinct.
+        return Literal[tuple(sorted(values, key=lambda v: (type(v).__name__, v)))]
 
 
 def _schema_cache_sort_key(value: Any) -> str:

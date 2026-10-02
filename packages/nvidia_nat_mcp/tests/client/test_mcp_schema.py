@@ -949,8 +949,9 @@ def test_required_nullable_field_with_enum():
         (["", "a"], "b"),
         (["mro", "_x_", "__init__"], "init"),
         (["low", 1], "1"),
+        ([True, 1], False),
     ],
-    ids=["integer", "boolean", "number", "empty_string", "reserved_names", "mixed"],
+    ids=["integer", "boolean", "number", "empty_string", "reserved_names", "mixed", "boolean_and_integer"],
 )
 def test_enum_values_that_are_not_valid_member_names(enum_values, invalid_value):
     """Test that enum values which cannot be Enum member names validate and dump the raw value"""
@@ -998,6 +999,26 @@ def test_integer_enum_class_is_reused_regardless_of_value_order():
     second_model = model_from_mcp_schema("test_integer_enum_order_second", second_schema)
 
     assert second_model.model_fields["level"].annotation is first_model.model_fields["level"].annotation
+
+
+def test_integer_enum_with_numeric_constraints():
+    """Test that minimum and maximum still apply to an integer enum"""
+    schema = {
+        'type': 'object',
+        'properties': {
+            'level': {
+                'type': 'integer', 'enum': [1, 2, 3], 'minimum': 1, 'maximum': 3
+            }
+        },
+        'required': ['level']
+    }
+
+    _model = model_from_mcp_schema("test_integer_enum_constraints", schema)
+
+    for value in (1, 3):
+        assert _model.model_validate({"level": value}).model_dump(mode="json") == {"level": value}
+    with pytest.raises(ValidationError):
+        _model.model_validate({"level": 4})
 
 
 def test_equal_enum_values_of_different_types_do_not_share_a_class():
