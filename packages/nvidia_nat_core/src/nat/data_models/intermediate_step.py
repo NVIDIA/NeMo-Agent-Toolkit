@@ -39,6 +39,7 @@ class IntermediateStepCategory(StrEnum):
     CUSTOM = "CUSTOM"
     SPAN = "SPAN"
     TTC = "TTC"
+    GUARDRAIL = "GUARDRAIL"
 
 
 class IntermediateStepType(StrEnum):
@@ -60,6 +61,8 @@ class IntermediateStepType(StrEnum):
     SPAN_START = "SPAN_START"
     SPAN_CHUNK = "SPAN_CHUNK"
     SPAN_END = "SPAN_END"
+    GUARDRAIL_START = "GUARDRAIL_START"
+    GUARDRAIL_END = "GUARDRAIL_END"
 
 
 class IntermediateStepState(StrEnum):
@@ -171,6 +174,8 @@ class IntermediateStepPayload(BaseModel):
     @property
     def event_category(self) -> IntermediateStepCategory:
         match self.event_type:
+            case IntermediateStepType.GUARDRAIL_START | IntermediateStepType.GUARDRAIL_END:
+                return IntermediateStepCategory.GUARDRAIL
             case IntermediateStepType.LLM_START:
                 return IntermediateStepCategory.LLM
             case IntermediateStepType.LLM_END:
@@ -213,6 +218,10 @@ class IntermediateStepPayload(BaseModel):
     @property
     def event_state(self) -> IntermediateStepState:
         match self.event_type:
+            case IntermediateStepType.GUARDRAIL_START:
+                return IntermediateStepState.START
+            case IntermediateStepType.GUARDRAIL_END:
+                return IntermediateStepState.END
             case IntermediateStepType.LLM_START:
                 return IntermediateStepState.START
             case IntermediateStepType.LLM_END:

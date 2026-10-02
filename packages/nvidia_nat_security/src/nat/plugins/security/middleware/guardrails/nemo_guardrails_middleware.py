@@ -41,6 +41,7 @@ from nat.middleware.function_middleware import CallNext
 from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
+from nat.middleware.telemetry import trace_middleware
 from nat.middleware.utils.workflow_inventory import DiscoveredFunction
 from nat.plugins.security.middleware.guardrails.exceptions import PostInvokeBlockedError
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailFunctionFields
@@ -118,7 +119,9 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         modified: bool = False
 
         for text, apply_to_field in self._gather_guardrail_inputs(value, paths, apply_to_value):
-            response: GenerationResponse = await self._llm_rails.generate_async(
+            response: GenerationResponse = await self._generate_rail(
+                "input",
+                context.function_context.name,
                 prompt=text,
                 options=GenerationOptions(
                     rails=["input"],
@@ -170,7 +173,9 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         for text, apply_to_field in self._gather_guardrail_inputs(value, paths, apply_to_value):
             messages: list[dict[str, str]] = ([{"role": "user", "content": input_text}] if input_text else [])
             messages.append({"role": "assistant", "content": text})
-            response: GenerationResponse = await self._llm_rails.generate_async(
+            response: GenerationResponse = await self._generate_rail(
+                "output",
+                context.function_context.name,
                 messages=messages,
                 options=GenerationOptions(
                     rails=["output"],
@@ -190,6 +195,18 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
                 modified = True
 
         return context if modified else None
+
+    async def _generate_rail(self, rail_type: str, function_name: str, **kwargs: Any) -> GenerationResponse:
+        """Trace the policy evaluation separately from the wrapped function."""
+        with trace_middleware(f"guardrails.{rail_type}",
+                              input_data=kwargs.get("prompt", kwargs.get("messages")),
+                              function_name=function_name,
+                              guardrail=True) as trace:
+            response = await self._llm_rails.generate_async(**kwargs)
+            trace.output = response.response
+            if self._rail_blocked(response):
+                trace.status = "blocked"
+            return response
 
     async def function_middleware_invoke(
         self,
@@ -270,8 +287,19 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
             return
 
         if self._guardrails_config.stream_output_rails:
-            async for chunk in self._stream_with_output_rails(ctx, call_next):
-                yield chunk
+            with trace_middleware("guardrails.output.stream",
+                                  input_data=ctx.modified_args,
+                                  function_name=context.name,
+                                  guardrail=True) as trace:
+                stream = self._stream_with_output_rails(ctx, call_next)
+                try:
+                    async for chunk in stream:
+                        trace.output = chunk
+                        if ctx.output is not None:
+                            trace.status = "blocked"
+                        yield chunk
+                finally:
+                    await stream.aclose()
             return
 
         buffered: list[Any] = [chunk async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs)]

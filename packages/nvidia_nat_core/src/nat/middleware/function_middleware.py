@@ -41,6 +41,7 @@ from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationAction
 from nat.middleware.middleware import InvocationContext
 from nat.middleware.middleware import Middleware
+from nat.middleware.telemetry import trace_middleware
 
 logger = logging.getLogger(__name__)
 
@@ -325,7 +326,16 @@ class FunctionMiddlewareChain:
                               _call_next: CallNext = call_next,
                               _context: FunctionMiddlewareContext = self._context,
                               **kwargs: Any) -> Any:
-                return await _middleware.middleware_invoke(*args, call_next=_call_next, context=_context, **kwargs)
+                with trace_middleware(type(_middleware).__name__,
+                                      input_data={
+                                          "args": args, "kwargs": kwargs
+                                      },
+                                      function_name=_context.name) as trace:
+                    trace.output = await _middleware.middleware_invoke(*args,
+                                                                       call_next=_call_next,
+                                                                       context=_context,
+                                                                       **kwargs)
+                    return trace.output
 
             call = wrapped  # type: ignore[assignment]
 
@@ -355,9 +365,20 @@ class FunctionMiddlewareChain:
                               _call_next: CallNextStream = call_next,
                               _context: FunctionMiddlewareContext = self._context,
                               **kwargs: Any) -> AsyncIterator[Any]:
-                stream = _middleware.middleware_stream(*args, call_next=_call_next, context=_context, **kwargs)
-                async for chunk in stream:
-                    yield chunk
+                with trace_middleware(type(_middleware).__name__,
+                                      input_data={
+                                          "args": args, "kwargs": kwargs
+                                      },
+                                      function_name=_context.name) as trace:
+                    stream = _middleware.middleware_stream(*args, call_next=_call_next, context=_context, **kwargs)
+                    try:
+                        async for chunk in stream:
+                            trace.output = chunk
+                            yield chunk
+                    finally:
+                        close = getattr(stream, "aclose", None)
+                        if close is not None:
+                            await close()
 
             call = wrapped  # type: ignore[assignment]
 
