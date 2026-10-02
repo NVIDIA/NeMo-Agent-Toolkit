@@ -2509,6 +2509,7 @@ defense = [
 guardrails = [
     { name = "dataclasses-json" },
     { name = "nemoguardrails" },
+    { name = "nvidia-nat-langchain" },
 ]
 
 [package.metadata]
@@ -2517,6 +2518,7 @@ requires-dist = [
     { name = "nemoguardrails", marker = "extra == 'guardrails'", specifier = ">=0.11,<0.22" },
     { name = "nvidia-nat-core", editable = "../../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-eval", editable = "../../../packages/nvidia_nat_eval" },
+    { name = "nvidia-nat-langchain", marker = "extra == 'guardrails'", editable = "../../../packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../../packages/nvidia_nat_test" },
     { name = "plotly", specifier = "~=6.0" },
     { name = "presidio-analyzer", marker = "extra == 'defense'", specifier = ">=2.2" },

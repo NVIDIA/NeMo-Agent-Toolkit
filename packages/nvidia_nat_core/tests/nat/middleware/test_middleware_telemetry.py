@@ -128,6 +128,63 @@ async def test_stream_completion_and_close_pair_nested_spans(close_early, record
     assert_pairs(recorded_steps, 2)
 
 
+@pytest.mark.parametrize("cancel_consumer", [False, True])
+async def test_nested_stream_close_finishes_retained_target_immediately(cancel_consumer, recorded_steps):
+    context = Context.get()
+    manager = context.intermediate_step_manager
+    initial_span = context.active_span_id
+    initial_outstanding = manager.get_outstanding_step_count()
+    target_closed = asyncio.Event()
+    consumer_started = asyncio.Event()
+    held_targets = []
+
+    async def source(value):
+        try:
+            yield "first"
+            await asyncio.Event().wait()
+        finally:
+            target_closed.set()
+
+    def target(value):
+        # Hold the generator so GC/finalizer scheduling cannot mask missing close delegation.
+        stream = source(value)
+        held_targets.append(stream)
+        return stream
+
+    def assert_closed():
+        assert target_closed.is_set()
+        assert manager.get_outstanding_step_count() == initial_outstanding
+        assert context.active_span_id == initial_span
+        starts, ends = assert_pairs(recorded_steps, 2)
+        assert [step.UUID for step in ends] == [step.UUID for step in reversed(starts)]
+
+    async def consume():
+        stream = chain(FunctionMiddleware(), FunctionMiddleware()).build_stream(target)("hello")
+        try:
+            assert await anext(stream) == "first"
+            consumer_started.set()
+            await asyncio.Event().wait()
+        finally:
+            await stream.aclose()
+            assert_closed()
+
+    try:
+        if cancel_consumer:
+            task = asyncio.create_task(consume())
+            await consumer_started.wait()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        else:
+            stream = chain(FunctionMiddleware(), FunctionMiddleware()).build_stream(target)("hello")
+            assert await anext(stream) == "first"
+            await stream.aclose()
+            assert_closed()
+    finally:
+        for stream in held_targets:
+            await stream.aclose()
+
+
 @pytest.mark.parametrize("event_type,state", [("GUARDRAIL_START", IntermediateStepState.START),
                                               ("GUARDRAIL_END", IntermediateStepState.END)])
 def test_guardrail_events_are_classified(event_type, state):

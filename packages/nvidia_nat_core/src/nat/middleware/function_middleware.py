@@ -142,8 +142,14 @@ class FunctionMiddleware(Middleware):
                                 context: FunctionMiddlewareContext,
                                 **kwargs: Any) -> AsyncIterator[Any]:
         """Delegate to function_middleware_stream for function-specific handling."""
-        async for chunk in self.function_middleware_stream(*args, call_next=call_next, context=context, **kwargs):
-            yield chunk
+        stream = self.function_middleware_stream(*args, call_next=call_next, context=context, **kwargs)
+        try:
+            async for chunk in stream:
+                yield chunk
+        finally:
+            close = getattr(stream, "aclose", None)
+            if close is not None:
+                await close()
 
     # ==================== Orchestration ====================
 
@@ -261,18 +267,24 @@ class FunctionMiddleware(Middleware):
             return
 
         # Stream with per-chunk post-invoke
-        async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs):
-            # Set output for this chunk
-            ctx.output = chunk
+        stream = call_next(*ctx.modified_args, **ctx.modified_kwargs)
+        try:
+            async for chunk in stream:
+                # Set output for this chunk
+                ctx.output = chunk
 
-            # Post-invoke transformation per chunk
-            result = await self.post_invoke(ctx)
-            if result is not None:
-                ctx = result
+                # Post-invoke transformation per chunk
+                result = await self.post_invoke(ctx)
+                if result is not None:
+                    ctx = result
 
-            # None output is the suppression sentinel: post_invoke cleared it to suppress this chunk.
-            if ctx.output is not None:
-                yield ctx.output
+                # None output is the suppression sentinel: post_invoke cleared it to suppress this chunk.
+                if ctx.output is not None:
+                    yield ctx.output
+        finally:
+            close = getattr(stream, "aclose", None)
+            if close is not None:
+                await close()
 
 
 class FunctionMiddlewareChain:

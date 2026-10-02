@@ -18,7 +18,13 @@ import logging
 from uuid import uuid4
 
 import pytest
+from langchain_core.language_models.fake import FakeListLLM
+from langchain_core.messages import AIMessage
+from langchain_core.outputs import ChatGeneration
+from langchain_core.outputs import Generation
+from langchain_core.outputs import LLMResult
 
+from nat.builder.context import Context
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
 from nat.plugins.langchain.callback_handler import _extract_tools_schema
@@ -99,6 +105,225 @@ async def test_langchain_handler(reactive_stream: Subject):
     assert all_stats[3].payload.usage_info.token_usage.prompt_tokens == 15  # Will not populate usage
     assert all_stats[3].payload.usage_info.token_usage.completion_tokens == 15
     assert all_stats[3].payload.data.output == "Hello back!"
+
+
+async def test_langchain_handler_traces_native_completion_model(chain_handler_fixture):
+    """A NeMo-compatible BaseLLM emits plain Generation objects, not chat messages."""
+    handler, all_stats = chain_handler_fixture
+    context = Context.get()
+    initial_span = context.active_span_id
+    model = FakeListLLM(responses=["allowed"], callbacks=[handler])
+
+    output = await model.ainvoke("Check this input", config={"metadata": {"ls_model_name": "rail-model"}})
+
+    assert output == "allowed"
+    assert [step.event_type for step in all_stats] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert all_stats[0].UUID == all_stats[1].UUID
+    assert all_stats[1].payload.name == "rail-model"
+    assert all_stats[1].payload.data.input == "Check this input"
+    assert all_stats[1].payload.data.output == "allowed"
+    assert context.active_span_id == initial_span
+    assert not handler._run_id_to_model_name
+    assert not handler._run_id_to_llm_input
+    assert not handler._run_id_to_parent_span
+    assert not handler._run_id_to_start_time
+
+
+@pytest.mark.parametrize("chat_model", [False, True])
+async def test_langchain_handler_reads_provider_token_usage(chain_handler_fixture, chat_model):
+    """Provider-level token counts are retained when a message has no usage_metadata."""
+    handler, all_stats = chain_handler_fixture
+    run_id = uuid4()
+    await handler.on_llm_start(serialized={"kwargs": {
+        "model_name": "native-rail"
+    }},
+                               prompts=["policy prompt"],
+                               run_id=run_id)
+    generation = ChatGeneration(message=AIMessage(content="yes")) if chat_model else Generation(text="yes")
+    response = LLMResult(generations=[[generation]],
+                         llm_output={
+                             "token_usage": {
+                                 "prompt_tokens": 11,
+                                 "completion_tokens": 4,
+                                 "total_tokens": 15,
+                                 "prompt_tokens_details": {
+                                     "cached_tokens": 3
+                                 },
+                                 "completion_tokens_details": {
+                                     "reasoning_tokens": 2
+                                 },
+                             }
+                         })
+    await handler.on_llm_end(response, run_id=run_id)
+
+    end = all_stats[-1].payload
+    assert end.name == "native-rail"
+    assert end.data.output == "yes"
+    assert end.usage_info.token_usage.model_dump() == {
+        "prompt_tokens": 11,
+        "completion_tokens": 4,
+        "total_tokens": 15,
+        "cached_tokens": 3,
+        "reasoning_tokens": 2,
+    }
+
+
+@pytest.mark.parametrize(
+    "details",
+    [
+        {
+            "prompt_tokens_details": None, "completion_tokens_details": None
+        },
+        {
+            "prompt_tokens_details": {
+                "cached_tokens": None
+            }, "completion_tokens_details": {
+                "reasoning_tokens": None
+            }
+        },
+        {
+            "input_token_details": None, "output_token_details": None
+        },
+        {
+            "input_token_details": {
+                "cache_read": None
+            }, "output_token_details": {
+                "reasoning": None
+            }
+        },
+    ],
+    ids=["provider-null-details", "provider-null-counts", "message-null-details", "message-null-counts"])
+async def test_langchain_handler_completes_with_nullable_token_details(chain_handler_fixture, details):
+    """Optional provider details must not turn a successful completion into an error."""
+    handler, all_stats = chain_handler_fixture
+    context = Context.get()
+    initial_span = context.active_span_id
+    run_id = uuid4()
+    await handler.on_llm_start(serialized={"name": "rail-model"}, prompts=["check"], run_id=run_id)
+    response = LLMResult(
+        generations=[[Generation(text="allowed")]],
+        llm_output={"token_usage": {
+            "prompt_tokens": 2, "completion_tokens": 1, "total_tokens": 3, **details
+        }})
+    await handler.on_llm_end(response, run_id=run_id)
+
+    assert [step.event_type for step in all_stats] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert all_stats[-1].payload.data.output == "allowed"
+    usage = all_stats[-1].payload.usage_info.token_usage
+    assert (usage.prompt_tokens, usage.completion_tokens, usage.total_tokens) == (2, 1, 3)
+    assert (usage.cached_tokens, usage.reasoning_tokens) == (0, 0)
+    assert context.active_span_id == initial_span
+    assert not handler._run_id_to_parent_span
+    assert not handler._run_id_to_model_name
+
+
+async def test_langchain_handler_prefers_message_usage(chain_handler_fixture):
+    handler, all_stats = chain_handler_fixture
+    run_id = uuid4()
+    await handler.on_chat_model_start(serialized={},
+                                      messages=[],
+                                      run_id=run_id,
+                                      metadata={"ls_model_name": "rail-model"})
+    response = LLMResult(generations=[[
+        ChatGeneration(message=AIMessage(content="allowed",
+                                         usage_metadata={
+                                             "input_tokens": 7, "output_tokens": 2, "total_tokens": 9
+                                         }))
+    ]],
+                         llm_output={"token_usage": {
+                             "prompt_tokens": 99, "completion_tokens": 99
+                         }})
+    await handler.on_llm_end(response, run_id=run_id)
+
+    usage = all_stats[-1].payload.usage_info.token_usage
+    assert (usage.prompt_tokens, usage.completion_tokens, usage.total_tokens) == (7, 2, 9)
+
+
+async def test_langchain_handler_closes_empty_result(chain_handler_fixture):
+    handler, all_stats = chain_handler_fixture
+    context = Context.get()
+    initial_span = context.active_span_id
+    run_id = uuid4()
+    await handler.on_llm_start(serialized={"name": "EmptyModel"}, prompts=[], run_id=run_id)
+    await handler.on_llm_end(LLMResult(generations=[], llm_output=None), run_id=run_id)
+
+    assert [step.event_type for step in all_stats] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert all_stats[-1].payload.name == "EmptyModel"
+    assert all_stats[-1].payload.data.output == ""
+    assert all_stats[-1].payload.metadata.chat_responses == []
+    assert context.active_span_id == initial_span
+    assert not handler._run_id_to_start_time
+
+
+@pytest.mark.parametrize("error", [RuntimeError("provider failed"), asyncio.CancelledError()], ids=["error", "cancel"])
+async def test_langchain_handler_pairs_error_and_cancellation(chain_handler_fixture, error):
+    """Failures close the span and allow the same callback instance to handle another call."""
+    handler, all_stats = chain_handler_fixture
+    context = Context.get()
+    initial_span = context.active_span_id
+    run_id = uuid4()
+    await handler.on_llm_start(serialized={},
+                               prompts=["check"],
+                               run_id=run_id,
+                               invocation_params={"model": "rail-model"})
+    await handler.on_llm_error(error, run_id=run_id)
+    await handler.on_llm_error(error, run_id=run_id)
+
+    assert len(all_stats) == 2
+    assert all_stats[-1].event_type == IntermediateStepType.LLM_END
+    assert all_stats[-1].UUID == str(run_id)
+    assert all_stats[-1].payload.name == "rail-model"
+    assert all_stats[-1].payload.metadata == {"status": type(error).__name__}
+    assert context.active_span_id == initial_span
+    assert not handler._run_id_to_model_name
+    assert not handler._run_id_to_llm_input
+    assert not handler._run_id_to_parent_span
+    assert not handler._run_id_to_start_time
+
+    model = FakeListLLM(responses=["recovered"], callbacks=[handler])
+    assert await model.ainvoke("new call") == "recovered"
+    assert len(all_stats) == 4
+    assert all_stats[-1].UUID != str(run_id)
+    assert context.active_span_id == initial_span
+
+
+async def test_langchain_handler_closes_only_policy_owned_runs(chain_handler_fixture):
+    """Boundary cleanup leaves another request's unresolved calls untouched."""
+    handler, all_stats = chain_handler_fixture
+    cancelled_run = uuid4()
+    other_run = uuid4()
+    context = Context.get()
+    initial_span = context.active_span_id
+    with Context.scope(active_span_id_stack=[initial_span, "policy-a"]):
+        await handler.on_llm_start(serialized={}, prompts=["request a"], run_id=cancelled_run)
+        with Context.scope(active_span_id_stack=[initial_span, "policy-b"]):
+            await handler.on_llm_start(serialized={}, prompts=["request b"], run_id=other_run)
+
+        await handler.close_llm_runs("policy-a", asyncio.CancelledError())
+        assert context.active_span_id == "policy-a"
+        assert handler._run_id_to_parent_span == {str(other_run): "policy-b"}
+        assert str(other_run) in handler._run_id_to_model_name
+        assert all_stats[-1].UUID == str(cancelled_run)
+        assert all_stats[-1].parent_id == "policy-a"
+
+        # A provider may finish after the policy boundary already closed its span.
+        await handler.on_llm_new_token("late token", run_id=cancelled_run)
+        await handler.on_llm_end(LLMResult(generations=[[Generation(text="late completion")]]), run_id=cancelled_run)
+        await handler.close_llm_runs("policy-a", asyncio.CancelledError())
+        assert len(all_stats) == 3
+
+    with Context.scope(active_span_id_stack=[initial_span, "policy-b"]):
+        await handler.on_llm_end(LLMResult(generations=[[Generation(text="completed b")]]), run_id=other_run)
+        assert context.active_span_id == "policy-b"
+
+    assert len(all_stats) == 4
+    assert all_stats[-1].UUID == str(other_run)
+    assert all_stats[-1].payload.data.output == "completed b"
+    assert not handler._run_id_to_parent_span
+    assert not handler._run_id_to_model_name
+    assert not handler._run_id_to_llm_input
+    assert not handler._run_id_to_start_time
+    assert context.active_span_id == initial_span
 
 
 async def test_langchain_handler_tracks_chain_runnable_events(chain_handler_fixture):

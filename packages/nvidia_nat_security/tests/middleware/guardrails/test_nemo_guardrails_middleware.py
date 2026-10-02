@@ -843,3 +843,33 @@ async def test_streaming_output_rail_span_closes_with_consumer(close_early, guar
     assert len(starts) == len(ends) == 2
     assert {step.UUID for step in starts} == {step.UUID for step in ends}
     assert starts[1].payload.name == "guardrails.output.stream"
+
+
+async def test_live_rail_consumer_close_closes_sdk_and_target_immediately(guardrail_steps):
+    config = GuardrailsMiddlewareConfig(workflow_functions=["test_fn"],
+                                        guardrails=_rails_policy(),
+                                        stream_output_rails=True)
+    middleware = _make_middleware(config=config)
+    closed = []
+
+    async def target(*args, **kwargs):
+        try:
+            yield "first"
+            yield "last"
+        finally:
+            closed.append("target")
+
+    async def sdk_stream(*, messages, generator):
+        try:
+            async for chunk in generator:
+                yield chunk
+        finally:
+            closed.append("sdk")
+
+    middleware._llm_rails.stream_async = sdk_stream
+    context = _invocation_context()
+    stream = middleware.function_middleware_stream("hello", call_next=target, context=context.function_context)
+    assert await anext(stream) == "first"
+    await stream.aclose()
+    assert sorted(closed) == ["sdk", "target"]
+    assert guardrail_steps[-1].payload.event_type == IntermediateStepType.GUARDRAIL_END
