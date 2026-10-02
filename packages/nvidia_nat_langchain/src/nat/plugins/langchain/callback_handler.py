@@ -178,7 +178,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         if usage_metadata:
             prompt_tokens = usage_metadata.get("input_tokens", usage_metadata.get("prompt_tokens", 0)) or 0
             completion_tokens = usage_metadata.get("output_tokens", usage_metadata.get("completion_tokens", 0)) or 0
-            total_tokens = usage_metadata.get("total_tokens", prompt_tokens + completion_tokens) or 0
+            total_tokens = usage_metadata.get("total_tokens") or (prompt_tokens + completion_tokens)
 
             input_details = usage_metadata.get("input_token_details") or {}
             prompt_details = usage_metadata.get("prompt_tokens_details") or {}

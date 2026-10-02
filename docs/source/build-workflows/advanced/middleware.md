@@ -1057,11 +1057,11 @@ exceptions, and stream closure. Buffered streaming records its final output;
 generic streaming records the last emitted chunk without accumulating the stream.
 
 NeMo Guardrails middleware also attaches the existing LangChain profiler to native
-and NAT-bound rail models. Their LLM spans include model names, prompts, responses,
-and provider-reported token usage for ordinary and live streaming calls. Existing
-model callbacks are preserved, and an active workflow profiler takes precedence
-to avoid duplicate LLM spans. Providers that do not report token usage retain
-zero counts; the middleware does not estimate tokens.
+rail models and rail models bound from NeMo Agent Toolkit. Their LLM spans include
+model names, prompts, responses, and provider-reported token usage for ordinary and
+live streaming calls. Existing model callbacks are preserved, and an active
+workflow profiler takes precedence to avoid duplicate LLM spans. Providers that do
+not report token usage retain zero counts; the middleware does not estimate tokens.
 
 Middleware inputs and outputs follow the configured telemetry exporters' existing
 payload and redaction rules.

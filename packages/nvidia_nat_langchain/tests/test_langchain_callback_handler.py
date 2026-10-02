@@ -104,6 +104,7 @@ async def test_langchain_handler(reactive_stream: Subject):
     # Check final token usage
     assert all_stats[3].payload.usage_info.token_usage.prompt_tokens == 15  # Will not populate usage
     assert all_stats[3].payload.usage_info.token_usage.completion_tokens == 15
+    assert all_stats[3].payload.usage_info.token_usage.total_tokens == 30
     assert all_stats[3].payload.data.output == "Hello back!"
 
 
@@ -130,7 +131,18 @@ async def test_langchain_handler_traces_native_completion_model(chain_handler_fi
 
 
 @pytest.mark.parametrize("chat_model", [False, True])
-async def test_langchain_handler_reads_provider_token_usage(chain_handler_fixture, chat_model):
+@pytest.mark.parametrize("total_usage,expected_total", [({}, 15), ({
+    "total_tokens": None
+}, 15), ({
+    "total_tokens": 0
+}, 15), ({
+    "total_tokens": 23
+}, 23)],
+                         ids=["missing-total", "null-total", "zero-total", "provider-total"])
+async def test_langchain_handler_reads_provider_token_usage(chain_handler_fixture,
+                                                            chat_model,
+                                                            total_usage,
+                                                            expected_total):
     """Provider-level token counts are retained when a message has no usage_metadata."""
     handler, all_stats = chain_handler_fixture
     run_id = uuid4()
@@ -145,7 +157,7 @@ async def test_langchain_handler_reads_provider_token_usage(chain_handler_fixtur
                              "token_usage": {
                                  "prompt_tokens": 11,
                                  "completion_tokens": 4,
-                                 "total_tokens": 15,
+                                 **total_usage,
                                  "prompt_tokens_details": {
                                      "cached_tokens": 3
                                  },
@@ -162,7 +174,7 @@ async def test_langchain_handler_reads_provider_token_usage(chain_handler_fixtur
     assert end.usage_info.token_usage.model_dump() == {
         "prompt_tokens": 11,
         "completion_tokens": 4,
-        "total_tokens": 15,
+        "total_tokens": expected_total,
         "cached_tokens": 3,
         "reasoning_tokens": 2,
     }
@@ -251,6 +263,7 @@ async def test_langchain_handler_closes_empty_result(chain_handler_fixture):
     assert all_stats[-1].payload.name == "EmptyModel"
     assert all_stats[-1].payload.data.output == ""
     assert all_stats[-1].payload.metadata.chat_responses == []
+    assert all_stats[-1].payload.usage_info.token_usage.total_tokens == 0
     assert context.active_span_id == initial_span
     assert not handler._run_id_to_start_time
 
