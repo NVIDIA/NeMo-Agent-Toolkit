@@ -242,10 +242,11 @@ async def test_endpoint_timeout_fails_only_the_slow_item(rag_eval_input, stall_m
                                           reps=1)
 
     handler = EvaluationRemoteWorkflowHandler(config=eval_run_config, max_concurrency=2)
-    await handler.run_workflow_remote(rag_eval_input)
-
-    release_slow_item.set()
-    await server.close()
+    try:
+        await handler.run_workflow_remote(rag_eval_input)
+    finally:
+        release_slow_item.set()
+        await server.close()
 
     # The slow item fails on its own, dropping any partial answer streamed before the timeout
     assert slow_item.output_obj is None
