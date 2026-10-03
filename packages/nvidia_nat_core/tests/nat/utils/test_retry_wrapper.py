@@ -1330,3 +1330,19 @@ def _walk_traceback(tb):
         yield tb
         tb = tb.tb_next
 
+
+
+def test_sync_generator_retry_wrapper_forwards_send():
+    """The sync generator wrapper still delivers send() values to the wrapped generator."""
+
+    class Echo:
+
+        def stream(self):
+            received = yield "ready"
+            yield f"got {received}"
+
+    patched = ar.patch_with_retry(Echo(), retries=2, base_delay=0, retry_codes=[429], retry_on_messages=None)
+
+    gen = patched.stream()
+    assert next(gen) == "ready"
+    assert gen.send("hello") == "got hello"

@@ -192,6 +192,39 @@ def _want_retry(
 # ─────────────────────────────────────────────────────────────
 #  Memory-optimized decorator factory
 # ─────────────────────────────────────────────────────────────
+class _YieldTracker:
+    """Forward the generator protocol to a wrapped iterator and note whether it produced an item."""
+
+    def __init__(self, stream: Any) -> None:
+        self._stream = iter(stream)
+        self.yielded = False
+
+    def __iter__(self) -> "_YieldTracker":
+        return self
+
+    def __next__(self) -> Any:
+        item = next(self._stream)
+        self.yielded = True
+        return item
+
+    def send(self, value: Any) -> Any:
+        if value is None or not hasattr(self._stream, "send"):
+            return next(self)
+        item = self._stream.send(value)
+        self.yielded = True
+        return item
+
+    def throw(self, *args: Any) -> Any:
+        item = self._stream.throw(*args)
+        self.yielded = True
+        return item
+
+    def close(self) -> None:
+        close = getattr(self._stream, "close", None)
+        if close is not None:
+            close()
+
+
 def _retry_decorator(
     *,
     retries: int = 3,
@@ -403,11 +436,10 @@ def _retry_decorator(
                     else:
                         call_args, call_kwargs = _deep_copy_args(args, kw, skip_first=skip_self_in_deepcopy)
 
+                    tracker = _YieldTracker(fn(*call_args, **call_kwargs))
                     try:
-                        yielded = False
-                        for item in fn(*call_args, **call_kwargs):
-                            yielded = True
-                            yield item
+                        # ``yield from`` keeps send()/throw()/close() reaching the wrapped generator.
+                        yield from tracker
                     except retry_on as exc:
                         # Same traceback-preservation as the async-generator path:
                         # only clear the superseded ``last_exception`` so the fresh
@@ -427,7 +459,7 @@ def _retry_decorator(
                     else:
                         # Same empty-retry guard as the async-generator path: do not
                         # treat a zero-item completion after a prior failure as success.
-                        if last_exception is not None and not yielded:
+                        if last_exception is not None and not tracker.yielded:
                             raise last_exception
                         return
 
