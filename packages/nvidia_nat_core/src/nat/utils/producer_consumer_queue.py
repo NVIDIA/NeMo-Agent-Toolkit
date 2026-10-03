@@ -170,8 +170,10 @@ class AsyncIOProducerConsumerQueue(asyncio.Queue, typing.Generic[_T]):
             # Hit the flag
             self._closed.set()
 
-            self._wakeup_next(self._putters)
-            self._wakeup_next(self._getters)
+            while self._putters:
+                self._wakeup_next(self._putters)
+            while self._getters:
+                self._wakeup_next(self._getters)
 
     def is_closed(self) -> bool:
         """Check if the queue is closed."""

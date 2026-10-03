@@ -162,6 +162,145 @@ async def test_reasoning_content_is_not_promoted_to_react_final_answer(mock_reac
     assert "I should call a tool next." not in response.content
 
 
+def test_normalize_react_message_content_recovers_think_wrapped_react():
+    """ReAct payload wrapped entirely in think tags must remain parseable (#1611)."""
+    from nat.plugins.langchain.agent.react_agent.agent import _normalize_react_message_content
+
+    wrapped_action = ("<think>\nThought: I need to multiply 12 by 11.\n"
+                      "Action: multiply\nAction Input: {\"a\": 12, \"b\": 11}\n</think>")
+    wrapped_answer = "<think>\nThought: I now know the final answer\nFinal Answer: 132\n</think>"
+
+    assert "Action: multiply" in _normalize_react_message_content(wrapped_action)
+    assert "Final Answer: 132" in _normalize_react_message_content(wrapped_answer)
+
+
+def test_normalize_react_message_content_does_not_promote_plain_think_text():
+    """Inner think text that is not ReAct format must stay empty so retry can run."""
+    from nat.plugins.langchain.agent.react_agent.agent import _normalize_react_message_content
+
+    assert _normalize_react_message_content("<think>just thinking about the tools</think>").strip() == ""
+    assert _normalize_react_message_content("").strip() == ""
+    assert _normalize_react_message_content("\n").strip() == ""
+    assert _normalize_react_message_content("r.\n</think>\n").strip() == ""
+
+
+def test_normalize_react_message_content_keeps_text_after_orphan_think_close():
+    """Issue #1611 working logs had a stray </think> before the real ReAct payload."""
+    from nat.plugins.langchain.agent.react_agent.agent import _normalize_react_message_content
+
+    raw = ("r.\n</think>\nQuestion: What is 12 times 11?\n"
+           "Thought: I need to multiply 12 by 11 to get the answer.\n"
+           "Action: multiply\nAction Input: {'a': 12, 'b': 11}\n")
+    cleaned = _normalize_react_message_content(raw)
+    assert "Action: multiply" in cleaned
+    assert "</think>" not in cleaned
+
+
+@pytest.mark.parametrize("empty_content", ["", "\n", "   ", "<think>just thinking</think>", "r.\n</think>\n"])
+async def test_agent_node_empty_llm_content_does_not_forward_empty_message_on_retry(mock_config_react_agent,
+                                                                                    mock_llm,
+                                                                                    mock_tool,
+                                                                                    empty_content):
+    """Regression for #1611: empty first thoughts must not be forwarded on retry."""
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=True,
+                            parse_agent_response_max_retries=3,
+                            raise_on_parsing_failure=True)
+
+    captured_inputs: list[dict] = []
+
+    async def _side_effect(_runnable, inputs, config=None):  # noqa: ARG001
+        captured_inputs.append(inputs)
+        if len(captured_inputs) == 1:
+            return AIMessage(content=empty_content)
+        return AIMessage(content="Thought: I now know the final answer\nFinal Answer: 132")
+
+    state = ReActGraphState(messages=[HumanMessage(content="What's 12*11? What's 10*10? What's the weather in Tokyo?")])
+
+    with patch.object(agent, '_stream_llm', side_effect=_side_effect):
+        result = await agent.agent_node(state)
+
+    assert result.final_answer == "132"
+    assert len(captured_inputs) == 2
+    retry_scratchpad = captured_inputs[1]["agent_scratchpad"]
+    assert retry_scratchpad, "retry must include the parse observation"
+    for message in retry_scratchpad:
+        assert str(message.content).strip(), "empty message forwarded via agent_scratchpad (#1611)"
+
+
+async def test_agent_node_parses_think_wrapped_tool_action(mock_config_react_agent, mock_llm, mock_tool):
+    """Think-tag-only ReAct tool calls should parse without a retry (#1611)."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=True, raise_on_parsing_failure=True)
+    wrapped = ("<think>\nThought: I need the tool\nAction: Tool A\nAction Input: hello, world!\n</think>")
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = AIMessage(content=wrapped)
+        result = await agent.agent_node(ReActGraphState(messages=[HumanMessage(content="use the tool")]))
+
+    assert mock_stream_llm.await_count == 1
+    action = result.agent_scratchpad[-1]
+    assert isinstance(action, AgentAction)
+    assert action.tool == "Tool A"
+    assert action.tool_input == "hello, world!"
+
+
+async def test_agent_node_parses_think_wrapped_final_answer(mock_config_react_agent, mock_llm, mock_tool):
+    """Think-tag-only ReAct final answers should parse without a retry (#1611)."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=True, raise_on_parsing_failure=True)
+    wrapped = "<think>\nThought: I now know the final answer\nFinal Answer: 132\n</think>"
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = AIMessage(content=wrapped)
+        result = await agent.agent_node(ReActGraphState(messages=[HumanMessage(content="What's 12*11?")]))
+
+    assert mock_stream_llm.await_count == 1
+    assert result.final_answer == "132"
+
+
+async def test_agent_node_empty_scratchpad_log_is_not_replayed_as_empty(mock_config_react_agent, mock_llm, mock_tool):
+    """Later agentic cycles must not replay an empty thought as an empty AIMessage (#1611)."""
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=True, raise_on_parsing_failure=True)
+
+    captured_inputs: list[dict] = []
+
+    async def _side_effect(_runnable, inputs, config=None):  # noqa: ARG001
+        captured_inputs.append(inputs)
+        return AIMessage(content="Thought: I now know the final answer\nFinal Answer: done")
+
+    state = ReActGraphState(messages=[HumanMessage(content="What's 12*11? what's the weather in Tokyo?")],
+                            agent_scratchpad=[AgentAction(tool="Tool A", tool_input="hello", log="")],
+                            tool_responses=[ToolMessage(name="Tool A", tool_call_id="Tool A", content="")])
+
+    with patch.object(agent, '_stream_llm', side_effect=_side_effect):
+        result = await agent.agent_node(state)
+
+    assert result.final_answer == "done"
+    replayed = captured_inputs[0]["agent_scratchpad"]
+    assert replayed
+    for message in replayed:
+        assert str(message.content).strip(), "empty message replayed via agent_scratchpad (#1611)"
+
+
 async def test_agent_node_parse_agent_action(mock_react_agent):
     mock_react_agent_output = 'Thought:not_many\nAction:Tool A\nAction Input: hello, world!\nObservation:'
     mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])

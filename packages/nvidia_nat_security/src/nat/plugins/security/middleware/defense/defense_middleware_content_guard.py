@@ -33,6 +33,7 @@ from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 from nat.plugins.security.middleware.defense.defense_middleware import DefenseMiddleware
 from nat.plugins.security.middleware.defense.defense_middleware import DefenseMiddlewareConfig
+from nat.plugins.security.middleware.defense.defense_middleware import stream_chunk_to_text
 from nat.plugins.security.middleware.defense.defense_middleware_data_models import ContentAnalysisResult
 from nat.plugins.security.middleware.defense.defense_middleware_data_models import GuardResponseResult
 
@@ -419,7 +420,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             accumulated_length = 0
 
             async for chunk in call_next(value, *args[1:], **kwargs):
-                serialized_chunk = chunk if isinstance(chunk, str) else str(chunk)
+                serialized_chunk = stream_chunk_to_text(chunk)
                 accumulated_length += len(serialized_chunk)
                 if accumulated_length > self.config.max_content_length:
                     raise ValueError(f"Content Safety Guard input length {accumulated_length} exceeds configured "
