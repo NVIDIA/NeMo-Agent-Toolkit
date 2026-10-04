@@ -60,6 +60,7 @@ class Observer(ObserverBase[_T_in_contra]):
 
     def on_error(self, exc: Exception) -> None:
         if not self._stopped:
+            self._stopped = True
             if self._on_error:
                 try:
                     self._on_error(exc)

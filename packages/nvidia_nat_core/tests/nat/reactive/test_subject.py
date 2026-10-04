@@ -41,14 +41,19 @@ def test_subject_basic():
 
 def test_subject_error():
     sub = Subject[str]()
-    errors = []
-    obs = Observer(on_error=lambda e: errors.append(str(e)))
+    events = []
+    sub.subscribe(on_next=lambda value: events.append(("next", value)),
+                  on_error=lambda exc: events.append(("error", str(exc))),
+                  on_complete=lambda: events.append(("complete", )))
 
-    sub.subscribe(obs)
     sub.on_error(ValueError("Err"))
-    # subsequent events do nothing if we consider on_error closes the subject
+    late_items = []
+    sub.subscribe(on_next=late_items.append)
     sub.on_next("ignored")
-    assert errors == ["Err"]
+    sub.on_error(ValueError("ignored"))
+    sub.on_complete()
+    assert events == [("error", "Err")]
+    assert not late_items
 
 
 def test_subject_complete():
@@ -83,4 +88,22 @@ def test_subject_late_subscriber_after_dispose():
     items = []
     sub.subscribe(Observer(on_next=items.append))
     sub.on_next("ignored")
+    assert not items
+
+
+def test_subject_closes_before_error_callbacks():
+    sub = Subject[str]()
+    first_errors, second_errors, items = [], [], []
+
+    def on_error(exc):
+        first_errors.append(exc)
+        sub.on_next("reentrant value")
+        sub.on_complete()
+
+    sub.subscribe(on_error=on_error)
+    sub.subscribe(on_next=items.append, on_error=second_errors.append)
+    error = ValueError("Err")
+    sub.on_error(error)
+    assert first_errors == [error]
+    assert second_errors == [error]
     assert not items
