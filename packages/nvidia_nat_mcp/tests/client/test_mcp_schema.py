@@ -1007,7 +1007,7 @@ def test_integer_enum_with_numeric_constraints():
         'type': 'object',
         'properties': {
             'level': {
-                'type': 'integer', 'enum': [1, 2, 3], 'minimum': 1, 'maximum': 3
+                'type': 'integer', 'enum': [0, 1, 2, 3, 4], 'minimum': 1, 'maximum': 3
             }
         },
         'required': ['level']
@@ -1017,8 +1017,9 @@ def test_integer_enum_with_numeric_constraints():
 
     for value in (1, 3):
         assert _model.model_validate({"level": value}).model_dump(mode="json") == {"level": value}
-    with pytest.raises(ValidationError):
-        _model.model_validate({"level": 4})
+    for value in (0, 4):
+        with pytest.raises(ValidationError):
+            _model.model_validate({"level": value})
 
 
 def test_equal_enum_values_of_different_types_do_not_share_a_class():
