@@ -19,15 +19,16 @@ the initial call plus any retries. Values below 1 are normalized to 1, so a
 wrapped callable always executes at least once.
 """
 import asyncio
+import contextvars
 import copy
 import functools
 import gc
 import inspect
 import logging
 import re
+import threading
 import time
 import types
-import weakref
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Sequence
@@ -38,6 +39,26 @@ T = TypeVar("T")
 Exc = tuple[type[BaseException], ...]  # exception classes
 CodePattern = int | str | range  # for retry_codes argument
 logger = logging.getLogger(__name__)
+
+# (patched object id, owning task/thread id) pairs the current call chain is already
+# retrying. A ContextVar (not an instance attribute) keeps this per-call-chain: concurrent
+# tasks/threads sharing one instance never see each other's entry, and nested calls within
+# one task do. The owner id is checked, not just inherited, because asyncio.create_task()
+# copies the current ContextVar value into the child task: without an owner check, a task
+# spawned from inside a retry-wrapped call would inherit its parent's "already retrying"
+# entry for an instance it has never itself entered, and silently skip its own retries.
+_in_retry_context: contextvars.ContextVar[frozenset[tuple[int, int]]] = contextvars.ContextVar("_in_retry_context",
+                                                                                               default=frozenset())
+
+
+def _current_owner_id() -> int:
+    """Identify the running asyncio task, or the OS thread when there is none."""
+    try:
+        task = asyncio.current_task()
+    except RuntimeError:
+        task = None
+    return id(task) if task is not None else threading.get_ident()
+
 
 # ─────────────────────────────────────────────────────────────
 #  Memory-optimized helpers
@@ -198,9 +219,12 @@ def _retry_decorator(
         at least once.
 
     instance_context_aware:
-        If True, the decorator will check for a retry context flag on the first
-        argument (assumed to be 'self'). If the flag is set, retries are skipped
-        to prevent retry storms in nested method calls.
+        If True, the decorator tracks retry state in the module-level
+        `_in_retry_context` ContextVar, keyed by the wrapped object and its
+        owning task or thread (see `_RetryContext`), rather than a flag on the
+        first argument. Nested calls within the same call chain then skip
+        their own retries, while concurrent callers sharing the same instance
+        retry independently.
     """
 
     # ``retries`` counts total attempts. A non-positive budget would make the
@@ -217,53 +241,54 @@ def _retry_decorator(
         skip_self_in_deepcopy = instance_context_aware
 
         class _RetryContext:
-            """Context manager for instance-level retry gating."""
+            """Context manager for retry gating.
 
-            __slots__ = ("_obj_ref", "_enabled", "_active")
+            Scoped to the (object, owning task/thread) pair via the module-level
+            `_in_retry_context`, not to the patched instance alone."""
+
+            __slots__ = ("_enabled", "_key", "_token")
 
             def __init__(self, args: tuple[Any, ...]):
                 if use_context_aware and args:
-                    try:
-                        # Use weak reference to avoid keeping objects alive
-                        self._obj_ref = weakref.ref(args[0])
-                        self._enabled = True
-                    except TypeError:
-                        # Object doesn't support weak references
-                        self._obj_ref = None
-                        self._enabled = False
+                    self._key = (id(args[0]), _current_owner_id())
+                    self._enabled = True
                 else:
-                    self._obj_ref = None
+                    self._key = None
                     self._enabled = False
-                self._active = False
+                self._token = None
 
-            def __enter__(self):
-                if not self._enabled or self._obj_ref is None:
+            def __enter__(self) -> bool:
+                if not self._enabled:
                     return False
 
-                obj = self._obj_ref()
-                if obj is None:
-                    return False
+                # If already in retry context, skip retries
+                if self._key in _in_retry_context.get():
+                    return True
 
+                self._token = _in_retry_context.set(_in_retry_context.get() | {self._key})
+                return False
+
+            def __exit__(self,
+                         _exc_type: type[BaseException] | None,
+                         _exc: BaseException | None,
+                         _tb: types.TracebackType | None) -> None:
+                if self._token is None:
+                    return
                 try:
-                    # If already in retry context, skip retries
-                    if getattr(obj, "_in_retry_context", False):
-                        return True
-                    object.__setattr__(obj, "_in_retry_context", True)
-                    self._active = True
-                    return False
-                except Exception:
-                    # Cannot set attribute, disable context
-                    self._enabled = False
-                    return False
-
-            def __exit__(self, _exc_type, _exc, _tb):
-                if (self._enabled and self._active and self._obj_ref is not None):
-                    obj = self._obj_ref()
-                    if obj is not None:
-                        try:
-                            object.__setattr__(obj, "_in_retry_context", False)
-                        except Exception:
-                            pass
+                    _in_retry_context.reset(self._token)
+                except ValueError:
+                    # _agen_with_retry below scopes its context to one anext() call
+                    # and exits before yielding, so this is only still reachable via
+                    # _gen_with_retry's sync generator (or a caller closing one from a
+                    # different thread), where the token is held for the whole `with`.
+                    # Nothing to reset there is unsafe to skip: no later call on this
+                    # instance can see a token minted outside its own context.
+                    logger.debug(
+                        "Retry context for key %s was entered in a different task's "
+                        "context than the one running cleanup now; skipping the "
+                        "ContextVar reset.",
+                        self._key,
+                    )
 
         async def _call_with_retry_async(*args, **kw) -> T:
             with _RetryContext(args) as already_in_context:
@@ -303,43 +328,52 @@ def _retry_decorator(
                     raise last_exception
 
         async def _agen_with_retry(*args, **kw):
-            with _RetryContext(args) as already_in_context:
-                if already_in_context:
-                    async for item in fn(*args, **kw):
-                        yield item
-                    return
+            delay = base_delay
+            last_exception = None
 
-                delay = base_delay
-                last_exception = None
-
-                for attempt in range(total_attempts):
-                    if use_shallow_copy:
+            for attempt in range(total_attempts):
+                with _RetryContext(args) as already_in_context:
+                    if already_in_context:
+                        call_args, call_kwargs = args, kw
+                    elif use_shallow_copy:
                         call_args, call_kwargs = _shallow_copy_args(args, kw)
                     else:
                         call_args, call_kwargs = _deep_copy_args(args, kw, skip_first=skip_self_in_deepcopy)
 
-                    try:
-                        async for item in fn(*call_args, **call_kwargs):
-                            yield item
-                        return
-                    except retry_on as exc:
-                        last_exception = exc
+                # The context above is entered and exited around each item advance
+                # below, never held open across a `yield`. A caller can suspend
+                # indefinitely between items, or close/GC the generator from a
+                # different task, without leaving a stale entry in this task's
+                # context that would silently skip retries on its next call.
+                try:
+                    stream = fn(*call_args, **call_kwargs)
+                    while True:
+                        with _RetryContext(args) as already_in_context:
+                            try:
+                                item = await anext(stream)
+                            except StopAsyncIteration:
+                                return
+                        yield item
+                except retry_on as exc:
+                    if already_in_context:
+                        raise
+                    last_exception = exc
 
-                        # Memory cleanup
-                        if clear_tracebacks:
-                            _clear_exception_context(exc)
+                    # Memory cleanup
+                    if clear_tracebacks:
+                        _clear_exception_context(exc)
 
-                        _run_gc_if_needed(attempt, gc_frequency)
+                    _run_gc_if_needed(attempt, gc_frequency)
 
-                        if not _want_retry(exc, code_patterns=retry_codes,
-                                           msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
-                            raise
+                    if not _want_retry(exc, code_patterns=retry_codes,
+                                       msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
+                        raise
 
-                        await asyncio.sleep(delay)
-                        delay *= backoff
+                    await asyncio.sleep(delay)
+                    delay *= backoff
 
-                if last_exception:
-                    raise last_exception
+            if last_exception:
+                raise last_exception
 
         def _gen_with_retry(*args, **kw) -> Iterable[Any]:
             with _RetryContext(args) as already_in_context:

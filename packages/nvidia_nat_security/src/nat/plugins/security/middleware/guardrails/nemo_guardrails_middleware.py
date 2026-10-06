@@ -34,6 +34,8 @@ from nemoguardrails.rails.llm.options import RailType
 from pydantic import BaseModel
 
 from nat.builder.builder import Builder
+from nat.data_models.api_server import Message
+from nat.data_models.api_server import UserMessageContentRoleType
 from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
 from nat.middleware.function_middleware import CallNext
 from nat.middleware.function_middleware import CallNextStream
@@ -602,7 +604,8 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
             whole_setter: Setter used when the value is guarded as a single string.
 
         Yields:
-            ``(text, setter)`` pairs for each top-level string (or list-of-string element).
+            ``(text, setter)`` pairs for each top-level string (or list-of-string element), and for
+            the last user message of a chat ``messages`` list.
         """
         if isinstance(value, BaseModel):
             for name in type(value).model_fields:
@@ -613,10 +616,30 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
                     for index, item in enumerate(leaf):
                         if isinstance(item, str):
                             yield item, self._set_modified_rail_value_in_list(leaf, index)
+                    yield from self._iter_last_user_message(leaf)
             return
         text: str = value if isinstance(value, str) else str(value)
         if text:
             yield text, whole_setter
+
+    def _iter_last_user_message(self, messages: list[Any]) -> Iterator[tuple[str, Callable[[str], None]]]:
+        """Yield the text of the last user message in a chat ``messages`` list.
+
+        Chat requests carry the conversation as a list of ``Message`` models. Only the last user
+        message is the current turn; guarding earlier messages would let one historical message
+        block every later turn.
+
+        Args:
+            messages: Top-level list field of the boundary value.
+
+        Yields:
+            At most one ``(text, setter)`` pair for the content of the last user message.
+        """
+        for message in reversed(messages):
+            if isinstance(message, Message) and message.role == UserMessageContentRoleType.USER:
+                if isinstance(message.content, str) and message.content:
+                    yield message.content, self._set_modified_rail_value(message, "content")
+                return
 
     def _rail_blocked(self, response: GenerationResponse) -> bool:
         """Return whether any activated rail signaled a block.

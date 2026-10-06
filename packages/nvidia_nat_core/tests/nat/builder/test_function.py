@@ -28,6 +28,10 @@ from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
 
+# Both spellings are covered on purpose: the bug only reproduced with the ``typing`` forms.
+OPTIONAL_STR_TYPES = [str | None, typing.Optional[str]]  # noqa: UP045
+OPTIONAL_STR_IDS = ["pep604", "typing.Optional"]
+
 
 class DummyConfig(FunctionBaseConfig, name="dummy"):
     pass
@@ -626,6 +630,49 @@ async def test_ainvoke_accepts_any_input_and_output_type():
         assert fn_obj.single_output_type is typing.Any
         assert fn_obj.single_output_class is object
         assert await fn_obj.ainvoke("test", to_type=typing.Any) == {"message": "test"}
+
+
+@pytest.mark.parametrize("optional_type", OPTIONAL_STR_TYPES, ids=OPTIONAL_STR_IDS)
+async def test_ainvoke_optional_single_input(optional_type):
+    """Test that a function whose single input is optional can be invoked with a plain value or None."""
+
+    @register_function(config_type=DummyConfig)
+    async def _register(config: DummyConfig, b: Builder):
+
+        async def _inner(message: optional_type) -> str:
+            return f"got {message!r}"
+
+        yield _inner
+
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
+
+        assert fn_obj.input_type == optional_type
+        assert await fn_obj.ainvoke("hi") == "got 'hi'"
+        assert await fn_obj.ainvoke(None) == "got None"
+        assert await fn_obj.ainvoke({"message": "hi"}) == "got 'hi'"
+
+
+@pytest.mark.parametrize("optional_type", OPTIONAL_STR_TYPES, ids=OPTIONAL_STR_IDS)
+async def test_ainvoke_optional_output_to_type(optional_type):
+    """Test that an optional output can be requested via to_type for both a value and None."""
+
+    @register_function(config_type=DummyConfig)
+    async def _register(config: DummyConfig, b: Builder):
+
+        async def _inner(message: str) -> str | None:
+            return message.upper() or None
+
+        yield _inner
+
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
+
+        assert fn_obj.single_output_type == str | None
+        assert await fn_obj.ainvoke("hi", to_type=optional_type) == "HI"
+        assert await fn_obj.ainvoke("", to_type=optional_type) is None
 
 
 async def test_astream_output_type_conversion_failure():
