@@ -788,8 +788,12 @@ def test_extract_token_usage_carries_langchain_cached_tokens():
     message = AIMessage(
         content="x",
         usage_metadata={
-            "input_tokens": 100, "output_tokens": 20, "total_tokens": 120,
-            "input_token_details": {"cache_read": 80},
+            "input_tokens": 100,
+            "output_tokens": 20,
+            "total_tokens": 120,
+            "input_token_details": {
+                "cache_read": 80
+            },
         },
     )
     usage = extract_token_usage(message)
@@ -803,8 +807,12 @@ def test_extract_token_usage_carries_openai_cached_tokens():
         content="x",
         response_metadata={
             "usage": {
-                "prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120,
-                "prompt_tokens_details": {"cached_tokens": 80},
+                "prompt_tokens": 100,
+                "completion_tokens": 20,
+                "total_tokens": 120,
+                "prompt_tokens_details": {
+                    "cached_tokens": 80
+                },
             }
         },
     )
@@ -817,7 +825,9 @@ def test_extract_token_usage_omits_cached_tokens_when_unreported():
     """Absent and zero are different facts, and only one of them is a claim about the cache."""
     message = AIMessage(
         content="x",
-        response_metadata={"usage": {"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120}},
+        response_metadata={"usage": {
+            "prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120
+        }},
     )
     usage = extract_token_usage(message)
     assert usage is not None
