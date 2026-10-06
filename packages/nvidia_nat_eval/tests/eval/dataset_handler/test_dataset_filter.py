@@ -75,6 +75,16 @@ def combined_filter():
     )
 
 
+@pytest.mark.parametrize("filter_config", [None, EvalFilterConfig()])
+def test_apply_filters_without_filters(sample_df, filter_config):
+    dataset_filter = DatasetFilter(filter_config)
+
+    filtered_df = dataset_filter.apply_filters(sample_df)
+
+    pd.testing.assert_frame_equal(filtered_df, sample_df)
+    assert filtered_df is not sample_df
+
+
 def test_apply_filters_allowlist(sample_df, allowlist_filter):
     """Test that the allowlist filter correctly keeps only the specified repo."""
     dataset_filter = DatasetFilter(allowlist_filter)
