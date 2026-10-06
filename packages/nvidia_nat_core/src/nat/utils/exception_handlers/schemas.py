@@ -21,6 +21,18 @@ from pydantic import ValidationError
 logger = logging.getLogger(__name__)
 
 
+def _format_error(error: dict) -> str:
+    """
+    Format one Pydantic error as ``<location>: <message>``.
+
+    The location is the full dotted path to the offending field (``llms.my_llm.temperature``), not just its first
+    segment, so a nested configuration error points at the actual field. Errors raised by a model-level validator
+    have an empty location and are reported by their message alone.
+    """
+    location = ".".join(str(part) for part in error["loc"])
+    return f"{location}: {error['msg']}" if location else error["msg"]
+
+
 def schema_exception_handler(func, **kwargs):
     """
     A decorator that handles `ValidationError` exceptions for schema validation functions.
@@ -64,14 +76,14 @@ def schema_exception_handler(func, **kwargs):
     ...     validate_config(invalid_config)
     ... except ValueError as e:
     ...     logger.error("Caught error: %s", e)
-    Caught error: Invalid configuration: field1: value is not a valid integer; field2: field required
+    Caught error: Invalid configuration: field1: value is not a valid integer; nested.field2: field required
     """
 
     def inner_function(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except ValidationError as e:
-            error_messages = "; ".join([f"{error['loc'][0]}: {error['msg']}" for error in e.errors()])
+            error_messages = "; ".join([_format_error(error) for error in e.errors()])
             log_error_message = f"Invalid configuration: {error_messages}"
             logger.error(log_error_message)
             raise ValueError(log_error_message) from e
