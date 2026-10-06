@@ -24,6 +24,7 @@ import pytest
 from pydantic import BaseModel
 
 from nat.builder.function import FunctionGroup
+from nat.data_models.api_server import ChatResponseChunk
 from nat.middleware.common import TargetLocation
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.plugins.security.middleware.defense.defense_middleware_output_verifier import OutputVerifierMiddleware
@@ -571,6 +572,34 @@ class TestOutputVerifierStreaming:
 
         assert chunks == ["6.0"]
         assert mock_llm.ainvoke.called
+
+    async def test_streaming_analyzes_structured_chunks_as_text(self, mock_builder, middleware_context):
+        """Structured stream chunks are analyzed as text, not as their repr."""
+        config = OutputVerifierMiddlewareConfig(llm_name="test_llm", action="refusal")
+        middleware = OutputVerifierMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = '{"threat_detected": false, "confidence": 0.9}'
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        async def mock_stream(_value):
+            yield ChatResponseChunk.create_streaming_chunk("Hello ", id_="echo")
+            yield ChatResponseChunk.create_streaming_chunk("world", id_="echo")
+
+        chunks = []
+        async for chunk in middleware.function_middleware_stream({
+                "a": 2, "b": 3
+        },
+                                                                 call_next=mock_stream,
+                                                                 context=middleware_context):
+            chunks.append(chunk)
+
+        assert len(chunks) == 2
+        analyzed = str(mock_llm.ainvoke.call_args)
+        assert "Hello world" in analyzed
+        assert "ChatResponseChunk" not in analyzed
 
     async def test_streaming_refusal_action(self, mock_builder, middleware_context):
         """Test streaming refusal action raises exception."""
