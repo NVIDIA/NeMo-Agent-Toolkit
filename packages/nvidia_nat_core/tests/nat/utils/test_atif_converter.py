@@ -17,6 +17,8 @@
 import datetime
 
 import pytest
+from pydantic import BaseModel
+from pydantic import RootModel
 
 from nat.atif import ATIFTrajectory
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -153,6 +155,35 @@ def test_extract_user_input_chat_variants(raw_input: str | dict, expected: str):
 def test_parse_tool_arguments_variants(raw_input: str | int, expected: dict[str, str]):
     """Tool argument parsing supports JSON/literal/plain/scalar payload variants."""
     assert atif_converter_module._parse_tool_arguments(raw_input) == expected
+
+
+def test_parse_tool_arguments_pydantic_model():
+    """A converted pydantic tool input is dumped to its fields, not its repr."""
+
+    class SearchInput(BaseModel):
+        query: str
+        top_k: int
+
+    parsed = atif_converter_module._parse_tool_arguments(SearchInput(query="nemo", top_k=3))
+
+    assert parsed == {"query": "nemo", "top_k": 3}
+
+
+def test_parse_tool_arguments_pydantic_root_model():
+    """A root model whose root value is not a dict is wrapped like other non-dict inputs."""
+    parsed = atif_converter_module._parse_tool_arguments(RootModel[list[str]](["a", "b"]))
+
+    assert parsed == {"input": ["a", "b"]}
+
+
+def test_parse_tool_arguments_unhashable_literal_key():
+    """A string literal_eval rejects with TypeError falls back to the raw input."""
+    assert atif_converter_module._parse_tool_arguments("{[1]: 2}") == {"input": "{[1]: 2}"}
+
+
+def test_extract_user_input_empty_input_message():
+    """An empty input_message is still the user input, not a reason to fall back to the repr."""
+    assert atif_converter_module._extract_user_input({"messages": None, "input_message": ""}) == ""
 
 
 # ---------------------------------------------------------------------------

@@ -18,6 +18,9 @@ from pydantic import TypeAdapter
 from pydantic import ValidationError
 
 from nat.data_models.api_server import AuthPayload
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatRequestOrMessage
+from nat.data_models.api_server import Message
 from nat.data_models.api_server import OAuthMode
 from nat.data_models.api_server import OAuthModePreferencePayload
 
@@ -33,3 +36,20 @@ def test_oauth_mode_preference_rejects_unknown_mode():
     adapter = TypeAdapter(AuthPayload)
     with pytest.raises(ValidationError):
         adapter.validate_python({"method": "oauth_mode_preference", "mode": "iframe"})
+
+
+@pytest.mark.parametrize("model", [ChatRequest, ChatRequestOrMessage])
+def test_chat_request_rejects_empty_messages(model):
+    # The min_length used to sit inside Annotated as a conlist type, which pydantic
+    # ignores, so an empty conversation was accepted.
+    with pytest.raises(ValidationError) as exc_info:
+        model(messages=[])
+
+    assert exc_info.value.errors()[0]["type"] == "too_short"
+
+
+def test_chat_request_accepts_non_empty_messages():
+    request = ChatRequest(messages=[Message(role="user", content="hi")])
+
+    assert len(request.messages) == 1
+    assert ChatRequestOrMessage(input_message="hi").messages is None
