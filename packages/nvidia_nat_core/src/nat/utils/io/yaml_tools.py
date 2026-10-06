@@ -132,15 +132,6 @@ def _interpolate_variables(value: str | int | float | bool | None) -> str | int 
     return expand(value, surrounded_vars_only=True)
 
 
-def _interpolate_config(value: typing.Any) -> typing.Any:
-    """Recursively interpolate environment variables in a parsed config tree."""
-    if isinstance(value, dict):
-        return {key: _interpolate_config(item) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_interpolate_config(item) for item in value]
-    return _interpolate_variables(value)
-
-
 def deep_merge(base: dict, override: dict) -> dict:
     """
     Recursively merge override dictionary into base dictionary.
@@ -255,7 +246,8 @@ def yaml_loads(config: str, base_path: Path) -> dict:
 
     assert isinstance(config_data, dict)
 
-    config_data = _interpolate_config(config_data)
+    # Variables were already expanded on the YAML text above. Expanding the parsed values a second
+    # time would also expand any "${...}" that came from an environment variable's own value.
     config_data = _resolve_file_references(config_data, base_path)
 
     return config_data
