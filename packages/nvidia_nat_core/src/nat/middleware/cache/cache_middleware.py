@@ -95,7 +95,9 @@ class CacheMiddleware(FunctionMiddleware):
         self._similarity_threshold = similarity_threshold
         # OrderedDict gives O(1) LRU: move_to_end() on hit, popitem(last=False)
         # to evict the oldest when we exceed max_entries.
-        self._cache: OrderedDict[str, Any] = OrderedDict()
+        # Keyed by (function name, serialized input): one middleware instance is shared by every function that
+        # lists it, so the input alone would hand one function's cached output to another.
+        self._cache: OrderedDict[tuple[str, str], Any] = OrderedDict()
         self._max_entries = max_entries
 
     # ==================== Abstract Method Implementations ====================
@@ -146,10 +148,11 @@ class CacheMiddleware(FunctionMiddleware):
             logger.debug("Failed to serialize input for caching", exc_info=True)
             return None
 
-    def _find_similar_key(self, input_str: str) -> str | None:
-        """Find a cached key that is similar to the input string.
+    def _find_similar_key(self, function_name: str, input_str: str) -> tuple[str, str] | None:
+        """Find a cached key for ``function_name`` whose input is similar to the input string.
 
         Args:
+            function_name: The name of the function being invoked.
             input_str: The serialized input string to match.
 
         Returns:
@@ -157,13 +160,15 @@ class CacheMiddleware(FunctionMiddleware):
         """
         if self._similarity_threshold == 1.0:
             # Exact matching - fast path
-            return input_str if input_str in self._cache else None
+            key = (function_name, input_str)
+            return key if key in self._cache else None
 
         import difflib
 
-        best_matches = difflib.get_close_matches(input_str, self._cache.keys(), n=1, cutoff=self._similarity_threshold)
+        candidates = [cached_input for name, cached_input in self._cache if name == function_name]
+        best_matches = difflib.get_close_matches(input_str, candidates, n=1, cutoff=self._similarity_threshold)
         if best_matches:
-            return best_matches[0]
+            return (function_name, best_matches[0])
         return None
 
     async def function_middleware_invoke(self,
@@ -204,14 +209,14 @@ class CacheMiddleware(FunctionMiddleware):
             return await call_next(*args, **kwargs)
 
         # Phase 1: Preprocess - look for a similar cached input
-        similar_key = self._find_similar_key(input_str)
+        similar_key = self._find_similar_key(context.name, input_str)
         if similar_key is not None:
             # Cache hit - short-circuit and return cached output.
             # Move the hit entry to the MRU end so LRU eviction prefers truly
             # old entries, not just recently-useful ones.
             logger.debug("Cache hit for function %s with similarity %.2f",
                          context.name,
-                         1.0 if similar_key == input_str else self._similarity_threshold)
+                         1.0 if similar_key[1] == input_str else self._similarity_threshold)
             self._cache.move_to_end(similar_key)
             # Phase 4: Continue - return cached result
             return self._cache[similar_key]
@@ -223,7 +228,7 @@ class CacheMiddleware(FunctionMiddleware):
         # Phase 3: Postprocess - cache the result for future use. Insert first,
         # then enforce the LRU bound so the cache stays within max_entries,
         # preventing unbounded memory growth (DoS).
-        self._cache[input_str] = result
+        self._cache[(context.name, input_str)] = result
         while len(self._cache) > self._max_entries:
             self._cache.popitem(last=False)
         logger.debug("Cached result for function %s (size=%d/%d)", context.name, len(self._cache), self._max_entries)
