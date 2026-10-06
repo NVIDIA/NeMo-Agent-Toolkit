@@ -24,6 +24,9 @@ async def ainvoke_any(func: Callable[..., Any], *args: Any, **kwargs: Any) -> An
     Handles synchronous functions, asynchronous functions, generators,
     and async generators uniformly, returning the final result value.
 
+    A generator is consumed to exhaustion. Its return value is the result where it
+    has one; otherwise the last value it yielded is.
+
     Args:
         func (Callable[..., Any]): The function to execute (sync/async function, generator, etc.)
 
@@ -39,13 +42,18 @@ async def ainvoke_any(func: Callable[..., Any], *args: Any, **kwargs: Any) -> An
         return await result_value
 
     if inspect.isgenerator(result_value):
-        # Sync generator - consume until StopIteration and get return value
+        # Sync generator - consume it, preferring an explicit return value and falling
+        # back to the last value yielded. The fallback is what makes this agree with the
+        # async generator branch below: PEP 525 forbids `return <value>` in an async
+        # generator, so the last yielded value is all it can report, and without this a
+        # yield-only sync generator reported None where its async counterpart reported
+        # the value.
+        last_value = None
         try:
             while True:
-                next(result_value)
+                last_value = next(result_value)
         except StopIteration as e:
-            # Return the generator's return value, or None if not provided
-            return e.value
+            return e.value if e.value is not None else last_value
 
     if inspect.isasyncgen(result_value):
         # Async generator - consume all values and return the last one
