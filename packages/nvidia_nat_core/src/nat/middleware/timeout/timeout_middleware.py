@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncIterator
 from typing import Any
@@ -65,12 +66,14 @@ class TimeoutMiddleware(DynamicFunctionMiddleware):
             TimeoutError: If the downstream call exceeds the configured timeout.
         """
         timeout: float = self._timeout_config.timeout
+        timeout_cm = asyncio.timeout(timeout)
         try:
-            return await asyncio.wait_for(
-                super().function_middleware_invoke(*args, call_next=call_next, context=context, **kwargs),
-                timeout=timeout,
-            )
+            async with timeout_cm:
+                return await super().function_middleware_invoke(*args, call_next=call_next, context=context, **kwargs)
         except TimeoutError:
+            if not timeout_cm.expired():
+                # The wrapped call raised its own TimeoutError; it is not this middleware's timeout.
+                raise
             logger.error("Function '%s' exceeded timeout of %ss", context.name, timeout)
             msg: str = f"Execution exceeded the configured timeout of {timeout}s."
             if self._timeout_config.timeout_message:
@@ -102,19 +105,33 @@ class TimeoutMiddleware(DynamicFunctionMiddleware):
             TimeoutError: If the full stream exceeds the configured timeout.
         """
         timeout: float = self._timeout_config.timeout
-        try:
-            async with asyncio.timeout(timeout):
-                async for chunk in super().function_middleware_stream(*args,
-                                                                      call_next=call_next,
-                                                                      context=context,
-                                                                      **kwargs):
-                    yield chunk
-        except TimeoutError:
-            logger.error("Streaming function '%s' exceeded timeout of %ss", context.name, timeout)
-            msg: str = f"Execution exceeded the configured timeout of {timeout}s."
-            if self._timeout_config.timeout_message:
-                msg = f"{msg} {self._timeout_config.timeout_message}"
-            raise TimeoutError(msg) from None
+        loop = asyncio.get_running_loop()
+        deadline: float = loop.time() + timeout
+        # The deadline covers the whole stream but is only enforced while waiting on the downstream stream. If it
+        # fired while suspended at `yield`, it would cancel the consumer's task instead of raising TimeoutError here.
+        async with contextlib.aclosing(super().function_middleware_stream(*args,
+                                                                          call_next=call_next,
+                                                                          context=context,
+                                                                          **kwargs)) as stream:
+            while True:
+                timeout_cm = asyncio.timeout_at(deadline)
+                try:
+                    if loop.time() >= deadline:
+                        raise TimeoutError
+                    async with timeout_cm:
+                        chunk = await anext(stream)
+                except StopAsyncIteration:
+                    return
+                except TimeoutError:
+                    if loop.time() < deadline and not timeout_cm.expired():
+                        # The downstream stream raised its own TimeoutError; it is not this middleware's timeout.
+                        raise
+                    logger.error("Streaming function '%s' exceeded timeout of %ss", context.name, timeout)
+                    msg: str = f"Execution exceeded the configured timeout of {timeout}s."
+                    if self._timeout_config.timeout_message:
+                        msg = f"{msg} {self._timeout_config.timeout_message}"
+                    raise TimeoutError(msg) from None
+                yield chunk
 
 
 __all__ = ["TimeoutMiddleware"]
