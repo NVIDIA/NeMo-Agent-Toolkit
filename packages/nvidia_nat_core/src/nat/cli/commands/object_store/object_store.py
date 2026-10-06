@@ -48,7 +48,8 @@ def get_object_store_config(**kwargs) -> ObjectStoreBaseConfig:
     config = STORE_CONFIGS[store_type]
     module = importlib.import_module(config["module"])
     config_class = getattr(module, config["config_class"])
-    return config_class(**kwargs)
+    # Click supplies None for every option the user did not type, which would otherwise override the defaults.
+    return config_class(**{name: value for name, value in kwargs.items() if value is not None})
 
 
 async def upload_file(object_store: ObjectStore, file_path: Path, key: str):
