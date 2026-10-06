@@ -15,14 +15,15 @@
 
 import re
 
+_THINK_BLOCK_PATTERN = re.compile(r'<think>.*?</think>\s*', re.DOTALL)
+
 
 def remove_r1_think_tags(text: str):
-    pattern = r'(<think>)?.*?</think>\s*(.*)'
+    """Remove every ``<think>...</think>`` block from ``text``.
 
-    # Add re.DOTALL flag to make . match newlines
-    match = re.match(pattern, text, re.DOTALL)
-
-    if match:
-        return match.group(2)
-
-    return text
+    Blocks are removed where they appear. The previous ``re.match`` plus a single lazy
+    ``.*?</think>`` returned only the text that followed the *first* closing tag, which
+    (a) discarded anything the model emitted before that tag, (b) left any later block
+    in place, and (c) truncated the text at a ``</think>`` that was never opened.
+    """
+    return _THINK_BLOCK_PATTERN.sub('', text)
