@@ -23,6 +23,7 @@ from collections.abc import AsyncIterator
 from collections.abc import Callable
 from collections.abc import Iterator
 from collections.abc import Sequence
+from contextlib import asynccontextmanager
 from typing import Any
 
 from nemoguardrails import LLMRails
@@ -41,7 +42,11 @@ from nat.middleware.function_middleware import CallNext
 from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
+from nat.middleware.telemetry import trace_middleware
 from nat.middleware.utils.workflow_inventory import DiscoveredFunction
+from nat.plugins.security.middleware.guardrails.callback_handler import GuardrailsProfilerHandler
+from nat.plugins.security.middleware.guardrails.callback_handler import attach_rail_profiler
+from nat.plugins.security.middleware.guardrails.callback_handler import profile_rail_calls
 from nat.plugins.security.middleware.guardrails.exceptions import PostInvokeBlockedError
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailFunctionFields
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailsMiddlewareConfig
@@ -52,6 +57,17 @@ _PRIMARY_RAIL_TYPES: frozenset[str] = frozenset({"default", "main"})
 _PRIMARY_LLM_PARAM: str = "llm"
 _LLM_PARAM_SUFFIX: str = "_llm"
 _DEFAULT_REFUSAL: str = "I'm sorry, I can't help with that."
+
+
+@asynccontextmanager
+async def _closing_stream(stream: AsyncIterator[Any]):
+    """Close delegated streams immediately when their consumer exits."""
+    try:
+        yield stream
+    finally:
+        close = getattr(stream, "aclose", None)
+        if close is not None:
+            await close()
 
 
 class GuardrailsMiddleware(DynamicFunctionMiddleware):
@@ -93,6 +109,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         self._guardrails_config: GuardrailsMiddlewareConfig = config
         self._rail_llms: set[str] = set((config.llm_bindings or {}).values())
         self._rail_llms_bound: bool = False
+        self._rail_profiler = GuardrailsProfilerHandler()
         super().__init__(config, builder, is_final=False)
 
     async def pre_invoke(self, context: InvocationContext) -> InvocationContext | None:
@@ -118,7 +135,9 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         modified: bool = False
 
         for text, apply_to_field in self._gather_guardrail_inputs(value, paths, apply_to_value):
-            response: GenerationResponse = await self._llm_rails.generate_async(
+            response: GenerationResponse = await self._generate_rail(
+                "input",
+                context.function_context.name,
                 prompt=text,
                 options=GenerationOptions(
                     rails=["input"],
@@ -170,7 +189,9 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         for text, apply_to_field in self._gather_guardrail_inputs(value, paths, apply_to_value):
             messages: list[dict[str, str]] = ([{"role": "user", "content": input_text}] if input_text else [])
             messages.append({"role": "assistant", "content": text})
-            response: GenerationResponse = await self._llm_rails.generate_async(
+            response: GenerationResponse = await self._generate_rail(
+                "output",
+                context.function_context.name,
                 messages=messages,
                 options=GenerationOptions(
                     rails=["output"],
@@ -190,6 +211,19 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
                 modified = True
 
         return context if modified else None
+
+    async def _generate_rail(self, rail_type: str, function_name: str, **kwargs: Any) -> GenerationResponse:
+        """Trace the policy evaluation separately from the wrapped function."""
+        with trace_middleware(f"guardrails.{rail_type}",
+                              input_data=kwargs.get("prompt", kwargs.get("messages")),
+                              function_name=function_name,
+                              guardrail=True) as trace:
+            async with profile_rail_calls(self._rail_profiler):
+                response = await self._llm_rails.generate_async(**kwargs)
+            trace.output = response.response
+            if self._rail_blocked(response):
+                trace.status = "blocked"
+            return response
 
     async def function_middleware_invoke(
         self,
@@ -270,11 +304,24 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
             return
 
         if self._guardrails_config.stream_output_rails:
-            async for chunk in self._stream_with_output_rails(ctx, call_next):
-                yield chunk
+            with trace_middleware("guardrails.output.stream",
+                                  input_data=ctx.modified_args,
+                                  function_name=context.name,
+                                  guardrail=True) as trace:
+                async with profile_rail_calls(self._rail_profiler):
+                    stream = self._stream_with_output_rails(ctx, call_next)
+                    try:
+                        async for chunk in stream:
+                            trace.output = chunk
+                            if ctx.output is not None:
+                                trace.status = "blocked"
+                            yield chunk
+                    finally:
+                        await stream.aclose()
             return
 
-        buffered: list[Any] = [chunk async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs)]
+        async with _closing_stream(call_next(*ctx.modified_args, **ctx.modified_kwargs)) as stream:
+            buffered: list[Any] = [chunk async for chunk in stream]
         ctx.output = "".join(str(chunk) for chunk in buffered)
         result = await self.post_invoke(ctx)
         if result is not None:
@@ -306,20 +353,23 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         messages: list[dict[str, str]] = ([{"role": "user", "content": input_text}] if input_text else [])
 
         async def upstream() -> AsyncIterator[str]:
-            async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs):
-                yield str(chunk)
+            async with _closing_stream(call_next(*ctx.modified_args, **ctx.modified_kwargs)) as stream:
+                async for chunk in stream:
+                    yield str(chunk)
 
-        async for chunk in self._llm_rails.stream_async(messages=messages, generator=upstream()):
-            try:
-                payload: Any = json.loads(chunk)
-                if isinstance(payload, dict) and "error" in payload:
-                    error_msg: str = payload["error"].get("message", "Blocked by output rail.")
-                    ctx.output = ""
-                    yield self.on_post_invoke_blocked(ctx, error_msg)
-                    return
-            except (json.JSONDecodeError, TypeError, ValueError):
-                pass
-            yield chunk
+        async with _closing_stream(upstream()) as source:
+            async with _closing_stream(self._llm_rails.stream_async(messages=messages, generator=source)) as stream:
+                async for chunk in stream:
+                    try:
+                        payload: Any = json.loads(chunk)
+                        if isinstance(payload, dict) and "error" in payload:
+                            error_msg: str = payload["error"].get("message", "Blocked by output rail.")
+                            ctx.output = ""
+                            yield self.on_post_invoke_blocked(ctx, error_msg)
+                            return
+                    except (json.JSONDecodeError, TypeError, ValueError):
+                        pass
+                    yield chunk
 
     def _set_modified_rail_value(self, obj: Any, name: str) -> Callable[[str], None]:
         """Build a setter that writes a modified rail value back to an object attribute.
@@ -658,6 +708,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
             return
 
         if not self._config.llm_bindings:
+            attach_rail_profiler(self._llm_rails, self._rail_profiler)
             self._rail_llms_bound = True
             return
 
@@ -675,6 +726,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
                 raise TypeError(f"llm_bindings['{llms_key}'] must resolve to a LangChain BaseLanguageModel "
                                 f"(NeMo Guardrails requires LangChain); got {type(llm).__name__}")
             self._llm_rails.register_action_param(param, llm)
+        attach_rail_profiler(self._llm_rails, self._rail_profiler)
         self._rail_llms_bound = True
 
     def _should_intercept_llm(self, llm_name: str) -> bool:
