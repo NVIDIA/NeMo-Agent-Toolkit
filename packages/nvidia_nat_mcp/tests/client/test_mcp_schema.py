@@ -948,10 +948,24 @@ def test_required_nullable_field_with_enum():
         ([0.5, 1.5], 2.5),
         (["", "a"], "b"),
         (["mro", "_x_", "__init__"], "init"),
+        (["_ignore_"], "a"),
+        (["_ignore_", "a"], "b"),
+        (["__init__"], "init"),
         (["low", 1], "1"),
         ([True, 1], False),
     ],
-    ids=["integer", "boolean", "number", "empty_string", "reserved_names", "mixed", "boolean_and_integer"],
+    ids=[
+        "integer",
+        "boolean",
+        "number",
+        "empty_string",
+        "reserved_names",
+        "ignore_directive",
+        "ignore_directive_and_name",
+        "dunder_name",
+        "mixed",
+        "boolean_and_integer",
+    ],
 )
 def test_enum_values_that_are_not_valid_member_names(enum_values, invalid_value):
     """Test that enum values which cannot be Enum member names validate and dump the raw value"""

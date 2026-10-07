@@ -49,12 +49,17 @@ def _get_or_create_enum(name: str, typed_values: frozenset[tuple[type, Any]]) ->
     """
     values = [value for _, value in typed_values]
     try:
-        return Enum(name, {item: item for item in values})
+        enum_class = Enum(name, {item: item for item in values})
     except (TypeError, ValueError):
-        # Non-string values (e.g. 1, True) and strings that are not valid member names (e.g. "", "mro")
-        # cannot be member names. A Literal of the raw values validates them as given, so numeric
-        # constraints still apply and equal values of different types (1 and True) stay distinct.
-        return Literal[tuple(sorted(values, key=lambda v: (type(v).__name__, v)))]
+        enum_class = None
+    # Enum also drops some names without raising (e.g. "_ignore_", "__init__"), so keep it only
+    # when every value became a member.
+    if enum_class is not None and len(enum_class.__members__) == len(values):
+        return enum_class
+    # Non-string values (e.g. 1, True) and strings that are not valid member names (e.g. "", "mro")
+    # cannot be member names. A Literal of the raw values validates them as given, so numeric
+    # constraints still apply and equal values of different types (1 and True) stay distinct.
+    return Literal[tuple(sorted(values, key=lambda v: (type(v).__name__, v)))]
 
 
 def _schema_cache_sort_key(value: Any) -> str:
