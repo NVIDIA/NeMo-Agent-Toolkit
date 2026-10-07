@@ -1174,6 +1174,7 @@ def test_patch_with_retry_zero_budget_still_calls_method():
         svc.sync_method()
     assert svc.calls_sync == 1
 
+
 # ---------------------------------------------------------------------------
 # Empty streaming retry must preserve the original exception (#2223)
 # ---------------------------------------------------------------------------
