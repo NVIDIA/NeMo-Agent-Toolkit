@@ -41,8 +41,7 @@ def _get_or_create_enum(name: str, typed_values: frozenset[tuple[type, Any]]) ->
 
     Args:
         name: The name for the enum class
-        typed_values: Frozenset of (type, value) pairs. The type keeps 1, True and 1.0 apart, since they
-            are equal as set members and would otherwise share one cached class.
+        typed_values: Frozenset of (type, value) pairs; the type keeps 1, True and 1.0 in separate classes
 
     Returns:
         An Enum class (cached or newly created), or a Literal of the raw values when they cannot be
