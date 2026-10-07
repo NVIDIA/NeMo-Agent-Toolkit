@@ -192,6 +192,39 @@ def _want_retry(
 # ─────────────────────────────────────────────────────────────
 #  Memory-optimized decorator factory
 # ─────────────────────────────────────────────────────────────
+class _YieldTracker:
+    """Forward the generator protocol to a wrapped iterator and note whether it produced an item."""
+
+    def __init__(self, stream: Any) -> None:
+        self._stream = iter(stream)
+        self.yielded = False
+
+    def __iter__(self) -> "_YieldTracker":
+        return self
+
+    def __next__(self) -> Any:
+        item = next(self._stream)
+        self.yielded = True
+        return item
+
+    def send(self, value: Any) -> Any:
+        if value is None or not hasattr(self._stream, "send"):
+            return next(self)
+        item = self._stream.send(value)
+        self.yielded = True
+        return item
+
+    def throw(self, *args: Any) -> Any:
+        item = self._stream.throw(*args)
+        self.yielded = True
+        return item
+
+    def close(self) -> None:
+        close = getattr(self._stream, "close", None)
+        if close is not None:
+            close()
+
+
 def _retry_decorator(
     *,
     retries: int = 3,
@@ -346,22 +379,27 @@ def _retry_decorator(
                 # different task, without leaving a stale entry in this task's
                 # context that would silently skip retries on its next call.
                 try:
+                    yielded = False
                     stream = fn(*call_args, **call_kwargs)
                     while True:
                         with _RetryContext(args) as already_in_context:
                             try:
                                 item = await anext(stream)
                             except StopAsyncIteration:
-                                return
+                                break
+                        yielded = True
                         yield item
                 except retry_on as exc:
                     if already_in_context:
                         raise
-                    last_exception = exc
 
-                    # Memory cleanup
-                    if clear_tracebacks:
-                        _clear_exception_context(exc)
+                    # Clear the previous attempt's traceback (breaks reference
+                    # cycles) but keep the current exception intact so a later
+                    # ``raise last_exception`` in the ``else`` branch preserves
+                    # its traceback (#2223).
+                    if clear_tracebacks and last_exception is not None:
+                        _clear_exception_context(last_exception)
+                    last_exception = exc
 
                     _run_gc_if_needed(attempt, gc_frequency)
 
@@ -371,6 +409,14 @@ def _retry_decorator(
 
                     await asyncio.sleep(delay)
                     delay *= backoff
+                else:
+                    # A completed attempt that produced no chunks after a prior
+                    # failure usually means a one-shot async iterator was already
+                    # exhausted on retry (common in LangChain streaming). Re-raise
+                    # outside the except so we do not burn remaining attempts.
+                    if last_exception is not None and not yielded:
+                        raise last_exception
+                    return
 
             if last_exception:
                 raise last_exception
@@ -390,15 +436,17 @@ def _retry_decorator(
                     else:
                         call_args, call_kwargs = _deep_copy_args(args, kw, skip_first=skip_self_in_deepcopy)
 
+                    tracker = _YieldTracker(fn(*call_args, **call_kwargs))
                     try:
-                        yield from fn(*call_args, **call_kwargs)
-                        return
+                        # ``yield from`` keeps send()/throw()/close() reaching the wrapped generator.
+                        yield from tracker
                     except retry_on as exc:
+                        # Same traceback-preservation as the async-generator path:
+                        # only clear the superseded ``last_exception`` so the fresh
+                        # ``exc`` keeps its traceback for any later re-raise (#2223).
+                        if clear_tracebacks and last_exception is not None:
+                            _clear_exception_context(last_exception)
                         last_exception = exc
-
-                        # Memory cleanup
-                        if clear_tracebacks:
-                            _clear_exception_context(exc)
 
                         _run_gc_if_needed(attempt, gc_frequency)
 
@@ -408,6 +456,12 @@ def _retry_decorator(
 
                         time.sleep(delay)
                         delay *= backoff
+                    else:
+                        # Same empty-retry guard as the async-generator path: do not
+                        # treat a zero-item completion after a prior failure as success.
+                        if last_exception is not None and not tracker.yielded:
+                            raise last_exception
+                        return
 
                 if last_exception:
                     raise last_exception
