@@ -761,7 +761,7 @@ def test_union_type_bidirectional_conversion():
     "return_type",
     [str | int, typing.Union[str, int], typing.Optional[str]],  # noqa: UP007, UP045
     ids=["pep604_union", "typing_union", "typing_optional"])
-def test_union_return_type_does_not_break_conversion(return_type):
+def test_union_return_type_does_not_break_conversion(return_type: object) -> None:
     """A converter's union return type is handled the same way however the union is spelled.
 
     The root of `typing.Union[...]` / `typing.Optional[...]` is not a class, so the direct
