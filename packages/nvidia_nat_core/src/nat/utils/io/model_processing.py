@@ -19,11 +19,19 @@ _THINK_BLOCK_PATTERN = re.compile(r'<think>.*?</think>\s*', re.DOTALL)
 
 
 def remove_r1_think_tags(text: str):
-    """Remove every ``<think>...</think>`` block from ``text``.
+    """Remove reasoning-model think blocks from ``text``.
 
-    Blocks are removed where they appear. The previous ``re.match`` plus a single lazy
-    ``.*?</think>`` returned only the text that followed the *first* closing tag, which
-    (a) discarded anything the model emitted before that tag, (b) left any later block
-    in place, and (c) truncated the text at a ``</think>`` that was never opened.
+    Complete ``<think>...</think>`` blocks are removed wherever they appear, so text before,
+    between or after them survives. The previous ``re.match`` plus a single lazy
+    ``.*?</think>`` returned only what followed the *first* closing tag, which discarded
+    anything the model emitted before that tag and left any later block in place.
+
+    A lone ``</think>`` with no opening tag is the provider artifact tracked in #1611.
+    Everything before it is unusable preamble, so only what follows the last one is kept.
+    That is what lets an all-reasoning message reduce to an empty string and reach the
+    ReAct retry path instead of being accepted as a final answer.
     """
-    return _THINK_BLOCK_PATTERN.sub('', text)
+    stripped = _THINK_BLOCK_PATTERN.sub('', text)
+    if '</think>' in stripped:
+        stripped = stripped.rsplit('</think>', 1)[1].lstrip()
+    return stripped
