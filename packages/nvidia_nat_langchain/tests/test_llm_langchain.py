@@ -523,6 +523,29 @@ class TestDynamoLangChain:
         mock_httpx_async_client.assert_called_once()
         assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
 
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    async def test_verify_ssl_not_forwarded_to_chat_openai(self, mock_builder, verify_ssl):
+        """verify_ssl only configures the httpx client.
+
+        ChatOpenAI moves unknown kwargs into model_kwargs and forwards them to the OpenAI SDK's create(),
+        which rejects verify_ssl with a TypeError on every call.
+        """
+        cfg = DynamoModelConfig(model_name="test-model",
+                                base_url="http://localhost:8000/v1",
+                                api_key="test-key",
+                                verify_ssl=verify_ssl)
+        async with dynamo_langchain(cfg, mock_builder) as client:
+            assert "verify_ssl" not in client.model_kwargs
+
+    async def test_verify_ssl_not_forwarded_after_round_trip(self, mock_builder):
+        """`nat serve` reloads a round-trip dump of the config, which marks verify_ssl as set."""
+        cfg = DynamoModelConfig(model_name="test-model", base_url="http://localhost:8000/v1", api_key="test-key")
+        cfg = DynamoModelConfig.model_validate(cfg.model_dump(mode="json", by_alias=True, round_trip=True))
+        assert "verify_ssl" in cfg.model_fields_set
+
+        async with dynamo_langchain(cfg, mock_builder) as client:
+            assert "verify_ssl" not in client.model_kwargs
+
 
 # ---------------------------------------------------------------------------
 # LiteLLM → LangChain wrapper tests

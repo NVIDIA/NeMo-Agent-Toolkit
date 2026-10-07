@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+
 import pytest
 from langchain_core.agents import AgentAction
 from langchain_core.agents import AgentFinish
@@ -577,6 +579,49 @@ def test_validate_system_prompt():
 @pytest.fixture(name='mock_react_output_parser', scope="module")
 def mock_parser():
     return ReActOutputParser()
+
+
+async def test_output_parser_json_object_action(mock_react_output_parser):
+    # A JSON object with quoted keys used to fall through to the direct-answer path (#2274)
+    mock_react_agent_output = ('{"Thought": "I should check the account", "Action": "clinical_limits", '
+                               '"Action Input": {"query": "limits"}}')
+    test_output = await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "clinical_limits"
+    assert test_output.tool_input == '{"query": "limits"}'
+    assert test_output.log == mock_react_agent_output
+
+
+async def test_output_parser_json_object_action_snake_case_keys(mock_react_output_parser):
+    mock_react_agent_output = '{"action": "internet_agent", "action_input": "who won?"}'
+    test_output = await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "internet_agent"
+    assert test_output.tool_input == "who won?"
+
+
+async def test_output_parser_json_object_action_missing_input(mock_react_output_parser):
+    mock_react_agent_output = '{"Thought": "check the account", "Action": "clinical_limits"}'
+    with pytest.raises(ReActOutputParserException) as ex:
+        await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert ex.value.missing_action_input
+    assert ex.value.observation == MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE
+
+
+@pytest.mark.parametrize("action_value", [None, 123, "", "   "], ids=["null", "int", "empty", "blank"])
+async def test_output_parser_json_object_invalid_action_is_a_parse_error(mock_react_output_parser, action_value):
+    # An Action key with an unusable value must not fall through to the direct-answer path (#2274)
+    mock_react_agent_output = json.dumps({"Thought": "check", "Action": action_value, "Action Input": {"query": "x"}})
+    with pytest.raises(ReActOutputParserException) as ex:
+        await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert not ex.value.missing_action
+
+
+async def test_output_parser_json_object_without_action_is_not_an_action(mock_react_output_parser):
+    mock_react_agent_output = '{"result": "42"}'
+    with pytest.raises(ReActOutputParserException) as ex:
+        await mock_react_output_parser.aparse(mock_react_agent_output)
+    assert ex.value.missing_action
 
 
 async def test_output_parser_no_observation(mock_react_output_parser):

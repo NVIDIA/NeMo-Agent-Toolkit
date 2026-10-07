@@ -82,3 +82,69 @@ async def test_close_empty_queue_finishes_iteration_and_join():
     await queue.close()
     assert [item async for item in queue] == []
     await asyncio.wait_for(queue.join(), timeout=1)
+
+
+@pytest.mark.parametrize("producers", [False, True])
+async def test_cancelling_awakened_waiter_hands_off_available_work(producers):
+    """Cancellation must not strand an item or a free slot behind its first waiter."""
+    queue = AsyncIOProducerConsumerQueue(maxsize=1)
+    if producers:
+        queue.put_nowait("buffered")
+    tasks = [asyncio.create_task(queue.put(value) if producers else queue.get()) for value in ("cancelled", "survivor")]
+    try:
+        await asyncio.sleep(0)
+        assert all(not task.done() for task in tasks)
+        if producers:
+            assert queue.get_nowait() == "buffered"
+            queue.task_done()
+        else:
+            queue.put_nowait("payload")
+        tasks[0].cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await tasks[0]
+        done, pending = await asyncio.wait([tasks[1]], timeout=1)
+        assert not pending
+        assert tasks[1] in done
+        if producers:
+            assert tasks[1].result() is None
+            assert queue.get_nowait() == "survivor"
+        else:
+            assert tasks[1].result() == "payload"
+        queue.task_done()
+        await queue.close()
+        await asyncio.wait_for(queue.join(), timeout=1)
+        assert queue.empty()
+    finally:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        await queue.close()
+
+
+@pytest.mark.parametrize("producers", [False, True])
+async def test_cancelled_waiters_are_removed_without_new_queue_activity(producers):
+    """Repeated cancellations release their futures even before any wakeup."""
+    queue = AsyncIOProducerConsumerQueue(maxsize=1)
+    if producers:
+        queue.put_nowait("buffered")
+    waiters = queue._putters if producers else queue._getters
+    for _ in range(8):
+        task = asyncio.create_task(queue.put("cancelled") if producers else queue.get())
+        try:
+            await asyncio.sleep(0)
+            assert len(waiters) == 1
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert not waiters
+        finally:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+    if producers:
+        assert await queue.get() == "buffered"
+        queue.task_done()
+    await queue.put("later")
+    await queue.close()
+    assert [item async for item in queue] == ["later"]
+    queue.task_done()
+    await asyncio.wait_for(queue.join(), timeout=1)
