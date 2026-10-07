@@ -29,16 +29,15 @@ def test_observer_on_next():
 
 
 def test_observer_on_error():
-    errors = []
-
-    def on_err(e):
-        errors.append(str(e))
-
-    obs = Observer(on_error=on_err)
+    events = []
+    obs = Observer(on_next=lambda value: events.append(("next", value)),
+                   on_error=lambda exc: events.append(("error", str(exc))),
+                   on_complete=lambda: events.append(("complete", )))
     obs.on_error(ValueError("Something bad"))
-    # further on_next calls do nothing
     obs.on_next("ignored")
-    assert errors == ["Something bad"]
+    obs.on_error(ValueError("ignored"))
+    obs.on_complete()
+    assert events == [("error", "Something bad")]
 
 
 def test_observer_on_complete():
@@ -62,4 +61,20 @@ def test_observer_callback_raises():
 
     obs = Observer(on_next=fail_callback, on_error=handle_error)
     obs.on_next("test")
+    obs.on_next("ignored")
     assert errors == ["CallbackFail"]
+
+
+def test_observer_stops_before_error_callback():
+    events = []
+
+    def on_error(exc):
+        events.append(("error", str(exc)))
+        obs.on_next("reentrant value")
+        obs.on_complete()
+
+    obs = Observer(on_next=lambda value: events.append(("next", value)),
+                   on_error=on_error,
+                   on_complete=lambda: events.append(("complete", )))
+    obs.on_error(ValueError("Err"))
+    assert events == [("error", "Err")]

@@ -551,6 +551,22 @@ curl -X POST http://localhost:8000/v1/chat/completions \
   }'
 ```
 
+#### Streaming Usage Chunk
+
+When a streaming request sets `stream_options.include_usage`, the final chunk (after
+the content chunks, with `choices: []`) carries the usage object for the whole
+completion. The counts are summed across every LLM call the agent made (one per
+tool round), not overwritten, and no usage chunk is emitted when the caller did not
+ask for one or the model reported none.
+
+```
+data: {"id": "...", "choices": [], "usage": {"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120, "prompt_tokens_details": {"cached_tokens": 80}}}
+
+```
+
+`prompt_tokens_details.cached_tokens` is present only when the inference provider
+reported a prompt cache for the request; it is omitted, not zero, otherwise.
+
 #### Client Library Examples
 
 **OpenAI Python Client:**
