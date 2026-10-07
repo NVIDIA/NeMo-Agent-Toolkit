@@ -15,7 +15,7 @@
 
 import re
 
-_THINK_BLOCK_PATTERN = re.compile(r'<think>.*?</think>\s*', re.DOTALL)
+_THINK_BLOCK_PATTERN = re.compile(r'<think>.*?</think>', re.DOTALL)
 
 
 def remove_r1_think_tags(text: str):
