@@ -79,10 +79,19 @@ def _normalize_react_message_content(content: typing.Any) -> str:
     When a reasoning model wraps the entire ReAct payload in ``<think>`` tags
     with nothing after the closing tag, keep the inner text so the parser
     still sees Thought/Action/Final Answer instead of an empty string (#1611).
+    An all-reasoning message reduces to ``""`` so the retry path runs.
     Provider ``reasoning_content`` metadata is intentionally not used here.
     """
     raw_text = _extract_message_text(content)
     cleaned = remove_r1_think_tags(raw_text)
+
+    # A lone </think> with no opening tag is a provider artifact (#1611): everything before it
+    # is unusable preamble, so keep only what follows the last one. This lives here rather than
+    # in remove_r1_think_tags because it is a ReAct quirk -- the shared helper is also used by
+    # the test_time_compute components, where discarding that text would silently blank results.
+    if "</think>" in cleaned:
+        cleaned = cleaned.rsplit("</think>", 1)[1].lstrip()
+
     if cleaned.strip():
         return cleaned
 

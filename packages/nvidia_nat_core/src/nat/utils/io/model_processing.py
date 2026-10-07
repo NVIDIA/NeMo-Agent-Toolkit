@@ -26,12 +26,8 @@ def remove_r1_think_tags(text: str):
     ``.*?</think>`` returned only what followed the *first* closing tag, which discarded
     anything the model emitted before that tag and left any later block in place.
 
-    A lone ``</think>`` with no opening tag is the provider artifact tracked in #1611.
-    Everything before it is unusable preamble, so only what follows the last one is kept.
-    That is what lets an all-reasoning message reduce to an empty string and reach the
-    ReAct retry path instead of being accepted as a final answer.
+    A lone ``</think>`` with no opening tag is left alone here on purpose. It is a
+    provider quirk that only the ReAct agent needs to interpret, and this helper is shared
+    with the test_time_compute components, which just want the markup gone.
     """
-    stripped = _THINK_BLOCK_PATTERN.sub('', text)
-    if '</think>' in stripped:
-        stripped = stripped.rsplit('</think>', 1)[1].lstrip()
-    return stripped
+    return _THINK_BLOCK_PATTERN.sub('', text)
