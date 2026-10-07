@@ -940,6 +940,71 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
         mock_eval_run_output.assert_called()
 
 
+async def test_run_and_evaluate_total_runtime_ignores_items_without_steps(evaluation_run, default_eval_config):
+    """An item whose remote request failed has no steps and must not stretch the total runtime back to epoch 0."""
+    evaluation_run.config.endpoint = "http://localhost:8000"
+    finished_item = EvalInputItem(id=1,
+                                  input_obj="question 1",
+                                  expected_output_obj="answer 1",
+                                  output_obj=None,
+                                  trajectory=[],
+                                  expected_trajectory=[],
+                                  full_dataset_entry={})
+    failed_item = EvalInputItem(id=2,
+                                input_obj="question 2",
+                                expected_output_obj="answer 2",
+                                output_obj=None,
+                                trajectory=[],
+                                expected_trajectory=[],
+                                full_dataset_entry={})
+    eval_input = EvalInput(eval_input_items=[finished_item, failed_item])
+
+    def make_step(event_type: IntermediateStepType, timestamp: float) -> IntermediateStep:
+        return IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(function_name="remote", function_id="remote-id"),
+                                payload=IntermediateStepPayload(event_type=event_type, event_timestamp=timestamp))
+
+    async def fake_run_workflow_remote(remote_eval_input):
+        finished, failed = remote_eval_input.eval_input_items
+        finished.output_obj = "answer 1"
+        finished.trajectory = [
+            make_step(IntermediateStepType.WORKFLOW_START, 1_700_000_000.0),
+            make_step(IntermediateStepType.WORKFLOW_END, 1_700_000_002.5),
+        ]
+        # A failed or timed-out remote request leaves the item without output or steps
+        failed.output_obj = None
+        failed.trajectory = []
+        return remote_eval_input
+
+    mock_nat_config = Config()
+    mock_nat_config.eval = default_eval_config
+    mock_dataset_handler = MagicMock()
+    mock_dataset_handler.get_eval_input_from_dataset.return_value = eval_input
+    mock_dataset_handler.pre_eval_process_eval_input.side_effect = lambda value: value
+
+    @asynccontextmanager
+    async def mock_eval_builder(config):
+        yield MagicMock()
+
+    mock_uploader = MagicMock()
+    mock_uploader.upload_directory = AsyncMock()
+
+    with patch("nat.runtime.loader.load_config", MagicMock(return_value=mock_nat_config)), \
+         patch("nat.plugins.eval.runtime.builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
+         patch("nat.plugins.eval.runtime.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
+         patch("nat.plugins.eval.runtime.evaluate._get_output_uploader_cls",
+               return_value=MagicMock(return_value=mock_uploader)), \
+         patch("nat.plugins.eval.runtime.remote_workflow.EvaluationRemoteWorkflowHandler") as mock_handler, \
+         patch.object(evaluation_run, "run_evaluators", AsyncMock()), \
+         patch.object(evaluation_run, "profile_workflow", AsyncMock(return_value=ProfilerResults())), \
+         patch.object(evaluation_run, "_on_eval_complete", MagicMock()):
+        mock_handler.return_value.run_workflow_remote = AsyncMock(side_effect=fake_run_workflow_remote)
+
+        output = await evaluation_run.run_and_evaluate()
+
+    assert output.usage_stats.total_runtime == pytest.approx(2.5)
+
+
 def test_append_job_id_to_output_dir(default_eval_config):
     """Test that append_job_id_to_output_dir generates UUID when enabled."""
     # Test case 1: Feature enabled, no job_id provided
