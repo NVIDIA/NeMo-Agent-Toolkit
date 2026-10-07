@@ -114,23 +114,25 @@ class TimeoutMiddleware(DynamicFunctionMiddleware):
                                                                           context=context,
                                                                           **kwargs)) as stream:
             while True:
-                timeout_cm = asyncio.timeout_at(deadline)
-                try:
-                    if loop.time() >= deadline:
-                        raise TimeoutError
-                    async with timeout_cm:
-                        chunk = await anext(stream)
-                except StopAsyncIteration:
-                    return
-                except TimeoutError:
-                    if loop.time() < deadline and not timeout_cm.expired():
-                        # The downstream stream raised its own TimeoutError; it is not this middleware's timeout.
-                        raise
+                expired: bool = loop.time() >= deadline
+                if not expired:
+                    timeout_cm = asyncio.timeout_at(deadline)
+                    try:
+                        async with timeout_cm:
+                            chunk = await anext(stream)
+                    except StopAsyncIteration:
+                        return
+                    except TimeoutError:
+                        if not timeout_cm.expired():
+                            # The downstream stream raised its own TimeoutError; it is not this middleware's timeout.
+                            raise
+                        expired = True
+                if expired:
                     logger.error("Streaming function '%s' exceeded timeout of %ss", context.name, timeout)
                     msg: str = f"Execution exceeded the configured timeout of {timeout}s."
                     if self._timeout_config.timeout_message:
                         msg = f"{msg} {self._timeout_config.timeout_message}"
-                    raise TimeoutError(msg) from None
+                    raise TimeoutError(msg)
                 yield chunk
 
 
