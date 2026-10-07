@@ -18,6 +18,7 @@ import inspect
 import json
 import os
 import time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
@@ -940,7 +941,8 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
         mock_eval_run_output.assert_called()
 
 
-async def test_run_and_evaluate_total_runtime_ignores_items_without_steps(evaluation_run, default_eval_config):
+async def test_run_and_evaluate_total_runtime_ignores_items_without_steps(evaluation_run: EvaluationRun,
+                                                                          default_eval_config: EvalConfig):
     """An item whose remote request failed has no steps and must not stretch the total runtime back to epoch 0."""
     evaluation_run.config.endpoint = "http://localhost:8000"
     finished_item = EvalInputItem(id=1,
@@ -964,7 +966,7 @@ async def test_run_and_evaluate_total_runtime_ignores_items_without_steps(evalua
                                 function_ancestry=InvocationNode(function_name="remote", function_id="remote-id"),
                                 payload=IntermediateStepPayload(event_type=event_type, event_timestamp=timestamp))
 
-    async def fake_run_workflow_remote(remote_eval_input):
+    async def fake_run_workflow_remote(remote_eval_input: EvalInput) -> EvalInput:
         finished, failed = remote_eval_input.eval_input_items
         finished.output_obj = "answer 1"
         finished.trajectory = [
@@ -983,7 +985,7 @@ async def test_run_and_evaluate_total_runtime_ignores_items_without_steps(evalua
     mock_dataset_handler.pre_eval_process_eval_input.side_effect = lambda value: value
 
     @asynccontextmanager
-    async def mock_eval_builder(config):
+    async def mock_eval_builder(config: Config) -> AsyncIterator[MagicMock]:
         yield MagicMock()
 
     mock_uploader = MagicMock()
