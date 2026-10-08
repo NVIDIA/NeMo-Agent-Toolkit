@@ -1,0 +1,58 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+general:
+  front_end:
+    _type: fastapi
+    cors:
+      allow_origins: ['*']
+    step_adaptor:
+      mode: default
+
+functions:
+  hotel_price:
+    _type: hotel_price
+  local_events:
+    _type: local_events
+
+llms:
+  openai_llm:
+    _type: openai
+    model_name: gpt-5.4-mini
+    temperature: 0.0
+
+workflow:
+  _type: crewai
+  tool_names: [hotel_price, local_events]
+  llm_name: openai_llm
+  verbose: true
+  itinerary_expert_role: Itinerary Expert
+  itinerary_expert_goal: Build detailed, well-paced day-by-day travel itineraries.
+  itinerary_expert_backstory: |
+    You specialize in attractions, local events, and trip logistics. You focus purely on what to do and when;
+    you leave hotel pricing and overall budgeting to the Budget Advisor.
+
+  budget_advisor_role: Budget Advisor
+  budget_advisor_goal: Produce an accurate, itemized cost estimate for the whole trip.
+  budget_advisor_backstory: |
+    You specialize in estimating and optimizing travel costs. You use the hotel price tool to find lodging costs
+    and combine them with the itinerary's activity costs into one clear total.
+
+  summarize_agent_role: Summarizer
+  summarize_agent_goal: Turn the itinerary and the budget into one polished, user-facing travel plan.
+  summarize_agent_backstory: |
+    You specialize in taking detailed notes from other specialists and compiling them into a clear,
+    well-structured final document, without duplicating information or losing any details.
