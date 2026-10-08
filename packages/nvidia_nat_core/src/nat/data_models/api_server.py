@@ -572,6 +572,7 @@ class ResponseIntermediateStep(ResponseBaseModelIntermediate):
     type: str = "markdown"
     name: str
     payload: str
+    thought_text: str | None = None
 
 
 class ResponseObservabilityTrace(BaseModel, ResponseSerializable):
