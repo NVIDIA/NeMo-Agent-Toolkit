@@ -15,14 +15,19 @@
 
 import re
 
+_THINK_BLOCK_PATTERN = re.compile(r'<think>.*?</think>', re.DOTALL)
+
 
 def remove_r1_think_tags(text: str):
-    pattern = r'(<think>)?.*?</think>\s*(.*)'
+    """Remove reasoning-model think blocks from ``text``.
 
-    # Add re.DOTALL flag to make . match newlines
-    match = re.match(pattern, text, re.DOTALL)
+    Complete ``<think>...</think>`` blocks are removed wherever they appear, so text before,
+    between or after them survives. The previous ``re.match`` plus a single lazy
+    ``.*?</think>`` returned only what followed the *first* closing tag, which discarded
+    anything the model emitted before that tag and left any later block in place.
 
-    if match:
-        return match.group(2)
-
-    return text
+    A lone ``</think>`` with no opening tag is left alone here on purpose. It is a
+    provider quirk that only the ReAct agent needs to interpret, and this helper is shared
+    with the test_time_compute components, which just want the markup gone.
+    """
+    return _THINK_BLOCK_PATTERN.sub('', text)
