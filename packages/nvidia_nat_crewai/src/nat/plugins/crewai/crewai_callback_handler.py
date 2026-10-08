@@ -118,6 +118,7 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
                 # Post-call usage stats
                 usage_stat = IntermediateStepPayload(
                     event_type=IntermediateStepType.TOOL_END,
+                    UUID=stats.UUID,
                     span_event_timestamp=now,
                     framework=LLMFrameworkEnum.CREWAI,
                     name=tool_name,
@@ -200,6 +201,7 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
             # Record the end event
             output_stats = IntermediateStepPayload(
                 event_type=IntermediateStepType.LLM_END,
+                UUID=input_stats.UUID,
                 span_event_timestamp=now,
                 framework=LLMFrameworkEnum.CREWAI,
                 name=model_name,

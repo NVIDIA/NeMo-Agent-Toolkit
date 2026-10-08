@@ -90,3 +90,36 @@ async def test_crewai_handler_time_between_calls(reactive_stream: Subject):
     assert len(results) == 4
     # Check the intervals
     assert results[2].usage_info.seconds_between_calls == 7
+
+
+async def test_crewai_handler_pairs_start_and_end_events(reactive_stream: Subject):
+    """The wrapped tool and LLM calls must emit END events that close their START events."""
+    from types import SimpleNamespace
+
+    from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
+
+    usage = SimpleNamespace(model_dump=lambda: {"prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5})
+    choice = SimpleNamespace(message=SimpleNamespace(content="answer"),
+                             model_dump=lambda: {"message": {
+                                 "content": "answer", "role": "assistant"
+                             }})
+
+    results = []
+    _ = reactive_stream.subscribe(results.append)
+
+    handler = CrewAIProfilerHandler()
+    handler._original_tool_use = lambda _instance, *args, **kwargs: "tool result"
+    handler._original_llm_call = lambda *args, **kwargs: SimpleNamespace(choices=[choice], model_extra={"usage": usage})
+
+    handler._tool_use_monkey_patch()(object(), tool=SimpleNamespace(name="search"))
+    handler._llm_call_monkey_patch()(model="test-model", messages=[{"content": "question"}])
+
+    assert [step.event_type for step in results] == [
+        IntermediateStepType.TOOL_START,
+        IntermediateStepType.TOOL_END,
+        IntermediateStepType.LLM_START,
+        IntermediateStepType.LLM_END,
+    ]
+    assert results[0].UUID == results[1].UUID
+    assert results[2].UUID == results[3].UUID
+    assert results[3].usage_info.token_usage.total_tokens == 5
