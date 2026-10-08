@@ -45,6 +45,7 @@ from nat.middleware.utils.workflow_inventory import DiscoveredFunction
 from nat.plugins.security.middleware.guardrails.exceptions import PostInvokeBlockedError
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailFunctionFields
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailsMiddlewareConfig
+from nat.utils.type_converter import GlobalTypeConverter
 
 # NeMo Guardrails registers the primary model under the bare action param "llm" and every other
 # model type under "<type>_llm" (see nemoguardrails LLMRails). These mirror that convention.
@@ -275,7 +276,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
             return
 
         buffered: list[Any] = [chunk async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs)]
-        ctx.output = "".join(str(chunk) for chunk in buffered)
+        ctx.output = "".join(str(GlobalTypeConverter.try_convert(chunk, str)) for chunk in buffered)
         result = await self.post_invoke(ctx)
         if result is not None:
             ctx = result
@@ -306,8 +307,9 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         messages: list[dict[str, str]] = ([{"role": "user", "content": input_text}] if input_text else [])
 
         async def upstream() -> AsyncIterator[str]:
+            """Convert upstream chunks to reply text for streaming output rails."""
             async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs):
-                yield str(chunk)
+                yield str(GlobalTypeConverter.try_convert(chunk, str))
 
         async for chunk in self._llm_rails.stream_async(messages=messages, generator=upstream()):
             try:
