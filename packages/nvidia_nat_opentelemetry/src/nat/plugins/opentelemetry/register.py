@@ -87,6 +87,7 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
     yield OTLPSpanAdapterExporter(
         endpoint=config.endpoint,
         headers=headers,
+        resource_attributes=config.resource_attributes,
         batch_size=config.batch_size,
         flush_interval=config.flush_interval,
         max_queue_size=config.max_queue_size,
@@ -128,6 +129,7 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
     yield OTLPSpanAdapterExporter(
         endpoint=config.endpoint,
         headers=headers,
+        resource_attributes=config.resource_attributes,
         batch_size=config.batch_size,
         flush_interval=config.flush_interval,
         max_queue_size=config.max_queue_size,
@@ -201,6 +203,7 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
     yield OTLPSpanAdapterExporter(
         endpoint=config.endpoint,
         headers=headers,
+        resource_attributes=config.resource_attributes,
         batch_size=config.batch_size,
         flush_interval=config.flush_interval,
         max_queue_size=config.max_queue_size,
