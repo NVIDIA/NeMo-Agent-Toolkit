@@ -871,11 +871,11 @@ class EvaluationRun:
         # Profile the workflow
         profiler_results = await self.profile_workflow()
 
-        # compute total runtime
-        if self.usage_stats.usage_stats_items:
-            self.usage_stats.total_runtime = max(self.usage_stats.usage_stats_items.values(),
-                                                 key=lambda x: x.max_timestamp).max_timestamp - \
-                min(self.usage_stats.usage_stats_items.values(), key=lambda x: x.min_timestamp).min_timestamp
+        # compute total runtime, skipping items without steps (their timestamps default to 0.0)
+        timed_items = [item for item in self.usage_stats.usage_stats_items.values() if item.max_timestamp > 0.0]
+        if timed_items:
+            self.usage_stats.total_runtime = max(item.max_timestamp for item in timed_items) - \
+                min(item.min_timestamp for item in timed_items)
         else:
             self.usage_stats.total_runtime = 0.0
 
