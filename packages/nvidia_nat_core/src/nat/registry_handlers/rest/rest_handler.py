@@ -17,12 +17,13 @@ import base64
 import logging
 import os
 import shutil
-import subprocess
+import tempfile
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
 
+from nat.registry_handlers.process_utils import run_command
 from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from nat.registry_handlers.schemas.headers import RequestHeaders
 from nat.registry_handlers.schemas.package import PackageNameVersionList
@@ -107,7 +108,11 @@ class RestRegistryHandler(AbstractRegistryHandler):
                 completion status message.
         """
 
-        tmp_dir = "./.tmp/nat-pull"
+        # A unique directory per pull. A shared one is not safe now that the
+        # install is awaited rather than run synchronously: two concurrent pulls
+        # would write into the same directory, and whichever finished first would
+        # rmtree it out from under the other installer.
+        tmp_dir = tempfile.mkdtemp(prefix="nat-pull-")
 
         try:
             async with httpx.AsyncClient(headers=self._headers, timeout=self._timeout) as client:
@@ -122,9 +127,6 @@ class RestRegistryHandler(AbstractRegistryHandler):
                 logger.error(validated_pull_response.status.message)
                 raise ValueError(f"Server error: {validated_pull_response.status.message}")
 
-            if (not os.path.exists(tmp_dir)):
-                os.mkdir(tmp_dir)
-
             whl_paths = []
 
             for package in validated_pull_response.packages:
@@ -138,19 +140,13 @@ class RestRegistryHandler(AbstractRegistryHandler):
 
             cmd = ["uv", "pip", "install"]
             cmd.extend(whl_paths)
-            result = subprocess.run(cmd, check=True)
-            result.check_returncode()
-
-            if (os.path.exists(tmp_dir)):
-                shutil.rmtree(tmp_dir)
+            await run_command(*cmd)
 
             yield validated_pull_response
 
         except Exception as e:
             msg = f"Error occured when installing packages: {e}"
             logger.error(msg)
-            if (os.path.exists(tmp_dir)):
-                shutil.rmtree(tmp_dir)
 
             validated_pull_response = PullResponse(status={
                 "status": StatusEnum.ERROR, "message": msg, "action": ActionEnum.PULL
@@ -160,6 +156,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
             yield validated_pull_response
 
         finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
             logger.info("Execution complete.")
 
     @asynccontextmanager
