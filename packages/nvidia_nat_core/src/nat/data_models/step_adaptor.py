@@ -33,24 +33,49 @@ class StepAdaptorMode(StrEnum):
 
 class StepAdaptorConfig(BaseModel):
     """
-    Configures how intermediate steps are filtered and normalized by the StepAdaptor.
+    Configures how intermediate steps are filtered and normalized by the ``StepAdaptor``.
 
     Args:
-        mode (StepAdaptorMode): One of:
-            - 'current' => pass only LLM (all LLM_* events) + TOOL_END
-            - 'end_events_only' => pass only LLM_END and TOOL_END
-            - 'custom' => pass only the events in custom_event_types
+        mode (StepAdaptorMode): Mode determining which events are emitted (``StepAdaptorMode.DEFAULT``,
+            ``StepAdaptorMode.CUSTOM``, or ``StepAdaptorMode.OFF``).
         custom_event_types (list[IntermediateStepType]):
-            If mode == 'custom', we only pass events whose event_type is in this list.
+            If ``mode`` is ``StepAdaptorMode.CUSTOM``, only events whose ``event_type`` is in this list are passed.
             Otherwise, this field is ignored.
+        stream_llm_tokens (bool): Whether to emit intermediate LLM token events
+            (``IntermediateStepType.LLM_NEW_TOKEN``). When ``False``, only ``IntermediateStepType.LLM_START``
+            and ``IntermediateStepType.LLM_END`` are emitted.
+        max_input_length (int): Maximum character length for input fields in intermediate step payloads.
+            Exceeding text will be truncated. Must be greater than or equal to 0.
+        max_output_length (int): Maximum character length for output fields in intermediate step payloads.
+            Exceeding text will be truncated. Must be greater than or equal to 0.
     """
     mode: StepAdaptorMode = StepAdaptorMode.DEFAULT
     custom_event_types: list[IntermediateStepType] = Field(default_factory=list)
+    stream_llm_tokens: bool = Field(
+        default=False,
+        description=("Whether to emit intermediate LLM token events (LLM_NEW_TOKEN). "
+                     "When False, only LLM_START and LLM_END are emitted."),
+    )
+    max_input_length: int = Field(
+        default=4000,
+        ge=0,
+        description=("Maximum character length for input fields in intermediate step payloads. "
+                     "Exceeding text will be truncated."),
+    )
+    max_output_length: int = Field(
+        default=4000,
+        ge=0,
+        description=("Maximum character length for output fields in intermediate step payloads. "
+                     "Exceeding text will be truncated."),
+    )
 
     @model_validator(mode="after")
     def check_custom_event_types(self) -> "StepAdaptorConfig":
         """
-        Validates custom configurations
+        Validates ``StepAdaptorConfig`` when ``mode`` is ``StepAdaptorMode.CUSTOM``.
+
+        Returns:
+            StepAdaptorConfig: The validated configuration instance.
         """
         if self.mode != StepAdaptorMode.CUSTOM and self.custom_event_types:
             logger.warning("Ignoring custom_event_types because mode is not 'custom'")
