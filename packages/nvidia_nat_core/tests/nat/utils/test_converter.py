@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
 from io import BytesIO
 from io import TextIOWrapper
 
@@ -754,6 +755,33 @@ def test_union_type_bidirectional_conversion():
     # Note: This tests that union return types don't break conversion
     result = converter.convert(TargetSchema(value="test"), str)
     assert result == "test"
+
+
+@pytest.mark.parametrize(
+    "return_type",
+    [str | int, typing.Union[str, int], typing.Optional[str]],  # noqa: UP007, UP045
+    ids=["pep604_union", "typing_union", "typing_optional"])
+def test_union_return_type_does_not_break_conversion(return_type: object) -> None:
+    """A converter's union return type is handled the same way however the union is spelled.
+
+    The root of `typing.Union[...]` / `typing.Optional[...]` is not a class, so the direct
+    lookup's `issubclass` check raised TypeError for every conversion through this converter.
+    """
+
+    def convert_from_schema(schema: TargetSchema) -> str:
+        return schema.value
+
+    convert_from_schema.__annotations__["return"] = return_type
+
+    def int_to_float(value: int) -> float:
+        return float(value)
+
+    converter = TypeConverter([convert_from_schema, int_to_float])
+
+    assert converter.convert(TargetSchema(value="test"), str) == "test"
+    assert converter.convert(3, float) == 3.0
+    sentinel = object()
+    assert converter.try_convert(sentinel, float) is sentinel
 
 
 def test_convert_none_to_optional_returns_none(basic_converter):
