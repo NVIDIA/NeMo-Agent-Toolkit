@@ -42,6 +42,7 @@ from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 from nat.middleware.utils.workflow_inventory import DiscoveredFunction
+from nat.plugins.security.middleware.defense.defense_middleware import stream_chunk_to_text
 from nat.plugins.security.middleware.guardrails.exceptions import PostInvokeBlockedError
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailFunctionFields
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailsMiddlewareConfig
@@ -275,7 +276,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
             return
 
         buffered: list[Any] = [chunk async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs)]
-        ctx.output = "".join(str(chunk) for chunk in buffered)
+        ctx.output = "".join(stream_chunk_to_text(chunk) for chunk in buffered)
         result = await self.post_invoke(ctx)
         if result is not None:
             ctx = result
@@ -307,7 +308,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
 
         async def upstream() -> AsyncIterator[str]:
             async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs):
-                yield str(chunk)
+                yield stream_chunk_to_text(chunk)
 
         async for chunk in self._llm_rails.stream_async(messages=messages, generator=upstream()):
             try:

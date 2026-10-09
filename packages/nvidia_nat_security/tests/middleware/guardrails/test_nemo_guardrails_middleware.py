@@ -30,6 +30,7 @@ from nemoguardrails.rails.llm.options import GenerationResponse
 from pydantic import BaseModel
 
 from nat.data_models.api_server import ChatRequestOrMessage
+from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Message
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
@@ -739,6 +740,80 @@ async def test_stream_with_output_rails_translates_json_block_sentinel() -> None
     assert " token2" in chunks
     assert "Blocked by content safety rails." in chunks
     assert block_sentinel not in chunks
+
+
+async def test_buffered_stream_renders_typed_chunks_as_text() -> None:
+    """The default buffered path returns reply text, not chunk reprs."""
+    config = GuardrailsMiddlewareConfig(
+        workflow_functions=["test_fn"],
+        guardrails=_rails_policy(),
+    )
+    assert config.stream_output_rails is False
+    middleware = _make_middleware(config=config)
+    fn_context = FunctionMiddlewareContext(
+        name="test_fn",
+        config=None,
+        description=None,
+        input_schema=None,
+        single_output_schema=None,
+        stream_output_schema=None,
+    )
+    chunks = [
+        ChatResponseChunk.from_string("Hello"),
+        ChatResponseChunk.from_string(" world"),
+    ]
+    call_next = MagicMock(return_value=_async_iter(chunks))
+
+    out: list[Any] = [
+        chunk async for chunk in middleware.function_middleware_stream(
+            "hello",
+            call_next=call_next,
+            context=fn_context, )
+    ]
+
+    assert out == ["Hello world"]
+
+
+async def test_stream_output_rails_evaluate_text_not_chunk_reprs() -> None:
+    """Token-by-token output rails are fed reply text, not chunk reprs."""
+    config = GuardrailsMiddlewareConfig(
+        workflow_functions=["test_fn"],
+        stream_output_rails=True,
+        guardrails=_rails_policy(),
+    )
+    middleware = _make_middleware(config=config)
+    fn_context = FunctionMiddlewareContext(
+        name="test_fn",
+        config=None,
+        description=None,
+        input_schema=None,
+        single_output_schema=None,
+        stream_output_schema=None,
+    )
+    seen_by_rails: list[str] = []
+
+    async def fake_stream_async(*, messages: Any, generator: Any, **kwargs: Any) -> AsyncIterator[str]:
+        del messages, kwargs
+        async for piece in generator:
+            seen_by_rails.append(piece)
+        yield "passed"
+
+    middleware._llm_rails.stream_async = MagicMock(side_effect=fake_stream_async)
+    chunks = [
+        ChatResponseChunk.from_string("Hello"),
+        ChatResponseChunk.from_string(" world"),
+    ]
+    call_next = MagicMock(return_value=_async_iter(chunks))
+
+    out: list[Any] = [
+        chunk async for chunk in middleware.function_middleware_stream(
+            "hello",
+            call_next=call_next,
+            context=fn_context, )
+    ]
+
+    assert seen_by_rails == ["Hello", " world"]
+    assert out == ["passed"]
 
 
 def test_finalize_guardrails_rejects_stream_output_rails_with_mapping_workflow_functions() -> None:
