@@ -62,6 +62,44 @@ class MCPFrontEndPluginWorkerBase(ABC):
                                               log_interval=self.front_end_config.memory_profile_interval,
                                               top_n=self.front_end_config.memory_profile_top_n,
                                               log_level=self.front_end_config.memory_profile_log_level)
+        self._session_managers: list[SessionManager] = []
+
+    def _track_session_manager(self, session_manager: SessionManager) -> SessionManager:
+        """Track a session manager so ``cleanup()`` can shut it down."""
+        self._session_managers.append(session_manager)
+        return session_manager
+
+    def _is_primary_workflow_per_user(self) -> bool:
+        """Return True when the configured workflow is registered as per-user."""
+        from nat.cli.type_registry import GlobalTypeRegistry
+
+        workflow_registration = GlobalTypeRegistry.get().get_function(type(self.full_config.workflow))
+        return workflow_registration.is_per_user
+
+    def _resolve_workflow_tool_name(self) -> str:
+        """Return the MCP tool name for the configured workflow entry point."""
+        workflow_config = self.full_config.workflow
+        alias = getattr(workflow_config, "workflow_alias", None)
+        return alias if alias else workflow_config.type
+
+    async def cleanup(self) -> None:
+        """Shut down all tracked session managers.
+
+        Attempts shutdown for every manager even when an individual call fails.
+        Clears the tracked list before re-raising the first shutdown error.
+        """
+        errors: list[BaseException] = []
+        try:
+            for session_manager in self._session_managers:
+                try:
+                    await session_manager.shutdown()
+                except Exception as exc:
+                    logger.exception("Failed to shut down SessionManager during MCP worker cleanup")
+                    errors.append(exc)
+        finally:
+            self._session_managers.clear()
+        if errors:
+            raise errors[0]
 
     def _setup_health_endpoint(self, mcp: FastMCP):
         """Set up the HTTP health endpoint that exercises MCP ping handler."""
@@ -129,7 +167,8 @@ class MCPFrontEndPluginWorkerBase(ABC):
 
         This method:
         - Sets up the health endpoint
-        - Builds the workflow and extracts all functions
+        - Creates session managers via SessionManager.create (shared or per-user)
+        - Extracts functions from the shared workflow when applicable
         - Filters functions based on tool_names config
         - Registers each function as an MCP tool
         - Sets up debug endpoints for tool introspection
@@ -143,8 +182,17 @@ class MCPFrontEndPluginWorkerBase(ABC):
         # Set up the health endpoint
         self._setup_health_endpoint(mcp)
 
-        # Build the default workflow
-        workflow = await builder.build()
+        if self._is_primary_workflow_per_user():
+            session_manager = self._track_session_manager(await SessionManager.create(config=self.full_config,
+                                                                                      shared_builder=builder))
+            tool_name = self._resolve_workflow_tool_name()
+            register_function_with_mcp(mcp, tool_name, session_manager, self.memory_profiler)
+            self._setup_debug_endpoints(mcp, {})
+            return
+
+        primary_session_manager = self._track_session_manager(await SessionManager.create(config=self.full_config,
+                                                                                          shared_builder=builder))
+        workflow = primary_session_manager.workflow
 
         # Get all functions from the workflow
         functions = await self._get_all_functions(workflow)
@@ -170,17 +218,12 @@ class MCPFrontEndPluginWorkerBase(ABC):
         session_managers: dict[str, SessionManager] = {}
         for function_name, function in functions.items():
             if isinstance(function, Workflow):
-                # Already a workflow, use it directly
                 logger.info("Function %s is a Workflow, using directly", function_name)
-                session_managers[function_name] = await SessionManager.create(config=self.full_config,
-                                                                              shared_builder=builder,
-                                                                              entry_function=None)
+                session_managers[function_name] = primary_session_manager
             else:
-                # Regular function - build a workflow with this function as entry point
                 logger.info("Function %s is a regular function, building entry workflow", function_name)
-                session_managers[function_name] = await SessionManager.create(config=self.full_config,
-                                                                              shared_builder=builder,
-                                                                              entry_function=function_name)
+                session_managers[function_name] = self._track_session_manager(await SessionManager.create(
+                    config=self.full_config, shared_builder=builder, entry_function=function_name))
 
         # Register each function with MCP, passing SessionManager for observability
         for function_name, session_manager in session_managers.items():
@@ -194,9 +237,7 @@ class MCPFrontEndPluginWorkerBase(ABC):
         if not session_managers:
             raise RuntimeError("No functions found in workflow. Please check your configuration.")
 
-        # After registration, expose debug endpoints for tool/schema inspection
-        # Extract the entry functions from session managers for debug endpoints
-        debug_functions = {name: sm.workflow for name, sm in session_managers.items()}
+        debug_functions = {name: sm.workflow for name, sm in session_managers.items() if not sm.is_workflow_per_user}
         self._setup_debug_endpoints(mcp, debug_functions)
 
     async def _get_all_functions(self, workflow: Workflow) -> dict[str, Function]:

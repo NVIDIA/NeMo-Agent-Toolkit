@@ -17,6 +17,7 @@
 import asyncio
 import base64
 import json
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
@@ -1482,6 +1483,62 @@ class TestFromConnectionXApiKeyHeader:
 
         assert info is not None
         assert info.get_user_details() == "fallback-key"
+
+
+def _request_with_access_token(token: str, access_token: object, cookie: str | None = None) -> Request:
+    headers = [(b"authorization", f"Bearer {token}".encode())]
+    if cookie is not None:
+        headers.append((b"cookie", f"{SESSION_COOKIE_NAME}={cookie}".encode()))
+    return Request({
+        "type": "http",
+        "http_version": "1.1",
+        "method": "POST",
+        "scheme": "http",
+        "path": "/mcp",
+        "raw_path": b"/mcp",
+        "query_string": b"",
+        "headers": headers,
+        "client": ("127.0.0.1", 1234),
+        "server": ("testserver", 80),
+        "root_path": "",
+        "user": SimpleNamespace(access_token=access_token),
+    })
+
+
+class TestVerifiedAccessTokenIdentity:
+    """A verified bearer principal is not replaced by a client-supplied nat-session cookie."""
+
+    def test_conflicting_cookie_is_rejected(self):
+        token = _make_jwt({"sub": "alice"})
+        access_token = SimpleNamespace(token=token, claims={})
+        request = _request_with_access_token(token, access_token, cookie="bob")
+
+        with pytest.raises(ValueError, match="nat-session cookie does not match"):
+            UserManager.user_id_from_verified_access_token(request, access_token)
+
+    def test_token_subject_is_used_when_cookie_names_the_same_user(self):
+        token = _make_jwt({"sub": "alice"})
+        access_token = SimpleNamespace(token=token, claims={})
+        request = _request_with_access_token(token, access_token, cookie="alice")
+
+        user_id = UserManager.user_id_from_verified_access_token(request, access_token)
+
+        assert user_id == UserManager._user_info_from_jwt({"sub": "alice"}).get_user_id()
+        assert user_id != UserInfo._from_session_cookie("bob").get_user_id()
+
+    def test_opaque_token_uses_verified_subject(self):
+        access_token = SimpleNamespace(token="opaque-token", claims={"sub": "alice"})
+        request = _request_with_access_token("opaque-token", access_token)
+
+        user_id = UserManager.user_id_from_verified_access_token(request, access_token)
+
+        assert user_id == UserManager._user_info_from_jwt({"sub": "alice"}).get_user_id()
+        assert UserManager.verified_access_token_from_connection(request) is access_token
+
+    def test_connection_without_auth_user_has_no_verified_token(self):
+        request = _request_with_access_token("plain", SimpleNamespace(token="plain", claims={}))
+        request.scope.pop("user")
+        assert UserManager.verified_access_token_from_connection(request) is None
 
 
 class TestJwtVsApiKeyDiscrimination:

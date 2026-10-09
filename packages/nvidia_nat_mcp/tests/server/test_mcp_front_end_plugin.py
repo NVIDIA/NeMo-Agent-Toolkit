@@ -230,7 +230,7 @@ async def test_workflow_alias_with_function_groups():
 
 
 async def test_session_manager_creation_for_workflow_vs_function():
-    """Test that SessionManager.create is called with correct entry_function for workflows vs regular functions."""
+    """Test SessionManager.create usage for shared workflows vs entry functions."""
     from unittest.mock import AsyncMock
     from unittest.mock import MagicMock
     from unittest.mock import patch
@@ -266,6 +266,7 @@ async def test_session_manager_creation_for_workflow_vs_function():
             # Configure the mock to return a mock SessionManager
             mock_session_manager = MagicMock()
             mock_session_manager.workflow = mock_workflow
+            mock_session_manager.is_workflow_per_user = False
             mock_session_create.return_value = mock_session_manager
 
             # Patch register_function_with_mcp to avoid actual registration
@@ -273,28 +274,11 @@ async def test_session_manager_creation_for_workflow_vs_function():
                 # Call the method we're testing
                 await worker._default_add_routes(mock_mcp, mock_builder)
 
-        # Verify SessionManager.create was called twice (once for each function)
+        # Primary manager builds the shared workflow; regular functions get their own entry manager.
         assert mock_session_create.call_count == 2
 
-        # Extract the calls
-        calls = mock_session_create.call_args_list
+        primary_call = mock_session_create.call_args_list[0]
+        function_call = mock_session_create.call_args_list[1]
 
-        # Find the call for the workflow and the call for the regular function
-        workflow_call = None
-        function_call = None
-
-        for call in calls:
-            # Check the entry_function parameter
-            entry_function = call.kwargs.get('entry_function')
-            if entry_function is None:
-                workflow_call = call
-            else:
-                function_call = call
-
-        # Verify workflow call used entry_function=None
-        assert workflow_call is not None, "Workflow should use entry_function=None"
-        assert workflow_call.kwargs['entry_function'] is None
-
-        # Verify regular function call used entry_function=function_name
-        assert function_call is not None, "Function should use entry_function=<name>"
-        assert function_call.kwargs['entry_function'] == "echo_function"
+        assert primary_call.kwargs.get('entry_function') is None
+        assert function_call.kwargs.get('entry_function') == "echo_function"

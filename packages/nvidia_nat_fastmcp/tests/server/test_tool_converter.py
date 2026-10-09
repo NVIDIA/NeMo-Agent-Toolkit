@@ -17,8 +17,12 @@
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
+import pytest
+from fastmcp import FastMCP
+from fastmcp.server.context import Context
 from pydantic import create_model
 
+from nat.plugins.fastmcp.server.tool_converter import INJECTED_CONTEXT_PARAM
 from nat.plugins.fastmcp.server.tool_converter import _build_name_mapping
 from nat.plugins.fastmcp.server.tool_converter import _sanitize_parameter_name
 from nat.plugins.fastmcp.server.tool_converter import create_function_wrapper
@@ -28,6 +32,7 @@ from nat.runtime.session import SessionManager
 def _mock_session_manager(result_value="result"):
     """Create a mock SessionManager for testing."""
     mock_sm = MagicMock(spec=SessionManager)
+    mock_sm.is_workflow_per_user = False
     mock_runner = MagicMock()
     mock_runner.__aenter__ = AsyncMock(return_value=mock_runner)
     mock_runner.__aexit__ = AsyncMock(return_value=None)
@@ -160,3 +165,40 @@ class TestParameterNameSanitization:
         wrapper = create_function_wrapper("tool", _mock_session_manager(), schema)
 
         assert "from_" in wrapper.__annotations__
+
+    def test_wrapper_declares_context_for_injection(self):
+        """FastMCP injects request context only when a Context parameter is annotated."""
+        from fastmcp.server.dependencies import find_kwarg_by_type
+
+        schema = create_model("Schema", **{"query": (str, ...)})  # type: ignore[call-overload]
+        wrapper = create_function_wrapper("tool", _mock_session_manager(), schema)
+
+        assert find_kwarg_by_type(wrapper, Context) == INJECTED_CONTEXT_PARAM
+
+    def test_create_wrapper_rejects_schema_field_named_ctx(self):
+        """A workflow field named `ctx` collides with MCP context injection."""
+        schema = create_model("CtxSchema", **{"ctx": (str, ...)})  # type: ignore[call-overload]
+
+        with pytest.raises(ValueError, match="cannot declare a field named 'ctx'"):
+            create_function_wrapper("tool", _mock_session_manager(), schema)
+
+    async def test_registered_per_user_tool_excludes_ctx_from_client_schema(self):
+        """Registered tools expose workflow args but not the injected Context param."""
+        from fastmcp.server.dependencies import find_kwarg_by_type
+
+        schema = create_model("ToolSchema", **{"message": (str, ...)})  # type: ignore[call-overload]
+        mock_sm = _mock_session_manager()
+        mock_sm.is_workflow_per_user = True
+        mock_sm.get_workflow_input_schema = MagicMock(return_value=schema)
+        mock_sm.config = MagicMock(workflow=MagicMock(description="Per-user workflow"))
+
+        mcp = FastMCP("test-server")
+        from nat.plugins.fastmcp.server.tool_converter import register_function_with_mcp
+
+        register_function_with_mcp(mcp, "per_user_tool", mock_sm)
+        tools = await mcp.list_tools()
+
+        assert len(tools) == 1
+        assert set(tools[0].parameters["properties"]) == {"message"}
+        tool = await mcp.get_tool("per_user_tool")
+        assert find_kwarg_by_type(tool.fn, Context) == INJECTED_CONTEXT_PARAM
