@@ -21,6 +21,7 @@ from typing import TypeVar
 
 import pytest
 
+from nat.utils.type_utils import ClassInfo
 from nat.utils.type_utils import DecomposedType
 
 # Both spellings are covered on purpose: the bug only reproduced with the ``typing`` forms.
@@ -312,3 +313,62 @@ class TestIsInstance:
         assert dt.is_instance("hi") is True
         assert dt.is_instance(None) is True
         assert dt.is_instance(1) is False
+
+
+class TestIsSubtype:
+    """Tests for DecomposedType.is_subtype method."""
+
+    def test_plain_type(self):
+        """Test is_subtype with plain, non-generic types."""
+        assert DecomposedType(int).is_subtype(int) is True
+        assert DecomposedType(str).is_subtype(int) is False
+        assert DecomposedType(bool).is_subtype(int) is True  # bool is a subclass of int
+
+    def test_tuple_of_classes(self):
+        """Test is_subtype with a tuple of classes."""
+        assert DecomposedType(int).is_subtype((str, int)) is True
+        assert DecomposedType(float).is_subtype((str, int)) is False
+
+    @pytest.mark.parametrize("union_type", INT_STR_UNION_TYPES, ids=INT_STR_UNION_IDS)
+    def test_union_of_concrete_types(self, union_type: ClassInfo) -> None:
+        """Test is_subtype against a union target, which issubclass rejects directly."""
+        assert DecomposedType(int).is_subtype(union_type) is True
+        assert DecomposedType(bool).is_subtype(union_type) is True
+        assert DecomposedType(float).is_subtype(union_type) is False
+
+    @pytest.mark.parametrize("optional_type", OPTIONAL_STR_TYPES, ids=OPTIONAL_STR_IDS)
+    def test_optional(self, optional_type: ClassInfo) -> None:
+        """Test is_subtype with `str | None` and `typing.Optional[str]`."""
+        assert DecomposedType(str).is_subtype(optional_type) is True
+        assert DecomposedType(NoneType).is_subtype(optional_type) is True
+        assert DecomposedType(int).is_subtype(optional_type) is False
+
+    def test_union_with_generic_member(self):
+        """Test is_subtype against a union containing a parameterized generic."""
+        assert DecomposedType(list).is_subtype(list[int] | None) is True
+        assert DecomposedType(int).is_subtype(list[int] | None) is False
+
+    def test_tuple_member_is_a_union(self):
+        """Test is_subtype with a tuple that contains a union member."""
+        assert DecomposedType(int).is_subtype((str, int | float)) is True
+        assert DecomposedType(bytes).is_subtype((str, int | float)) is False
+
+    def test_union_with_any_member(self):
+        """Test that a union containing typing.Any matches any subtype through its other members."""
+        assert DecomposedType(int).is_subtype(int | typing.Any) is True
+
+    def test_any_target_follows_issubclass(self):
+        """Test that typing.Any as the target keeps `issubclass` semantics."""
+        assert DecomposedType(int).is_subtype(typing.Any) is False
+
+    def test_generic_target_checks_origin_only(self):
+        """Test that a generic target is resolved through its origin."""
+        assert DecomposedType(list).is_subtype(list[int]) is True
+        assert DecomposedType(int).is_subtype(list[int]) is False
+
+    def test_annotated_union(self):
+        """Test is_subtype with a union wrapped in typing.Annotated."""
+        target = typing.Annotated[str | None, "meta"]
+        assert DecomposedType(str).is_subtype(target) is True
+        assert DecomposedType(NoneType).is_subtype(target) is True
+        assert DecomposedType(int).is_subtype(target) is False

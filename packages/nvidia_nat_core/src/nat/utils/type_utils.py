@@ -358,9 +358,21 @@ class DecomposedType:
             return False
 
         if (isinstance(class_or_tuple, tuple)):
-            return any(issubclass(base_root, DecomposedType(cls).root) for cls in class_or_tuple)
+            return any(self.is_subtype(cls) for cls in class_or_tuple)
 
-        return issubclass(base_root, DecomposedType(class_or_tuple).root)
+        target = DecomposedType(class_or_tuple).get_base_type()
+        if target.is_union:
+            # A union's root is the `typing.Union` / `types.UnionType` class itself, which
+            # `issubclass` rejects, so a union target is resolved member by member instead.
+            return any(self.is_subtype(arg) for arg in target.args)
+
+        target_root = target.root
+        if not inspect.isclass(target_root):
+            # No usable `issubclass` target (for example a bare `typing.Union` left inside an
+            # annotation); treat it as "not a subtype" instead of raising.
+            return False
+
+        return issubclass(base_root, target_root)
 
     def is_instance(self, instance: typing.Any) -> bool:
         """
