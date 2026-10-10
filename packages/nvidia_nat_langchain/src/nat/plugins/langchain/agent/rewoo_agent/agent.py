@@ -289,7 +289,7 @@ class ReWOOAgentGraph(BaseAgent):
             task = str(state.task.content)
             if not task:
                 logger.error("%s No task provided to the ReWOO Agent. Please provide a valid task.", AGENT_LOG_PREFIX)
-                return {"result": NO_INPUT_ERROR_MESSAGE}
+                return {"result": AIMessage(content=NO_INPUT_ERROR_MESSAGE)}
             chat_history = self._get_chat_history(state.messages)
             plan = await self._stream_llm(
                 planner,
@@ -517,6 +517,18 @@ class ReWOOAgentGraph(BaseAgent):
             logger.error("%s Failed to call solver_node: %s", AGENT_LOG_PREFIX, ex)
             raise
 
+    async def planner_edge(self, state: ReWOOGraphState):
+        """Skip execution when the planner has already produced the answer itself.
+
+        It does that for a task it cannot plan for, such as an empty one. A plan
+        it could not parse into steps still goes to the executor, which says so.
+        """
+        if state.result.content:
+            logger.debug("%s Planner answered without a plan, ending graph traversal", AGENT_LOG_PREFIX)
+            return AgentDecision.END
+
+        return AgentDecision.TOOL
+
     async def conditional_edge(self, state: ReWOOGraphState):
         try:
             logger.debug("%s Starting the ReWOO Conditional Edge", AGENT_LOG_PREFIX)
@@ -555,7 +567,10 @@ class ReWOOAgentGraph(BaseAgent):
             graph.add_node("executor", self.executor_node)
             graph.add_node("solver", self.solver_node)
 
-            graph.add_edge("planner", "executor")
+            graph.add_conditional_edges("planner",
+                                        self.planner_edge, {
+                                            AgentDecision.TOOL: "executor", AgentDecision.END: "__end__"
+                                        })
             graph.add_conditional_edges("executor",
                                         self.conditional_edge, {
                                             AgentDecision.TOOL: "executor", AgentDecision.END: "solver"
