@@ -346,6 +346,40 @@ async def test_executor_node_should_not_be_invoked_after_all_steps_executed(mock
         await mock_rewoo_agent.executor_node(mock_state)
 
 
+@pytest.mark.parametrize(
+    "content, expected_result",
+    [
+        ("plain text", "plain text"),
+        ([{
+            "a": 1
+        }], "{'a': 1}"),
+        (["doc one", "doc two"], "doc one"),
+        ([], ""),
+    ],
+)
+async def test_solver_node_handles_every_tool_content_shape(mock_rewoo_agent, content, expected_result):
+    # ToolMessage.content is str | list[str | dict], so a list of strings and an
+    # empty list are both shapes a NAT function can produce.
+    step = _create_step_info("find stuff", "#E1", "search", "q")
+    state = _create_mock_state_with_parallel_data([step], {"#E1": ToolMessage(content=content, tool_call_id="#E1")})
+
+    with patch.object(ReWOOAgentGraph, "_stream_llm", autospec=True) as stream_llm:
+        stream_llm.return_value = AIMessage(content="answer")
+        result = await mock_rewoo_agent.solver_node(state)
+
+    assert result["result"].content == "answer"
+    solver_chain = stream_llm.call_args.args[1]
+    plan = solver_chain.steps[0].partial_variables["plan"]
+    assert plan == f"Plan: find stuff\n#E1 = search[q]\nResult: {expected_result}\n\n"
+
+
+def test_tool_output_value(mock_rewoo_agent):
+    assert mock_rewoo_agent._tool_output_value(ToolMessage(content="text", tool_call_id="#E1")) == "text"
+    assert mock_rewoo_agent._tool_output_value(ToolMessage(content=[{"a": 1}], tool_call_id="#E1")) == {"a": 1}
+    assert mock_rewoo_agent._tool_output_value(ToolMessage(content=["one", "two"], tool_call_id="#E1")) == "one"
+    assert mock_rewoo_agent._tool_output_value(ToolMessage(content=[], tool_call_id="#E1")) == ""
+
+
 def test_validate_planner_prompt_no_input():
     mock_prompt = ''
     with pytest.raises(ValueError):
