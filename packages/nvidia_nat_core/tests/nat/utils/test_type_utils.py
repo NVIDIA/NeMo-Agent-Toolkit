@@ -21,6 +21,7 @@ from typing import TypeVar
 
 import pytest
 
+from nat.utils.type_utils import ClassInfo
 from nat.utils.type_utils import DecomposedType
 
 # Both spellings are covered on purpose: the bug only reproduced with the ``typing`` forms.
@@ -329,14 +330,14 @@ class TestIsSubtype:
         assert DecomposedType(float).is_subtype((str, int)) is False
 
     @pytest.mark.parametrize("union_type", INT_STR_UNION_TYPES, ids=INT_STR_UNION_IDS)
-    def test_union_of_concrete_types(self, union_type):
+    def test_union_of_concrete_types(self, union_type: ClassInfo) -> None:
         """Test is_subtype against a union target, which issubclass rejects directly."""
         assert DecomposedType(int).is_subtype(union_type) is True
         assert DecomposedType(bool).is_subtype(union_type) is True
         assert DecomposedType(float).is_subtype(union_type) is False
 
     @pytest.mark.parametrize("optional_type", OPTIONAL_STR_TYPES, ids=OPTIONAL_STR_IDS)
-    def test_optional(self, optional_type):
+    def test_optional(self, optional_type: ClassInfo) -> None:
         """Test is_subtype with `str | None` and `typing.Optional[str]`."""
         assert DecomposedType(str).is_subtype(optional_type) is True
         assert DecomposedType(NoneType).is_subtype(optional_type) is True
