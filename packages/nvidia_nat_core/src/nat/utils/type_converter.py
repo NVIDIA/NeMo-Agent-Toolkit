@@ -215,10 +215,10 @@ class TypeConverter:
             convert_to_root = DecomposedType(convert_to_type).root
             if inspect.isclass(convert_to_root) and issubclass(convert_to_root, target_root_type):
                 for convert_from_type, from_type_converter in to_type_converters.items():
-                    # union types correctly in Python 3.10+ (e.g., isinstance("x", str | int))
-                    decomposed_from = DecomposedType(convert_from_type)
-                    check_type = convert_from_type if decomposed_from.is_union else decomposed_from.root
-                    if isinstance(data, check_type):
+                    # `is_instance` resolves unions member by member and parameterized generics
+                    # through their origin; a raw `isinstance` rejects both, and also `Any` and
+                    # `Literal`, which are valid annotations for a registered converter.
+                    if DecomposedType(convert_from_type).is_instance(data):
                         try:
                             return from_type_converter(data)
                         except ConvertException:
@@ -274,15 +274,9 @@ class TypeConverter:
         # 2) Attempt each known converter from current_type -> ???, then recurse
         for _, to_type_converters in self._converters.items():
             for convert_from_type, from_type_converter in to_type_converters.items():
-                # For union types, use isinstance directly since it handles union types
-                # correctly in Python 3.10+ (e.g., isinstance("x", str | int))
-                decomposed_from = DecomposedType(convert_from_type)
-                if decomposed_from.is_union:
-                    matches = isinstance(data, convert_from_type)
-                else:
-                    matches = decomposed_from.is_instance(data)
-
-                if matches:
+                # `is_instance` resolves unions member by member and parameterized generics through
+                # their origin, which a raw `isinstance` rejects (and `Any` / `Literal` as well).
+                if DecomposedType(convert_from_type).is_instance(data):
                     try:
                         next_data = from_type_converter(data)
                         # Use DecomposedType for safe isinstance check with parameterized generics
