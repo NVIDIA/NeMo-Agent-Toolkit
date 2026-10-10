@@ -386,6 +386,15 @@ class DecomposedType:
         root = base_type.root
         if root is typing.Any:
             return True
+        if root is typing.Literal:
+            # `Literal[...]` constrains the value, not the class, so it is checked against the
+            # literal arguments instead of an `isinstance` target. `type` is compared alongside the
+            # value so `True` does not match `Literal[1]` and vice versa.
+            return any(type(instance) is type(arg) and instance == arg for arg in base_type.args)
+        if not inspect.isclass(root):
+            # Not usable as an `isinstance` target (for example `Callable[..., str]` is resolved
+            # through its origin above, but some constructs keep a non-class root).
+            return False
         return isinstance(instance, root)
 
     def get_pydantic_schema(self,

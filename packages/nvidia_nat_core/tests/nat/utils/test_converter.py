@@ -825,3 +825,61 @@ def test_registered_converter_returning_none_is_not_a_miss():
 
     assert converter.convert(Box(), str | None) is None
     assert converter.try_convert(Box(), str | None) is None
+
+
+# --------------------------------------------------------------------
+# Unit tests for converter source types that `isinstance` rejects:
+# `Any`, `Literal`, and unions containing a parameterized generic
+# --------------------------------------------------------------------
+
+
+def convert_any_to_int(value: typing.Any) -> int:
+    """A converter registered from `Any`, which `isinstance` rejects as a target."""
+    return 42
+
+
+def convert_literal_a_to_int(value: typing.Literal["a"]) -> int:
+    """A converter registered from a `Literal`, which `isinstance` rejects as a target."""
+    return 1
+
+
+def convert_generic_union_to_base(value: dict[str, int] | None) -> Base:
+    """A converter registered from a union whose member is a parameterized generic."""
+    return Base()
+
+
+def test_convert_source_registered_from_any():
+    """A source annotated with `Any` matches any value instead of raising TypeError."""
+    converter = TypeConverter([convert_any_to_int])
+
+    assert converter.convert("anything", int) == 42
+
+
+def test_convert_source_registered_from_literal():
+    """A `Literal` source matches its literal values only."""
+    converter = TypeConverter([convert_literal_a_to_int])
+
+    assert converter.convert("a", int) == 1
+
+    with pytest.raises(ValueError, match="Cannot convert"):
+        converter.convert("b", int)
+
+
+def test_convert_source_registered_from_generic_union():
+    """A union containing a parameterized generic matches through its members."""
+    converter = TypeConverter([convert_generic_union_to_base, convert_base_to_str])
+
+    # Direct match on each member of `dict[str, int] | None`.
+    assert isinstance(converter.convert({"key": 1}, Base), Base)
+    assert isinstance(converter.convert(None, Base), Base)
+
+    # Indirect chain: dict[str, int] | None -> Base -> str.
+    assert converter.convert({"key": 1}, str) == repr(Base())
+
+
+def test_convert_with_target_rejected_by_isinstance():
+    """`Any` and `Literal` targets are checked without raising TypeError."""
+    converter = TypeConverter([convert_any_to_int])
+
+    assert converter.convert(7, typing.Any) == 7
+    assert converter.convert("a", typing.Literal["a"]) == "a"
