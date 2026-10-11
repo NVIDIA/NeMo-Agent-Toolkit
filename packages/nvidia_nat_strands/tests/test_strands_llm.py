@@ -142,8 +142,10 @@ class TestBedrockStrands:
 
     @patch("boto3.Session")
     @patch("strands.models.bedrock.BedrockModel")
-    @pytest.mark.asyncio
-    async def test_credentials_profile_builds_boto_session(self, mock_model, mock_session, mock_builder):
+    async def test_credentials_profile_builds_boto_session(self,
+                                                           mock_model: MagicMock,
+                                                           mock_session: MagicMock,
+                                                           mock_builder: MagicMock):
         """A configured profile reaches Bedrock through a boto3 session that also carries the region."""
         config = AWSBedrockModelConfig(
             model_name="anthropic.claude-3-sonnet-20240229-v1:0",
@@ -160,12 +162,11 @@ class TestBedrockStrands:
 
     @patch("boto3.Session")
     @patch("strands.models.bedrock.BedrockModel")
-    @pytest.mark.asyncio
     async def test_no_boto_session_without_credentials_profile(self,
-                                                               mock_model,
-                                                               mock_session,
-                                                               bedrock_config,
-                                                               mock_builder):
+                                                               mock_model: MagicMock,
+                                                               mock_session: MagicMock,
+                                                               bedrock_config: AWSBedrockModelConfig,
+                                                               mock_builder: MagicMock):
         """Without a profile, the region goes to BedrockModel directly and the default credential chain applies."""
         # pylint: disable=not-async-context-manager
         async with bedrock_strands(bedrock_config, mock_builder):
