@@ -90,10 +90,17 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
 
     # LlamaIndex uses context_size instead of max_tokens
-    llm = Bedrock(**llm_config.model_dump(exclude={"api_type", "thinking", "top_p", "type", "verify_ssl"},
-                                          by_alias=True,
-                                          exclude_none=True,
-                                          exclude_unset=True))
+    config_dict = llm_config.model_dump(
+        exclude={"api_type", "credentials_profile_name", "thinking", "top_p", "type", "verify_ssl"},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+    # LlamaIndex names the AWS profile `profile_name` and silently drops unknown keyword arguments.
+    if llm_config.credentials_profile_name is not None:
+        config_dict["profile_name"] = llm_config.credentials_profile_name
+
+    llm = Bedrock(**config_dict)
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
