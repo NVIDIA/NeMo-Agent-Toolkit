@@ -312,7 +312,7 @@ class EvaluationRun:
         if self.config.skip_completed_entries:
             eval_input_items = []
             for item in self.eval_input.eval_input_items:
-                if not item.output_obj or pd.isnull(item.output_obj):
+                if not item.output_obj or (pd.api.types.is_scalar(item.output_obj) and pd.isnull(item.output_obj)):
                     eval_input_items.append(item)
 
             if not eval_input_items:
