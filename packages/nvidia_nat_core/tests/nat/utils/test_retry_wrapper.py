@@ -1264,6 +1264,36 @@ def test_sync_generator_empty_retry_reraises():
     assert service.sync_items == 1
 
 
+async def test_async_generator_legitimately_empty_retry_still_reraises():
+    """Pin the known tradeoff: a retry that genuinely yields nothing re-raises.
+
+    The wrapper cannot tell an exhausted one-shot iterator apart from a retry that
+    legitimately returns no chunks, so a stream that raises 429 and then succeeds
+    with zero chunks surfaces the original 429 instead of completing empty.
+    """
+
+    class FlakyThenEmpty:
+
+        def __init__(self):
+            self.calls = 0
+
+        async def astream(self) -> AsyncIterator[str]:
+            self.calls += 1
+            if self.calls == 1:
+                raise Boom429()
+            return
+            yield  # unreachable; keeps this an async generator
+
+    service = FlakyThenEmpty()
+    patched = ar.patch_with_retry(service, retries=3, base_delay=0, retry_codes=[429], retry_on_messages=None)
+
+    with pytest.raises(Boom429):
+        async for _chunk in patched.astream():
+            pass
+
+    assert service.calls == 2
+
+
 async def test_async_generator_empty_first_attempt_still_succeeds():
     """A genuinely empty successful stream (no prior failure) still completes."""
 
@@ -1330,7 +1360,6 @@ def _walk_traceback(tb):
     while tb is not None:
         yield tb
         tb = tb.tb_next
-
 
 
 def test_sync_generator_retry_wrapper_forwards_send():

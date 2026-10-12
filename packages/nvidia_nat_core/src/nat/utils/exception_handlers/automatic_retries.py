@@ -547,6 +547,15 @@ def patch_with_retry(
     deepcopy:
         If True, each retry receives deep‑copied *args and **kwargs* to avoid
         mutating shared state between attempts.
+
+    Streaming caveat
+    ----------------
+    For generator and async generator methods, a retry that finishes without
+    yielding anything after an earlier failure re-raises that earlier exception.
+    This catches the common case of a one-shot input iterator that was already
+    consumed by the failed attempt, but it also means a stream that fails (e.g.
+    with a 429) and then legitimately succeeds with zero chunks raises the
+    original error instead of returning an empty result.
     """
 
     # Invert deep copy to keep function signature the same
