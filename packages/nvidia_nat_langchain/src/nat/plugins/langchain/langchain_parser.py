@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+from collections.abc import Mapping
+
 from langchain_core.messages import AIMessage
 from langchain_core.messages import AIMessageChunk
 from langchain_core.messages import BaseMessage
@@ -144,13 +147,41 @@ def _parse_tool_message(message: IntermediateStep) -> dict:
     else:
         result["content"] = ""
 
-    # Add tool_call_id if available from metadata or UUID
-    if message.metadata and hasattr(message.metadata, 'tool_call_id'):
-        result["tool_call_id"] = message.metadata.tool_call_id
-    else:
-        result["tool_call_id"] = 0
+    # Carry a real tool call id through when the step recorded one, so the tool
+    # message can be matched to the assistant tool_calls entry it answers.
+    # Otherwise omit the key, which is what the llama_index and adk parsers do.
+    # A placeholder id is worse than no id: it is shaped like a real one, so a
+    # trajectory looks valid while every tool result points at the same call.
+    tool_call_id = _extract_tool_call_id(message.metadata)
+    if tool_call_id is not None:
+        result["tool_call_id"] = tool_call_id
 
     return result
+
+
+def _extract_tool_call_id(metadata: typing.Any) -> str | None:
+    """Return the tool call id recorded on a step's metadata, if there is one.
+
+    Handles both mapping and model metadata. ``hasattr`` is not a sufficient
+    test on a pydantic model, where a declared but unset field still answers
+    True and would yield a null id.
+
+    Args:
+        metadata: The ``metadata`` of an intermediate step, which may be a
+            mapping, a model, or None.
+
+    Returns:
+        The id as a non-empty string, or None when the step has no usable id.
+    """
+    if metadata is None:
+        return None
+
+    if isinstance(metadata, Mapping):
+        value = metadata.get("tool_call_id")
+    else:
+        value = getattr(metadata, "tool_call_id", None)
+
+    return value if isinstance(value, str) and value else None
 
 
 def _parse_input_message(message: IntermediateStep) -> dict | list[dict]:
