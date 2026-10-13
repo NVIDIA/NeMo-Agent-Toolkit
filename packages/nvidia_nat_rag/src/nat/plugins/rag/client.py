@@ -174,9 +174,7 @@ async def nat_rag(config: NATRAGConfig, builder: Builder) -> AsyncGenerator[Func
         final_citations: Citations | None = None
         try:
             stream = await rag_client.generate(
-                # exclude_none so the optional tool fields on OpenAIMessage are
-                # not sent as nulls in the request body.
-                messages=[OpenAIMessage(role="user", content=query).model_dump(exclude_none=True)],
+                messages=[OpenAIMessage(role="user", content=query).model_dump()],
                 collection_names=config.collection_names,
                 reranker_top_k=config.reranker_top_k,
             )
