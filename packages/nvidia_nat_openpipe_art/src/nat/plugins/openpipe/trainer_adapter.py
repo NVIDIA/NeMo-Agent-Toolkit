@@ -99,10 +99,13 @@ class ARTTrainerAdapter(TrainerAdapter):
         """
         Checks all EpisodeItem in traj.episode to validate:
 
-        - Every EpisodeItem.role is EpisodeItemRole.USER, SYSTEM, or ASSISTANT
+        - The episode is not empty
         - The first EpisodeItem.role is SYSTEM or USER
-        - The last EpisodeItem.role is ASSISTANT
-        - No two consecutive EpisodeItem.role are the same, except for SYSTEM
+        - No two consecutive EpisodeItem.role are both ASSISTANT
+
+        Roles are not restricted to USER, SYSTEM and ASSISTANT. A tool or
+        function result is a valid turn and is converted to a message of its
+        own role, so it does not count as an assistant turn here either.
 
         Args:
             traj: Trajectory to validate
@@ -146,6 +149,8 @@ class ARTTrainerAdapter(TrainerAdapter):
 
         def _to_chat_msg(d: EpisodeItem) -> dict:
 
+            metadata = d.metadata or {}
+
             if d.role == EpisodeItemRole.USER:
                 return {
                     "role": "user",
@@ -156,7 +161,40 @@ class ARTTrainerAdapter(TrainerAdapter):
                     "role": "system",
                     "content": _as_text(d.content),
                 }
+            elif d.role == EpisodeItemRole.TOOL:
+                # A tool result is not model output. Sending it as an assistant
+                # message trains the model to generate whatever the tool
+                # returned, and it puts two assistant turns in a row, which
+                # _validate_episode_order rejects on the episode itself.
+                msg = {"role": "tool", "content": _as_text(d.content)}
+                tool_call_id = metadata.get("tool_call_id")
+                if isinstance(tool_call_id, str) and tool_call_id:
+                    msg["tool_call_id"] = tool_call_id
+                else:
+                    # Nothing records an id on a tool step yet, so this is the
+                    # common case. Omit the key rather than inventing one: a
+                    # placeholder is shaped like a real id, so the trajectory
+                    # looks valid while every result points at the same call.
+                    logger.warning("Tool message has no tool_call_id, so it cannot be matched to the call it "
+                                   "answers.")
+                return msg
+            elif d.role == EpisodeItemRole.FUNCTION:
+                # The adk and llama_index parsers emit the deprecated function
+                # role, which carries a name instead of a tool call id.
+                msg = {"role": "function", "content": _as_text(d.content)}
+                name = metadata.get("name")
+                if isinstance(name, str) and name:
+                    msg["name"] = name
+                return msg
             else:
+                if d.role != EpisodeItemRole.ASSISTANT:
+                    # environment and other have no chat equivalent. Keep the
+                    # existing mapping so trajectories are not dropped, but say
+                    # so rather than losing the distinction silently.
+                    logger.warning(
+                        "Episode item role '%s' has no chat equivalent and is being sent as an "
+                        "assistant message.",
+                        d.role.value)
                 return {"role": "assistant", "content": _as_text(d.content)}
 
         output_trajectory_groups = []

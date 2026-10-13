@@ -441,6 +441,130 @@ class TestARTTrainerAdapter:
         assert len(result) == 1
         mock_art_traj.assert_called()
 
+    @staticmethod
+    def _emitted_messages(mock_art_traj, mock_openai_types) -> list[dict]:
+        """Collect the chat messages the adapter handed to ART, in order.
+
+        The first one goes in through the constructor and the rest are
+        appended, so neither alone shows the whole sequence. Assistant turns
+        are wrapped in a Choice, which conftest mocks, so each one is resolved
+        back to the message it was built from.
+        """
+        emitted = list(mock_art_traj.call_args.kwargs["messages_and_choices"])
+        for call in mock_art_traj.return_value.messages_and_choices.append.call_args_list:
+            emitted.append(call.args[0])
+
+        choice_calls = mock_openai_types.types.chat.chat_completion.Choice.call_args_list
+        messages = []
+        next_choice = 0
+        for item in emitted:
+            if isinstance(item, dict):
+                messages.append(item)
+            else:
+                messages.append(choice_calls[next_choice].kwargs["message"])
+                next_choice += 1
+        return messages
+
+    @patch('nat.plugins.openpipe.trainer_adapter.art.Trajectory')
+    @patch('nat.plugins.openpipe.trainer_adapter.art.TrajectoryGroup')
+    async def test_tool_result_is_sent_as_a_tool_message(self,
+                                                         mock_traj_group,
+                                                         mock_art_traj,
+                                                         adapter,
+                                                         mock_openai_types):
+        """A tool result keeps the tool role and carries its tool_call_id.
+
+        Relabelling it as an assistant message trains the model to generate
+        whatever the tool returned.
+        """
+        trajectory = Trajectory(episode=[
+            EpisodeItem(role=EpisodeItemRole.USER, content="weather in SF?"),
+            EpisodeItem(role=EpisodeItemRole.ASSISTANT, content="", logprobs={"test": 0.5}),
+            EpisodeItem(role=EpisodeItemRole.TOOL, content="sunny, 18C", metadata={"tool_call_id": "call_abc"}),
+            EpisodeItem(role=EpisodeItemRole.ASSISTANT, content="It is sunny and 18C.", logprobs={"test": 0.6}),
+        ],
+                                reward=0.7)
+        mock_art_traj.return_value.model_validate = MagicMock()
+
+        await adapter._construct_trajectory_groups([[trajectory]])
+
+        messages = self._emitted_messages(mock_art_traj, mock_openai_types)
+        tool_messages = [m for m in messages if isinstance(m, dict) and m.get("role") == "tool"]
+        assert tool_messages == [{"role": "tool", "content": "sunny, 18C", "tool_call_id": "call_abc"}]
+
+    @patch('nat.plugins.openpipe.trainer_adapter.art.Trajectory')
+    @patch('nat.plugins.openpipe.trainer_adapter.art.TrajectoryGroup')
+    async def test_tool_result_does_not_become_a_third_assistant_turn(self,
+                                                                      mock_traj_group,
+                                                                      mock_art_traj,
+                                                                      adapter,
+                                                                      mock_openai_types):
+        """The emitted messages must not break the no-consecutive-assistant rule.
+
+        ``_validate_episode_order`` enforces that rule on EpisodeItem.role
+        before the conversion, so flattening a tool item to assistant produced
+        a payload the same function would have rejected.
+        """
+        trajectory = Trajectory(episode=[
+            EpisodeItem(role=EpisodeItemRole.USER, content="weather in SF?"),
+            EpisodeItem(role=EpisodeItemRole.ASSISTANT, content="", logprobs={"test": 0.5}),
+            EpisodeItem(role=EpisodeItemRole.TOOL, content="sunny, 18C", metadata={"tool_call_id": "call_abc"}),
+            EpisodeItem(role=EpisodeItemRole.ASSISTANT, content="It is sunny and 18C.", logprobs={"test": 0.6}),
+        ],
+                                reward=0.7)
+        mock_art_traj.return_value.model_validate = MagicMock()
+
+        await adapter._construct_trajectory_groups([[trajectory]])
+
+        roles = [m["role"] for m in self._emitted_messages(mock_art_traj, mock_openai_types)]
+        assert roles == ["user", "assistant", "tool", "assistant"]
+
+    @patch('nat.plugins.openpipe.trainer_adapter.art.Trajectory')
+    @patch('nat.plugins.openpipe.trainer_adapter.art.TrajectoryGroup')
+    async def test_tool_message_without_an_id_omits_the_key(self,
+                                                            mock_traj_group,
+                                                            mock_art_traj,
+                                                            adapter,
+                                                            mock_openai_types):
+        """Nothing records a tool call id yet, so this is the common case.
+
+        The key is omitted rather than filled with a placeholder, and the
+        message still keeps the tool role.
+        """
+        trajectory = Trajectory(episode=[
+            EpisodeItem(role=EpisodeItemRole.USER, content="weather in SF?"),
+            EpisodeItem(role=EpisodeItemRole.TOOL, content="sunny, 18C"),
+            EpisodeItem(role=EpisodeItemRole.ASSISTANT, content="It is sunny.", logprobs={"test": 0.5}),
+        ],
+                                reward=0.7)
+        mock_art_traj.return_value.model_validate = MagicMock()
+
+        await adapter._construct_trajectory_groups([[trajectory]])
+
+        messages = self._emitted_messages(mock_art_traj, mock_openai_types)
+        assert {"role": "tool", "content": "sunny, 18C"} in messages
+
+    @patch('nat.plugins.openpipe.trainer_adapter.art.Trajectory')
+    @patch('nat.plugins.openpipe.trainer_adapter.art.TrajectoryGroup')
+    async def test_function_result_keeps_its_role_and_name(self,
+                                                           mock_traj_group,
+                                                           mock_art_traj,
+                                                           adapter,
+                                                           mock_openai_types):
+        """The adk and llama_index parsers emit role "function", not "tool"."""
+        trajectory = Trajectory(episode=[
+            EpisodeItem(role=EpisodeItemRole.USER, content="weather in SF?"),
+            EpisodeItem(role=EpisodeItemRole.FUNCTION, content="sunny, 18C", metadata={"name": "get_weather"}),
+            EpisodeItem(role=EpisodeItemRole.ASSISTANT, content="It is sunny.", logprobs={"test": 0.5}),
+        ],
+                                reward=0.7)
+        mock_art_traj.return_value.model_validate = MagicMock()
+
+        await adapter._construct_trajectory_groups([[trajectory]])
+
+        messages = self._emitted_messages(mock_art_traj, mock_openai_types)
+        assert {"role": "function", "content": "sunny, 18C", "name": "get_weather"} in messages
+
     async def test_submit_task_callback_success(self, adapter):
         """Test task callback on successful training."""
         collection = TrajectoryCollection(trajectories=[[]], run_id="test_run")
