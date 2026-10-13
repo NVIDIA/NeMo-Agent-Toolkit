@@ -15,6 +15,8 @@
 
 import io
 import logging
+import os
+import re
 import typing
 from pathlib import Path
 
@@ -132,6 +134,66 @@ def _interpolate_variables(value: str | int | float | bool | None) -> str | int 
     return expand(value, surrounded_vars_only=True)
 
 
+# A plain YAML value that is exactly one reference, such as `${VAR}` or `${VAR:-default}`.
+_WHOLE_REFERENCE = re.compile(r"\$\{(?P<name>[A-Za-z_][A-Za-z0-9_]*)(?:(?P<op>:?-)(?P<default>[^${}]*))?\}")
+
+
+def _interpolate_whole_reference(match: re.Match[str]) -> typing.Any:
+    """
+    Resolve a plain YAML value that is exactly one `${...}` reference.
+
+    The value keeps the YAML type it had when variables were expanded on the raw text: numbers,
+    booleans, null and `[...]` / `{...}` collections are parsed. Any other value is used verbatim,
+    so YAML comment and indicator characters in a value are not interpreted.
+
+    Args:
+        match: The `_WHOLE_REFERENCE` match for the value.
+
+    Returns:
+        The resolved value.
+    """
+    default = match["default"]
+    if default is not None and len(default) >= 2 and default[0] == default[-1] and default[0] in "\"'":
+        env_value = os.environ.get(match["name"])
+        if env_value is None or (match["op"] == ":-" and env_value == ""):
+            # A quoted default, as in `${VAR:-"http://default.com"}`, is a string without its quotes.
+            return default[1:-1]
+
+    text: str = expand(match.group(0), surrounded_vars_only=True)
+    if text.strip() == "":
+        # Matches loading the expanded text: an empty plain value is null.
+        return None
+
+    try:
+        parsed = yaml.safe_load(text)
+    except yaml.YAMLError:
+        return text
+
+    if isinstance(parsed, bool | int | float):
+        return parsed
+    if parsed is None and text.strip() in ("~", "null", "Null", "NULL"):
+        return None
+    if isinstance(parsed, list | dict) and text.lstrip()[:1] in ("[", "{"):
+        return parsed
+    return text
+
+
+class _EnvVarLoader(yaml.SafeLoader):
+    """Safe YAML loader that expands `${VAR}` references in string values after parsing."""
+
+
+def _construct_interpolated_str(loader: _EnvVarLoader, node: yaml.ScalarNode) -> typing.Any:
+    value: str = loader.construct_scalar(node)
+    if node.style is None:
+        match = _WHOLE_REFERENCE.fullmatch(value)
+        if match is not None:
+            return _interpolate_whole_reference(match)
+    return expand(value, surrounded_vars_only=True)
+
+
+_EnvVarLoader.add_constructor("tag:yaml.org,2002:str", _construct_interpolated_str)
+
+
 def deep_merge(base: dict, override: dict) -> dict:
     """
     Recursively merge override dictionary into base dictionary.
@@ -236,14 +298,15 @@ def yaml_loads(config: str, base_path: Path) -> dict:
     Raises:
         ValueError: If the YAML is invalid or its top level is not a mapping.
     """
-    config_text: str = expand(config, surrounded_vars_only=True)
+    # Variables are expanded in the parsed string values, so a value is never read again as YAML.
+    config_text: str = config
 
     stream = io.StringIO(config_text)
     stream.seek(0)
 
     # Load the YAML data
     try:
-        config_data = yaml.safe_load(stream)
+        config_data = yaml.load(stream, Loader=_EnvVarLoader)  # noqa: S506  # _EnvVarLoader is a SafeLoader
     except yaml.YAMLError as e:
         logger.error("Error loading YAML: %s", config_text)
         raise ValueError(f"Error loading YAML: {e}") from e
@@ -251,8 +314,8 @@ def yaml_loads(config: str, base_path: Path) -> dict:
     if not isinstance(config_data, dict):
         raise ValueError(f"Error loading YAML: the top level must be a mapping, got {type(config_data).__name__}")
 
-    # Variables were already expanded on the YAML text above. Expanding the parsed values a second
-    # time would also expand any "${...}" that came from an environment variable's own value.
+    # Each string value was expanded once while loading. Expanding again would also expand any
+    # "${...}" that came from an environment variable's own value.
     config_data = _resolve_file_references(config_data, base_path)
 
     return config_data
