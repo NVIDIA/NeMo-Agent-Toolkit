@@ -171,6 +171,22 @@ class TestFromConnectionRequestJwt:
         assert from_jwt is not None
         assert from_subject.get_user_id() == from_jwt.get_user_id()
 
+    def test_validated_subject_with_issuer_matches_verified_jwt_user_id(self):
+        """A subject and its issuer produce the ID the verified JWT paths produce."""
+        claims = {"sub": "user-123", "iss": "https://idp.example"}
+
+        from_subject = UserManager.user_info_from_subject("user-123", "https://idp.example")
+        from_verified_jwt = UserManager._user_info_from_jwt(claims, issuer_scoped=True)
+
+        assert from_subject.get_user_id() == from_verified_jwt.get_user_id()
+
+    def test_same_subject_at_different_issuers_is_two_users(self):
+        """Two identity providers that reuse a subject do not share one user."""
+        first = UserManager.user_info_from_subject("user-123", "https://idp-one.example")
+        second = UserManager.user_info_from_subject("user-123", "https://idp-two.example")
+
+        assert first.get_user_id() != second.get_user_id()
+
     def test_empty_validated_subject_is_rejected(self):
         """An authentication layer cannot create an identity from an empty subject."""
         with pytest.raises(ValueError, match="no usable identity claim"):

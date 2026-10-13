@@ -39,6 +39,7 @@ from nat.plugins.a2a.server.front_end_plugin_worker import A2AFrontEndPluginWork
 from nat.runtime.user_manager import UserManager
 
 SUBJECT = "alice@example.com"
+ISSUER = "https://idp.example"
 
 
 class _Input(BaseModel):
@@ -71,7 +72,7 @@ def _jwt(subject: str) -> str:
     return f"{segment({'alg': 'none', 'typ': 'JWT'})}.{segment({'sub': subject})}.c2lnbmF0dXJl"
 
 
-def _request(subject: str | None, token: str | None = None) -> Request:
+def _request(subject: str | None, token: str | None = None, issuer: str | None = None) -> Request:
     """Build a request shaped like one OAuth2ValidationMiddleware has passed."""
     bearer_token = token or _jwt(SUBJECT)
     scope = {
@@ -85,6 +86,7 @@ def _request(subject: str | None, token: str | None = None) -> Request:
     request = Request(scope)
     if subject is not None:
         request.state.oauth_user = subject
+        request.state.oauth_token_info = SimpleNamespace(subject=subject, issuer=issuer)
     return request
 
 
@@ -315,6 +317,21 @@ class TestPerUserRequestIdentity:
 
         assert first_context.user.user_name == expected
         assert second_context.user.user_name == expected
+
+    def test_call_context_builder_scopes_user_id_by_issuer(self):
+        """A2A must derive the ID the verified JWT paths derive for the same token."""
+        context = NATCallContextBuilder().build(_request(SUBJECT, issuer=ISSUER))
+
+        expected = UserManager._user_info_from_jwt({"sub": SUBJECT, "iss": ISSUER}, issuer_scoped=True).get_user_id()
+
+        assert context.user.user_name == expected
+
+    def test_call_context_builder_separates_one_subject_at_two_issuers(self):
+        """Two identity providers that reuse a subject must not share a per-user workflow."""
+        first_context = NATCallContextBuilder().build(_request(SUBJECT, issuer=ISSUER))
+        second_context = NATCallContextBuilder().build(_request(SUBJECT, issuer="https://other-idp.example"))
+
+        assert first_context.user.user_name != second_context.user.user_name
 
     def test_call_context_builder_leaves_unverified_requests_alone(self):
         """A request the middleware has not verified stays unauthenticated.

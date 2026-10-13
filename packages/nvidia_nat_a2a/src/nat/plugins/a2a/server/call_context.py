@@ -73,8 +73,11 @@ class NATCallContextBuilder(DefaultCallContextBuilder):
         if subject is None:
             return context
 
+        # Introspected opaque tokens may carry no issuer, which leaves the ID unscoped.
+        issuer = getattr(getattr(request.state, "oauth_token_info", None), "issuer", None)
+
         try:
-            user_info = UserManager.user_info_from_subject(subject)
+            user_info = UserManager.user_info_from_subject(subject, issuer)
         except ValueError:
             # A validated subject that cannot be resolved leaves the context unauthenticated
             # rather than failing the request here.
