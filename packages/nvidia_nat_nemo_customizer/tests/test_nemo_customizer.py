@@ -325,6 +325,32 @@ class TestNeMoCustomizerTrainerAdapter:
         assert result[0] == {"role": "system", "content": "System message"}
         assert result[1] == {"role": "user", "content": "User message"}
 
+    def test_format_prompt_carries_tool_and_function_identifiers(self, trainer_adapter):
+        """A tool or function message keeps what matches it to the call it answers."""
+        trainer_adapter.adapter_config.use_full_message_history = True
+
+        messages = [
+            OpenAIMessage(role="tool", content="sunny, 18C", tool_call_id="call_abc"),
+            OpenAIMessage(role="function", content="sunny, 18C", name="get_weather"),
+        ]
+
+        result = trainer_adapter._format_prompt(messages)
+
+        assert result[0] == {"role": "tool", "content": "sunny, 18C", "tool_call_id": "call_abc"}
+        assert result[1] == {"role": "function", "content": "sunny, 18C", "name": "get_weather"}
+
+    def test_format_prompt_omits_unset_identifiers(self, trainer_adapter):
+        """A user or assistant message gains no null keys.
+
+        The fields are optional, so emitting them unconditionally would put
+        nulls in every message of every DPO record.
+        """
+        trainer_adapter.adapter_config.use_full_message_history = True
+
+        result = trainer_adapter._format_prompt([OpenAIMessage(role="user", content="weather?")])
+
+        assert result[0] == {"role": "user", "content": "weather?"}
+
     def test_format_prompt_full_history_with_string(self, trainer_adapter):
         """Test prompt formatting with string prompt in full history mode."""
         trainer_adapter.adapter_config.use_full_message_history = True

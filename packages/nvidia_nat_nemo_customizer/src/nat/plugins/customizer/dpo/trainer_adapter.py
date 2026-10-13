@@ -45,6 +45,29 @@ from .config import NeMoCustomizerTrainerAdapterConfig
 logger = logging.getLogger(__name__)
 
 
+def _message_to_dict(msg: OpenAIMessage) -> dict[str, str]:
+    """Convert a message to its OpenAI chat form.
+
+    A tool message needs its ``tool_call_id`` and a function message needs its
+    ``name``, otherwise the message cannot be matched to the call it answers.
+    Both are optional, so they are emitted only when set rather than as nulls.
+
+    Args:
+        msg: The message to convert.
+
+    Returns:
+        The message as a dict holding only the fields it has.
+    """
+    result = {"role": msg.role, "content": msg.content}
+
+    if msg.tool_call_id:
+        result["tool_call_id"] = msg.tool_call_id
+    if msg.name:
+        result["name"] = msg.name
+
+    return result
+
+
 class NeMoCustomizerTrainerAdapter(TrainerAdapter):
     """
     TrainerAdapter for NeMo Customizer backend.
@@ -151,7 +174,7 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
             if isinstance(prompt, str):
                 return [{"role": "user", "content": prompt}]
             else:
-                return [{"role": msg.role, "content": msg.content} for msg in prompt]
+                return [_message_to_dict(msg) for msg in prompt]
         # Return only last message content as string
         elif isinstance(prompt, str):
             return prompt

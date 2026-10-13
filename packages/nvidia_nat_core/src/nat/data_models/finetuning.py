@@ -129,6 +129,8 @@ class OpenAIMessage(BaseModel):
     """
     role: str = Field(description="The role of the message (e.g., 'user', 'assistant').")
     content: str = Field(description="The content of the message.")
+    name: str | None = Field(default=None, description="The name of the function a 'function' role message answers.")
+    tool_call_id: str | None = Field(default=None, description="The id of the tool call a 'tool' role message answers.")
 
 
 class DPOItem(BaseModel):
