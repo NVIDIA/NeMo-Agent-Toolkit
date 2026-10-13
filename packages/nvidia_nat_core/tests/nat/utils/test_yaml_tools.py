@@ -189,6 +189,14 @@ def test_yaml_loads_references_in_flow_collections(monkeypatch: pytest.MonkeyPat
     assert config == {"ports": [8080, "x"], "headers": {"Authorization": "hunter2 #42"}, "nested": {"a": [8080]}}
 
 
+def test_yaml_loads_reference_as_merge_value(monkeypatch: pytest.MonkeyPatch):
+    """A `<<` merge value from an environment variable is merged, as it was when the raw text was expanded."""
+    monkeypatch.setenv("NAT_TEST_MERGE", "{y: 2}")
+
+    config: dict = yaml_loads("a:\n  <<: ${NAT_TEST_MERGE}\n  z: 3\nb:\n  <<: [${NAT_TEST_MERGE}]\n  z: 4\n", Path("."))
+    assert config == {"a": {"y": 2, "z": 3}, "b": {"y": 2, "z": 4}}
+
+
 def test_yaml_loads_explicit_str_tag_keeps_a_string(monkeypatch: pytest.MonkeyPatch):
     """An explicit `!!str` tag keeps a whole-value reference a string."""
     monkeypatch.setenv("NAT_TEST_PORT", "8080")
