@@ -227,6 +227,29 @@ class _EnvVarLoader(yaml.SafeLoader):
             return _WHOLE_REFERENCE_TAG
         return super().resolve(kind, value, implicit)
 
+    def _compose_reference(self, node: yaml.Node) -> yaml.Node:
+        """Turn a whole-reference scalar into the node its expanded text composes to, for use as a merge value."""
+        if not isinstance(node, yaml.ScalarNode) or node.tag != _WHOLE_REFERENCE_TAG:
+            return node
+        text = expand(self._restore(yaml.SafeLoader.construct_scalar(self, node)), surrounded_vars_only=True)
+        try:
+            composed = yaml.compose(text, Loader=yaml.SafeLoader)
+        except yaml.YAMLError:
+            return node
+        return composed if isinstance(composed, yaml.MappingNode) else node
+
+    def flatten_mapping(self, node: yaml.MappingNode) -> None:
+        # PyYAML checks `<<` merge values by node type before any scalar is constructed, so a merge value
+        # that comes from a reference has to be composed into a mapping node first.
+        for index, (key_node, value_node) in enumerate(node.value):
+            if key_node.tag != "tag:yaml.org,2002:merge":
+                continue
+            if isinstance(value_node, yaml.SequenceNode):
+                value_node.value = [self._compose_reference(item) for item in value_node.value]
+            else:
+                node.value[index] = (key_node, self._compose_reference(value_node))
+        super().flatten_mapping(node)
+
     def construct_scalar(self, node: yaml.ScalarNode) -> str:
         # Every scalar, including keys and explicitly tagged values, is expanded exactly once here.
         return expand(self._restore(super().construct_scalar(node)), surrounded_vars_only=True)
