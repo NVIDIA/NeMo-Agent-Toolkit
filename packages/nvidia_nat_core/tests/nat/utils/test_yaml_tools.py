@@ -156,16 +156,19 @@ def test_yaml_loads_does_not_expand_variables_inside_env_values(monkeypatch: pyt
     assert config["name"] == "world"
 
 
-@pytest.mark.parametrize("value", [
-    "hunter2 #42",
-    "*s3cret",
-    "&s3cret",
-    "!s3cret",
-    "@s3cret",
-    "'s3cret",
-    "Answer: yes",
-    "a, b",
-])
+@pytest.mark.parametrize("value",
+                         [
+                             "hunter2 #42",
+                             "*s3cret",
+                             "&s3cret",
+                             "!s3cret",
+                             "@s3cret",
+                             "'s3cret",
+                             "Answer: yes",
+                             "a, b",
+                             "123 #42",
+                             "true # x",
+                         ])
 def test_yaml_loads_env_value_is_not_parsed_as_yaml_text(monkeypatch: pytest.MonkeyPatch, value: str):
     """A text value is used as it is, even when it contains YAML comment or indicator characters."""
     monkeypatch.setenv("NAT_TEST_SECRET", value)
@@ -173,6 +176,25 @@ def test_yaml_loads_env_value_is_not_parsed_as_yaml_text(monkeypatch: pytest.Mon
     config: dict = yaml_loads("password: ${NAT_TEST_SECRET}\nurl: http://host/${NAT_TEST_SECRET}\n", Path("."))
     assert config["password"] == value
     assert config["url"] == f"http://host/{value}"
+
+
+def test_yaml_loads_references_in_flow_collections(monkeypatch: pytest.MonkeyPatch):
+    """References inside `[...]` and `{...}` load as they did when the raw text was expanded first."""
+    monkeypatch.setenv("NAT_TEST_PORT", "8080")
+    monkeypatch.setenv("NAT_TEST_SECRET", "hunter2 #42")
+
+    config: dict = yaml_loads(
+        "ports: [${NAT_TEST_PORT}, x]\nheaders: {Authorization: ${NAT_TEST_SECRET}}\nnested: {a: [${NAT_TEST_PORT}]}\n",
+        Path("."))
+    assert config == {"ports": [8080, "x"], "headers": {"Authorization": "hunter2 #42"}, "nested": {"a": [8080]}}
+
+
+def test_yaml_loads_explicit_str_tag_keeps_a_string(monkeypatch: pytest.MonkeyPatch):
+    """An explicit `!!str` tag keeps a whole-value reference a string."""
+    monkeypatch.setenv("NAT_TEST_PORT", "8080")
+
+    config: dict = yaml_loads("port: !!str ${NAT_TEST_PORT}\nother: ${NAT_TEST_PORT}\n", Path("."))
+    assert config == {"port": "8080", "other": 8080}
 
 
 def test_yaml_loads_quoted_default_drops_the_quotes(monkeypatch: pytest.MonkeyPatch):
