@@ -165,8 +165,13 @@ def _interpolate_whole_reference(match: re.Match[str]) -> typing.Any:
         return None
 
     try:
+        node = yaml.compose(text, Loader=yaml.SafeLoader)
         parsed = yaml.safe_load(text)
     except yaml.YAMLError:
+        return text
+
+    if node is None or node.end_mark.index < len(text.rstrip()):
+        # The YAML value ends before the text does, e.g. `123 #42` parses as `123`. Keep the text.
         return text
 
     if isinstance(parsed, bool | int | float):
@@ -178,20 +183,68 @@ def _interpolate_whole_reference(match: re.Match[str]) -> typing.Any:
     return text
 
 
+# Tag the loader resolves an untagged plain `${VAR}` value to. Quoted values and values with an explicit
+# tag such as `!!str` are not resolved, so they stay strings.
+_WHOLE_REFERENCE_TAG = "tag:nvidia.com,2026:nat-env-reference"
+
+# A `${...}` reference on one line. Its braces are YAML flow indicators, so each reference is swapped
+# for a placeholder of letters, digits and `_` before parsing and swapped back in each scalar.
+_REFERENCE = re.compile(r"\$\{[^{}\n]*\}")
+_PLACEHOLDER = re.compile(r"NATENVREF[0-9a-f]{12}N[0-9]+N")
+
+
+def _protect_references(config: str) -> tuple[str, dict[str, str]]:
+    """
+    Replace each `${...}` reference in the raw YAML text with a placeholder that is safe in any YAML context.
+
+    Args:
+        config (str): The raw YAML text.
+
+    Returns:
+        tuple[str, dict[str, str]]: The text with placeholders, and each placeholder's original reference.
+    """
+    nonce = os.urandom(6).hex()
+    references: dict[str, str] = {}
+
+    def _swap(match: re.Match[str]) -> str:
+        placeholder = f"NATENVREF{nonce}N{len(references)}N"
+        references[placeholder] = match.group(0)
+        return placeholder
+
+    return _REFERENCE.sub(_swap, config), references
+
+
 class _EnvVarLoader(yaml.SafeLoader):
-    """Safe YAML loader that expands `${VAR}` references in string values after parsing."""
+    """Safe YAML loader that expands `${VAR}` references in scalar values after parsing."""
+
+    references: dict[str, str] = {}
+
+    def _restore(self, value: str) -> str:
+        return _PLACEHOLDER.sub(lambda m: self.references.get(m.group(0), m.group(0)), value)
+
+    def resolve(self, kind: typing.Any, value: typing.Any, implicit: typing.Any) -> str:
+        if kind is yaml.ScalarNode and implicit[0] and _WHOLE_REFERENCE.fullmatch(self._restore(value)):
+            return _WHOLE_REFERENCE_TAG
+        return super().resolve(kind, value, implicit)
+
+    def construct_scalar(self, node: yaml.ScalarNode) -> str:
+        # Every scalar, including keys and explicitly tagged values, is expanded exactly once here.
+        return expand(self._restore(super().construct_scalar(node)), surrounded_vars_only=True)
 
 
-def _construct_interpolated_str(loader: _EnvVarLoader, node: yaml.ScalarNode) -> typing.Any:
-    value: str = loader.construct_scalar(node)
-    if node.style is None:
-        match = _WHOLE_REFERENCE.fullmatch(value)
-        if match is not None:
-            return _interpolate_whole_reference(match)
-    return expand(value, surrounded_vars_only=True)
+def _env_var_loader(references: dict[str, str]) -> type[_EnvVarLoader]:
+    """Create an `_EnvVarLoader` subclass that restores the given placeholders."""
+    return typing.cast(type[_EnvVarLoader],
+                       type("_EnvVarLoaderForConfig", (_EnvVarLoader, ), {"references": references}))
 
 
-_EnvVarLoader.add_constructor("tag:yaml.org,2002:str", _construct_interpolated_str)
+def _construct_whole_reference(loader: _EnvVarLoader, node: yaml.ScalarNode) -> typing.Any:
+    match = _WHOLE_REFERENCE.fullmatch(loader._restore(yaml.SafeLoader.construct_scalar(loader, node)))
+    assert match is not None  # the resolver only assigns this tag to a full match
+    return _interpolate_whole_reference(match)
+
+
+_EnvVarLoader.add_constructor(_WHOLE_REFERENCE_TAG, _construct_whole_reference)
 
 
 def deep_merge(base: dict, override: dict) -> dict:
@@ -299,14 +352,14 @@ def yaml_loads(config: str, base_path: Path) -> dict:
         ValueError: If the YAML is invalid or its top level is not a mapping.
     """
     # Variables are expanded in the parsed string values, so a value is never read again as YAML.
-    config_text: str = config
+    config_text, references = _protect_references(config)
 
     stream = io.StringIO(config_text)
     stream.seek(0)
 
     # Load the YAML data
     try:
-        config_data = yaml.load(stream, Loader=_EnvVarLoader)  # noqa: S506  # _EnvVarLoader is a SafeLoader
+        config_data = yaml.load(stream, Loader=_env_var_loader(references))  # noqa: S506  # a SafeLoader
     except yaml.YAMLError as e:
         logger.error("Error loading YAML: %s", config_text)
         raise ValueError(f"Error loading YAML: {e}") from e
