@@ -147,7 +147,14 @@ class ARTTrainerAdapter(TrainerAdapter):
         def _as_text(obj: Any) -> str:
             return obj if isinstance(obj, str) else json.dumps(obj, ensure_ascii=False)
 
+        # Nothing records a tool call id on a tool step yet, so a missing id is
+        # the common case rather than an anomaly. Count them and warn once
+        # instead of once per message.
+        tool_messages_without_id = 0
+
         def _to_chat_msg(d: EpisodeItem) -> dict:
+
+            nonlocal tool_messages_without_id
 
             metadata = d.metadata or {}
 
@@ -171,12 +178,13 @@ class ARTTrainerAdapter(TrainerAdapter):
                 if isinstance(tool_call_id, str) and tool_call_id:
                     msg["tool_call_id"] = tool_call_id
                 else:
-                    # Nothing records an id on a tool step yet, so this is the
-                    # common case. Omit the key rather than inventing one: a
-                    # placeholder is shaped like a real id, so the trajectory
-                    # looks valid while every result points at the same call.
-                    logger.warning("Tool message has no tool_call_id, so it cannot be matched to the call it "
-                                   "answers.")
+                    # Omit the key rather than inventing one: a placeholder is
+                    # shaped like a real id, so the trajectory looks valid
+                    # while every result points at the same call. Dropping the
+                    # turn instead would lose the tool result and put two
+                    # assistant turns next to each other, which is the defect
+                    # this branch exists to avoid.
+                    tool_messages_without_id += 1
                 return msg
             elif d.role == EpisodeItemRole.FUNCTION:
                 # The adk and llama_index parsers emit the deprecated function
@@ -234,6 +242,15 @@ class ARTTrainerAdapter(TrainerAdapter):
             if art_trajectories:
                 trajectory_group = art.TrajectoryGroup(trajectories=art_trajectories)
                 output_trajectory_groups.append(trajectory_group)
+
+        if tool_messages_without_id:
+            # These messages are rendered by the tokenizer chat template, not
+            # sent to the chat completions API, and most templates ignore the
+            # id. A template that does use it renders the turn without it.
+            logger.warning(
+                "%d tool message(s) had no tool_call_id and were emitted without one, so they cannot be "
+                "matched to the call they answer.",
+                tool_messages_without_id)
 
         return output_trajectory_groups
 

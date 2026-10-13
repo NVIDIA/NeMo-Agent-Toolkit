@@ -15,6 +15,7 @@
 
 import asyncio
 import json
+import logging
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -543,6 +544,27 @@ class TestARTTrainerAdapter:
 
         messages = self._emitted_messages(mock_art_traj, mock_openai_types)
         assert {"role": "tool", "content": "sunny, 18C"} in messages
+
+    @patch('nat.plugins.openpipe.trainer_adapter.art.Trajectory')
+    @patch('nat.plugins.openpipe.trainer_adapter.art.TrajectoryGroup')
+    async def test_missing_tool_call_ids_warn_once(self, mock_traj_group, mock_art_traj, adapter, caplog):
+        """Every tool message lacks an id today, so warn once with a count.
+
+        Warning per message would put one line per tool call in the log of
+        every training run.
+        """
+        episode = [EpisodeItem(role=EpisodeItemRole.USER, content="weather?")]
+        for _ in range(3):
+            episode.append(EpisodeItem(role=EpisodeItemRole.TOOL, content="sunny"))
+            episode.append(EpisodeItem(role=EpisodeItemRole.ASSISTANT, content="ok", logprobs={"test": 0.5}))
+        mock_art_traj.return_value.model_validate = MagicMock()
+
+        with caplog.at_level(logging.WARNING, logger="nat.plugins.openpipe.trainer_adapter"):
+            await adapter._construct_trajectory_groups([[Trajectory(episode=episode, reward=0.5)]])
+
+        warnings = [r for r in caplog.records if "tool_call_id" in r.getMessage()]
+        assert len(warnings) == 1
+        assert "3 tool message(s)" in warnings[0].getMessage()
 
     @patch('nat.plugins.openpipe.trainer_adapter.art.Trajectory')
     @patch('nat.plugins.openpipe.trainer_adapter.art.TrajectoryGroup')
