@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -215,7 +216,7 @@ class TestParseToolMessageCallId:
     """Tests for the tool_call_id carried on a TOOL_END tool message."""
 
     @staticmethod
-    def _tool_end_step(metadata, output="tool output"):
+    def _tool_end_step(metadata: Any, output: str = "tool output") -> IntermediateStep:
         """Build a real TOOL_END step, not a mock.
 
         A MagicMock metadata answers any attribute, so it cannot show whether a
@@ -232,7 +233,7 @@ class TestParseToolMessageCallId:
                                 ))
 
     @pytest.mark.parametrize("metadata", [TraceMetadata(), {}, None], ids=["model", "dict", "none"])
-    def test_omits_tool_call_id_when_step_has_none(self, metadata):
+    def test_omits_tool_call_id_when_step_has_none(self, metadata: Any):
         """No recorded id means the key is omitted, not filled with a placeholder.
 
         TraceMetadata declares no tool_call_id, so this is the common case. A
@@ -254,7 +255,7 @@ class TestParseToolMessageCallId:
         assert result["tool_call_id"] == "call_xyz789"
 
     @pytest.mark.parametrize("value", [None, "", 0, 7, False], ids=["none", "empty", "zero", "int", "bool"])
-    def test_rejects_an_unusable_recorded_id(self, value):
+    def test_rejects_an_unusable_recorded_id(self, value: Any):
         """Only a non-empty string is a usable id.
 
         OpenAI requires tool_call_id to be a string, so a null, blank or
