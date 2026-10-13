@@ -94,3 +94,28 @@ def test_config_casting():
     assert config.a is False
     assert config.b == 45
     assert config.c == 5.6
+
+
+def test_float_override_of_integer_valued_float_field():
+    """YAML loads `temperature: 0` as int, but `--override ... 0.7` is the documented example."""
+    layered_config = config_override.LayeredConfig({"llms": {"nim_llm": {"_type": "nim", "temperature": 0}}})
+
+    layered_config.set_override("llms.nim_llm.temperature", "0.7")
+
+    assert layered_config.get_effective_config()["llms"]["nim_llm"]["temperature"] == 0.7
+
+
+def test_integer_override_of_integer_field_stays_int():
+    layered_config = config_override.LayeredConfig({"llms": {"nim_llm": {"max_tokens": 1024}}})
+
+    layered_config.set_override("llms.nim_llm.max_tokens", "2048")
+
+    value = layered_config.get_effective_config()["llms"]["nim_llm"]["max_tokens"]
+    assert value == 2048 and isinstance(value, int)
+
+
+def test_non_numeric_override_of_integer_field_still_rejected():
+    layered_config = config_override.LayeredConfig({"llms": {"nim_llm": {"temperature": 0}}})
+
+    with pytest.raises(click.BadParameter, match="Type mismatch"):
+        layered_config.set_override("llms.nim_llm.temperature", "hot")
