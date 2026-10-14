@@ -501,6 +501,35 @@ async def test_run_workflow_remote_success(evaluation_run, generated_answer):
             assert item.output_obj == generated_answer, f"Expected {generated_answer}, got {item.output_obj}"
 
 
+def test_compute_usage_stats_pairs_overlapping_llm_calls_by_uuid(evaluation_run):
+    """Overlapping LLM calls must be matched to their own LLM_START when computing the LLM latency."""
+
+    def make_step(event_type: IntermediateStepType, uuid: str, timestamp: float) -> IntermediateStep:
+        return IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(function_name="agent", function_id="agent-id"),
+                                payload=IntermediateStepPayload(event_type=event_type,
+                                                                event_timestamp=timestamp,
+                                                                UUID=uuid,
+                                                                name="llm"))
+
+    item = EvalInputItem(id="overlap",
+                         input_obj="question",
+                         expected_output_obj="answer",
+                         output_obj="answer",
+                         trajectory=[
+                             make_step(IntermediateStepType.LLM_START, "call-a", 100.0),
+                             make_step(IntermediateStepType.LLM_START, "call-b", 101.0),
+                             make_step(IntermediateStepType.LLM_END, "call-a", 110.0),
+                             make_step(IntermediateStepType.LLM_END, "call-b", 111.0),
+                         ],
+                         expected_trajectory=[],
+                         full_dataset_entry={})
+
+    usage_stats_item = evaluation_run._compute_usage_stats(item)
+
+    assert usage_stats_item.llm_latency == pytest.approx(10.0)
+
+
 # Batch-2: Tests for running evaluators
 async def test_run_single_evaluator_success(evaluation_run, mock_evaluator, eval_output, average_score):
     """Test for running a single evaluator."""

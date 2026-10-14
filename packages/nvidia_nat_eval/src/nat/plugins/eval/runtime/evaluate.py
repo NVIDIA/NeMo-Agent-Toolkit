@@ -172,13 +172,12 @@ class EvaluationRun:
 
         # find llm latency by calculating p95 of all llm calls
         llm_latencies = []
-        previous_llm_start_time = None
+        llm_start_times: dict[str, float] = {}
         for step in item.trajectory:
             if step.event_type == IntermediateStepType.LLM_START:
-                previous_llm_start_time = step.event_timestamp
-            elif step.event_type == IntermediateStepType.LLM_END and previous_llm_start_time is not None:
-                llm_latencies.append(step.event_timestamp - previous_llm_start_time)
-                previous_llm_start_time = None
+                llm_start_times[step.UUID] = step.event_timestamp
+            elif step.event_type == IntermediateStepType.LLM_END and step.UUID in llm_start_times:
+                llm_latencies.append(step.event_timestamp - llm_start_times.pop(step.UUID))
 
         # Calculate p95 LLM latency (or 0 if no LLM calls)
         if llm_latencies:
