@@ -16,16 +16,20 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 from nat.data_models.api_server import ChatResponseChunk
 
 
 @pytest.fixture(name="structured_chunk_stream")
-def fixture_structured_chunk_stream():
+def fixture_structured_chunk_stream() -> Callable[[Any], AsyncIterator[ChatResponseChunk]]:
     """A ``call_next`` stream that yields ``ChatResponseChunk`` objects whose text joins to "Hello world"."""
 
-    async def _stream(_value):
+    async def _stream(_value: Any) -> AsyncIterator[ChatResponseChunk]:
         yield ChatResponseChunk.create_streaming_chunk("Hello ", id_="echo")
         yield ChatResponseChunk.create_streaming_chunk("world", id_="echo")
 
