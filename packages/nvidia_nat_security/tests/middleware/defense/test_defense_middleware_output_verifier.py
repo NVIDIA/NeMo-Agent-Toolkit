@@ -24,7 +24,6 @@ import pytest
 from pydantic import BaseModel
 
 from nat.builder.function import FunctionGroup
-from nat.data_models.api_server import ChatResponseChunk
 from nat.middleware.common import TargetLocation
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.plugins.security.middleware.defense.defense_middleware_output_verifier import OutputVerifierMiddleware
@@ -573,7 +572,10 @@ class TestOutputVerifierStreaming:
         assert chunks == ["6.0"]
         assert mock_llm.ainvoke.called
 
-    async def test_streaming_analyzes_structured_chunks_as_text(self, mock_builder, middleware_context):
+    async def test_streaming_analyzes_structured_chunks_as_text(self,
+                                                                mock_builder,
+                                                                middleware_context,
+                                                                structured_chunk_stream):
         """Structured stream chunks are analyzed as text, not as their repr."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm", action="refusal")
         middleware = OutputVerifierMiddleware(config, mock_builder)
@@ -584,15 +586,11 @@ class TestOutputVerifierStreaming:
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
 
-        async def mock_stream(_value):
-            yield ChatResponseChunk.create_streaming_chunk("Hello ", id_="echo")
-            yield ChatResponseChunk.create_streaming_chunk("world", id_="echo")
-
         chunks = []
         async for chunk in middleware.function_middleware_stream({
                 "a": 2, "b": 3
         },
-                                                                 call_next=mock_stream,
+                                                                 call_next=structured_chunk_stream,
                                                                  context=middleware_context):
             chunks.append(chunk)
 
