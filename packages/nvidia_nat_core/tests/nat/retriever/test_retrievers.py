@@ -783,3 +783,56 @@ async def test_milvus_bind_custom_vector_field(milvus_retriever_fresh):
     res = await milvus_retriever_fresh.search(query="Test query?")
     assert isinstance(res, RetrieverOutput)
     assert len(res) == 2
+
+
+class _SearchPage(list):
+    """Mimics a pymilvus search iterator page."""
+
+    def get_res(self):
+        return [list(self)]
+
+
+class _SearchIterator:
+    """Mimics a pymilvus search iterator that returns an empty page once exhausted."""
+
+    def __init__(self, pages: list[_SearchPage]):
+        self._pages = [*pages, _SearchPage()]
+
+    def next(self):
+        return self._pages.pop(0)
+
+    def close(self):
+        pass
+
+
+class _IteratorMilvusClient(CustomMilvusClient):
+
+    def __init__(self, pages: list[_SearchPage]):
+        super().__init__()
+        self._iterator_pages = pages
+
+    def search_iterator(self, **kwargs):
+        super().search_iterator(**kwargs)
+        return _SearchIterator(self._iterator_pages)
+
+
+def _iterator_hit(doc_id: str, distance: float):
+    from pymilvus.client.abstract import Hit
+    return Hit({"id": doc_id, "distance": distance, "entity": {"text": f"Text {doc_id}"}}, pk_name="id")
+
+
+@pytest.mark.parametrize("page_distances, distance_cutoff, expected_ids", [([[0.1, 0.2], [0.3]], None, ["1", "2", "3"]),
+                                                                           ([[0.1, 0.9]], 0.5, ["1"]), ([], None, [])],
+                         ids=["all_pages", "distance_cutoff", "no_results"])
+async def test_milvus_search_with_iterator(page_distances, distance_cutoff, expected_ids):
+    doc_ids = iter(range(1, 100))
+    pages = [_SearchPage([_iterator_hit(str(next(doc_ids)), d) for d in distances]) for distances in page_distances]
+    retriever = MilvusRetriever(client=_IteratorMilvusClient(pages), embedder=TestEmbeddings(), use_iterator=True)
+
+    res = await retriever.search(query="Test query?",
+                                 collection_name="collection1",
+                                 top_k=10,
+                                 distance_cutoff=distance_cutoff)
+
+    assert isinstance(res, RetrieverOutput)
+    assert [doc.document_id for doc in res.results] == expected_ids

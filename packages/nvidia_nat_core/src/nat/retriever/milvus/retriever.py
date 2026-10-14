@@ -193,7 +193,7 @@ class MilvusRetriever(Retriever):
                     break
                 results.extend(res[0])
 
-                return _wrap_milvus_results(results, content_field=self.content_field)
+            return _wrap_milvus_results(results, content_field=self.content_field)
 
         except Exception as e:
             logger.error("Exception when retrieving results from milvus for query %s: %s", query, e)
