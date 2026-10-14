@@ -372,3 +372,14 @@ class TestIsSubtype:
         assert DecomposedType(str).is_subtype(target) is True
         assert DecomposedType(NoneType).is_subtype(target) is True
         assert DecomposedType(int).is_subtype(target) is False
+
+    def test_union_source_is_subtype_of_itself(self):
+        """Test that a union source stays a subtype of itself."""
+        assert DecomposedType(int | None).is_subtype(int | None) is True
+        assert DecomposedType(int | str).is_subtype(int | str | None) is True
+        assert DecomposedType(typing.Optional[int]).is_subtype(int | None) is True
+
+    def test_union_source_requires_every_member(self):
+        """Test that a union source fails when any member is not a subtype."""
+        assert DecomposedType(int | str).is_subtype(int | None) is False
+        assert DecomposedType(int | None).is_subtype(int) is False

@@ -352,7 +352,13 @@ class DecomposedType:
             True if the current type is a subtype of the specified class or tuple of classes, False otherwise
         """
 
-        base_root = self.get_base_type().root
+        base = self.get_base_type()
+        if base.is_union:
+            # A union source is a subtype of the target only when every member is, so a
+            # union stays a subtype of itself (e.g. int | None is a subtype of int | None).
+            return all(DecomposedType(arg).is_subtype(class_or_tuple) for arg in base.args)
+
+        base_root = base.root
 
         if not inspect.isclass(base_root):
             return False
