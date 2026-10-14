@@ -117,6 +117,9 @@ def get_common_prefixes(all_steps: list[list[IntermediateStep]],
 
     output_data: dict[str, FrameworkLLMPrefixData] = {}
 
+    # Only LLM_START events carry the prompt, so keep one row per LLM call
+    df = df[df['event_type'] == 'LLM_START']
+
     # Group DataFrame by (framework, llm_name)
     grouped = df.groupby(['llm_name'])
     for llm_name, group_df in grouped:
