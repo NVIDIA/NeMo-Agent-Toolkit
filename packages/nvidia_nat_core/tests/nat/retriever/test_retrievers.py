@@ -793,13 +793,18 @@ class _SearchPage(list):
 
 
 class _SearchIterator:
-    """Mimics a pymilvus search iterator that returns an empty page once exhausted."""
+    """Mimics pymilvus SearchIteratorV2: an empty page once exhausted, None once `limit` hits were returned."""
 
-    def __init__(self, pages: list[_SearchPage]):
-        self._pages = [*pages, _SearchPage()]
+    def __init__(self, pages: list[_SearchPage], limit: int):
+        self._pages = list(pages)
+        self._left = limit
 
     def next(self):
-        return self._pages.pop(0)
+        if self._left <= 0:
+            return None
+        page = self._pages.pop(0) if self._pages else _SearchPage()
+        self._left -= len(page)
+        return page
 
     def close(self):
         pass
@@ -813,7 +818,7 @@ class _IteratorMilvusClient(CustomMilvusClient):
 
     def search_iterator(self, **kwargs):
         super().search_iterator(**kwargs)
-        return _SearchIterator(self._iterator_pages)
+        return _SearchIterator(self._iterator_pages, kwargs["limit"])
 
 
 def _iterator_hit(doc_id: str, distance: float):
@@ -821,17 +826,18 @@ def _iterator_hit(doc_id: str, distance: float):
     return Hit({"id": doc_id, "distance": distance, "entity": {"text": f"Text {doc_id}"}}, pk_name="id")
 
 
-@pytest.mark.parametrize("page_distances, distance_cutoff, expected_ids", [([[0.1, 0.2], [0.3]], None, ["1", "2", "3"]),
-                                                                           ([[0.1, 0.9]], 0.5, ["1"]), ([], None, [])],
-                         ids=["all_pages", "distance_cutoff", "no_results"])
-async def test_milvus_search_with_iterator(page_distances, distance_cutoff, expected_ids):
+@pytest.mark.parametrize("page_distances, top_k, distance_cutoff, expected_ids",
+                         [([[0.1, 0.2], [0.3]], 10, None, ["1", "2", "3"]), ([[0.1, 0.2]], 2, None, ["1", "2"]),
+                          ([[0.1, 0.9]], 10, 0.5, ["1"]), ([], 10, None, [])],
+                         ids=["all_pages", "top_k_reached", "distance_cutoff", "no_results"])
+async def test_milvus_search_with_iterator(page_distances, top_k, distance_cutoff, expected_ids):
     doc_ids = iter(range(1, 100))
     pages = [_SearchPage([_iterator_hit(str(next(doc_ids)), d) for d in distances]) for distances in page_distances]
     retriever = MilvusRetriever(client=_IteratorMilvusClient(pages), embedder=TestEmbeddings(), use_iterator=True)
 
     res = await retriever.search(query="Test query?",
                                  collection_name="collection1",
-                                 top_k=10,
+                                 top_k=top_k,
                                  distance_cutoff=distance_cutoff)
 
     assert isinstance(res, RetrieverOutput)
