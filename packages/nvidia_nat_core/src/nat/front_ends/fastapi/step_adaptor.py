@@ -15,7 +15,6 @@
 
 import html
 import logging
-from functools import reduce
 from textwrap import dedent
 
 from nat.data_models.api_server import ResponseIntermediateStep
@@ -35,16 +34,104 @@ logger = logging.getLogger(__name__)
 class StepAdaptor:
 
     def __init__(self, config: StepAdaptorConfig):
+        """
+        Initializes the ``StepAdaptor`` with configuration settings.
 
-        self._history: list[IntermediateStep] = []
+        Args:
+            config (StepAdaptorConfig): The configuration governing event filtering and payload truncation.
+        """
+        self._tool_starts: dict[str, IntermediateStep] = {}
+        self._function_starts: dict[str, IntermediateStep] = {}
+        self._llm_tokens: dict[str, str] = {}
+        self._llm_token_counts: dict[str, int] = {}
+        self._llm_inputs: dict[str, str] = {}
         self.config = config
+
+    def clear_state(self) -> None:
+        """
+        Clears all pending start steps and buffered streaming states across all event types.
+        """
+        self._tool_starts.clear()
+        self._function_starts.clear()
+        self._llm_tokens.clear()
+        self._llm_token_counts.clear()
+        self._llm_inputs.clear()
+
+    def _clear_llm_state(self, uuid: str) -> None:
+        """
+        Removes buffered streaming state for a completed LLM run.
+
+        Args:
+            uuid (str): The intermediate step UUID to clear state for.
+        """
+        self._llm_tokens.pop(uuid, None)
+        self._llm_token_counts.pop(uuid, None)
+        self._llm_inputs.pop(uuid, None)
+
+    def _truncate_text(self, text: str | None, max_len: int | None) -> str:
+        """
+        Truncates text if it exceeds ``max_len``, appending a truncation notice.
+
+        Args:
+            text (str | None): The text to truncate.
+            max_len (int | None): The maximum character length allowed, or ``None``/``0`` to disable truncation.
+
+        Returns:
+            str: The truncated text or empty string if input is None or empty.
+        """
+        if not text:
+            return ""
+        if max_len is None or max_len <= 0:
+            return text
+        if len(text) <= max_len:
+            return text
+
+        placeholder = f"\n... [truncated {len(text)} characters]"
+        if max_len > len(placeholder):
+            slice_len = max_len - len(placeholder)
+            return f"{text[:slice_len]}\n... [truncated {len(text) - slice_len} characters]"
+        return text[:max_len]
+
+    def _format_streamed_output(self, uuid: str) -> str:
+        """
+        Formats the accumulated streaming tokens for a step UUID with truncation.
+
+        Args:
+            uuid (str): The intermediate step UUID.
+
+        Returns:
+            str: The truncated streaming output string.
+        """
+        buf = self._llm_tokens.get(uuid, "")
+        total_chars = self._llm_token_counts.get(uuid, 0)
+        max_len = self.config.max_output_length
+
+        if max_len is None or max_len <= 0:
+            return buf
+        if total_chars <= max_len:
+            return buf
+
+        placeholder = f"\n... [truncated {total_chars} characters]"
+        if max_len > len(placeholder):
+            slice_len = max_len - len(placeholder)
+            return f"{buf[:slice_len]}\n... [truncated {total_chars - slice_len} characters]"
+        return buf[:max_len]
 
     def _step_matches_filter(self, step: IntermediateStep, config: StepAdaptorConfig) -> bool:
         """
-        Returns True if this intermediate step should be included (based on the config.mode).
-        """
+        Determines if an intermediate step should be included based on ``config.mode``.
 
+        Args:
+            step (IntermediateStep): The intermediate step to evaluate.
+            config (StepAdaptorConfig): The current adaptor configuration.
+
+        Returns:
+            bool: ``True`` if the step should be processed, ``False`` otherwise.
+        """
         if config.mode == StepAdaptorMode.OFF:
+            return False
+
+        if step.event_type == IntermediateStepType.LLM_NEW_TOKEN and not config.stream_llm_tokens:
             return False
 
         if config.mode == StepAdaptorMode.DEFAULT:
@@ -64,30 +151,42 @@ class StepAdaptor:
         return False
 
     def _handle_llm(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
+        """
+        Handles ``LLM_START``, ``LLM_NEW_TOKEN``, and ``LLM_END`` events.
+
+        Args:
+            step (IntermediateStepPayload): The intermediate step payload.
+            ancestry (InvocationNode): The invocation node representing the ancestry hierarchy.
+
+        Returns:
+            ResponseSerializable | None: The formatted intermediate step response, or ``None`` if skipped.
+        """
         input_str: str | None = None
         output_str: str | None = None
 
-        # Find the start in the history with matching run_id
-        start_step = next(
-            (x for x in self._history if x.event_type == IntermediateStepType.LLM_START and x.UUID == step.UUID), None)
+        if step.event_type == IntermediateStepType.LLM_START:
+            if hasattr(step.data, "input") and step.data.input is not None:
+                input_str = str(step.data.input)
+            elif step.data is not None:
+                input_str = str(step.data)
+            else:
+                input_str = ""
 
-        if not start_step:
-            # If we don't have a start step, we can't do anything
-            return None
-
-        input_str = str(start_step.data.input)
+            if input_str:
+                input_str = self._truncate_text(input_str, self.config.max_input_length)
+            self._llm_inputs[step.UUID] = input_str
+        else:
+            input_str = self._llm_inputs.get(step.UUID, "")
 
         if step.event_type == IntermediateStepType.LLM_NEW_TOKEN:
-
-            # Find all of the previous LLM chunks and concatenate them
-            output_str = reduce(
-                lambda x, y: x + y,
-                (str(x.data.chunk)
-                 for x in self._history if x.event_type == IntermediateStepType.LLM_NEW_TOKEN and x.UUID == step.UUID),
-                "")
+            output_str = self._format_streamed_output(step.UUID)
 
         elif step.event_type == IntermediateStepType.LLM_END:
-            output_str = str(step.data.output)
+            if hasattr(step.data, "output") and step.data.output is not None and str(step.data.output).strip() != "":
+                output_str = self._truncate_text(str(step.data.output), self.config.max_output_length)
+            else:
+                output_str = self._format_streamed_output(step.UUID)
+            self._clear_llm_state(step.UUID)
 
         if not input_str and not output_str:
             return None
@@ -120,25 +219,48 @@ class StepAdaptor:
 
         return event
 
-    def _handle_tool(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
+    def _handle_tool(self, step: IntermediateStep) -> ResponseSerializable | None:
         """
-        Handles both TOOL_START and TOOL_END events
+        Handles both ``TOOL_START`` and ``TOOL_END`` events.
+
+        Args:
+            step (IntermediateStep): The intermediate step event.
+
+        Returns:
+            ResponseSerializable | None: The formatted intermediate step response, or ``None`` if skipped.
         """
         input_str: str | None = None
         output_str: str | None = None
 
-        # Find the start in the history with matching run_id
-        start_step = next(
-            (x for x in self._history if x.event_type == IntermediateStepType.TOOL_START and x.UUID == step.UUID), None)
+        if step.event_type == IntermediateStepType.TOOL_START:
+            self._tool_starts[step.UUID] = step
+            start_step: IntermediateStep | None = step
+        elif step.event_type == IntermediateStepType.TOOL_END:
+            start_step = self._tool_starts.pop(step.UUID, None)
+            if not start_step and step.data and hasattr(step.data, "input") and step.data.input is not None:
+                start_step = step
+        else:
+            start_step = None
 
         if not start_step:
             # If we don't have a start step, we can't do anything
             return None
 
-        input_str = str(start_step.data.input)
+        if start_step.data and hasattr(start_step.data, "input") and start_step.data.input is not None:
+            input_str = str(start_step.data.input)
+        elif start_step.data is not None:
+            input_str = str(start_step.data)
+
+        if input_str:
+            input_str = self._truncate_text(input_str, self.config.max_input_length)
 
         if step.event_type == IntermediateStepType.TOOL_END:
-            output_str = str(step.data.output)
+            if step.data and hasattr(step.data, "output") and step.data.output is not None:
+                output_str = str(step.data.output)
+            elif step.data is not None:
+                output_str = str(step.data)
+            if output_str:
+                output_str = self._truncate_text(output_str, self.config.max_output_length)
 
         if not input_str and not output_str:
             return None
@@ -171,27 +293,35 @@ class StepAdaptor:
         event = ResponseIntermediateStep(id=step.UUID,
                                          name=f"Tool: {step.name}",
                                          payload=payload,
-                                         parent_id=ancestry.function_id)
+                                         parent_id=step.function_ancestry.function_id)
 
         return event
 
-    def _handle_function(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
+    def _handle_function(self, step: IntermediateStep) -> ResponseSerializable | None:
         """
-        Handles the FUNCTION_START and FUNCTION_END events
+        Handles the ``FUNCTION_START`` and ``FUNCTION_END`` events.
+
+        Args:
+            step (IntermediateStep): The intermediate step event.
+
+        Returns:
+            ResponseSerializable | None: The formatted intermediate step response, or ``None`` if skipped.
         """
         input_str: str | None = None
         output_str: str | None = None
 
         if step.event_type == IntermediateStepType.FUNCTION_START:
+            self._function_starts[step.UUID] = step
             # For function start events, display input data
-            if step.data and hasattr(step.data, 'input'):
+            if step.data and hasattr(step.data, "input") and step.data.input is not None:
                 input_str = str(step.data.input)
-            elif step.data:
+            elif step.data is not None:
                 input_str = str(step.data)
 
             if not input_str:
                 return None
 
+            input_str = self._truncate_text(input_str, self.config.max_input_length)
             escaped_input = html.escape(input_str, quote=False)
             format_input_type = "json" if is_valid_json(escaped_input) else "python"
 
@@ -206,37 +336,36 @@ class StepAdaptor:
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Start: {step.name}",
                                              payload=payload_str,
-                                             parent_id=ancestry.parent_id)
+                                             parent_id=step.function_ancestry.parent_id)
             return event
 
         if step.event_type == IntermediateStepType.FUNCTION_END:
-            # Find the start event with matching UUID
-            start_step = next(
-                (x
-                 for x in self._history if x.event_type == IntermediateStepType.FUNCTION_START and x.UUID == step.UUID),
-                None)
+            # Pop start event with matching UUID
+            start_step = self._function_starts.pop(step.UUID, None)
 
             # For function end events, display output data
-            if step.data and hasattr(step.data, 'output'):
+            if step.data and hasattr(step.data, "output") and step.data.output is not None:
                 output_str = str(step.data.output)
-            elif step.data:
+            elif step.data is not None:
                 output_str = str(step.data)
 
             if not output_str:
                 return None
 
+            output_str = self._truncate_text(output_str, self.config.max_output_length)
             escaped_output = html.escape(output_str, quote=False)
             format_output_type = "json" if is_valid_json(escaped_output) else "python"
 
             # Get input from start step if available
             input_payload = ""
             if start_step and start_step.data:
-                if hasattr(start_step.data, 'input'):
+                if hasattr(start_step.data, "input") and start_step.data.input is not None:
                     input_str = str(start_step.data.input)
-                else:
+                elif start_step.data is not None:
                     input_str = str(start_step.data)
 
                 if input_str:
+                    input_str = self._truncate_text(input_str, self.config.max_input_length)
                     escaped_input = html.escape(input_str, quote=False)
                     format_input_type = "json" if is_valid_json(escaped_input) else "python"
                     input_payload = dedent("""
@@ -259,14 +388,21 @@ class StepAdaptor:
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Complete: {step.name}",
                                              payload=payload_str,
-                                             parent_id=ancestry.parent_id)
+                                             parent_id=step.function_ancestry.parent_id)
             return event
 
         return None
 
     def _handle_custom(self, payload: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         """
-        Handles the CUSTOM event
+        Handles the ``CUSTOM`` event.
+
+        Args:
+            payload (IntermediateStepPayload): The intermediate step payload.
+            ancestry (InvocationNode): The invocation node representing the ancestry hierarchy.
+
+        Returns:
+            ResponseSerializable | None: The formatted intermediate step response, or ``None`` if skipped.
         """
         escaped_payload = html.escape(str(payload), quote=False)
         escaped_payload = escaped_payload.replace("\n", "")
@@ -290,13 +426,48 @@ class StepAdaptor:
         return event
 
     def process(self, step: IntermediateStep) -> ResponseSerializable | None:
+        """
+        Processes an intermediate step and returns a serialized response if matched.
 
-        # Track the chunk
-        self._history.append(step)
+        Args:
+            step (IntermediateStep): The intermediate step event to process.
+
+        Returns:
+            ResponseSerializable | None: The adapted response model if matched and processed,
+                or ``None`` if filtered out or an error occurred.
+        """
         payload = step.payload
         ancestry = step.function_ancestry
 
+        if step.event_type == IntermediateStepType.LLM_NEW_TOKEN:
+            chunk_str: str | None = None
+            if step.data:
+                if hasattr(step.data, "chunk") and step.data.chunk is not None:
+                    chunk_str = str(step.data.chunk)
+                elif hasattr(step.data, "output") and step.data.output is not None:
+                    chunk_str = str(step.data.output)
+                elif hasattr(step.data, "payload") and step.data.payload is not None:
+                    chunk_str = str(step.data.payload)
+                elif not hasattr(step.data, "__dict__") and step.data is not None:
+                    chunk_str = str(step.data)
+
+            if chunk_str:
+                self._llm_token_counts[step.UUID] = self._llm_token_counts.get(step.UUID, 0) + len(chunk_str)
+                current_buf = self._llm_tokens.get(step.UUID, "")
+                max_len = self.config.max_output_length
+                if max_len is None or max_len <= 0:
+                    self._llm_tokens[step.UUID] = current_buf + chunk_str
+                elif len(current_buf) < max_len:
+                    remaining = max_len - len(current_buf)
+                    self._llm_tokens[step.UUID] = current_buf + chunk_str[:remaining]
+
         if not self._step_matches_filter(step, self.config):
+            if step.event_type == IntermediateStepType.LLM_END:
+                self._clear_llm_state(step.UUID)
+            elif step.event_type == IntermediateStepType.TOOL_END:
+                self._tool_starts.pop(step.UUID, None)
+            elif step.event_type == IntermediateStepType.FUNCTION_END:
+                self._function_starts.pop(step.UUID, None)
             return None
 
         try:
@@ -305,15 +476,22 @@ class StepAdaptor:
                 return self._handle_llm(payload, ancestry)
 
             if step.event_category == IntermediateStepCategory.TOOL:
-                return self._handle_tool(payload, ancestry)
+                return self._handle_tool(step)
 
             if step.event_category == IntermediateStepCategory.FUNCTION:
-                return self._handle_function(payload, ancestry)
+                return self._handle_function(step)
 
             if step.event_category == IntermediateStepCategory.CUSTOM:
                 return self._handle_custom(payload, ancestry)
 
         except Exception as e:
             logger.exception("Error processing intermediate step: %s", e)
+        finally:
+            if step.event_type == IntermediateStepType.LLM_END:
+                self._clear_llm_state(step.UUID)
+            elif step.event_type == IntermediateStepType.TOOL_END:
+                self._tool_starts.pop(step.UUID, None)
+            elif step.event_type == IntermediateStepType.FUNCTION_END:
+                self._function_starts.pop(step.UUID, None)
 
         return None

@@ -21,6 +21,8 @@ from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import SerializerFunctionWrapHandler
+from pydantic import model_serializer
 from pydantic import model_validator
 
 from .common import BaseModelRegistryTag
@@ -129,6 +131,33 @@ class OpenAIMessage(BaseModel):
     """
     role: str = Field(description="The role of the message (e.g., 'user', 'assistant').")
     content: str = Field(description="The content of the message.")
+    name: str | None = Field(default=None, description="The name of the function a 'function' role message answers.")
+    tool_call_id: str | None = Field(default=None, description="The id of the tool call a 'tool' role message answers.")
+
+    @model_serializer(mode="wrap")
+    def _omit_unset_identifiers(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        """Drop the optional identifiers when unset, rather than emitting nulls.
+
+        These apply only to 'function' and 'tool' role messages. A user or
+        assistant message has neither, and a null key would change the shape of
+        every serialized message. Doing this on the model rather than at each
+        call site also covers the nested case, where the message is serialized
+        as part of an enclosing model and the caller cannot pass
+        ``exclude_none``.
+
+        Args:
+            handler: The normal serialization path for this model.
+
+        Returns:
+            The serialized message without the identifiers it does not have.
+        """
+        serialized = handler(self)
+
+        for field in ("name", "tool_call_id"):
+            if serialized.get(field) is None:
+                serialized.pop(field, None)
+
+        return serialized
 
 
 class DPOItem(BaseModel):

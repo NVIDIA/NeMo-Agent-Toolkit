@@ -25,7 +25,6 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Discriminator
 from pydantic import Field
-from pydantic import conlist
 from pydantic import field_serializer
 from pydantic import field_validator
 from pydantic import model_validator
@@ -146,7 +145,7 @@ class ChatRequest(BaseModel):
     """
 
     # Required fields
-    messages: typing.Annotated[list[Message], conlist(Message, min_length=1)]
+    messages: typing.Annotated[list[Message], Field(min_length=1)]
 
     # Optional fields (OpenAI Chat Completions API compatible)
     model: str | None = Field(default=None, description="name of the model to use")
@@ -274,7 +273,7 @@ class ChatRequestOrMessage(BaseModel):
         },
     )
 
-    messages: typing.Annotated[list[Message] | None, conlist(Message, min_length=1)] = Field(
+    messages: typing.Annotated[list[Message], Field(min_length=1)] | None = Field(
         default=None, description="A non-empty conversation of messages to process.")
 
     input_message: str | None = Field(
@@ -356,10 +355,24 @@ class ChatResponseChunkChoice(ChoiceBase):
 Choice = ChatResponseChoice
 
 
+class PromptTokensDetails(BaseModel):
+    """Breakdown of the prompt tokens, in the shape OpenAI defines.
+
+    ``cached_tokens`` is the subset of ``prompt_tokens`` the provider served from its prompt cache.
+    It is carried because it is what the cache actually saved: a cost estimate built from
+    ``prompt_tokens`` alone prices cached input at the uncached rate, and overstates the bill by
+    whatever the cache absorbed. ``None`` means the provider did not report it, which is distinct
+    from a reported zero.
+    """
+
+    cached_tokens: int | None = None
+
+
 class Usage(BaseModel):
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
     total_tokens: int | None = None
+    prompt_tokens_details: PromptTokensDetails | None = None
 
 
 class ResponseSerializable(abc.ABC):

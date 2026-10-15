@@ -48,7 +48,8 @@ def get_object_store_config(**kwargs) -> ObjectStoreBaseConfig:
     config = STORE_CONFIGS[store_type]
     module = importlib.import_module(config["module"])
     config_class = getattr(module, config["config_class"])
-    return config_class(**kwargs)
+    # Click supplies None for every option the user did not type, which would otherwise override the defaults.
+    return config_class(**{name: value for name, value in kwargs.items() if value is not None})
 
 
 async def upload_file(object_store: ObjectStore, file_path: Path, key: str):
@@ -193,7 +194,6 @@ def register_object_store_commands():
     @click.argument("bucket_name", type=str, required=True)
     @click.option("--host", type=str, help="MySQL host")
     @click.option("--port", type=int, help="MySQL port")
-    @click.option("--db", type=str, help="MySQL database name")
     @click.option("--username", type=str, help="MySQL username")
     @click.option("--password", type=str, help="MySQL password")
     @click.pass_context

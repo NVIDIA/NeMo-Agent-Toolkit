@@ -33,6 +33,8 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+from pydantic import BaseModel
+
 from nat.atif import ATIFAgentConfig
 from nat.atif import AtifAncestry
 from nat.atif import ATIFFinalMetrics
@@ -118,7 +120,7 @@ def _extract_user_input(value: Any) -> str:
     if hasattr(value, "model_dump"):
         obj = value.model_dump()
     if isinstance(obj, dict):
-        if obj.get("input_message"):
+        if obj.get("input_message") is not None:
             return str(obj["input_message"])
         msgs = obj.get("messages")
         if msgs and isinstance(msgs, list):
@@ -166,6 +168,10 @@ def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
     """Best-effort extraction of tool arguments as a dict."""
     if isinstance(raw_input, dict):
         return raw_input
+    if isinstance(raw_input, BaseModel):
+        dumped = raw_input.model_dump(mode="json")
+        # a RootModel dumps to its root value, which may not be a dict
+        return dumped if isinstance(dumped, dict) else {"input": dumped}
     if isinstance(raw_input, str):
         import ast
         import json
@@ -181,7 +187,7 @@ def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
             parsed = ast.literal_eval(raw_input)
             if isinstance(parsed, dict):
                 return parsed
-        except (ValueError, SyntaxError):
+        except (ValueError, SyntaxError, TypeError):
             pass
 
         return {"input": raw_input} if raw_input else {}

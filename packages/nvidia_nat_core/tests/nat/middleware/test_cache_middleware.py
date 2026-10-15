@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -208,6 +209,24 @@ class TestCacheMiddlewareCaching:
             await middleware.function_middleware_invoke(input_obj, call_next=mock_next_call, context=middleware_context)
             assert call_count == 2
 
+    async def test_cache_is_scoped_per_function(self, middleware_context):
+        """One middleware instance is shared by every function that lists it; their entries must not mix."""
+        middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=1.0, max_entries=1024)
+        other_context = dataclasses.replace(middleware_context, name="other_function")
+
+        async def first(*_args, **_kwargs):
+            return "first"
+
+        async def second(*_args, **_kwargs):
+            return "second"
+
+        assert await middleware.function_middleware_invoke("Paris", call_next=first,
+                                                           context=middleware_context) == "first"
+        assert await middleware.function_middleware_invoke("Paris", call_next=second, context=other_context) == "second"
+        # The first function still gets its own cached result
+        assert await middleware.function_middleware_invoke("Paris", call_next=second,
+                                                           context=middleware_context) == "first"
+
 
 class TestCacheMiddlewareStreaming:
     """Test streaming behavior."""
@@ -272,15 +291,17 @@ class TestCacheMiddlewareEdgeCases:
         # Directly test internal methods
         # Add a cached entry
         test_key = "hello world"
-        middleware._cache[test_key] = "cached_result"  # noqa
+        middleware._cache[("test_function", test_key)] = "cached_result"  # noqa
 
         # Test various similarity levels
         # Exact match
-        assert middleware._find_similar_key(test_key) == test_key  # noqa
+        assert middleware._find_similar_key("test_function", test_key) == ("test_function", test_key)  # noqa
         # Very similar (one char shorter, ~0.95 ratio)
-        assert middleware._find_similar_key("hello worl") == test_key  # noqa
+        assert middleware._find_similar_key("test_function", "hello worl") == ("test_function", test_key)  # noqa
         # Too different - use a completely different string
-        assert middleware._find_similar_key("xyz123abc") is None  # noqa
+        assert middleware._find_similar_key("test_function", "xyz123abc") is None  # noqa
+        # Entries cached for another function never match
+        assert middleware._find_similar_key("other_function", test_key) is None  # noqa
 
     async def test_multiple_similar_entries(self, middleware_context):
         """Test behavior with multiple similar cached entries."""
@@ -295,8 +316,8 @@ class TestCacheMiddlewareEdgeCases:
             {
                 "value": "test input 2", "number": 42
             })
-        middleware._cache[key1] = _TestOutput(result="Result 1")  # noqa
-        middleware._cache[key2] = _TestOutput(result="Result 2")  # noqa
+        middleware._cache[("test_function", key1)] = _TestOutput(result="Result 1")  # noqa
+        middleware._cache[("test_function", key2)] = _TestOutput(result="Result 2")  # noqa
 
         async def mock_next_call(*args, **kwargs):
             return _TestOutput(result="New Result")
@@ -345,7 +366,7 @@ class TestMaxEntriesLruEviction:
         # The MOST recent three inserts should be what's left.
         latest_keys = list(mw._cache.keys())  # noqa: SLF001
         for i in range(7, 10):
-            assert any(f"unique_input_{i}" in k for k in latest_keys)
+            assert any(f"unique_input_{i}" in input_str for _, input_str in latest_keys)
 
     async def test_cache_hit_promotes_entry_to_most_recently_used(self, middleware_context):
         """A cache hit should move the entry to MRU so later evictions spare it."""
@@ -368,7 +389,7 @@ class TestMaxEntriesLruEviction:
         # Now insert D — B (now oldest) should be evicted, not A.
         await mw.function_middleware_invoke({"value": "D"}, call_next=mock_next_call, context=middleware_context)
 
-        keys = "".join(list(mw._cache.keys()))  # noqa: SLF001
+        keys = "".join(input_str for _, input_str in mw._cache)  # noqa: SLF001
         assert '"value": "A"' in keys
         assert '"value": "D"' in keys
         assert '"value": "B"' not in keys

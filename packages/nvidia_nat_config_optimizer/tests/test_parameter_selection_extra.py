@@ -41,6 +41,14 @@ def test_pick_trial_sum_and_chebyshev_selects_center_point():
     assert tuple(trial_cheb.values) == (0.2, 0.2)
 
 
+def test_pick_trial_harmonic_selects_center_point():
+    vals = [(0.1, 0.9), (0.2, 0.2), (0.9, 0.1)]
+    study = _make_study_with_trials(vals)
+
+    trial = pick_trial(study, mode="harmonic")
+    assert tuple(trial.values) == (0.2, 0.2)
+
+
 def test_pick_trial_weights_mismatch_raises():
     vals = [(0.1, 0.9), (0.2, 0.2), (0.9, 0.1)]
     study = _make_study_with_trials(vals)

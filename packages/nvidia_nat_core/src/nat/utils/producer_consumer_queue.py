@@ -68,7 +68,7 @@ class AsyncIOProducerConsumerQueue(asyncio.Queue, typing.Generic[_T]):
             self._putters.append(putter)
             try:
                 await putter
-            except Exception:
+            except BaseException:
                 putter.cancel()  # Just in case putter is not done yet.
                 try:
                     # Clean self._putters from canceled putters.
@@ -98,7 +98,7 @@ class AsyncIOProducerConsumerQueue(asyncio.Queue, typing.Generic[_T]):
             self._getters.append(getter)
             try:
                 await getter
-            except Exception:
+            except BaseException:
                 getter.cancel()  # Just in case getter is not done yet.
                 try:
                     # Clean self._getters from canceled getters.

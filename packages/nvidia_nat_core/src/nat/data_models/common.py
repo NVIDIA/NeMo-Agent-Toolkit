@@ -40,16 +40,28 @@ class HashableBaseModel(BaseModel):
             'utf-8', errors='ignore')).digest(),
                               byteorder=sys.byteorder)
 
+    # The comparisons are defined on the hash so that two instances with the same class and field values compare
+    # equal. They only make sense against another HashableBaseModel; for anything else Python gets NotImplemented
+    # and falls back to its default behaviour, instead of the TypeError that ``other.__hash__()`` raises for an
+    # unhashable operand such as a dict or list.
     def __lt__(self, other):
+        if not isinstance(other, HashableBaseModel):
+            return NotImplemented
         return self.__hash__() < other.__hash__()
 
     def __eq__(self, other):
+        if not isinstance(other, HashableBaseModel):
+            return NotImplemented
         return self.__hash__() == other.__hash__()
 
     def __ne__(self, other):
+        if not isinstance(other, HashableBaseModel):
+            return NotImplemented
         return self.__hash__() != other.__hash__()
 
     def __gt__(self, other):
+        if not isinstance(other, HashableBaseModel):
+            return NotImplemented
         return self.__hash__() > other.__hash__()
 
     @classmethod
