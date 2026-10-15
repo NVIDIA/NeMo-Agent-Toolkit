@@ -37,7 +37,7 @@
             "pattern": "^https://build\\.nvidia\\.com"
         },
         {
-            "pattern": "^https://([a-z0-9-]+\\.)?deepwiki\\.com"
+            "pattern": "^https://([a-z0-9-]+\\.)?deepwiki\\.com(?:[/:?#]|$)"
         }
     ]
 }
