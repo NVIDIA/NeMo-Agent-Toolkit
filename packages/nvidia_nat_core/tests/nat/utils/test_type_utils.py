@@ -377,7 +377,9 @@ class TestIsSubtype:
         """Test that a union source stays a subtype of itself."""
         assert DecomposedType(int | None).is_subtype(int | None) is True
         assert DecomposedType(int | str).is_subtype(int | str | None) is True
-        assert DecomposedType(typing.Optional[int]).is_subtype(int | None) is True
+        # noqa UP045 is intentional: the typing.Optional spelling must be tested
+        # explicitly (the bug only reproduced with the typing forms).
+        assert DecomposedType(typing.Optional[int]).is_subtype(int | None) is True  # noqa: UP045
 
     def test_union_source_requires_every_member(self):
         """Test that a union source fails when any member is not a subtype."""
