@@ -86,8 +86,8 @@ def test_get_common_prefixes_minimal(minimal_valid_df):
     if "llama-3" in result.root:
         flm_data = result.root["llama-3"]
         assert isinstance(flm_data, FrameworkLLMPrefixData)
-        # total_calls => 2 for gpt-3.5
-        assert flm_data.total_calls == 2
+        # total_calls => 1, one LLM_START for llama-3
+        assert flm_data.total_calls == 1
         # prefix_info => list of PrefixInfo
         for pfx in flm_data.prefix_info:
             assert pfx.prefix_length == len(pfx.prefix)
@@ -108,3 +108,33 @@ def test_get_common_prefixes_min_call_percentage(minimal_valid_df):
         for pfx_obj in v.prefix_info:
             # calls_percentage >= 0.6
             assert pfx_obj.calls_percentage >= 0.6, "Expected calls_percentage >= 0.6"
+
+
+def test_get_common_prefixes_counts_each_llm_call_once():
+    """Only LLM_START events carry the prompt, so END and non-LLM events must not count as calls."""
+
+    def make_step(event_type: IntermediateStepType, uuid: str, timestamp: float, **kwargs) -> IntermediateStep:
+        return IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(function_name="agent", function_id="agent-1"),
+                                payload=IntermediateStepPayload(event_type=event_type,
+                                                                event_timestamp=timestamp,
+                                                                UUID=uuid,
+                                                                **kwargs))
+
+    events = [[
+        make_step(IntermediateStepType.LLM_START, "llm-1", 1.0, name="llama-3", data=StreamEventData(input="SYS: hi")),
+        make_step(IntermediateStepType.LLM_END, "llm-1", 2.0, name="llama-3", data=StreamEventData(output="a")),
+        make_step(IntermediateStepType.TOOL_START, "tool-1", 3.0, name="search"),
+        make_step(IntermediateStepType.TOOL_END, "tool-1", 4.0, name="search"),
+        make_step(IntermediateStepType.LLM_START, "llm-2", 5.0, name="llama-3", data=StreamEventData(input="SYS: hi")),
+        make_step(IntermediateStepType.LLM_END, "llm-2", 6.0, name="llama-3", data=StreamEventData(output="b")),
+    ]]
+    all_steps = [[IntermediatePropertyAdaptor.from_intermediate_step(step) for step in steps] for steps in events]
+
+    result = get_common_prefixes(all_steps, min_call_percentage=0.6)
+
+    assert list(result.root) == ["llama-3"]
+    llm_data = result.root["llama-3"]
+    assert llm_data.total_calls == 2
+    prefixes = [(pfx.prefix, pfx.calls_count, pfx.calls_percentage) for pfx in llm_data.prefix_info]
+    assert prefixes == [("SYS: hi", 2, 1.0)]
