@@ -151,7 +151,10 @@ class NeMoCustomizerTrainerAdapter(TrainerAdapter):
             if isinstance(prompt, str):
                 return [{"role": "user", "content": prompt}]
             else:
-                return [{"role": msg.role, "content": msg.content} for msg in prompt]
+                # model_dump omits the optional tool identifiers when unset,
+                # so a tool message keeps its tool_call_id and a user message
+                # gains no null keys.
+                return [msg.model_dump() for msg in prompt]
         # Return only last message content as string
         elif isinstance(prompt, str):
             return prompt
