@@ -51,7 +51,8 @@ class Mem0Editor(MemoryEditor):
 
         # Iteratively insert memories into Mem0
         for memory_item in items:
-            item_meta = memory_item.metadata
+            # Copy so removing run_id does not change the caller's item (which a retry reuses)
+            item_meta = memory_item.metadata.copy()
             content = memory_item.conversation
 
             user_id = memory_item.user_id  # This must be specified
