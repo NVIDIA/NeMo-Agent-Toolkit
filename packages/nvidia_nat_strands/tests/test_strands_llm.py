@@ -140,6 +140,41 @@ class TestBedrockStrands:
                 pass
         mock_model.assert_not_called()
 
+    @patch("boto3.Session")
+    @patch("strands.models.bedrock.BedrockModel")
+    async def test_credentials_profile_builds_boto_session(self,
+                                                           mock_model: MagicMock,
+                                                           mock_session: MagicMock,
+                                                           mock_builder: MagicMock):
+        """A configured profile reaches Bedrock through a boto3 session that also carries the region."""
+        config = AWSBedrockModelConfig(
+            model_name="anthropic.claude-3-sonnet-20240229-v1:0",
+            region_name="eu-west-1",
+            credentials_profile_name="my-profile",
+        )
+
+        # pylint: disable=not-async-context-manager
+        async with bedrock_strands(config, mock_builder):
+            mock_session.assert_called_once_with(profile_name="my-profile", region_name="eu-west-1")
+            kwargs = mock_model.call_args.kwargs
+            assert kwargs["boto_session"] is mock_session.return_value
+            assert "region_name" not in kwargs
+
+    @patch("boto3.Session")
+    @patch("strands.models.bedrock.BedrockModel")
+    async def test_no_boto_session_without_credentials_profile(self,
+                                                               mock_model: MagicMock,
+                                                               mock_session: MagicMock,
+                                                               bedrock_config: AWSBedrockModelConfig,
+                                                               mock_builder: MagicMock):
+        """Without a profile, the region goes to BedrockModel directly and the default credential chain applies."""
+        # pylint: disable=not-async-context-manager
+        async with bedrock_strands(bedrock_config, mock_builder):
+            mock_session.assert_not_called()
+            kwargs = mock_model.call_args.kwargs
+            assert kwargs["region_name"] == "us-east-1"
+            assert "boto_session" not in kwargs
+
 
 class TestNIMStrands:
     """Tests for the nim_strands function."""

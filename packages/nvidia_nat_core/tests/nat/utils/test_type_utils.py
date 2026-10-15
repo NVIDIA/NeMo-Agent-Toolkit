@@ -312,3 +312,15 @@ class TestIsInstance:
         assert dt.is_instance("hi") is True
         assert dt.is_instance(None) is True
         assert dt.is_instance(1) is False
+
+    def test_literal(self):
+        """Test is_instance with typing.Literal, which `isinstance` rejects as a target."""
+        assert DecomposedType(typing.Literal["a", "b"]).is_instance("a") is True
+        assert DecomposedType(typing.Literal["a"]).is_instance("b") is False
+        assert DecomposedType(typing.Literal[True]).is_instance(True) is True
+        assert DecomposedType(typing.Literal[1]).is_instance(True) is False  # bool is not the literal 1
+
+    def test_constructs_without_a_class_root(self):
+        """Constructs that keep a non-class root match nothing instead of raising TypeError."""
+        assert DecomposedType(typing.NoReturn).is_instance(None) is False
+        assert DecomposedType(typing.Final[int]).is_instance(1) is False
