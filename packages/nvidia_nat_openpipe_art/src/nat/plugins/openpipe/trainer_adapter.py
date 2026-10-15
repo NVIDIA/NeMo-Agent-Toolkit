@@ -168,31 +168,39 @@ class ARTTrainerAdapter(TrainerAdapter):
                     "role": "system",
                     "content": _as_text(d.content),
                 }
-            elif d.role == EpisodeItemRole.TOOL:
+            elif d.role in (EpisodeItemRole.TOOL, EpisodeItemRole.FUNCTION):
                 # A tool result is not model output. Sending it as an assistant
                 # message trains the model to generate whatever the tool
                 # returned, and it puts two assistant turns in a row, which
                 # _validate_episode_order rejects on the episode itself.
+                #
+                # The deprecated "function" role, which the adk and llama_index
+                # parsers emit, is mapped to "tool" rather than passed through.
+                # Chat templates branch on the role, and the Qwen2.5 and Qwen3
+                # templates have no "function" case, so such a message renders
+                # as nothing and the result is absent from the tokenized
+                # sample. "tool" renders on every template that handles either.
                 msg = {"role": "tool", "content": _as_text(d.content)}
+
                 tool_call_id = metadata.get("tool_call_id")
                 if isinstance(tool_call_id, str) and tool_call_id:
                     msg["tool_call_id"] = tool_call_id
-                else:
+                elif d.role == EpisodeItemRole.TOOL:
                     # Omit the key rather than inventing one: a placeholder is
                     # shaped like a real id, so the trajectory looks valid
                     # while every result points at the same call. Dropping the
                     # turn instead would lose the tool result and put two
                     # assistant turns next to each other, which is the defect
-                    # this branch exists to avoid.
+                    # this branch exists to avoid. A function step never has an
+                    # id, so it is not counted here.
                     tool_messages_without_id += 1
-                return msg
-            elif d.role == EpisodeItemRole.FUNCTION:
-                # The adk and llama_index parsers emit the deprecated function
-                # role, which carries a name instead of a tool call id.
-                msg = {"role": "function", "content": _as_text(d.content)}
+
+                # The name is the only record of which function produced the
+                # output. Templates ignore it, but nothing else carries it.
                 name = metadata.get("name")
                 if isinstance(name, str) and name:
                     msg["name"] = name
+
                 return msg
             else:
                 if d.role != EpisodeItemRole.ASSISTANT:

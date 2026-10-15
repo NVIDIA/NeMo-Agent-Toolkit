@@ -568,12 +568,18 @@ class TestARTTrainerAdapter:
 
     @patch('nat.plugins.openpipe.trainer_adapter.art.Trajectory')
     @patch('nat.plugins.openpipe.trainer_adapter.art.TrajectoryGroup')
-    async def test_function_result_keeps_its_role_and_name(self,
-                                                           mock_traj_group,
-                                                           mock_art_traj,
-                                                           adapter,
-                                                           mock_openai_types):
-        """The adk and llama_index parsers emit role "function", not "tool"."""
+    async def test_function_result_is_sent_as_a_tool_message(self,
+                                                             mock_traj_group,
+                                                             mock_art_traj,
+                                                             adapter,
+                                                             mock_openai_types):
+        """The deprecated function role is mapped to tool, keeping the name.
+
+        The adk and llama_index parsers emit role "function". Chat templates
+        branch on the role and the Qwen2.5 and Qwen3 templates have no
+        "function" case, so emitting it verbatim drops the result from the
+        tokenized sample entirely.
+        """
         trajectory = Trajectory(episode=[
             EpisodeItem(role=EpisodeItemRole.USER, content="weather in SF?"),
             EpisodeItem(role=EpisodeItemRole.FUNCTION, content="sunny, 18C", metadata={"name": "get_weather"}),
@@ -585,7 +591,29 @@ class TestARTTrainerAdapter:
         await adapter._construct_trajectory_groups([[trajectory]])
 
         messages = self._emitted_messages(mock_art_traj, mock_openai_types)
-        assert {"role": "function", "content": "sunny, 18C", "name": "get_weather"} in messages
+        assert {"role": "tool", "content": "sunny, 18C", "name": "get_weather"} in messages
+        assert all(m["role"] != "function" for m in messages)
+
+    @patch('nat.plugins.openpipe.trainer_adapter.art.Trajectory')
+    @patch('nat.plugins.openpipe.trainer_adapter.art.TrajectoryGroup')
+    async def test_function_result_does_not_warn_about_a_missing_id(self,
+                                                                    mock_traj_group,
+                                                                    mock_art_traj,
+                                                                    adapter,
+                                                                    caplog):
+        """A function step never has a tool call id, so it is not counted."""
+        trajectory = Trajectory(episode=[
+            EpisodeItem(role=EpisodeItemRole.USER, content="weather in SF?"),
+            EpisodeItem(role=EpisodeItemRole.FUNCTION, content="sunny, 18C", metadata={"name": "get_weather"}),
+            EpisodeItem(role=EpisodeItemRole.ASSISTANT, content="It is sunny.", logprobs={"test": 0.5}),
+        ],
+                                reward=0.7)
+        mock_art_traj.return_value.model_validate = MagicMock()
+
+        with caplog.at_level(logging.WARNING, logger="nat.plugins.openpipe.trainer_adapter"):
+            await adapter._construct_trajectory_groups([[trajectory]])
+
+        assert not [r for r in caplog.records if "tool_call_id" in r.getMessage()]
 
     async def test_submit_task_callback_success(self, adapter):
         """Test task callback on successful training."""
