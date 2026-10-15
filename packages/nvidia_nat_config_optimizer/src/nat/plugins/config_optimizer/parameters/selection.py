@@ -74,8 +74,9 @@ def pick_trial(
     mode = mode.lower()
 
     if mode == "harmonic":
-        hmean = norm.shape[1] / (1.0 / (norm + eps)).sum(axis=1)
-        best_idx = hmean.argmin()  # lower = better
+        goodness = 1.0 - norm
+        hmean = norm.shape[1] / (1.0 / (goodness + eps)).sum(axis=1)
+        best_idx = hmean.argmax()
 
     elif mode == "sum":
         w = np.ones(norm.shape[1]) if weights is None else np.asarray(weights, float)

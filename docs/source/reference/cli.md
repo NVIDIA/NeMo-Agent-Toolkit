@@ -1324,7 +1324,6 @@ Usage: nat object-store mysql [OPTIONS] BUCKET_NAME COMMAND [ARGS]...
 Options:
   --host TEXT      MySQL host
   --port INTEGER   MySQL port
-  --db TEXT        MySQL database name
   --username TEXT  MySQL username
   --password TEXT  MySQL password
   --help           Show this message and exit.

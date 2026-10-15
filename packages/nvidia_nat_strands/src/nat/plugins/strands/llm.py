@@ -375,9 +375,15 @@ async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder) 
     )
 
     region = None if llm_config.region_name in (None, "None") else llm_config.region_name
-    client = BedrockModel(model_id=llm_config.model_name,
-                          region_name=region,
-                          endpoint_url=llm_config.base_url,
-                          **params)
+    if llm_config.credentials_profile_name is not None:
+        import boto3
+
+        # BedrockModel rejects `region_name` alongside `boto_session`, so the session carries the region.
+        session_kwargs: dict[str, Any] = {
+            "boto_session": boto3.Session(profile_name=llm_config.credentials_profile_name, region_name=region)
+        }
+    else:
+        session_kwargs = {"region_name": region}
+    client = BedrockModel(model_id=llm_config.model_name, endpoint_url=llm_config.base_url, **session_kwargs, **params)
 
     yield _patch_llm_based_on_config(client, llm_config)
