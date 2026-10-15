@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
 from io import BytesIO
 from io import TextIOWrapper
 
@@ -754,3 +755,131 @@ def test_union_type_bidirectional_conversion():
     # Note: This tests that union return types don't break conversion
     result = converter.convert(TargetSchema(value="test"), str)
     assert result == "test"
+
+
+@pytest.mark.parametrize(
+    "return_type",
+    [str | int, typing.Union[str, int], typing.Optional[str]],  # noqa: UP007, UP045
+    ids=["pep604_union", "typing_union", "typing_optional"])
+def test_union_return_type_does_not_break_conversion(return_type: object) -> None:
+    """A converter's union return type is handled the same way however the union is spelled.
+
+    The root of `typing.Union[...]` / `typing.Optional[...]` is not a class, so the direct
+    lookup's `issubclass` check raised TypeError for every conversion through this converter.
+    """
+
+    def convert_from_schema(schema: TargetSchema) -> str:
+        return schema.value
+
+    convert_from_schema.__annotations__["return"] = return_type
+
+    def int_to_float(value: int) -> float:
+        return float(value)
+
+    converter = TypeConverter([convert_from_schema, int_to_float])
+
+    assert converter.convert(TargetSchema(value="test"), str) == "test"
+    assert converter.convert(3, float) == 3.0
+    sentinel = object()
+    assert converter.try_convert(sentinel, float) is sentinel
+
+
+def test_convert_none_to_optional_returns_none(basic_converter):
+    """`None` is a valid value for an optional target, not a failed conversion.
+
+    `_convert` used `None` both for "converted value" and for "no path found",
+    so `convert` read the success as a failure and raised.
+    """
+    assert basic_converter.convert(None, str | None) is None
+    assert basic_converter.convert(None, int | None) is None
+    assert basic_converter.convert(None, type(None)) is None
+
+
+def test_convert_none_to_optional_via_parent(child_converter):
+    """The parent fallback must not treat a converted `None` as a miss either."""
+    assert child_converter.convert(None, str | None) is None
+
+
+def test_convert_still_raises_when_no_path_exists(basic_converter):
+    """A genuine miss keeps raising, so the sentinel did not widen conversion."""
+    with pytest.raises(ValueError, match="No match found"):
+        basic_converter.convert(object(), int)
+
+
+def test_try_convert_returns_original_when_no_path_exists(basic_converter):
+    """`try_convert` still hands back the input it could not convert."""
+    sentinel = object()
+    assert basic_converter.try_convert(sentinel, int) is sentinel
+
+
+def test_registered_converter_returning_none_is_not_a_miss():
+    """A converter may legitimately produce `None`; that is a result, not a missing path."""
+
+    class Box:
+        pass
+
+    def box_to_optional_str(value: Box) -> str | None:
+        return None
+
+    converter = TypeConverter([box_to_optional_str])
+
+    assert converter.convert(Box(), str | None) is None
+    assert converter.try_convert(Box(), str | None) is None
+
+
+# --------------------------------------------------------------------
+# Unit tests for converter source types that `isinstance` rejects:
+# `Any`, `Literal`, and unions containing a parameterized generic
+# --------------------------------------------------------------------
+
+
+def convert_any_to_int(value: typing.Any) -> int:
+    """A converter registered from `Any`, which `isinstance` rejects as a target."""
+    return 42
+
+
+def convert_literal_a_to_int(value: typing.Literal["a"]) -> int:
+    """A converter registered from a `Literal`, which `isinstance` rejects as a target."""
+    return 1
+
+
+def convert_generic_union_to_base(value: dict[str, int] | None) -> Base:
+    """A converter registered from a union whose member is a parameterized generic."""
+    return Base()
+
+
+def test_convert_source_registered_from_any():
+    """A source annotated with `Any` matches any value instead of raising TypeError."""
+    converter = TypeConverter([convert_any_to_int])
+
+    assert converter.convert("anything", int) == 42
+
+
+def test_convert_source_registered_from_literal():
+    """A `Literal` source matches its literal values only."""
+    converter = TypeConverter([convert_literal_a_to_int])
+
+    assert converter.convert("a", int) == 1
+
+    with pytest.raises(ValueError, match="Cannot convert"):
+        converter.convert("b", int)
+
+
+def test_convert_source_registered_from_generic_union():
+    """A union containing a parameterized generic matches through its members."""
+    converter = TypeConverter([convert_generic_union_to_base, convert_base_to_str])
+
+    # Direct match on each member of `dict[str, int] | None`.
+    assert isinstance(converter.convert({"key": 1}, Base), Base)
+    assert isinstance(converter.convert(None, Base), Base)
+
+    # Indirect chain: dict[str, int] | None -> Base -> str.
+    assert converter.convert({"key": 1}, str) == repr(Base())
+
+
+def test_convert_with_target_rejected_by_isinstance():
+    """`Any` and `Literal` targets are checked without raising TypeError."""
+    converter = TypeConverter([convert_any_to_int])
+
+    assert converter.convert(7, typing.Any) == 7
+    assert converter.convert("a", typing.Literal["a"]) == "a"

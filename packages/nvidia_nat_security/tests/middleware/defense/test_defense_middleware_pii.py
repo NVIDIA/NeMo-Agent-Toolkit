@@ -492,6 +492,30 @@ class TestPIIDefenseStreaming:
         assert chunks == ["Hello ", "world"]
         assert mock_analyzer.analyze.called
 
+    async def test_streaming_analyzes_structured_chunks_as_text(self,
+                                                                mock_builder,
+                                                                middleware_context,
+                                                                structured_chunk_stream):
+        """Structured stream chunks are analyzed as text, not as their repr."""
+        config = PIIDefenseMiddlewareConfig(action="redirection")
+        middleware = PIIDefenseMiddleware(config, mock_builder)
+
+        mock_analyzer = MagicMock()
+        mock_analyzer.analyze.return_value = []
+        middleware._analyzer = mock_analyzer
+        middleware._anonymizer = MagicMock()
+
+        chunks = []
+        async for chunk in middleware.function_middleware_stream({},
+                                                                 call_next=structured_chunk_stream,
+                                                                 context=middleware_context):
+            chunks.append(chunk)
+
+        assert len(chunks) == 2
+        analyzed = str(mock_analyzer.analyze.call_args)
+        assert "Hello world" in analyzed
+        assert "ChatResponseChunk" not in analyzed
+
     async def test_streaming_refusal_action(self, mock_builder, middleware_context):
         """Test streaming refusal action raises exception."""
         config = PIIDefenseMiddlewareConfig(action="refusal")

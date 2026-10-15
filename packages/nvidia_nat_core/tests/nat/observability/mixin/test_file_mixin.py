@@ -292,7 +292,7 @@ class TestFileExportMixin:
         await exporter.export_processed("string with\nnewlines")
 
         # Verify content was written (not counting lines due to embedded newlines)
-        async with aiofiles.open(output_path) as f:
+        async with aiofiles.open(output_path, encoding="utf-8") as f:
             content = await f.read()
 
         # Just verify all content is present in some form
@@ -302,6 +302,22 @@ class TestFileExportMixin:
         assert "spaces around" in content
         assert "string with" in content
         assert "newlines" in content
+
+    async def test_export_processed_opens_file_as_utf8(self, file_mixin_class, temp_file, monkeypatch):
+        """The exporter writes UTF-8 whatever the platform's locale encoding is."""
+        real_open = aiofiles.open
+        encodings = []
+
+        def recording_open(*args, **kwargs):
+            encodings.append(kwargs.get("encoding"))
+            return real_open(*args, **kwargs)
+
+        monkeypatch.setattr(aiofiles, "open", recording_open)
+        exporter = file_mixin_class(output_path=temp_file, project="test_project")
+
+        await exporter.export_processed("unicode string: 你好世界 →")
+
+        assert encodings and all(encoding == "utf-8" for encoding in encodings)
 
     async def test_export_processed_list_edge_cases(self, file_mixin_class, temp_file):
         """Test export_processed with various list edge cases."""

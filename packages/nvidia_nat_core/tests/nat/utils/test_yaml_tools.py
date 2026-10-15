@@ -138,6 +138,89 @@ def test_yaml_loads_leaves_embedded_dollar_identifiers_in_string_values():
     assert flows == ["content safety check input $model=content_safety"]
 
 
+def test_yaml_loads_does_not_expand_variables_inside_env_values(monkeypatch: pytest.MonkeyPatch):
+    """An environment variable's value is used verbatim, even when it looks like a "${...}" reference itself."""
+    monkeypatch.setenv("NAT_TEST_TEMPLATE", "Hello ${NAT_TEST_NAME}, token ${NAT_TEST_TOKEN:-none}")
+    monkeypatch.setenv("NAT_TEST_NAME", "world")
+    monkeypatch.setenv("NAT_TEST_PASSWORD", "pa$$word${NAT_TEST_NAME}")
+
+    yaml_str = """
+    prompt: ${NAT_TEST_TEMPLATE}
+    password: ${NAT_TEST_PASSWORD}
+    name: ${NAT_TEST_NAME}
+    """
+
+    config: dict = yaml_loads(yaml_str, Path("."))
+    assert config["prompt"] == "Hello ${NAT_TEST_NAME}, token ${NAT_TEST_TOKEN:-none}"
+    assert config["password"] == "pa$$word${NAT_TEST_NAME}"
+    assert config["name"] == "world"
+
+
+@pytest.mark.parametrize("value",
+                         [
+                             "hunter2 #42",
+                             "*s3cret",
+                             "&s3cret",
+                             "!s3cret",
+                             "@s3cret",
+                             "'s3cret",
+                             "Answer: yes",
+                             "a, b",
+                             "123 #42",
+                             "true # x",
+                         ])
+def test_yaml_loads_env_value_is_not_parsed_as_yaml_text(monkeypatch: pytest.MonkeyPatch, value: str):
+    """A text value is used as it is, even when it contains YAML comment or indicator characters."""
+    monkeypatch.setenv("NAT_TEST_SECRET", value)
+
+    config: dict = yaml_loads("password: ${NAT_TEST_SECRET}\nurl: http://host/${NAT_TEST_SECRET}\n", Path("."))
+    assert config["password"] == value
+    assert config["url"] == f"http://host/{value}"
+
+
+def test_yaml_loads_references_in_flow_collections(monkeypatch: pytest.MonkeyPatch):
+    """References inside `[...]` and `{...}` load as they did when the raw text was expanded first."""
+    monkeypatch.setenv("NAT_TEST_PORT", "8080")
+    monkeypatch.setenv("NAT_TEST_SECRET", "hunter2 #42")
+
+    config: dict = yaml_loads(
+        "ports: [${NAT_TEST_PORT}, x]\nheaders: {Authorization: ${NAT_TEST_SECRET}}\nnested: {a: [${NAT_TEST_PORT}]}\n",
+        Path("."))
+    assert config == {"ports": [8080, "x"], "headers": {"Authorization": "hunter2 #42"}, "nested": {"a": [8080]}}
+
+
+def test_yaml_loads_reference_as_merge_value(monkeypatch: pytest.MonkeyPatch):
+    """A `<<` merge value from an environment variable is merged, as it was when the raw text was expanded."""
+    monkeypatch.setenv("NAT_TEST_MERGE", "{y: 2}")
+
+    config: dict = yaml_loads("a:\n  <<: ${NAT_TEST_MERGE}\n  z: 3\nb:\n  <<: [${NAT_TEST_MERGE}]\n  z: 4\n", Path("."))
+    assert config == {"a": {"y": 2, "z": 3}, "b": {"y": 2, "z": 4}}
+
+
+def test_yaml_loads_explicit_str_tag_keeps_a_string(monkeypatch: pytest.MonkeyPatch):
+    """An explicit `!!str` tag keeps a whole-value reference a string."""
+    monkeypatch.setenv("NAT_TEST_PORT", "8080")
+
+    config: dict = yaml_loads("port: !!str ${NAT_TEST_PORT}\nother: ${NAT_TEST_PORT}\n", Path("."))
+    assert config == {"port": "8080", "other": 8080}
+
+
+def test_yaml_loads_quoted_default_drops_the_quotes(monkeypatch: pytest.MonkeyPatch):
+    """The documented `${VAR:-"default"}` form gives the default without its quotes."""
+    monkeypatch.delenv("NAT_TEST_UNSET", raising=False)
+
+    config: dict = yaml_loads('base_url: ${NAT_TEST_UNSET:-"http://default.com"}\n', Path("."))
+    assert config["base_url"] == "http://default.com"
+
+
+def test_yaml_loads_quoted_reference_stays_a_string(monkeypatch: pytest.MonkeyPatch):
+    """A reference inside a quoted YAML scalar stays a string, as it was before."""
+    monkeypatch.setenv("NAT_TEST_PORT", "8080")
+
+    config: dict = yaml_loads('port: "${NAT_TEST_PORT}"\nother: ${NAT_TEST_PORT}\n', Path("."))
+    assert config == {"port": "8080", "other": 8080}
+
+
 def test_yaml_load(env_vars: dict):
     # Create a temporary YAML file
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as temp_file:
@@ -286,6 +369,7 @@ def test_yaml_load_with_function(env_vars: dict):
 
 
 def test_yaml_loads_with_invalid_yaml():
+    """Reject malformed YAML with a descriptive loading error."""
     # Test with invalid YAML syntax
     invalid_yaml = """
     workflow:
@@ -303,7 +387,27 @@ def test_yaml_loads_with_invalid_yaml():
         yaml_loads(malformed_yaml, Path("."))
 
 
+@pytest.mark.parametrize("config_str, type_name",
+                         [("", "NoneType"), ("# only a comment\n", "NoneType"), ("- a\n- b\n", "list"),
+                          ("just a string", "str")])
+def test_yaml_loads_with_non_mapping_yaml(config_str: str, type_name: str):
+    """Reject non-mapping YAML and report the parsed top-level type."""
+    with pytest.raises(ValueError, match=f"must be a mapping, got {type_name}"):
+        yaml_loads(config_str, Path("."))
+
+
+def test_yaml_load_with_empty_file():
+    """Reject an empty YAML file with a descriptive mapping error."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        config_file = Path(temp_dir) / "empty.yml"
+        config_file.write_text("", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="must be a mapping, got NoneType"):
+            yaml_load(config_file)
+
+
 def test_deep_merge():
+    """Merge nested mappings, replace conflicting values, and accept empty overrides."""
     # Test basic merge
     base = {"a": 1, "b": 2}
     override = {"b": 3, "c": 4}

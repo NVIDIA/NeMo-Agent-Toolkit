@@ -135,6 +135,32 @@ class TestOpenAILlamaIndex:
             mock_httpx_sync_client.assert_called_once()
             assert mock_httpx_sync_client.call_args.kwargs["verify"] is verify_ssl
 
+    @patch("nat.plugins.llama_index.llm.patch_with_retry")
+    @patch("llama_index.llms.openai.OpenAI")
+    async def test_auto_retry_enabled_by_default(self,
+                                                 mock_openai: MagicMock,
+                                                 mock_patch_retry: MagicMock,
+                                                 oa_cfg_chat: OpenAIModelConfig,
+                                                 mock_builder: MagicMock):
+        """When do_auto_retry is True (default), patch_with_retry is called."""
+        mock_patch_retry.return_value = mock_openai.return_value
+        async with openai_llama_index(oa_cfg_chat, mock_builder):
+            pass
+        mock_patch_retry.assert_called_once()
+
+    @patch("nat.plugins.llama_index.llm.patch_with_retry")
+    @patch("llama_index.llms.openai.OpenAI")
+    async def test_auto_retry_disabled(self,
+                                       mock_openai: MagicMock,
+                                       mock_patch_retry: MagicMock,
+                                       oa_cfg_chat: OpenAIModelConfig,
+                                       mock_builder: MagicMock):
+        """When do_auto_retry is False, patch_with_retry is not called."""
+        oa_cfg_chat.do_auto_retry = False
+        async with openai_llama_index(oa_cfg_chat, mock_builder):
+            pass
+        mock_patch_retry.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # AWS Bedrock → Llama-Index wrapper tests
@@ -165,6 +191,23 @@ class TestBedrockLlamaIndex:
             async with aws_bedrock_llama_index(br_cfg_bad_api, mock_builder):
                 pass
         mock_bedrock.assert_not_called()
+
+    @patch("llama_index.llms.bedrock.Bedrock")
+    async def test_credentials_profile_passed_as_profile_name(self, mock_bedrock: MagicMock, mock_builder: MagicMock):
+        """LlamaIndex reads the AWS profile from `profile_name` and drops unknown kwargs."""
+        cfg = AWSBedrockModelConfig(model_name="ai21.j2-ultra", credentials_profile_name="my-profile")
+        async with aws_bedrock_llama_index(cfg, mock_builder):
+            kwargs = mock_bedrock.call_args.kwargs
+            assert kwargs["profile_name"] == "my-profile"
+            assert "credentials_profile_name" not in kwargs
+
+    @patch("llama_index.llms.bedrock.Bedrock")
+    async def test_no_profile_name_without_credentials_profile(self,
+                                                               mock_bedrock: MagicMock,
+                                                               br_cfg: AWSBedrockModelConfig,
+                                                               mock_builder: MagicMock):
+        async with aws_bedrock_llama_index(br_cfg, mock_builder):
+            assert "profile_name" not in mock_bedrock.call_args.kwargs
 
 
 # ---------------------------------------------------------------------------

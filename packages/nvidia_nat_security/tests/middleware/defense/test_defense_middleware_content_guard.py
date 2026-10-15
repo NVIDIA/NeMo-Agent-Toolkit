@@ -700,6 +700,31 @@ class TestContentSafetyGuardStreaming:
         assert chunks == ["Hello ", "world"]
         assert mock_llm.ainvoke.called
 
+    async def test_streaming_counts_structured_chunks_as_text(self,
+                                                              mock_builder,
+                                                              middleware_context,
+                                                              structured_chunk_stream):
+        """Structured chunks count against max_content_length as text, not as their repr."""
+        config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal", max_content_length=12)
+        middleware = ContentSafetyGuardMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.content = "Safe"
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+        middleware._llm = mock_llm
+
+        chunks = []
+        async for chunk in middleware.function_middleware_stream({},
+                                                                 call_next=structured_chunk_stream,
+                                                                 context=middleware_context):
+            chunks.append(chunk)
+
+        assert len(chunks) == 2
+        analyzed = str(mock_llm.ainvoke.call_args)
+        assert "Hello world" in analyzed
+        assert "ChatResponseChunk" not in analyzed
+
     async def test_streaming_refusal_action(self, mock_builder, middleware_context):
         """Test streaming refusal action raises exception."""
         config = ContentSafetyGuardMiddlewareConfig(llm_name="test_llm", action="refusal")

@@ -18,6 +18,7 @@ import inspect
 import json
 import os
 import time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
@@ -301,6 +302,38 @@ async def test_run_workflow_local_skip_completed(evaluation_run, session_manager
     assert pending_item.output_obj == generated_answer, "Pending item output should have been processed"
 
 
+async def test_run_workflow_local_skip_completed_list_output(evaluation_run, session_manager, generated_answer):
+    """Test that 'skip_completed_entries=True' treats a non-empty list output as completed."""
+
+    old_answer = ["first", "second"]
+    completed_item = EvalInputItem(id=1,
+                                   input_obj="Completed Question",
+                                   expected_output_obj="Golden Answer",
+                                   output_obj=old_answer,
+                                   expected_trajectory=[],
+                                   trajectory=[],
+                                   full_dataset_entry={
+                                       "id": 1, "question": "Completed Question", "answer": "Golden Answer"
+                                   })
+    pending_item = EvalInputItem(id=2,
+                                 input_obj="Pending Question",
+                                 expected_output_obj="Golden Answer",
+                                 output_obj=None,
+                                 expected_trajectory=[],
+                                 trajectory=[],
+                                 full_dataset_entry={
+                                     "id": 2, "question": "Pending Question", "answer": "Golden Answer"
+                                 })
+
+    evaluation_run.eval_input = EvalInput(eval_input_items=[completed_item, pending_item])
+    evaluation_run.config.skip_completed_entries = True
+
+    await evaluation_run.run_workflow_local(session_manager)
+
+    assert completed_item.output_obj == old_answer, "Completed item should be skipped"
+    assert pending_item.output_obj == generated_answer, "Pending item output should have been processed"
+
+
 async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_input, session_manager):
     """Test that workflow_interrupted is set to True when an exception occurs during workflow execution."""
 
@@ -498,6 +531,35 @@ async def test_run_workflow_remote_success(evaluation_run, generated_answer):
         # Assert that each item was updated with the generated output
         for item in evaluation_run.eval_input.eval_input_items:
             assert item.output_obj == generated_answer, f"Expected {generated_answer}, got {item.output_obj}"
+
+
+def test_compute_usage_stats_pairs_overlapping_llm_calls_by_uuid(evaluation_run):
+    """Overlapping LLM calls must be matched to their own LLM_START when computing the LLM latency."""
+
+    def make_step(event_type: IntermediateStepType, uuid: str, timestamp: float) -> IntermediateStep:
+        return IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(function_name="agent", function_id="agent-id"),
+                                payload=IntermediateStepPayload(event_type=event_type,
+                                                                event_timestamp=timestamp,
+                                                                UUID=uuid,
+                                                                name="llm"))
+
+    item = EvalInputItem(id="overlap",
+                         input_obj="question",
+                         expected_output_obj="answer",
+                         output_obj="answer",
+                         trajectory=[
+                             make_step(IntermediateStepType.LLM_START, "call-a", 100.0),
+                             make_step(IntermediateStepType.LLM_START, "call-b", 101.0),
+                             make_step(IntermediateStepType.LLM_END, "call-a", 110.0),
+                             make_step(IntermediateStepType.LLM_END, "call-b", 111.0),
+                         ],
+                         expected_trajectory=[],
+                         full_dataset_entry={})
+
+    usage_stats_item = evaluation_run._compute_usage_stats(item)
+
+    assert usage_stats_item.llm_latency == pytest.approx(10.0)
 
 
 # Batch-2: Tests for running evaluators
@@ -938,6 +1000,72 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
 
         # Ensure EvaluationRunOutput was created (this prevents the Pydantic validation error)
         mock_eval_run_output.assert_called()
+
+
+async def test_run_and_evaluate_total_runtime_ignores_items_without_steps(evaluation_run: EvaluationRun,
+                                                                          default_eval_config: EvalConfig):
+    """An item whose remote request failed has no steps and must not stretch the total runtime back to epoch 0."""
+    evaluation_run.config.endpoint = "http://localhost:8000"
+    finished_item = EvalInputItem(id=1,
+                                  input_obj="question 1",
+                                  expected_output_obj="answer 1",
+                                  output_obj=None,
+                                  trajectory=[],
+                                  expected_trajectory=[],
+                                  full_dataset_entry={})
+    failed_item = EvalInputItem(id=2,
+                                input_obj="question 2",
+                                expected_output_obj="answer 2",
+                                output_obj=None,
+                                trajectory=[],
+                                expected_trajectory=[],
+                                full_dataset_entry={})
+    eval_input = EvalInput(eval_input_items=[finished_item, failed_item])
+
+    def make_step(event_type: IntermediateStepType, timestamp: float) -> IntermediateStep:
+        return IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(function_name="remote", function_id="remote-id"),
+                                payload=IntermediateStepPayload(event_type=event_type, event_timestamp=timestamp))
+
+    async def fake_run_workflow_remote(remote_eval_input: EvalInput) -> EvalInput:
+        finished, failed = remote_eval_input.eval_input_items
+        finished.output_obj = "answer 1"
+        finished.trajectory = [
+            make_step(IntermediateStepType.WORKFLOW_START, 1_700_000_000.0),
+            make_step(IntermediateStepType.WORKFLOW_END, 1_700_000_002.5),
+        ]
+        # A failed or timed-out remote request leaves the item without output or steps
+        failed.output_obj = None
+        failed.trajectory = []
+        return remote_eval_input
+
+    mock_nat_config = Config()
+    mock_nat_config.eval = default_eval_config
+    mock_dataset_handler = MagicMock()
+    mock_dataset_handler.get_eval_input_from_dataset.return_value = eval_input
+    mock_dataset_handler.pre_eval_process_eval_input.side_effect = lambda value: value
+
+    @asynccontextmanager
+    async def mock_eval_builder(config: Config) -> AsyncIterator[MagicMock]:
+        yield MagicMock()
+
+    mock_uploader = MagicMock()
+    mock_uploader.upload_directory = AsyncMock()
+
+    with patch("nat.runtime.loader.load_config", MagicMock(return_value=mock_nat_config)), \
+         patch("nat.plugins.eval.runtime.builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
+         patch("nat.plugins.eval.runtime.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
+         patch("nat.plugins.eval.runtime.evaluate._get_output_uploader_cls",
+               return_value=MagicMock(return_value=mock_uploader)), \
+         patch("nat.plugins.eval.runtime.remote_workflow.EvaluationRemoteWorkflowHandler") as mock_handler, \
+         patch.object(evaluation_run, "run_evaluators", AsyncMock()), \
+         patch.object(evaluation_run, "profile_workflow", AsyncMock(return_value=ProfilerResults())), \
+         patch.object(evaluation_run, "_on_eval_complete", MagicMock()):
+        mock_handler.return_value.run_workflow_remote = AsyncMock(side_effect=fake_run_workflow_remote)
+
+        output = await evaluation_run.run_and_evaluate()
+
+    assert output.usage_stats.total_runtime == pytest.approx(2.5)
 
 
 def test_append_job_id_to_output_dir(default_eval_config):

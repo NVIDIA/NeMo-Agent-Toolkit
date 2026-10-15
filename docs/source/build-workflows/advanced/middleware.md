@@ -1041,6 +1041,31 @@ Solution: Ensure the register module is imported. NeMo Agent Toolkit automatical
 - Reduce logging verbosity
 - Consider async operations
 
+## Middleware Telemetry
+
+Each enabled function middleware emits paired `SPAN_START` and `SPAN_END`
+intermediate steps named after its class. The span surrounds the middleware's
+invocation, including downstream middleware and the function it delegates to;
+its duration is inclusive rather than a measurement of exclusive middleware
+overhead. Disabled middleware emits no steps.
+
+NeMo Guardrails additionally emits `GUARDRAIL_START` and `GUARDRAIL_END` for each
+input or output policy evaluation. Live output-rail streaming uses one
+`guardrails.output.stream` span for the stream lifetime. Intermediate-step and
+span exporters receive the same paired events on normal completion, refusal,
+exceptions, and stream closure. Buffered streaming records its final output;
+generic streaming records the last emitted chunk without accumulating the stream.
+
+NeMo Guardrails middleware also attaches the existing LangChain profiler to native
+rail models and rail models bound from NeMo Agent Toolkit. Their LLM spans include
+model names, prompts, responses, and provider-reported token usage for ordinary and
+live streaming calls. Existing model callbacks are preserved, and an active
+workflow profiler takes precedence to avoid duplicate LLM spans. Providers that do
+not report token usage retain zero counts; the middleware does not estimate tokens.
+
+Middleware inputs and outputs follow the configured telemetry exporters' existing
+payload and redaction rules.
+
 ## API Reference
 
 - {py:class}`~nat.plugin_api.FunctionMiddleware`: Base class

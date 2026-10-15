@@ -38,6 +38,9 @@ def convert_to_str(value: Any) -> str:
         raise ValueError(f"Unsupported type for conversion to string: {type(value)}")
 
 
+_ELLIPSIS = "..."
+
+
 def truncate_string(text: str | None, max_length: int = 100) -> str | None:
     """
     Truncate a string to a maximum length, adding ellipsis if truncated.
@@ -47,8 +50,16 @@ def truncate_string(text: str | None, max_length: int = 100) -> str | None:
         max_length: Maximum allowed length (default: 100)
 
     Returns:
-        The truncated text with ellipsis if needed, or None if input was None
+        The truncated text with ellipsis if needed, or None if input was None. The
+        returned string never exceeds ``max_length`` characters.
     """
     if not text or len(text) <= max_length:
         return text
-    return text[:max_length - 3] + "..."
+    # When there is no room for text plus the ellipsis, return as much of the
+    # ellipsis as fits. Guarding here avoids the negative-index slice
+    # ``text[:max_length - 3]`` would produce for ``max_length < 3`` (which cut
+    # characters off the end of ``text`` and returned a string longer than
+    # ``max_length``).
+    if max_length < len(_ELLIPSIS):
+        return _ELLIPSIS[:max(max_length, 0)]
+    return text[:max_length - len(_ELLIPSIS)] + _ELLIPSIS

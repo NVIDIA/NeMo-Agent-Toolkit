@@ -85,6 +85,31 @@ uv pip install -e examples/getting_started/simple_calculator
 nat serve --config_file examples/getting_started/simple_calculator/configs/config.yml
 ```
 
+## Health Check Endpoint
+- **Route:** `/health`
+- **Method:** GET
+- **Description:** A health probe for the running server. It is registered automatically
+  whenever you start `nat serve`, returns immediately without executing a workflow, and requires no
+  model or API credentials. This makes it suitable for reverse proxies, process supervisors, Docker
+  health checks, and Kubernetes-style readiness probes.
+- **HTTP Request Example:**
+  ```bash
+  curl -s http://localhost:8000/health
+  ```
+- **HTTP Response Example:**
+  ```json
+  {"status":"healthy"}
+  ```
+
+:::{note}
+This endpoint checks the FastAPI server started by `nat serve` (default port `8000`). The MCP and
+FastMCP servers expose their own separate `/health` routes on their own default ports — see
+[Verifying MCP Server Health](../../run-workflows/mcp-server.md#verifying-mcp-server-health)
+(default port `9901`) and
+[Verifying FastMCP Server Health](../../run-workflows/fastmcp-server.md#verifying-fastmcp-server-health)
+(default port `9902`).
+:::
+
 ## Generate Non-Streaming Transaction
 - **Route:** `/v1/workflow` (legacy: `/generate`)
 - **Description:** A non-streaming transaction that waits until all workflow data is available before sending the
@@ -525,6 +550,22 @@ curl -X POST http://localhost:8000/v1/chat/completions \
     "temperature": 0.7
   }'
 ```
+
+#### Streaming Usage Chunk
+
+When a streaming request sets `stream_options.include_usage`, the final chunk (after
+the content chunks, with `choices: []`) carries the usage object for the whole
+completion. The counts are summed across every LLM call the agent made (one per
+tool round), not overwritten, and no usage chunk is emitted when the caller did not
+ask for one or the model reported none.
+
+```
+data: {"id": "...", "choices": [], "usage": {"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120, "prompt_tokens_details": {"cached_tokens": 80}}}
+
+```
+
+`prompt_tokens_details.cached_tokens` is present only when the inference provider
+reported a prompt cache for the request; it is omitted, not zero, otherwise.
 
 #### Client Library Examples
 

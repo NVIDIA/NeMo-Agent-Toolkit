@@ -83,12 +83,13 @@ class Subject(Observable[T], Observer[T], SubjectBase[T]):
 
     def on_error(self, exc: Exception) -> None:
         """
-        Called by producers to signal an error. Notifies all observers.
+        Called by producers to signal an error. Closes the subject and notifies all observers.
         """
         with self._lock:
             if self._closed or self._disposed:
                 return
             current_obs = list(self._observers)
+            self.dispose()
 
         for obs in current_obs:
             obs.on_error(exc)
