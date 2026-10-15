@@ -192,6 +192,23 @@ class TestBedrockLlamaIndex:
                 pass
         mock_bedrock.assert_not_called()
 
+    @patch("llama_index.llms.bedrock.Bedrock")
+    async def test_credentials_profile_passed_as_profile_name(self, mock_bedrock: MagicMock, mock_builder: MagicMock):
+        """LlamaIndex reads the AWS profile from `profile_name` and drops unknown kwargs."""
+        cfg = AWSBedrockModelConfig(model_name="ai21.j2-ultra", credentials_profile_name="my-profile")
+        async with aws_bedrock_llama_index(cfg, mock_builder):
+            kwargs = mock_bedrock.call_args.kwargs
+            assert kwargs["profile_name"] == "my-profile"
+            assert "credentials_profile_name" not in kwargs
+
+    @patch("llama_index.llms.bedrock.Bedrock")
+    async def test_no_profile_name_without_credentials_profile(self,
+                                                               mock_bedrock: MagicMock,
+                                                               br_cfg: AWSBedrockModelConfig,
+                                                               mock_builder: MagicMock):
+        async with aws_bedrock_llama_index(br_cfg, mock_builder):
+            assert "profile_name" not in mock_bedrock.call_args.kwargs
+
 
 # ---------------------------------------------------------------------------
 # Registration decorator sanity check

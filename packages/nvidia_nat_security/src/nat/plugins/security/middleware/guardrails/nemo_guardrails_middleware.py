@@ -44,6 +44,7 @@ from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 from nat.middleware.telemetry import trace_middleware
 from nat.middleware.utils.workflow_inventory import DiscoveredFunction
+from nat.plugins.security.middleware.defense.defense_middleware import stream_chunk_to_text
 from nat.plugins.security.middleware.guardrails.callback_handler import GuardrailsProfilerHandler
 from nat.plugins.security.middleware.guardrails.callback_handler import attach_rail_profiler
 from nat.plugins.security.middleware.guardrails.callback_handler import profile_rail_calls
@@ -322,7 +323,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
 
         async with _closing_stream(call_next(*ctx.modified_args, **ctx.modified_kwargs)) as stream:
             buffered: list[Any] = [chunk async for chunk in stream]
-        ctx.output = "".join(str(chunk) for chunk in buffered)
+        ctx.output = "".join(stream_chunk_to_text(chunk) for chunk in buffered)
         result = await self.post_invoke(ctx)
         if result is not None:
             ctx = result
@@ -355,7 +356,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         async def upstream() -> AsyncIterator[str]:
             async with _closing_stream(call_next(*ctx.modified_args, **ctx.modified_kwargs)) as stream:
                 async for chunk in stream:
-                    yield str(chunk)
+                    yield stream_chunk_to_text(chunk)
 
         async with _closing_stream(upstream()) as source:
             async with _closing_stream(self._llm_rails.stream_async(messages=messages, generator=source)) as stream:

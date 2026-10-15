@@ -15,6 +15,8 @@
 
 import io
 import logging
+import os
+import re
 import typing
 from pathlib import Path
 
@@ -132,6 +134,142 @@ def _interpolate_variables(value: str | int | float | bool | None) -> str | int 
     return expand(value, surrounded_vars_only=True)
 
 
+# A plain YAML value that is exactly one reference, such as `${VAR}` or `${VAR:-default}`.
+_WHOLE_REFERENCE = re.compile(r"\$\{(?P<name>[A-Za-z_][A-Za-z0-9_]*)(?:(?P<op>:?-)(?P<default>[^${}]*))?\}")
+
+
+def _interpolate_whole_reference(match: re.Match[str]) -> typing.Any:
+    """
+    Resolve a plain YAML value that is exactly one `${...}` reference.
+
+    The value keeps the YAML type it had when variables were expanded on the raw text: numbers,
+    booleans, null and `[...]` / `{...}` collections are parsed. Any other value is used verbatim,
+    so YAML comment and indicator characters in a value are not interpreted.
+
+    Args:
+        match: The `_WHOLE_REFERENCE` match for the value.
+
+    Returns:
+        The resolved value.
+    """
+    default = match["default"]
+    if default is not None and len(default) >= 2 and default[0] == default[-1] and default[0] in "\"'":
+        env_value = os.environ.get(match["name"])
+        if env_value is None or (match["op"] == ":-" and env_value == ""):
+            # A quoted default, as in `${VAR:-"http://default.com"}`, is a string without its quotes.
+            return default[1:-1]
+
+    text: str = expand(match.group(0), surrounded_vars_only=True)
+    if text.strip() == "":
+        # Matches loading the expanded text: an empty plain value is null.
+        return None
+
+    try:
+        node = yaml.compose(text, Loader=yaml.SafeLoader)
+        parsed = yaml.safe_load(text)
+    except yaml.YAMLError:
+        return text
+
+    if node is None or node.end_mark.index < len(text.rstrip()):
+        # The YAML value ends before the text does, e.g. `123 #42` parses as `123`. Keep the text.
+        return text
+
+    if isinstance(parsed, bool | int | float):
+        return parsed
+    if parsed is None and text.strip() in ("~", "null", "Null", "NULL"):
+        return None
+    if isinstance(parsed, list | dict) and text.lstrip()[:1] in ("[", "{"):
+        return parsed
+    return text
+
+
+# Tag the loader resolves an untagged plain `${VAR}` value to. Quoted values and values with an explicit
+# tag such as `!!str` are not resolved, so they stay strings.
+_WHOLE_REFERENCE_TAG = "tag:nvidia.com,2026:nat-env-reference"
+
+# A `${...}` reference on one line. Its braces are YAML flow indicators, so each reference is swapped
+# for a placeholder of letters, digits and `_` before parsing and swapped back in each scalar.
+_REFERENCE = re.compile(r"\$\{[^{}\n]*\}")
+_PLACEHOLDER = re.compile(r"NATENVREF[0-9a-f]{12}N[0-9]+N")
+
+
+def _protect_references(config: str) -> tuple[str, dict[str, str]]:
+    """
+    Replace each `${...}` reference in the raw YAML text with a placeholder that is safe in any YAML context.
+
+    Args:
+        config (str): The raw YAML text.
+
+    Returns:
+        tuple[str, dict[str, str]]: The text with placeholders, and each placeholder's original reference.
+    """
+    nonce = os.urandom(6).hex()
+    references: dict[str, str] = {}
+
+    def _swap(match: re.Match[str]) -> str:
+        placeholder = f"NATENVREF{nonce}N{len(references)}N"
+        references[placeholder] = match.group(0)
+        return placeholder
+
+    return _REFERENCE.sub(_swap, config), references
+
+
+class _EnvVarLoader(yaml.SafeLoader):
+    """Safe YAML loader that expands `${VAR}` references in scalar values after parsing."""
+
+    references: dict[str, str] = {}
+
+    def _restore(self, value: str) -> str:
+        return _PLACEHOLDER.sub(lambda m: self.references.get(m.group(0), m.group(0)), value)
+
+    def resolve(self, kind: typing.Any, value: typing.Any, implicit: typing.Any) -> str:
+        if kind is yaml.ScalarNode and implicit[0] and _WHOLE_REFERENCE.fullmatch(self._restore(value)):
+            return _WHOLE_REFERENCE_TAG
+        return super().resolve(kind, value, implicit)
+
+    def _compose_reference(self, node: yaml.Node) -> yaml.Node:
+        """Turn a whole-reference scalar into the node its expanded text composes to, for use as a merge value."""
+        if not isinstance(node, yaml.ScalarNode) or node.tag != _WHOLE_REFERENCE_TAG:
+            return node
+        text = expand(self._restore(yaml.SafeLoader.construct_scalar(self, node)), surrounded_vars_only=True)
+        try:
+            composed = yaml.compose(text, Loader=yaml.SafeLoader)
+        except yaml.YAMLError:
+            return node
+        return composed if isinstance(composed, yaml.MappingNode) else node
+
+    def flatten_mapping(self, node: yaml.MappingNode) -> None:
+        # PyYAML checks `<<` merge values by node type before any scalar is constructed, so a merge value
+        # that comes from a reference has to be composed into a mapping node first.
+        for index, (key_node, value_node) in enumerate(node.value):
+            if key_node.tag != "tag:yaml.org,2002:merge":
+                continue
+            if isinstance(value_node, yaml.SequenceNode):
+                value_node.value = [self._compose_reference(item) for item in value_node.value]
+            else:
+                node.value[index] = (key_node, self._compose_reference(value_node))
+        super().flatten_mapping(node)
+
+    def construct_scalar(self, node: yaml.ScalarNode) -> str:
+        # Every scalar, including keys and explicitly tagged values, is expanded exactly once here.
+        return expand(self._restore(super().construct_scalar(node)), surrounded_vars_only=True)
+
+
+def _env_var_loader(references: dict[str, str]) -> type[_EnvVarLoader]:
+    """Create an `_EnvVarLoader` subclass that restores the given placeholders."""
+    return typing.cast(type[_EnvVarLoader],
+                       type("_EnvVarLoaderForConfig", (_EnvVarLoader, ), {"references": references}))
+
+
+def _construct_whole_reference(loader: _EnvVarLoader, node: yaml.ScalarNode) -> typing.Any:
+    match = _WHOLE_REFERENCE.fullmatch(loader._restore(yaml.SafeLoader.construct_scalar(loader, node)))
+    assert match is not None  # the resolver only assigns this tag to a full match
+    return _interpolate_whole_reference(match)
+
+
+_EnvVarLoader.add_constructor(_WHOLE_REFERENCE_TAG, _construct_whole_reference)
+
+
 def deep_merge(base: dict, override: dict) -> dict:
     """
     Recursively merge override dictionary into base dictionary.
@@ -236,14 +374,15 @@ def yaml_loads(config: str, base_path: Path) -> dict:
     Raises:
         ValueError: If the YAML is invalid or its top level is not a mapping.
     """
-    config_text: str = expand(config, surrounded_vars_only=True)
+    # Variables are expanded in the parsed string values, so a value is never read again as YAML.
+    config_text, references = _protect_references(config)
 
     stream = io.StringIO(config_text)
     stream.seek(0)
 
     # Load the YAML data
     try:
-        config_data = yaml.safe_load(stream)
+        config_data = yaml.load(stream, Loader=_env_var_loader(references))  # noqa: S506  # a SafeLoader
     except yaml.YAMLError as e:
         logger.error("Error loading YAML: %s", config_text)
         raise ValueError(f"Error loading YAML: {e}") from e
@@ -251,8 +390,8 @@ def yaml_loads(config: str, base_path: Path) -> dict:
     if not isinstance(config_data, dict):
         raise ValueError(f"Error loading YAML: the top level must be a mapping, got {type(config_data).__name__}")
 
-    # Variables were already expanded on the YAML text above. Expanding the parsed values a second
-    # time would also expand any "${...}" that came from an environment variable's own value.
+    # Each string value was expanded once while loading. Expanding again would also expand any
+    # "${...}" that came from an environment variable's own value.
     config_data = _resolve_file_references(config_data, base_path)
 
     return config_data

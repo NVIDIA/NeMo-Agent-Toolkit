@@ -1,12 +1,26 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Exercise telemetry through the middleware chain, including early exits."""
 
 import asyncio
+from collections.abc import Iterator
 
 import pytest
 
 from nat.builder.context import Context
+from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepState
@@ -18,8 +32,9 @@ from nat.middleware.telemetry import trace_middleware
 from nat.observability.exporter.span_exporter import SpanExporter
 
 
-@pytest.fixture
-def recorded_steps():
+@pytest.fixture(name="recorded_steps")
+def recorded_steps_fixture() -> Iterator[list[IntermediateStep]]:
+    """Record intermediate steps and verify that the caller's span is restored."""
     context = Context.get()
     steps = []
     subscription = context.intermediate_step_manager.subscribe(steps.append)

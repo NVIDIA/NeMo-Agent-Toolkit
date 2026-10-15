@@ -127,6 +127,21 @@ class ReWOOAgentGraph(BaseAgent):
             raise
 
     @staticmethod
+    def _tool_output_value(tool_output: ToolMessage):
+        """The value a placeholder stands for.
+
+        ToolMessage.content is typed str | list[str | dict], and
+        BaseAgent._call_tool wraps a dict response in a list, which is why a
+        one-element list is the usual shape here. A list of strings and an
+        empty list are in contract too, so neither may be assumed away.
+        """
+        content = tool_output.content
+        if isinstance(content, list):
+            return content[0] if content else ""
+
+        return content
+
+    @staticmethod
     def _get_current_level_status(state: ReWOOGraphState) -> tuple[int, bool]:
         """
         Get the current execution level and whether it's complete.
@@ -289,7 +304,7 @@ class ReWOOAgentGraph(BaseAgent):
             task = str(state.task.content)
             if not task:
                 logger.error("%s No task provided to the ReWOO Agent. Please provide a valid task.", AGENT_LOG_PREFIX)
-                return {"result": NO_INPUT_ERROR_MESSAGE}
+                return {"result": AIMessage(content=NO_INPUT_ERROR_MESSAGE)}
             chat_history = self._get_chat_history(state.messages)
             plan = await self._stream_llm(
                 planner,
@@ -422,13 +437,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         # Replace placeholders in tool input with previous results
         for ph_key, tool_output in intermediate_results.items():
-            tool_output_content = tool_output.content
-            # If the content is a list, get the first element which should be a dict
-            if isinstance(tool_output_content, list):
-                tool_output_content = tool_output_content[0]
-                assert isinstance(tool_output_content, dict)
-
-            replacements[ph_key] = tool_output_content
+            replacements[ph_key] = self._tool_output_value(tool_output)
 
         tool_input = self._replace_placeholders(evidence_info.tool_input, replacements)
 
@@ -472,13 +481,7 @@ class ReWOOAgentGraph(BaseAgent):
 
                 replacements = {}
                 for ph_key, tool_output in state.intermediate_results.items():
-                    tool_output_content = tool_output.content
-                    # If the content is a list, get the first element which should be a dict
-                    if isinstance(tool_output_content, list):
-                        tool_output_content = tool_output_content[0]
-                        assert isinstance(tool_output_content, dict)
-
-                    replacements[ph_key] = tool_output_content
+                    replacements[ph_key] = self._tool_output_value(tool_output)
 
                 # Replace placeholders in tool input with actual results
                 final_tool_input = self._replace_placeholders(original_tool_input, replacements)
@@ -486,18 +489,12 @@ class ReWOOAgentGraph(BaseAgent):
                 # Get the final result for this placeholder
                 final_result = ""
                 if placeholder in state.intermediate_results:
-                    result_content = state.intermediate_results[placeholder].content
-                    if isinstance(result_content, list):
-                        result_content = result_content[0]
-                        if isinstance(result_content, dict):
-                            final_result = str(result_content)
-                    else:
-                        final_result = str(result_content)
+                    final_result = str(self._tool_output_value(state.intermediate_results[placeholder]))
 
                 step_plan = step_info.plan
                 plan += '\n'.join([
                     f"Plan: {step_plan}",
-                    f"{placeholder} = {tool_name}[{final_tool_input}",
+                    f"{placeholder} = {tool_name}[{final_tool_input}]",
                     f"Result: {final_result}\n\n"
                 ])
 
@@ -516,6 +513,18 @@ class ReWOOAgentGraph(BaseAgent):
         except Exception as ex:
             logger.error("%s Failed to call solver_node: %s", AGENT_LOG_PREFIX, ex)
             raise
+
+    async def planner_edge(self, state: ReWOOGraphState):
+        """Skip execution when the planner has already produced the answer itself.
+
+        It does that for a task it cannot plan for, such as an empty one. A plan
+        it could not parse into steps still goes to the executor, which says so.
+        """
+        if state.result.content:
+            logger.debug("%s Planner answered without a plan, ending graph traversal", AGENT_LOG_PREFIX)
+            return AgentDecision.END
+
+        return AgentDecision.TOOL
 
     async def conditional_edge(self, state: ReWOOGraphState):
         try:
@@ -555,7 +564,10 @@ class ReWOOAgentGraph(BaseAgent):
             graph.add_node("executor", self.executor_node)
             graph.add_node("solver", self.solver_node)
 
-            graph.add_edge("planner", "executor")
+            graph.add_conditional_edges("planner",
+                                        self.planner_edge, {
+                                            AgentDecision.TOOL: "executor", AgentDecision.END: "__end__"
+                                        })
             graph.add_conditional_edges("executor",
                                         self.conditional_edge, {
                                             AgentDecision.TOOL: "executor", AgentDecision.END: "solver"

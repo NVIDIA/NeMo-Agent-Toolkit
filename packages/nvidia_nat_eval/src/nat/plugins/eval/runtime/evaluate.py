@@ -172,13 +172,12 @@ class EvaluationRun:
 
         # find llm latency by calculating p95 of all llm calls
         llm_latencies = []
-        previous_llm_start_time = None
+        llm_start_times: dict[str, float] = {}
         for step in item.trajectory:
             if step.event_type == IntermediateStepType.LLM_START:
-                previous_llm_start_time = step.event_timestamp
-            elif step.event_type == IntermediateStepType.LLM_END and previous_llm_start_time is not None:
-                llm_latencies.append(step.event_timestamp - previous_llm_start_time)
-                previous_llm_start_time = None
+                llm_start_times[step.UUID] = step.event_timestamp
+            elif step.event_type == IntermediateStepType.LLM_END and step.UUID in llm_start_times:
+                llm_latencies.append(step.event_timestamp - llm_start_times.pop(step.UUID))
 
         # Calculate p95 LLM latency (or 0 if no LLM calls)
         if llm_latencies:
@@ -312,7 +311,7 @@ class EvaluationRun:
         if self.config.skip_completed_entries:
             eval_input_items = []
             for item in self.eval_input.eval_input_items:
-                if not item.output_obj or pd.isnull(item.output_obj):
+                if not item.output_obj or (pd.api.types.is_scalar(item.output_obj) and pd.isnull(item.output_obj)):
                     eval_input_items.append(item)
 
             if not eval_input_items:
@@ -871,11 +870,11 @@ class EvaluationRun:
         # Profile the workflow
         profiler_results = await self.profile_workflow()
 
-        # compute total runtime
-        if self.usage_stats.usage_stats_items:
-            self.usage_stats.total_runtime = max(self.usage_stats.usage_stats_items.values(),
-                                                 key=lambda x: x.max_timestamp).max_timestamp - \
-                min(self.usage_stats.usage_stats_items.values(), key=lambda x: x.min_timestamp).min_timestamp
+        # compute total runtime, skipping items without steps (their timestamps default to 0.0)
+        timed_items = [item for item in self.usage_stats.usage_stats_items.values() if item.max_timestamp > 0.0]
+        if timed_items:
+            self.usage_stats.total_runtime = max(item.max_timestamp for item in timed_items) - \
+                min(item.min_timestamp for item in timed_items)
         else:
             self.usage_stats.total_runtime = 0.0
 

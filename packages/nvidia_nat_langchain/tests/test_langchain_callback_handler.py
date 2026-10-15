@@ -25,6 +25,7 @@ from langchain_core.outputs import Generation
 from langchain_core.outputs import LLMResult
 
 from nat.builder.context import Context
+from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
 from nat.plugins.langchain.callback_handler import _extract_tools_schema
@@ -139,10 +140,11 @@ async def test_langchain_handler_traces_native_completion_model(chain_handler_fi
     "total_tokens": 23
 }, 23)],
                          ids=["missing-total", "null-total", "zero-total", "provider-total"])
-async def test_langchain_handler_reads_provider_token_usage(chain_handler_fixture,
-                                                            chat_model,
-                                                            total_usage,
-                                                            expected_total):
+async def test_langchain_handler_reads_provider_token_usage(chain_handler_fixture: tuple[LangchainProfilerHandler,
+                                                                                         list[IntermediateStep]],
+                                                            chat_model: bool,
+                                                            total_usage: dict[str, int | None],
+                                                            expected_total: int):
     """Provider-level token counts are retained when a message has no usage_metadata."""
     handler, all_stats = chain_handler_fixture
     run_id = uuid4()

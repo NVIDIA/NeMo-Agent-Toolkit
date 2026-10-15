@@ -147,6 +147,19 @@ class TestTimeoutMiddlewareInvoke:
                 context=function_context,
             )
 
+    async def test_propagates_function_timeout_error(self, mock_builder, function_context):
+        """A TimeoutError raised by the function itself is not reported as the middleware's timeout."""
+        middleware: TimeoutMiddleware = _make_middleware(mock_builder, timeout=5.0)
+
+        call_next: AsyncMock = AsyncMock(side_effect=TimeoutError("upstream read timed out"))
+
+        with pytest.raises(TimeoutError, match="upstream read timed out"):
+            await middleware.function_middleware_invoke(
+                "input",
+                call_next=call_next,
+                context=function_context,
+            )
+
 
 # ==================== Streaming Tests ====================
 
@@ -204,6 +217,42 @@ class TestTimeoutMiddlewareStream:
                     context=function_context,
             ):
                 pass
+
+    async def test_stream_propagates_function_timeout_error(self, mock_builder, function_context):
+        """A TimeoutError raised by the stream itself is not reported as the middleware's timeout."""
+        middleware: TimeoutMiddleware = _make_middleware(mock_builder, timeout=5.0)
+
+        async def error_stream(*args, **kwargs):
+            yield "chunk_0"
+            raise TimeoutError("upstream read timed out")
+
+        with pytest.raises(TimeoutError, match="upstream read timed out"):
+            async for _ in middleware.function_middleware_stream(
+                    "input",
+                    call_next=error_stream,
+                    context=function_context,
+            ):
+                pass
+
+    async def test_stream_timeout_while_consumer_holds_chunk(self, mock_builder, function_context):
+        """A deadline that passes while the consumer works on a chunk raises TimeoutError, not CancelledError."""
+        middleware: TimeoutMiddleware = _make_middleware(mock_builder, timeout=0.05)
+
+        async def fast_stream(*args, **kwargs):
+            for i in range(3):
+                yield f"chunk_{i}"
+
+        collected: list[str] = []
+        with pytest.raises(TimeoutError, match=r"Execution exceeded the configured timeout of 0\.05s"):
+            async for chunk in middleware.function_middleware_stream(
+                    "input",
+                    call_next=fast_stream,
+                    context=function_context,
+            ):
+                collected.append(chunk)
+                await asyncio.sleep(0.1)
+
+        assert collected == ["chunk_0"]
 
     async def test_stream_custom_timeout_message(self, mock_builder, function_context):
         """Custom timeout_message is used in the streaming TimeoutError."""

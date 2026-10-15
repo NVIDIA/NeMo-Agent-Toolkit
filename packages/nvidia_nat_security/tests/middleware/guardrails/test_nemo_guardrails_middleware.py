@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from collections.abc import Iterator
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock
@@ -31,7 +32,9 @@ from pydantic import BaseModel
 
 from nat.builder.context import Context
 from nat.data_models.api_server import ChatRequestOrMessage
+from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Message
+from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
@@ -40,8 +43,9 @@ from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware impor
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailsMiddlewareConfig
 
 
-@pytest.fixture
-def guardrail_steps():
+@pytest.fixture(name="guardrail_steps")
+def guardrail_steps_fixture() -> Iterator[list[IntermediateStep]]:
+    """Record guardrail events and verify that the caller's span is restored."""
     context = Context.get()
     initial_span = context.active_span_id
     steps = []
@@ -754,6 +758,80 @@ async def test_stream_with_output_rails_translates_json_block_sentinel() -> None
     assert block_sentinel not in chunks
 
 
+async def test_buffered_stream_renders_typed_chunks_as_text() -> None:
+    """The default buffered path returns reply text, not chunk reprs."""
+    config = GuardrailsMiddlewareConfig(
+        workflow_functions=["test_fn"],
+        guardrails=_rails_policy(),
+    )
+    assert config.stream_output_rails is False
+    middleware = _make_middleware(config=config)
+    fn_context = FunctionMiddlewareContext(
+        name="test_fn",
+        config=None,
+        description=None,
+        input_schema=None,
+        single_output_schema=None,
+        stream_output_schema=None,
+    )
+    chunks = [
+        ChatResponseChunk.from_string("Hello"),
+        ChatResponseChunk.from_string(" world"),
+    ]
+    call_next = MagicMock(return_value=_async_iter(chunks))
+
+    out: list[Any] = [
+        chunk async for chunk in middleware.function_middleware_stream(
+            "hello",
+            call_next=call_next,
+            context=fn_context, )
+    ]
+
+    assert out == ["Hello world"]
+
+
+async def test_stream_output_rails_evaluate_text_not_chunk_reprs() -> None:
+    """Token-by-token output rails are fed reply text, not chunk reprs."""
+    config = GuardrailsMiddlewareConfig(
+        workflow_functions=["test_fn"],
+        stream_output_rails=True,
+        guardrails=_rails_policy(),
+    )
+    middleware = _make_middleware(config=config)
+    fn_context = FunctionMiddlewareContext(
+        name="test_fn",
+        config=None,
+        description=None,
+        input_schema=None,
+        single_output_schema=None,
+        stream_output_schema=None,
+    )
+    seen_by_rails: list[str] = []
+
+    async def fake_stream_async(*, messages: Any, generator: Any, **kwargs: Any) -> AsyncIterator[str]:
+        del messages, kwargs
+        async for piece in generator:
+            seen_by_rails.append(piece)
+        yield "passed"
+
+    middleware._llm_rails.stream_async = MagicMock(side_effect=fake_stream_async)
+    chunks = [
+        ChatResponseChunk.from_string("Hello"),
+        ChatResponseChunk.from_string(" world"),
+    ]
+    call_next = MagicMock(return_value=_async_iter(chunks))
+
+    out: list[Any] = [
+        chunk async for chunk in middleware.function_middleware_stream(
+            "hello",
+            call_next=call_next,
+            context=fn_context, )
+    ]
+
+    assert seen_by_rails == ["Hello", " world"]
+    assert out == ["passed"]
+
+
 def test_finalize_guardrails_rejects_stream_output_rails_with_mapping_workflow_functions() -> None:
     """Reject stream_output_rails=True when workflow_functions uses mapping form."""
     with pytest.raises(ValueError, match="stream_output_rails cannot be used with mapping-form"):
@@ -845,7 +923,10 @@ async def test_streaming_output_rail_span_closes_with_consumer(close_early, guar
     assert starts[1].payload.name == "guardrails.output.stream"
 
 
-async def test_live_rail_consumer_close_closes_sdk_and_target_immediately(guardrail_steps):
+@pytest.mark.parametrize("typed_chunks", [False, True])
+async def test_live_rail_consumer_close_closes_sdk_and_target_immediately(typed_chunks: bool,
+                                                                          guardrail_steps: list[IntermediateStep]):
+    """Closing either text or typed output closes nested streams and pairs the rail span."""
     config = GuardrailsMiddlewareConfig(workflow_functions=["test_fn"],
                                         guardrails=_rails_policy(),
                                         stream_output_rails=True)
@@ -854,8 +935,8 @@ async def test_live_rail_consumer_close_closes_sdk_and_target_immediately(guardr
 
     async def target(*args, **kwargs):
         try:
-            yield "first"
-            yield "last"
+            for text in ("first", "last"):
+                yield ChatResponseChunk.from_string(text) if typed_chunks else text
         finally:
             closed.append("target")
 
