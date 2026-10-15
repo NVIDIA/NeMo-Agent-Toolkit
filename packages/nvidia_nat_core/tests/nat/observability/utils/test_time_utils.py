@@ -34,6 +34,12 @@ def test_ns_timestamp_zero():
     assert isinstance(result, int)
 
 
+def test_ns_timestamp_rounds_when_the_product_lands_just_below_an_integer():
+    """1.001 * 1e9 is 1000999999.9999999. int() used to return 1000999999."""
+    assert ns_timestamp(1.001) == 1_001_000_000
+    assert ns_timestamp(-1.001) == -1_001_000_000
+
+
 def test_ns_timestamp_fractional_seconds():
     """Test timestamp conversion with fractional seconds."""
     seconds = 1.5

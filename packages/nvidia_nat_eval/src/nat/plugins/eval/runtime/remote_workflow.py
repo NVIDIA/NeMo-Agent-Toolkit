@@ -111,7 +111,8 @@ class EvaluationRemoteWorkflowHandler:
                 item.trajectory = intermediate_steps
                 return
 
-            except aiohttp.ClientError:
+            # aiohttp raises a bare TimeoutError, not a ClientError, when endpoint_timeout expires
+            except (aiohttp.ClientError, TimeoutError):
                 logger.exception("Request failed for question %s", question)
                 item.output_obj = None
                 item.trajectory = []

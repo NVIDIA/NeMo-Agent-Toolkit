@@ -411,7 +411,15 @@ class OpenAIMessage(BaseModel):
     """
     role: str = Field(description="The role of the message (e.g., 'user', 'assistant').")
     content: str = Field(description="The content of the message.")
+    name: str | None = Field(default=None,
+                             description="The name of the function a 'function' role message answers.")
+    tool_call_id: str | None = Field(
+        default=None, description="The id of the tool call a 'tool' role message answers.")
 ```
+
+`name` and `tool_call_id` apply only to `function` and `tool` role messages, which need them to be
+matched to the call they answer. They are omitted from the serialized message when unset, so a
+`user` or `assistant` message is unaffected.
 
 ### Trajectory Collections
 

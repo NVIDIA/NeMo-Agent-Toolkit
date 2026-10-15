@@ -194,7 +194,6 @@ def register_object_store_commands():
     @click.argument("bucket_name", type=str, required=True)
     @click.option("--host", type=str, help="MySQL host")
     @click.option("--port", type=int, help="MySQL port")
-    @click.option("--db", type=str, help="MySQL database name")
     @click.option("--username", type=str, help="MySQL username")
     @click.option("--password", type=str, help="MySQL password")
     @click.pass_context

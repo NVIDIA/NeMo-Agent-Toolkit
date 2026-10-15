@@ -29,7 +29,7 @@ workflow:
   _type: react_agent
   tool_names: [calculator]
   llm_name: nim_llm
-  # Load system prompt from external file (file:// works for keys ending in "prompt")
+  # Load system prompt from external file (file:// works for any string field)
   system_prompt: file://../prompts/system_prompt.txt
   verbose: true
   retry_agent_response_parsing_errors: true

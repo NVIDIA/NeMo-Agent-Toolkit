@@ -99,10 +99,13 @@ class ARTTrainerAdapter(TrainerAdapter):
         """
         Checks all EpisodeItem in traj.episode to validate:
 
-        - Every EpisodeItem.role is EpisodeItemRole.USER, SYSTEM, or ASSISTANT
+        - The episode is not empty
         - The first EpisodeItem.role is SYSTEM or USER
-        - The last EpisodeItem.role is ASSISTANT
-        - No two consecutive EpisodeItem.role are the same, except for SYSTEM
+        - No two consecutive EpisodeItem.role are both ASSISTANT
+
+        Roles are not restricted to USER, SYSTEM and ASSISTANT. A tool or
+        function result is a valid turn and is converted to a message of its
+        own role, so it does not count as an assistant turn here either.
 
         Args:
             traj: Trajectory to validate
@@ -144,7 +147,16 @@ class ARTTrainerAdapter(TrainerAdapter):
         def _as_text(obj: Any) -> str:
             return obj if isinstance(obj, str) else json.dumps(obj, ensure_ascii=False)
 
+        # Nothing records a tool call id on a tool step yet, so a missing id is
+        # the common case rather than an anomaly. Count them and warn once
+        # instead of once per message.
+        tool_messages_without_id = 0
+
         def _to_chat_msg(d: EpisodeItem) -> dict:
+
+            nonlocal tool_messages_without_id
+
+            metadata = d.metadata or {}
 
             if d.role == EpisodeItemRole.USER:
                 return {
@@ -156,7 +168,49 @@ class ARTTrainerAdapter(TrainerAdapter):
                     "role": "system",
                     "content": _as_text(d.content),
                 }
+            elif d.role in (EpisodeItemRole.TOOL, EpisodeItemRole.FUNCTION):
+                # A tool result is not model output. Sending it as an assistant
+                # message trains the model to generate whatever the tool
+                # returned, and it puts two assistant turns in a row, which
+                # _validate_episode_order rejects on the episode itself.
+                #
+                # The deprecated "function" role, which the adk and llama_index
+                # parsers emit, is mapped to "tool" rather than passed through.
+                # Chat templates branch on the role, and the Qwen2.5 and Qwen3
+                # templates have no "function" case, so such a message renders
+                # as nothing and the result is absent from the tokenized
+                # sample. "tool" renders on every template that handles either.
+                msg = {"role": "tool", "content": _as_text(d.content)}
+
+                tool_call_id = metadata.get("tool_call_id")
+                if isinstance(tool_call_id, str) and tool_call_id:
+                    msg["tool_call_id"] = tool_call_id
+                elif d.role == EpisodeItemRole.TOOL:
+                    # Omit the key rather than inventing one: a placeholder is
+                    # shaped like a real id, so the trajectory looks valid
+                    # while every result points at the same call. Dropping the
+                    # turn instead would lose the tool result and put two
+                    # assistant turns next to each other, which is the defect
+                    # this branch exists to avoid. A function step never has an
+                    # id, so it is not counted here.
+                    tool_messages_without_id += 1
+
+                # The name is the only record of which function produced the
+                # output. Templates ignore it, but nothing else carries it.
+                name = metadata.get("name")
+                if isinstance(name, str) and name:
+                    msg["name"] = name
+
+                return msg
             else:
+                if d.role != EpisodeItemRole.ASSISTANT:
+                    # environment and other have no chat equivalent. Keep the
+                    # existing mapping so trajectories are not dropped, but say
+                    # so rather than losing the distinction silently.
+                    logger.warning(
+                        "Episode item role '%s' has no chat equivalent and is being sent as an "
+                        "assistant message.",
+                        d.role.value)
                 return {"role": "assistant", "content": _as_text(d.content)}
 
         output_trajectory_groups = []
@@ -196,6 +250,15 @@ class ARTTrainerAdapter(TrainerAdapter):
             if art_trajectories:
                 trajectory_group = art.TrajectoryGroup(trajectories=art_trajectories)
                 output_trajectory_groups.append(trajectory_group)
+
+        if tool_messages_without_id:
+            # These messages are rendered by the tokenizer chat template, not
+            # sent to the chat completions API, and most templates ignore the
+            # id. A template that does use it renders the turn without it.
+            logger.warning(
+                "%d tool message(s) had no tool_call_id and were emitted without one, so they cannot be "
+                "matched to the call they answer.",
+                tool_messages_without_id)
 
         return output_trajectory_groups
 

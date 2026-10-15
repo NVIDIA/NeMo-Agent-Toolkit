@@ -177,14 +177,15 @@ class MilvusRetriever(Retriever):
                     _res = await search_iterator.next()
                 else:
                     _res = search_iterator.next()
-                res = _res.get_res()
-                if len(_res) == 0:
+                # SearchIteratorV2 returns None once `limit` hits have been returned
+                if _res is None or len(_res) == 0:
                     if self._is_async:
                         await search_iterator.close()
                     else:
                         search_iterator.close()
                     break
 
+                res = _res.get_res()
                 if distance_cutoff and res[0][-1].distance > distance_cutoff:
                     for i in range(len(res[0])):
                         if res[0][i].distance > distance_cutoff:
@@ -193,7 +194,7 @@ class MilvusRetriever(Retriever):
                     break
                 results.extend(res[0])
 
-                return _wrap_milvus_results(results, content_field=self.content_field)
+            return _wrap_milvus_results(results, content_field=self.content_field)
 
         except Exception as e:
             logger.error("Exception when retrieving results from milvus for query %s: %s", query, e)

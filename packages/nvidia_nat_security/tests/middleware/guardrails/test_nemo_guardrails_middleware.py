@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from collections.abc import Iterator
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock
@@ -29,13 +30,29 @@ from nemoguardrails.rails.llm.options import GenerationLog
 from nemoguardrails.rails.llm.options import GenerationResponse
 from pydantic import BaseModel
 
+from nat.builder.context import Context
 from nat.data_models.api_server import ChatRequestOrMessage
+from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Message
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepType
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware import _DEFAULT_REFUSAL
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware import GuardrailsMiddleware
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailsMiddlewareConfig
+
+
+@pytest.fixture(name="guardrail_steps")
+def guardrail_steps_fixture() -> Iterator[list[IntermediateStep]]:
+    """Record guardrail events and verify that the caller's span is restored."""
+    context = Context.get()
+    initial_span = context.active_span_id
+    steps = []
+    subscription = context.intermediate_step_manager.subscribe(steps.append)
+    yield steps
+    subscription.unsubscribe()
+    assert context.active_span_id == initial_span
 
 
 async def _async_iter(items: list[Any]) -> AsyncIterator[Any]:
@@ -741,6 +758,80 @@ async def test_stream_with_output_rails_translates_json_block_sentinel() -> None
     assert block_sentinel not in chunks
 
 
+async def test_buffered_stream_renders_typed_chunks_as_text() -> None:
+    """The default buffered path returns reply text, not chunk reprs."""
+    config = GuardrailsMiddlewareConfig(
+        workflow_functions=["test_fn"],
+        guardrails=_rails_policy(),
+    )
+    assert config.stream_output_rails is False
+    middleware = _make_middleware(config=config)
+    fn_context = FunctionMiddlewareContext(
+        name="test_fn",
+        config=None,
+        description=None,
+        input_schema=None,
+        single_output_schema=None,
+        stream_output_schema=None,
+    )
+    chunks = [
+        ChatResponseChunk.from_string("Hello"),
+        ChatResponseChunk.from_string(" world"),
+    ]
+    call_next = MagicMock(return_value=_async_iter(chunks))
+
+    out: list[Any] = [
+        chunk async for chunk in middleware.function_middleware_stream(
+            "hello",
+            call_next=call_next,
+            context=fn_context, )
+    ]
+
+    assert out == ["Hello world"]
+
+
+async def test_stream_output_rails_evaluate_text_not_chunk_reprs() -> None:
+    """Token-by-token output rails are fed reply text, not chunk reprs."""
+    config = GuardrailsMiddlewareConfig(
+        workflow_functions=["test_fn"],
+        stream_output_rails=True,
+        guardrails=_rails_policy(),
+    )
+    middleware = _make_middleware(config=config)
+    fn_context = FunctionMiddlewareContext(
+        name="test_fn",
+        config=None,
+        description=None,
+        input_schema=None,
+        single_output_schema=None,
+        stream_output_schema=None,
+    )
+    seen_by_rails: list[str] = []
+
+    async def fake_stream_async(*, messages: Any, generator: Any, **kwargs: Any) -> AsyncIterator[str]:
+        del messages, kwargs
+        async for piece in generator:
+            seen_by_rails.append(piece)
+        yield "passed"
+
+    middleware._llm_rails.stream_async = MagicMock(side_effect=fake_stream_async)
+    chunks = [
+        ChatResponseChunk.from_string("Hello"),
+        ChatResponseChunk.from_string(" world"),
+    ]
+    call_next = MagicMock(return_value=_async_iter(chunks))
+
+    out: list[Any] = [
+        chunk async for chunk in middleware.function_middleware_stream(
+            "hello",
+            call_next=call_next,
+            context=fn_context, )
+    ]
+
+    assert seen_by_rails == ["Hello", " world"]
+    assert out == ["passed"]
+
+
 def test_finalize_guardrails_rejects_stream_output_rails_with_mapping_workflow_functions() -> None:
     """Reject stream_output_rails=True when workflow_functions uses mapping form."""
     with pytest.raises(ValueError, match="stream_output_rails cannot be used with mapping-form"):
@@ -777,3 +868,94 @@ def test_finalize_guardrails_rejects_invalid_policy_root() -> None:
             workflow_functions=["test_fn"],
             guardrails_root="not_a_real_policy_directory",
         )
+
+
+@pytest.mark.parametrize("blocked", [False, True])
+async def test_policy_checks_emit_paired_guardrail_steps(blocked, guardrail_steps):
+    """Allowed and blocked policy checks produce paired guardrail events with matching status."""
+    response = _generation_response(
+        activated_rails=[ActivatedRail(type="input", name="content safety", stop=True)] if blocked else [],
+        response="refusal" if blocked else "hello",
+    )
+    middleware = _make_middleware(generate_side_effect=[response, _generation_response(response="answer")])
+    context = _invocation_context()
+    call_next = AsyncMock(return_value="answer")
+    await middleware.function_middleware_invoke("hello", call_next=call_next, context=context.function_context)
+    starts = [step for step in guardrail_steps if step.payload.event_type == IntermediateStepType.GUARDRAIL_START]
+    ends = [step for step in guardrail_steps if step.payload.event_type == IntermediateStepType.GUARDRAIL_END]
+    assert len(starts) == len(ends) == (1 if blocked else 2)
+    assert {step.UUID for step in starts} == {step.UUID for step in ends}
+    assert starts[0].payload.name == "guardrails.input"
+    assert ends[0].payload.metadata["status"] == ("blocked" if blocked else "ok")
+    if blocked:
+        call_next.assert_not_awaited()
+    else:
+        assert starts[1].payload.name == "guardrails.output"
+
+
+async def test_policy_exception_still_emits_guardrail_end(guardrail_steps):
+    """A failing policy evaluation still emits its matching guardrail end event."""
+    middleware = _make_middleware()
+    middleware._llm_rails.generate_async.side_effect = RuntimeError("rail failed")
+    with pytest.raises(RuntimeError, match="rail failed"):
+        await middleware.pre_invoke(_invocation_context())
+    assert [step.payload.event_type
+            for step in guardrail_steps] == [IntermediateStepType.GUARDRAIL_START, IntermediateStepType.GUARDRAIL_END]
+    assert guardrail_steps[1].payload.metadata["status"] == "RuntimeError"
+
+
+@pytest.mark.parametrize("close_early", [False, True])
+async def test_streaming_output_rail_span_closes_with_consumer(close_early, guardrail_steps):
+    """Finishing or closing the output stream closes both guardrail spans."""
+    config = GuardrailsMiddlewareConfig(workflow_functions=["test_fn"],
+                                        guardrails=_rails_policy(),
+                                        stream_output_rails=True)
+    middleware = _make_middleware(config=config)
+    middleware._llm_rails.stream_async = MagicMock(return_value=_async_iter(["first", "last"]))
+    context = _invocation_context()
+    stream = middleware.function_middleware_stream("hello", call_next=MagicMock(), context=context.function_context)
+    if close_early:
+        assert await anext(stream) == "first"
+        await stream.aclose()
+    else:
+        assert [chunk async for chunk in stream] == ["first", "last"]
+    starts = [step for step in guardrail_steps if step.payload.event_type == IntermediateStepType.GUARDRAIL_START]
+    ends = [step for step in guardrail_steps if step.payload.event_type == IntermediateStepType.GUARDRAIL_END]
+    assert len(starts) == len(ends) == 2
+    assert {step.UUID for step in starts} == {step.UUID for step in ends}
+    assert starts[1].payload.name == "guardrails.output.stream"
+
+
+@pytest.mark.parametrize("typed_chunks", [False, True])
+async def test_live_rail_consumer_close_closes_sdk_and_target_immediately(typed_chunks: bool,
+                                                                          guardrail_steps: list[IntermediateStep]):
+    """Closing either text or typed output closes nested streams and pairs the rail span."""
+    config = GuardrailsMiddlewareConfig(workflow_functions=["test_fn"],
+                                        guardrails=_rails_policy(),
+                                        stream_output_rails=True)
+    middleware = _make_middleware(config=config)
+    closed = []
+
+    async def target(*args, **kwargs):
+        """Yield text or typed chunks and record target closure."""
+        try:
+            for text in ("first", "last"):
+                yield ChatResponseChunk.from_string(text) if typed_chunks else text
+        finally:
+            closed.append("target")
+
+    async def sdk_stream(*, messages, generator):
+        """Forward source chunks and record SDK stream closure."""
+        try:
+            async for chunk in generator:
+                yield chunk
+        finally:
+            closed.append("sdk")
+
+    middleware._llm_rails.stream_async = sdk_stream
+    context = _invocation_context()
+    stream = middleware.function_middleware_stream("hello", call_next=target, context=context.function_context)
+    assert await anext(stream) == "first"
+    await stream.aclose()
+    assert sorted(closed) == ["sdk", "target"]
+    assert guardrail_steps[-1].payload.event_type == IntermediateStepType.GUARDRAIL_END
