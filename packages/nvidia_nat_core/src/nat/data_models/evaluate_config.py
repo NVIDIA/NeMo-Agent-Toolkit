@@ -132,12 +132,16 @@ class EvalGeneralConfig(BaseModel):
         "this creates a fresh workflow instance per eval item, resetting all stateful tools to their "
         "initial state. Set to False to disable this behavior.")
 
-    # overwrite the output_dir with the output config if present
     @model_validator(mode="before")
     @classmethod
     def override_output_dir(cls, values):
-        if values.get("output") and values["output"].get("dir"):
-            values["output_dir"] = values["output"]["dir"]
+        # Keep output_dir and output.dir on the same directory: output.dir wins when set,
+        # otherwise the output section inherits output_dir.
+        if values.get("output"):
+            if values["output"].get("dir"):
+                values["output_dir"] = values["output"]["dir"]
+            elif values.get("output_dir"):
+                values["output"] = {**values["output"], "dir": values["output_dir"]}
         return values
 
     @classmethod
