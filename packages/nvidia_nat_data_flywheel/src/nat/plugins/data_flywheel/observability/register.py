@@ -20,6 +20,7 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_telemetry_exporter
 from nat.data_models.common import OptionalSecretStr
+from nat.data_models.common import get_secret_value
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ContractVersion
@@ -47,7 +48,9 @@ async def dfw_elasticsearch_telemetry_exporter(config: DFWElasticsearchTelemetry
     # pylint: disable=import-outside-toplevel
     from nat.plugins.data_flywheel.observability.exporter.dfw_elasticsearch_exporter import DFWElasticsearchExporter
 
-    elasticsearch_auth = (config.username, config.password) if config.username and config.password else ()
+    elasticsearch_auth = ()
+    if config.username and config.password:
+        elasticsearch_auth = (config.username, get_secret_value(config.password))
 
     yield DFWElasticsearchExporter(client_id=config.client_id,
                                    index=config.index,

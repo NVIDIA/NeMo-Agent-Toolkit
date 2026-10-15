@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import logging
 import typing
 from collections import OrderedDict
@@ -209,8 +210,10 @@ class TypeConverter:
         for recursion up the chain.
         """
         for convert_to_type, to_type_converters in self._converters.items():
-            # e.g. if Derived is a subclass of Base, this is valid
-            if issubclass(DecomposedType(convert_to_type).root, target_root_type):
+            # e.g. if Derived is a subclass of Base, this is valid. The root of `typing.Union[...]` is not a class,
+            # so like `X | Y` it is left to the indirect search.
+            convert_to_root = DecomposedType(convert_to_type).root
+            if inspect.isclass(convert_to_root) and issubclass(convert_to_root, target_root_type):
                 for convert_from_type, from_type_converter in to_type_converters.items():
                     # union types correctly in Python 3.10+ (e.g., isinstance("x", str | int))
                     decomposed_from = DecomposedType(convert_from_type)
