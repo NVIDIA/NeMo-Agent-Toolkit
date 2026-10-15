@@ -354,6 +354,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         messages: list[dict[str, str]] = ([{"role": "user", "content": input_text}] if input_text else [])
 
         async def upstream() -> AsyncIterator[str]:
+            """Render delegated chunks as text and close their iterator on consumer exit."""
             async with _closing_stream(call_next(*ctx.modified_args, **ctx.modified_kwargs)) as stream:
                 async for chunk in stream:
                     yield stream_chunk_to_text(chunk)

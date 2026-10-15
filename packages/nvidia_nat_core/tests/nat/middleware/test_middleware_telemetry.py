@@ -45,6 +45,7 @@ def recorded_steps_fixture() -> Iterator[list[IntermediateStep]]:
 
 
 def chain(*middleware):
+    """Build a middleware chain around a minimal echo-function context."""
     context = FunctionMiddlewareContext(name="echo",
                                         config=None,
                                         description=None,
@@ -55,6 +56,7 @@ def chain(*middleware):
 
 
 def assert_pairs(steps, count):
+    """Require matching start/end UUIDs and return both event lists."""
     starts = [step for step in steps if step.payload.event_state == IntermediateStepState.START]
     ends = [step for step in steps if step.payload.event_state == IntermediateStepState.END]
     assert len(starts) == len(ends) == count
@@ -63,10 +65,12 @@ def assert_pairs(steps, count):
 
 
 async def echo(value):
+    """Return the input unchanged to isolate middleware behavior."""
     return value
 
 
 async def test_nested_middleware_parentage_and_output(recorded_steps):
+    """Nested middleware spans retain parentage, ancestry and the delegated output."""
     call = chain(FunctionMiddleware(), FunctionMiddleware()).build_single(echo)
     assert await call("hello") == "hello"
     starts, ends = assert_pairs(recorded_steps, 2)
@@ -76,11 +80,13 @@ async def test_nested_middleware_parentage_and_output(recorded_steps):
 
 
 async def test_disabled_middleware_emits_no_steps(recorded_steps):
+    """Disabled middleware delegates successfully without recording spans."""
 
     class Disabled(FunctionMiddleware):
 
         @property
         def enabled(self):
+            """Disable this test middleware."""
             return False
 
     assert await chain(Disabled()).build_single(echo)("hello") == "hello"
@@ -89,18 +95,22 @@ async def test_disabled_middleware_emits_no_steps(recorded_steps):
 
 @pytest.mark.parametrize("stage", ["pre", "target", "post"])
 async def test_exception_still_pairs_spans(stage, recorded_steps):
+    """Failures in hooks or the target still close the enclosing middleware span."""
 
     class Failing(FunctionMiddleware):
 
         async def pre_invoke(self, context):
+            """Raise only when the parametrized failure occurs before invocation."""
             if stage == "pre":
                 raise ValueError("failed")
 
         async def post_invoke(self, context):
+            """Raise only when the parametrized failure occurs after invocation."""
             if stage == "post":
                 raise ValueError("failed")
 
     async def target(value):
+        """Return the input unless the target is the selected failure point."""
         if stage == "target":
             raise ValueError("failed")
         return value
@@ -112,9 +122,11 @@ async def test_exception_still_pairs_spans(stage, recorded_steps):
 
 
 async def test_cancellation_pairs_spans(recorded_steps):
+    """Cancelling an active target closes its middleware span with cancellation status."""
     entered = asyncio.Event()
 
     async def target(value):
+        """Signal entry and wait until the test cancels this invocation."""
         entered.set()
         await asyncio.Event().wait()
 
@@ -129,8 +141,10 @@ async def test_cancellation_pairs_spans(recorded_steps):
 
 @pytest.mark.parametrize("close_early", [False, True])
 async def test_stream_completion_and_close_pair_nested_spans(close_early, recorded_steps):
+    """Exhaustion and explicit stream closure both pair nested middleware events."""
 
     async def target(value):
+        """Yield two chunks to exercise exhaustion and early closure."""
         yield "first"
         yield "last"
 
@@ -145,6 +159,7 @@ async def test_stream_completion_and_close_pair_nested_spans(close_early, record
 
 @pytest.mark.parametrize("cancel_consumer", [False, True])
 async def test_nested_stream_close_finishes_retained_target_immediately(cancel_consumer, recorded_steps):
+    """Consumer exit closes retained generators immediately and restores trace state."""
     context = Context.get()
     manager = context.intermediate_step_manager
     initial_span = context.active_span_id
@@ -154,6 +169,7 @@ async def test_nested_stream_close_finishes_retained_target_immediately(cancel_c
     held_targets = []
 
     async def source(value):
+        """Yield once, then record closure even when the waiting consumer is cancelled."""
         try:
             yield "first"
             await asyncio.Event().wait()
@@ -162,11 +178,13 @@ async def test_nested_stream_close_finishes_retained_target_immediately(cancel_c
 
     def target(value):
         # Hold the generator so GC/finalizer scheduling cannot mask missing close delegation.
+        """Retain the source iterator so garbage collection cannot hide missed closure."""
         stream = source(value)
         held_targets.append(stream)
         return stream
 
     def assert_closed():
+        """Verify target closure, span restoration and reverse-order paired end events."""
         assert target_closed.is_set()
         assert manager.get_outstanding_step_count() == initial_outstanding
         assert context.active_span_id == initial_span
@@ -174,6 +192,7 @@ async def test_nested_stream_close_finishes_retained_target_immediately(cancel_c
         assert [step.UUID for step in ends] == [step.UUID for step in reversed(starts)]
 
     async def consume():
+        """Hold the stream open until cancellation and close it during cleanup."""
         stream = chain(FunctionMiddleware(), FunctionMiddleware()).build_stream(target)("hello")
         try:
             assert await anext(stream) == "first"
@@ -203,20 +222,24 @@ async def test_nested_stream_close_finishes_retained_target_immediately(cancel_c
 @pytest.mark.parametrize("event_type,state", [("GUARDRAIL_START", IntermediateStepState.START),
                                               ("GUARDRAIL_END", IntermediateStepState.END)])
 def test_guardrail_events_are_classified(event_type, state):
+    """Guardrail events expose their category and matching start/end state."""
     payload = IntermediateStepPayload(event_type=event_type)
     assert payload.event_category == IntermediateStepCategory.GUARDRAIL
     assert payload.event_state == state
 
 
 async def test_guardrail_steps_reach_span_exporter():
+    """Guardrail events export as spans with input, output and valid timestamps."""
 
     class Recorder(SpanExporter[Span, Span]):
 
         def __init__(self):
+            """Initialize an exporter that records processed spans in memory."""
             super().__init__()
             self.spans = []
 
         async def export_processed(self, item: Span) -> None:
+            """Retain the processed span for assertions."""
             self.spans.append(item)
 
     exporter = Recorder()

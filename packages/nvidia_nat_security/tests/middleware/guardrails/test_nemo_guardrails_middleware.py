@@ -872,6 +872,7 @@ def test_finalize_guardrails_rejects_invalid_policy_root() -> None:
 
 @pytest.mark.parametrize("blocked", [False, True])
 async def test_policy_checks_emit_paired_guardrail_steps(blocked, guardrail_steps):
+    """Allowed and blocked policy checks produce paired guardrail events with matching status."""
     response = _generation_response(
         activated_rails=[ActivatedRail(type="input", name="content safety", stop=True)] if blocked else [],
         response="refusal" if blocked else "hello",
@@ -893,6 +894,7 @@ async def test_policy_checks_emit_paired_guardrail_steps(blocked, guardrail_step
 
 
 async def test_policy_exception_still_emits_guardrail_end(guardrail_steps):
+    """A failing policy evaluation still emits its matching guardrail end event."""
     middleware = _make_middleware()
     middleware._llm_rails.generate_async.side_effect = RuntimeError("rail failed")
     with pytest.raises(RuntimeError, match="rail failed"):
@@ -904,6 +906,7 @@ async def test_policy_exception_still_emits_guardrail_end(guardrail_steps):
 
 @pytest.mark.parametrize("close_early", [False, True])
 async def test_streaming_output_rail_span_closes_with_consumer(close_early, guardrail_steps):
+    """Finishing or closing the output stream closes both guardrail spans."""
     config = GuardrailsMiddlewareConfig(workflow_functions=["test_fn"],
                                         guardrails=_rails_policy(),
                                         stream_output_rails=True)
@@ -934,6 +937,7 @@ async def test_live_rail_consumer_close_closes_sdk_and_target_immediately(typed_
     closed = []
 
     async def target(*args, **kwargs):
+        """Yield text or typed chunks and record target closure."""
         try:
             for text in ("first", "last"):
                 yield ChatResponseChunk.from_string(text) if typed_chunks else text
@@ -941,6 +945,7 @@ async def test_live_rail_consumer_close_closes_sdk_and_target_immediately(typed_
             closed.append("target")
 
     async def sdk_stream(*, messages, generator):
+        """Forward source chunks and record SDK stream closure."""
         try:
             async for chunk in generator:
                 yield chunk

@@ -173,6 +173,7 @@ class IntermediateStepPayload(BaseModel):
 
     @property
     def event_category(self) -> IntermediateStepCategory:
+        """Map each event type to its telemetry category."""
         match self.event_type:
             case IntermediateStepType.GUARDRAIL_START | IntermediateStepType.GUARDRAIL_END:
                 return IntermediateStepCategory.GUARDRAIL
@@ -217,6 +218,7 @@ class IntermediateStepPayload(BaseModel):
 
     @property
     def event_state(self) -> IntermediateStepState:
+        """Classify an event as a span start, span end or intermediate update."""
         match self.event_type:
             case IntermediateStepType.GUARDRAIL_START:
                 return IntermediateStepState.START

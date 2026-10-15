@@ -232,6 +232,7 @@ async def test_langchain_handler_completes_with_nullable_token_details(chain_han
 
 
 async def test_langchain_handler_prefers_message_usage(chain_handler_fixture):
+    """Message usage takes precedence over conflicting provider-level token counts."""
     handler, all_stats = chain_handler_fixture
     run_id = uuid4()
     await handler.on_chat_model_start(serialized={},
@@ -254,6 +255,7 @@ async def test_langchain_handler_prefers_message_usage(chain_handler_fixture):
 
 
 async def test_langchain_handler_closes_empty_result(chain_handler_fixture):
+    """An empty generation still closes its span and clears per-run bookkeeping."""
     handler, all_stats = chain_handler_fixture
     context = Context.get()
     initial_span = context.active_span_id

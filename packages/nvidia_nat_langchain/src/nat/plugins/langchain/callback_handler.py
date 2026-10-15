@@ -123,6 +123,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
     run_inline = True
 
     def __init__(self) -> None:
+        """Initialize run bookkeeping and use the current intermediate-step manager."""
         super().__init__()
         self._lock = threading.Lock()
         self.last_call_ts = time.time()
@@ -175,6 +176,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         return True
 
     def _extract_token_base_model(self, usage_metadata: dict[str, Any]) -> TokenUsageBaseModel:
+        """Normalize message or provider usage, including nullable counts and missing totals."""
         if usage_metadata:
             prompt_tokens = usage_metadata.get("input_tokens", usage_metadata.get("prompt_tokens", 0)) or 0
             completion_tokens = usage_metadata.get("output_tokens", usage_metadata.get("completion_tokens", 0)) or 0
@@ -207,6 +209,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         return handler if _library_instrumented["langchain"] and isinstance(handler, LangchainProfilerHandler) else None
 
     async def on_llm_start(self, serialized: dict[str, Any], prompts: list[str], **kwargs: Any) -> None:
+        """Record a plain-model call's input, name and parent span before emitting its start."""
         workflow_profiler = self._workflow_profiler()
         if workflow_profiler is not None and workflow_profiler is not self:
             return
@@ -246,6 +249,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         metadata: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> Any:
+        """Record chat input, model identity and parentage before emitting an LLM start."""
         workflow_profiler = self._workflow_profiler()
         if workflow_profiler is not None and workflow_profiler is not self:
             return
@@ -367,6 +371,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
             self._state = IntermediateStepType.LLM_END
 
     def _clear_llm_run_state(self, run_id: str) -> None:
+        """Discard bookkeeping for a completed or failed LLM run."""
         self._run_id_to_model_name.pop(run_id, None)
         self._run_id_to_llm_input.pop(run_id, None)
         self._run_id_to_parent_span.pop(run_id, None)

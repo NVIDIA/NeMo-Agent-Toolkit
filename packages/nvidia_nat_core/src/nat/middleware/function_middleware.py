@@ -338,6 +338,7 @@ class FunctionMiddlewareChain:
                               _call_next: CallNext = call_next,
                               _context: FunctionMiddlewareContext = self._context,
                               **kwargs: Any) -> Any:
+                """Trace one middleware invocation and return its delegated output."""
                 with trace_middleware(type(_middleware).__name__,
                                       input_data={
                                           "args": args, "kwargs": kwargs
@@ -377,6 +378,7 @@ class FunctionMiddlewareChain:
                               _call_next: CallNextStream = call_next,
                               _context: FunctionMiddlewareContext = self._context,
                               **kwargs: Any) -> AsyncIterator[Any]:
+                """Trace streamed middleware output and close its delegated iterator on exit."""
                 with trace_middleware(type(_middleware).__name__,
                                       input_data={
                                           "args": args, "kwargs": kwargs

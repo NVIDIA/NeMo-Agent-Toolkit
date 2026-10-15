@@ -47,9 +47,11 @@ class RailModel(BaseChatModel):
 
     @property
     def _llm_type(self):
+        """Identify the deterministic fake chat model used by rail tests."""
         return "rail-test-model"
 
     def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        """Return a fixed completion with usage or raise the requested provider failure."""
         if self.failure:
             raise ValueError("rail model failed")
         return ChatResult(generations=[
@@ -60,11 +62,13 @@ class RailModel(BaseChatModel):
         ])
 
     async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
+        """Implement asynchronous completion with an optional cancellable wait."""
         if self.wait:
             await asyncio.Event().wait()
         return self._generate(messages, stop, run_manager, **kwargs)
 
     def _stream(self, messages, stop=None, run_manager=None, **kwargs):
+        """Stream the fixed answer followed by a final usage-bearing chunk."""
         yield ChatGenerationChunk(message=AIMessageChunk(content="safe"))
         yield ChatGenerationChunk(message=AIMessageChunk(content="",
                                                          usage_metadata={
@@ -85,6 +89,7 @@ def steps_fixture() -> Iterator[list[IntermediateStep]]:
 
 
 def rails_with(model):
+    """Expose a model through native and registered NeMo Guardrails model locations."""
     return SimpleNamespace(llm=model,
                            runtime=SimpleNamespace(registered_action_params={
                                "llm": model, "safety_llm": model, "llms": {
@@ -94,6 +99,7 @@ def rails_with(model):
 
 
 def llm_steps(steps):
+    """Select LLM start/end events while retaining their recorded order."""
     return [
         step for step in steps
         if step.payload.event_type in {IntermediateStepType.LLM_START, IntermediateStepType.LLM_END}
@@ -102,6 +108,7 @@ def llm_steps(steps):
 
 @pytest.mark.parametrize("plain", [False, True])
 async def test_native_and_registered_models_emit_nested_llm_steps(plain, steps):
+    """Native chat and plain rail calls emit one nested span despite repeated attachment."""
     model = FakeListLLM(responses=["safe"]) if plain else RailModel()
     handler = GuardrailsProfilerHandler()
     rails = rails_with(model)
@@ -121,6 +128,7 @@ async def test_native_and_registered_models_emit_nested_llm_steps(plain, steps):
 
 
 async def test_live_sdk_stream_emits_tokens_and_usage(steps):
+    """The SDK streaming path records tokens, final usage and the owning guardrail span."""
     model = RailModel()
     handler = GuardrailsProfilerHandler()
     attach_rail_profiler(rails_with(model), handler)
@@ -136,6 +144,7 @@ async def test_live_sdk_stream_emits_tokens_and_usage(steps):
 
 @pytest.mark.parametrize("manager", [False, True])
 def test_existing_callbacks_are_preserved_without_mutating_manager(manager):
+    """Profiler attachment preserves existing callbacks and leaves the original manager unchanged."""
     callback = AsyncCallbackHandler()
     original = CallbackManager([callback]) if manager else [callback]
     model = RailModel(callbacks=original)
@@ -147,6 +156,7 @@ def test_existing_callbacks_are_preserved_without_mutating_manager(manager):
 
 
 def test_existing_profiler_and_configurable_model_are_not_duplicated():
+    """A bound model keeps its existing profiler without a second fallback callback."""
     handler = LangchainProfilerHandler()
     model = RailModel(callbacks=[handler])
     rails = rails_with(model.bind(temperature=0))
@@ -157,12 +167,14 @@ def test_existing_profiler_and_configurable_model_are_not_duplicated():
 @pytest.mark.parametrize("cancel", [False, True])
 @pytest.mark.parametrize("existing_profiler", [False, True])
 async def test_failure_and_cancellation_close_llm_and_guardrail_spans(cancel, existing_profiler, steps):
+    """Provider failures and cancellation close both spans and clear all owned run state."""
     existing = LangchainProfilerHandler() if existing_profiler else None
     model = RailModel(failure=not cancel, wait=cancel, callbacks=[existing] if existing else None)
     handler = GuardrailsProfilerHandler()
     attach_rail_profiler(rails_with(model), handler)
 
     async def run():
+        """Invoke the fake rail model inside paired guardrail and profiler scopes."""
         with trace_middleware("guardrails.input", input_data="prompt", function_name="echo", guardrail=True):
             async with profile_rail_calls(handler):
                 await llm_call(model, "prompt")
@@ -187,6 +199,7 @@ async def test_failure_and_cancellation_close_llm_and_guardrail_spans(cancel, ex
 
 
 async def test_active_workflow_hook_takes_precedence_on_reused_model(monkeypatch, steps):
+    """Reused models defer to each active workflow profiler without duplicate events."""
     framework = pytest.importorskip("nat.plugins.profiler.decorators.framework_wrapper")
     from langchain_core.tracers.context import register_configure_hook
 

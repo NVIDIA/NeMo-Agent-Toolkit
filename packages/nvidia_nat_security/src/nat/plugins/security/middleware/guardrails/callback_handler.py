@@ -38,6 +38,7 @@ class GuardrailsProfilerHandler(LangchainProfilerHandler):
     """
 
     def __init__(self) -> None:
+        """Initialize fallback profiling and the list of existing model profilers."""
         super().__init__()
         self._model_profilers: list[LangchainProfilerHandler] = []
 
