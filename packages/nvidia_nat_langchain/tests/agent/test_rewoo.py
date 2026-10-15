@@ -98,7 +98,12 @@ async def test_build_graph(mock_rewoo_agent):
     graph = await mock_rewoo_agent.build_graph()
     assert isinstance(graph, CompiledStateGraph)
     assert list(graph.nodes.keys()) == ['__start__', 'planner', 'executor', 'solver']
-    assert graph.builder.edges == {('planner', 'executor'), ('__start__', 'planner'), ('solver', '__end__')}
+    assert graph.builder.edges == {('__start__', 'planner'), ('solver', '__end__')}
+    planner_branches = graph.builder.branches.get('planner')
+    if planner_branches:
+        planner_edge = planner_branches.get('planner_edge')
+        if planner_edge and hasattr(planner_edge, 'ends') and planner_edge.ends:
+            assert set(planner_edge.ends.keys()) == {AgentDecision.TOOL, AgentDecision.END}
     executor_branches = graph.builder.branches.get('executor')
     if executor_branches:
         conditional_edge = executor_branches.get('conditional_edge')
@@ -108,7 +113,24 @@ async def test_build_graph(mock_rewoo_agent):
 
 async def test_planner_node_no_input(mock_rewoo_agent):
     state = await mock_rewoo_agent.planner_node(ReWOOGraphState())
-    assert state["result"] == NO_INPUT_ERROR_MESSAGE
+    # ReWOOGraphState.result is an AIMessage, and the graph re-validates the
+    # state after every node, so a bare string never gets past the planner.
+    assert isinstance(state["result"], AIMessage)
+    assert state["result"].content == NO_INPUT_ERROR_MESSAGE
+
+
+async def test_no_input_returns_the_message_through_the_graph(mock_rewoo_agent):
+    graph = await mock_rewoo_agent.build_graph()
+
+    state = await graph.ainvoke(ReWOOGraphState(messages=[HumanMessage(content="")], task=HumanMessage(content="")))
+
+    assert ReWOOGraphState(**state).result.content == NO_INPUT_ERROR_MESSAGE
+
+
+async def test_planner_edge_runs_the_executor_when_there_is_a_plan(mock_rewoo_agent):
+    assert await mock_rewoo_agent.planner_edge(ReWOOGraphState()) == AgentDecision.TOOL
+    assert await mock_rewoo_agent.planner_edge(ReWOOGraphState(result=AIMessage(content=NO_INPUT_ERROR_MESSAGE))
+                                               ) == AgentDecision.END
 
 
 async def test_conditional_edge_no_input(mock_rewoo_agent):
