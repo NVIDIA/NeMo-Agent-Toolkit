@@ -302,6 +302,38 @@ async def test_run_workflow_local_skip_completed(evaluation_run, session_manager
     assert pending_item.output_obj == generated_answer, "Pending item output should have been processed"
 
 
+async def test_run_workflow_local_skip_completed_list_output(evaluation_run, session_manager, generated_answer):
+    """Test that 'skip_completed_entries=True' treats a non-empty list output as completed."""
+
+    old_answer = ["first", "second"]
+    completed_item = EvalInputItem(id=1,
+                                   input_obj="Completed Question",
+                                   expected_output_obj="Golden Answer",
+                                   output_obj=old_answer,
+                                   expected_trajectory=[],
+                                   trajectory=[],
+                                   full_dataset_entry={
+                                       "id": 1, "question": "Completed Question", "answer": "Golden Answer"
+                                   })
+    pending_item = EvalInputItem(id=2,
+                                 input_obj="Pending Question",
+                                 expected_output_obj="Golden Answer",
+                                 output_obj=None,
+                                 expected_trajectory=[],
+                                 trajectory=[],
+                                 full_dataset_entry={
+                                     "id": 2, "question": "Pending Question", "answer": "Golden Answer"
+                                 })
+
+    evaluation_run.eval_input = EvalInput(eval_input_items=[completed_item, pending_item])
+    evaluation_run.config.skip_completed_entries = True
+
+    await evaluation_run.run_workflow_local(session_manager)
+
+    assert completed_item.output_obj == old_answer, "Completed item should be skipped"
+    assert pending_item.output_obj == generated_answer, "Pending item output should have been processed"
+
+
 async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_input, session_manager):
     """Test that workflow_interrupted is set to True when an exception occurs during workflow execution."""
 
