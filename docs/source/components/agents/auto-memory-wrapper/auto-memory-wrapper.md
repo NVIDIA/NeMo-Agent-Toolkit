@@ -27,6 +27,7 @@ The automatic memory wrapper agent works with any memory backend that implements
 - [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) - Mem0 memory backend
 - [`nvidia-nat-memmachine`](https://pypi.org/project/nvidia-nat-memmachine/) - MemMachine memory backend (**Experimental; not recommended for production use**) ([MemMachine documentation](https://docs.memmachine.ai/))
 - [`nemo-agent-toolkit-redis`](https://pypi.org/project/nemo-agent-toolkit-redis/) - Redis memory backend
+- [`nemo-agent-toolkit-memanto`](https://pypi.org/project/nemo-agent-toolkit-memanto/) - Memanto memory backend ([Memanto NeMo Agent Toolkit documentation](https://docs.memanto.ai/integrations/nemo-agent-toolkit))
 
 ## Configuration
 
