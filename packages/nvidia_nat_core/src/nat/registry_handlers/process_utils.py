@@ -25,10 +25,16 @@ def _decode(raw: bytes | None) -> str:
     plain ``bytes.decode()`` does not do. Callers that split on ``"\\n"`` and then
     strip a fixed-width affix (e.g. parsing ``name (1.0)``) get a trailing ``)``
     or ``\\r`` without the translation.
+
+    Decoding is strict, so undecodable bytes raise :class:`UnicodeDecodeError`
+    instead of being replaced. ``subprocess.run(text=True)`` decodes through a
+    :class:`io.TextIOWrapper` with the default ``errors="strict"`` and raises on
+    invalid UTF-8; silently substituting ``U+FFFD`` here would hand callers a
+    mangled string that parses as a valid but wrong version number.
     """
     if raw is None:
         return ""
-    return raw.decode(errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+    return raw.decode().replace("\r\n", "\n").replace("\r", "\n")
 
 
 async def run_command(*args: str,
@@ -86,7 +92,7 @@ async def run_command(*args: str,
                 await process.wait()
             raise
         if check and process.returncode != 0:
-            raise subprocess.CalledProcessError(process.returncode, args)
+            raise subprocess.CalledProcessError(process.returncode, list(args))
         return subprocess.CompletedProcess(args=args, returncode=process.returncode)
 
     try:
@@ -110,6 +116,6 @@ async def run_command(*args: str,
     completed = subprocess.CompletedProcess(args=args, returncode=process.returncode, stdout=stdout, stderr=stderr)
 
     if check and process.returncode != 0:
-        raise subprocess.CalledProcessError(process.returncode, args, output=stdout, stderr=stderr)
+        raise subprocess.CalledProcessError(process.returncode, list(args), output=stdout, stderr=stderr)
 
     return completed

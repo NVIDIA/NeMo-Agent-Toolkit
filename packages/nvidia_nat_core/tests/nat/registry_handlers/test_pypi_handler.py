@@ -113,6 +113,16 @@ async def test_pypi_handler_pull(mock_run: MagicMock,
 
     assert pull_response.status.status == expected
 
+    # Each package spec must reach uv as its own argv element. Joining them with
+    # spaces and passing that single string makes create_subprocess_exec hand uv
+    # one argument like "a.whl package_name==package_version", which it cannot
+    # resolve. No shell runs, so the join is not undone.
+    assert mock_run.await_args is not None, "pull() did not invoke run_command"
+    forwarded = mock_run.await_args.args
+    assert "some_whl_path.whl" in forwarded, f"wheel path missing from argv: {forwarded}"
+    assert "package_name==package_version" in forwarded, f"package spec missing from argv: {forwarded}"
+    assert not any(" " in arg for arg in forwarded), f"package specs were joined into one argument: {forwarded}"
+
 
 @patch("nat.registry_handlers.pypi.pypi_handler.run_command", new_callable=AsyncMock)
 @pytest.mark.parametrize("return_value, expected", [

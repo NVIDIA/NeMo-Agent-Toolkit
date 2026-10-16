@@ -142,18 +142,37 @@ async def test_run_command_yields_to_the_loop_repeatedly():
 
 
 async def test_concurrent_run_commands_overlap():
-    """Two slow commands started together should not serialise the loop."""
+    """Two slow commands started together must run at the same time.
+
+    This asserts overlap rather than wall-clock. Each child records the start and
+    end time of its own execution, so the assertion is whether the second command
+    began before the first finished. Comparing elapsed time against a multiple of
+    the sleep puts the threshold exactly at serial execution time, so any scheduler
+    delay on a loaded runner fails a test that is actually correct.
+    """
+    script = ("import time;"
+              "start=time.time();"
+              "time.sleep(0.25);"
+              "print(start, time.time())")
+
     async with _Heartbeat() as beat:
         before = beat.ticks
-        started = time.perf_counter()
-        await asyncio.gather(run_command(*SLOW_CMD), run_command(*SLOW_CMD))
-        elapsed = time.perf_counter() - started
+        results = await asyncio.gather(run_command(sys.executable, "-c", script, text=True),
+                                       run_command(sys.executable, "-c", script, text=True))
         during = beat.ticks - before
 
-    assert during > 0
-    # Serialised execution would take ~2x SLEEP; concurrent awaits should be
-    # well under that. Kept loose to stay robust on slow machines.
-    assert elapsed < SLEEP * 2, f"commands appear to have serialised ({elapsed:.3f}s)"
+    spans = []
+    for result in results:
+        started_at, exited_at = (float(value) for value in result.stdout.split())
+        spans.append((started_at, exited_at))
+
+    (first_start, first_end), (second_start, second_end) = sorted(spans)
+
+    assert during > 0, "the event loop was starved while both commands ran"
+    assert second_start < first_end, (
+        f"the second command started at {second_start:.3f}, after the first exited at {first_end:.3f}; "
+        "the commands serialised")
+    assert first_end > first_start, "the measured child never actually slept"
 
 
 # ---------------------------------------------------------------------------
@@ -244,3 +263,34 @@ async def test_run_command_still_raises_when_not_capturing():
     """check=True must keep working on the inherited-output path."""
     with pytest.raises(subprocess.CalledProcessError):
         await run_command(sys.executable, "-c", "raise SystemExit(5)", capture=False)
+
+
+async def test_run_command_error_reports_cmd_as_a_list_like_subprocess_run():
+    """CalledProcessError.cmd must be list-form, matching subprocess.run.
+
+    ``subprocess.run`` stores the argument list it was given, so ``str(exc)``
+    renders as ``Command '['sh', '-c', 'exit 1']'``. Passing the ``*args`` tuple
+    straight through renders as ``Command '('sh', '-c', 'exit 1')'``, so error
+    messages and any log that formats ``exc.cmd`` differ from the sync helper
+    this function documents itself as replacing.
+    """
+    with pytest.raises(subprocess.CalledProcessError) as caught:
+        await run_command("sh", "-c", "exit 1")
+
+    assert isinstance(caught.value.cmd, list), f"cmd should be list-form, got {type(caught.value.cmd).__name__}"
+    assert str(caught.value) == "Command '['sh', '-c', 'exit 1']' returned non-zero exit status 1."
+
+
+async def test_run_command_text_mode_raises_on_invalid_utf8_like_subprocess_run():
+    """text=True must raise UnicodeDecodeError on undecodable output.
+
+    ``subprocess.run(text=True)`` decodes through a TextIOWrapper with the default
+    ``errors="strict"`` and raises. Replacing bad bytes with U+FFFD would hand the
+    PyPI parser a corrupted version string that still looks well-formed.
+    """
+    with pytest.raises(UnicodeDecodeError):
+        await run_command(sys.executable, "-c", r"import sys; sys.stdout.buffer.write(b'\xff\n')", text=True)
+
+    # Bytes mode is unaffected: callers that handle raw bytes get them untouched.
+    raw = await run_command(sys.executable, "-c", r"import sys; sys.stdout.buffer.write(b'\xff\n')")
+    assert raw.stdout == b"\xff\n"
