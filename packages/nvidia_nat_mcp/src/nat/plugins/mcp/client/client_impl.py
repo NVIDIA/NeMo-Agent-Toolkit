@@ -39,6 +39,7 @@ from nat.plugins.mcp.client.client_base import MCPBaseClient
 from nat.plugins.mcp.client.client_config import MCPClientConfig
 from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
 from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
+from nat.plugins.mcp.utils import SCHEMA_REQUIRED_FIELDS_ATTR
 from nat.plugins.mcp.utils import truncate_session_id
 from nat.runtime.session import SESSION_COOKIE_NAME
 
@@ -79,12 +80,13 @@ def _drop_optional_none_values(value: object, dumped: object) -> object:
     """Drop None values of optional model fields from ``dumped`` (the JSON dump of ``value``), at any depth."""
     if isinstance(value, BaseModel):
         fields = type(value).model_fields
+        schema_required = getattr(type(value), SCHEMA_REQUIRED_FIELDS_ATTR, frozenset())
         filtered = {}
         # The dump is keyed by field name (no aliases), so each key maps back to its attribute.
         for key, item_dump in dumped.items():
             item = getattr(value, key, item_dump)
             if item is None:
-                if key in fields and fields[key].is_required():
+                if key in schema_required or (key in fields and fields[key].is_required()):
                     filtered[key] = None
                 continue
             filtered[key] = _drop_optional_none_values(item, item_dump)

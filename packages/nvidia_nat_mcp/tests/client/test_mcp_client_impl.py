@@ -370,16 +370,42 @@ _NULLABLE_SCHEMA = {
     "required": ["issue_id", "assignee"],
 }
 
+# Required fields that also declare a default, at the top level and in a nested object.
+_REQUIRED_WITH_DEFAULT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "issue_id": {
+            "type": "string"
+        },
+        "reviewer": {
+            "type": ["string", "null"], "default": None
+        },
+        "filter": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": ["string", "null"], "default": None
+                },
+                "limit": {
+                    "type": ["integer", "null"]
+                },
+            },
+            "required": ["label"],
+        },
+    },
+    "required": ["issue_id", "reviewer"],
+}
+
 
 class _RecordingTool:
     """Fake MCP tool that records the arguments sent to the server."""
 
-    def __init__(self) -> None:
+    def __init__(self, schema: dict[str, Any]) -> None:
         from nat.plugins.mcp.utils import model_from_mcp_schema
 
         self.name = "update_issue"
         self.description = "desc"
-        self.input_schema = model_from_mcp_schema("update_issue", _NULLABLE_SCHEMA)
+        self.input_schema = model_from_mcp_schema("update_issue", schema)
         self.sent: dict[str, Any] | None = None
 
     async def acall(self, args: dict[str, Any]) -> str:
@@ -394,10 +420,11 @@ async def _call_tool_fn(fn_info, tool: _RecordingTool, tool_args: dict[str, Any]
     assert result == "ok"
 
 
-async def _send_through_per_user_tool(tool_args: dict[str, Any]) -> dict[str, Any] | None:
+async def _send_through_per_user_tool(tool_args: dict[str, Any],
+                                      schema: dict[str, Any] = _NULLABLE_SCHEMA) -> dict[str, Any] | None:
     from nat.plugins.mcp.client.client_impl import mcp_per_user_tool_function
 
-    tool = _RecordingTool()
+    tool = _RecordingTool(schema)
     client = MagicMock()
 
     async def get_tool(name):
@@ -408,8 +435,9 @@ async def _send_through_per_user_tool(tool_args: dict[str, Any]) -> dict[str, An
     return tool.sent
 
 
-async def _send_through_session_tool(tool_args: dict[str, Any]) -> dict[str, Any] | None:
-    tool = _RecordingTool()
+async def _send_through_session_tool(tool_args: dict[str, Any],
+                                     schema: dict[str, Any] = _NULLABLE_SCHEMA) -> dict[str, Any] | None:
+    tool = _RecordingTool(schema)
     group = _make_group()
     fake_client = _FakeMCPClient(tools={"update_issue": tool})
     async with fake_client:
@@ -443,3 +471,15 @@ async def test_optional_arguments_left_unset_are_not_sent(send_tool_args):
 async def test_optional_arguments_left_unset_in_nested_arrays_are_not_sent(send_tool_args):
     sent = await send_tool_args({"issue_id": "ISS-1", "assignee": "bob", "rows": [[{"v": 1}], [{"v": 2}]]})
     assert sent == {"issue_id": "ISS-1", "assignee": "bob", "rows": [[{"v": 1}], [{"v": 2}]]}
+
+
+async def test_required_argument_with_default_is_sent_when_left_unset(send_tool_args):
+    """A schema default does not lift `required`: the key is still sent, carrying the default."""
+    sent = await send_tool_args({"issue_id": "ISS-1"}, _REQUIRED_WITH_DEFAULT_SCHEMA)
+    assert sent == {"issue_id": "ISS-1", "reviewer": None}
+
+
+async def test_nested_required_argument_with_default_keeps_explicit_null(send_tool_args):
+    tool_args = {"issue_id": "ISS-1", "reviewer": None, "filter": {"label": None}}
+    sent = await send_tool_args(tool_args, _REQUIRED_WITH_DEFAULT_SCHEMA)
+    assert sent == {"issue_id": "ISS-1", "reviewer": None, "filter": {"label": None}}
