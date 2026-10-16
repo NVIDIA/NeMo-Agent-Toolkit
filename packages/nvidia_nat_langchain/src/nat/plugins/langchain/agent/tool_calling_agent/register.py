@@ -142,6 +142,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
         max_truncation_retries=config.truncation_retry.max_retries,
         truncation_scaling_fn=config.truncation_retry.build_scaling_fn(),
         max_empty_response_retries=config.max_empty_response_retries,
+        max_iterations=config.max_iterations,
     ).build_graph()
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> str:
@@ -170,9 +171,8 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
 
             # run the Tool Calling Agent Graph
             state = await graph.ainvoke(state, config={'recursion_limit': (config.max_iterations + 1) * 2})
-            # setting recursion_limit: 4 allows 1 tool call
-            #   - allows the Tool Calling Agent to perform 1 cycle / call 1 single tool,
-            #   - but stops the agent when it tries to call a tool a second time
+            # setting recursion_limit: 4 leaves room for 1 tool call and the final answer;
+            #   the Tool Calling Agent graph itself stops before a second tool call
 
             # get and return the output from the state
             state = ToolCallAgentGraphState(**state)
