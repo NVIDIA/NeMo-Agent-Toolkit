@@ -180,3 +180,42 @@ async def test_local_handler_remove_keeps_event_loop_responsive(local_registry_c
     assert response.status.status == "success"
     assert awaited, "handler did not go through the async run_command seam"
     assert during > 0, "event loop was starved for the duration of the subprocess call"
+
+
+@pytest.mark.asyncio
+async def test_local_handler_remove_streams_uninstall_output(local_registry_channel: dict,
+                                                             global_settings: Settings,
+                                                             registry: TypeRegistry):
+    """`remove()` must not capture the output of `uv pip uninstall`.
+
+    The handler never reads the child's stdout/stderr, so capturing them only
+    removes the progress and error text the operator used to see from the
+    blocking `subprocess.run`. run_command must be called with capture=False so
+    that output stays inherited.
+    """
+    from nat.registry_handlers.local import local_handler
+
+    calls = []
+
+    async def record_run_command(*args, **kwargs):
+        calls.append((args, kwargs))
+        return subprocess.CompletedProcess(args=args, returncode=0)
+
+    package = PackageNameVersion(name="package0", version="0.1")
+    packages = PackageNameVersionList(packages=[package])
+
+    discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
+    registry_config = global_settings.model_validate(local_registry_channel)
+    local_registry_config = registry_config.channels.get("local_channel", None)
+    assert local_registry_config is not None
+
+    with patch.object(local_handler, "run_command", record_run_command):
+        async with AsyncExitStack() as stack:
+            registry_handler_info = registry.get_registry_handler(type(local_registry_config))
+            registry_handler = await stack.enter_async_context(registry_handler_info.build_fn(local_registry_config))
+            response = await stack.enter_async_context(registry_handler.remove(packages=packages))
+
+    assert response.status.status == "success"
+    assert calls, "handler did not go through the async run_command seam"
+    for _, kwargs in calls:
+        assert kwargs.get("capture") is False, "uv pip uninstall output is captured instead of streamed"

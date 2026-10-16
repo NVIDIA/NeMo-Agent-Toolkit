@@ -154,7 +154,7 @@ class LocalRegistryHandler(AbstractRegistryHandler):
 
         try:
             for package_name in packages.packages:
-                await run_command("uv", "pip", "uninstall", package_name.name)
+                await run_command("uv", "pip", "uninstall", package_name.name, capture=False)
 
             validated_remove_response = RemoveResponse(status={
                 "status": StatusEnum.SUCCESS, "message": "", "action": ActionEnum.REMOVE

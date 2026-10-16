@@ -140,7 +140,8 @@ class PypiRegistryHandler(AbstractRegistryHandler):
                               "--prerelease=allow",
                               "--index-url",
                               f"{self._endpoint}/{self._pull_route}/",
-                              versioned_packages_str)
+                              versioned_packages_str,
+                              capture=False)
 
             validated_pull_response = PullResponse(status={
                 "status": StatusEnum.SUCCESS, "message": "", "action": ActionEnum.PULL

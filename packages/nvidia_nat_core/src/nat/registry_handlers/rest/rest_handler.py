@@ -112,9 +112,14 @@ class RestRegistryHandler(AbstractRegistryHandler):
         # install is awaited rather than run synchronously: two concurrent pulls
         # would write into the same directory, and whichever finished first would
         # rmtree it out from under the other installer.
-        tmp_dir = tempfile.mkdtemp(prefix="nat-pull-")
+        #
+        # Created inside the try so a staging failure (no writable temp dir) comes
+        # back as a normal ERROR PullResponse like every other pull failure, rather
+        # than raising out of an async generator.
+        tmp_dir = None
 
         try:
+            tmp_dir = tempfile.mkdtemp(prefix="nat-pull-")
             async with httpx.AsyncClient(headers=self._headers, timeout=self._timeout) as client:
                 packages_json = packages.model_dump_json()
                 response = await client.post(f"{self._endpoint}/{self._pull_route}", content=packages_json)
@@ -140,7 +145,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
 
             cmd = ["uv", "pip", "install"]
             cmd.extend(whl_paths)
-            await run_command(*cmd)
+            await run_command(*cmd, capture=False)
 
             yield validated_pull_response
 
@@ -156,7 +161,8 @@ class RestRegistryHandler(AbstractRegistryHandler):
             yield validated_pull_response
 
         finally:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
+            if tmp_dir is not None:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
             logger.info("Execution complete.")
 
     @asynccontextmanager
