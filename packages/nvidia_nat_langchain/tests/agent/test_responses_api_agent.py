@@ -14,6 +14,8 @@
 # limitations under the License.
 # pylint: disable=not-async-context-manager,unused-argument
 
+import typing
+
 import pytest
 
 from nat.data_models.openai_mcp import OpenAIMCPSchemaTool
@@ -158,10 +160,14 @@ async def test_never_exceeds_max_iterations(max_iterations):
         def _llm_type(self) -> str:
             return "always-tool-call"
 
-        def bind_tools(self, tools, **kwargs):
+        def bind_tools(self, tools: typing.Any, **kwargs: typing.Any) -> "AlwaysToolCallLLM":
             return self
 
-        def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        def _generate(self,
+                      messages: typing.Any,
+                      stop: typing.Any = None,
+                      run_manager: typing.Any = None,
+                      **kwargs: typing.Any) -> ChatResult:
             self.turns += 1
             message = AIMessage(content="",
                                 tool_calls=[{
@@ -175,8 +181,10 @@ async def test_never_exceeds_max_iterations(max_iterations):
     config = ResponsesAPIAgentWorkflowConfig(
         llm_name="openai_llm",
         nat_tools=["counter"],  # type: ignore[list-item]
-        max_iterations=max_iterations)
+        max_iterations=max_iterations,
+        verbose=True)  # verbose returns the error text instead of a generic message
 
     async with responses_api_agent_workflow(config, builder) as function_info:
-        await function_info.single_fn("hi")
+        result = await function_info.single_fn("hi")
     assert len(calls) == max_iterations
+    assert f"max_iterations ({max_iterations})" in result

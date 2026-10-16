@@ -839,10 +839,19 @@ def test_extract_token_usage_returns_none_without_any_usage():
     assert extract_token_usage(AIMessage(content="x")) is None
 
 
-async def _run_tool_calling_agent(tool_calls_before_answer: int | None, max_iterations: int, stream: bool = False):
-    """Run the agent with a model that requests the tool `tool_calls_before_answer` times (always if None)."""
+async def _run_tool_calling_agent(tool_calls_before_answer: int | None,
+                                  max_iterations: int,
+                                  stream: bool = False) -> tuple[str, list[str], list[str]]:
+    """Run the agent with a model that requests the tool `tool_calls_before_answer` times (always if None).
+
+    Returns the text output, the tool's calls, and the ids of the tool calls streamed to the client.
+    """
+    from collections.abc import Iterator
+
     from langchain_core.language_models import BaseChatModel
+    from langchain_core.messages import AIMessageChunk
     from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import ChatGenerationChunk
     from langchain_core.outputs import ChatResult
     from langchain_core.tools import tool
 
@@ -863,54 +872,77 @@ async def _run_tool_calling_agent(tool_calls_before_answer: int | None, max_iter
         def _llm_type(self) -> str:
             return "scripted-tool-call"
 
-        def bind_tools(self, tools, **kwargs):
+        def bind_tools(self, tools: typing.Any, **kwargs: typing.Any) -> "ScriptedToolCallLLM":
             return self
 
-        def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+        def _next_turn(self) -> AIMessageChunk:
             self.turns += 1
             if tool_calls_before_answer is not None and self.turns > tool_calls_before_answer:
-                message = AIMessage(content="all done")
-            else:
-                message = AIMessage(content="",
-                                    tool_calls=[{
-                                        "name": "counter", "args": {
-                                            "q": "x"
-                                        }, "id": f"call-{self.turns}"
-                                    }])
-            return ChatResult(generations=[ChatGeneration(message=message)])
+                return AIMessageChunk(content="all done")
+            return AIMessageChunk(content="",
+                                  tool_call_chunks=[{
+                                      "name": "counter", "args": '{"q": "x"}', "id": f"call-{self.turns}", "index": 0
+                                  }])
+
+        def _generate(self,
+                      messages: typing.Any,
+                      stop: typing.Any = None,
+                      run_manager: typing.Any = None,
+                      **kwargs: typing.Any) -> ChatResult:
+            return ChatResult(generations=[ChatGeneration(message=self._next_turn())])
+
+        def _stream(self,
+                    messages: typing.Any,
+                    stop: typing.Any = None,
+                    run_manager: typing.Any = None,
+                    **kwargs: typing.Any) -> Iterator[ChatGenerationChunk]:
+            yield ChatGenerationChunk(message=self._next_turn())
 
     builder = AsyncMock()
     builder.get_llm = AsyncMock(return_value=ScriptedToolCallLLM())
     builder.get_tools = AsyncMock(return_value=[counter])
     config = ToolCallAgentWorkflowConfig(tool_names=["counter"], llm_name="llm", max_iterations=max_iterations)
+    streamed_tool_call_ids = []
     async with tool_calling_agent_workflow(config, builder) as function_info:
         if stream:
             from nat.data_models.api_server import ChatRequestOrMessage
 
             chunks = [chunk async for chunk in function_info.stream_fn(ChatRequestOrMessage(input_message="hi"))]
             result = "".join(chunk.choices[0].delta.content or "" for chunk in chunks if chunk.choices)
+            deltas = [chunk.choices[0].delta for chunk in chunks if chunk.choices]
+            streamed_tool_call_ids = [tool_call.id for delta in deltas for tool_call in delta.tool_calls or []]
         else:
             result = await function_info.single_fn("hi")
-    return result, calls
+    return result, calls, streamed_tool_call_ids
 
 
 @pytest.mark.parametrize("max_iterations", [1, 2, 5])
 async def test_tool_calling_agent_never_exceeds_max_iterations(max_iterations):
     """`max_iterations` is the maximum number of tool calls the agent may perform."""
-    result, calls = await _run_tool_calling_agent(None, max_iterations)
+    result, calls, _ = await _run_tool_calling_agent(None, max_iterations)
     assert len(calls) == max_iterations
     assert "could not produce a final answer" in result
 
 
 @pytest.mark.parametrize("max_iterations", [1, 2, 5])
 async def test_tool_calling_agent_can_use_all_max_iterations_then_answer(max_iterations):
-    result, calls = await _run_tool_calling_agent(max_iterations, max_iterations)
+    result, calls, _ = await _run_tool_calling_agent(max_iterations, max_iterations)
     assert len(calls) == max_iterations
     assert result == "all done"
 
 
 @pytest.mark.parametrize("max_iterations", [1, 2, 5])
 async def test_tool_calling_agent_stream_never_exceeds_max_iterations(max_iterations):
-    result, calls = await _run_tool_calling_agent(None, max_iterations, stream=True)
+    """The client is only told about tool calls the agent runs, not the one rejected at the limit."""
+    result, calls, streamed_tool_call_ids = await _run_tool_calling_agent(None, max_iterations, stream=True)
     assert len(calls) == max_iterations
+    assert streamed_tool_call_ids == [f"call-{turn}" for turn in range(1, max_iterations + 1)]
     assert "could not produce a final answer" in result
+
+
+@pytest.mark.parametrize("max_iterations", [1, 2, 5])
+async def test_tool_calling_agent_stream_can_use_all_max_iterations_then_answer(max_iterations):
+    result, calls, streamed_tool_call_ids = await _run_tool_calling_agent(max_iterations, max_iterations, stream=True)
+    assert len(calls) == max_iterations
+    assert streamed_tool_call_ids == [f"call-{turn}" for turn in range(1, max_iterations + 1)]
+    assert result == "all done"
