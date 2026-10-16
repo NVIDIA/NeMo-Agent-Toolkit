@@ -330,6 +330,7 @@ async def test_context_boundaries_escape_adversarial_evidence(evaluator):
     assert [child.tag for child in parsed] == ["retrieved_context_1", "retrieved_context_2"]
     assert [child.text.strip() for child in parsed] == contexts
     assert output.reasoning["context_truncated"] is False
+    assert output.reasoning["retrieved_contexts"] == contexts
 
 
 @pytest.mark.parametrize("contexts", [["x" * 10000], ["&" * 10000], ["evidence"] * 1000])
@@ -347,6 +348,8 @@ async def test_context_budget_bounds_serialized_prompt(evaluator, contexts):
     assert 0 < len(evidence) <= 150
     ElementTree.fromstring("<evidence>" + evidence + "</evidence>")
     assert output.reasoning["context_truncated"] is True
+    assert output.reasoning["retrieved_contexts"] == []
+    assert len(output.model_dump_json()) < 1000
     assert output.score == 0.5
 
 

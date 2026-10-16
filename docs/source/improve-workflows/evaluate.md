@@ -239,6 +239,8 @@ limits these blocks, including delimiters, to 16,000 characters by default. Exce
 omitted in trajectory order and reported by `reasoning.context_truncated`. Adjust this limit
 for the judge's input capacity, reserving room for the question, answers, and rubric; it is a
 character budget rather than a token limit.
+When context is truncated, `reasoning.retrieved_contexts` is empty so evaluation output does not
+retain the oversized original evidence. Context within the budget remains available in that field.
 
 The example configurations preserve the `accuracy`, `groundedness`, and `relevance` output names,
 but the prompts and scoring methodology differ from Ragas. Establish new quality gate baselines before comparing

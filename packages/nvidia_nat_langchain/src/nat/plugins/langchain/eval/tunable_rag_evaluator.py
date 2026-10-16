@@ -308,7 +308,7 @@ class TunableRagEvaluator(BaseEvaluator):
             }
 
         if retrieved_contexts is not None:
-            reasoning_obj["retrieved_contexts"] = retrieved_contexts
+            reasoning_obj["retrieved_contexts"] = [] if context_truncated else retrieved_contexts
             reasoning_obj["context_truncated"] = context_truncated
         return EvalOutputItem(id=item_id, score=score, reasoning=reasoning_obj)
 

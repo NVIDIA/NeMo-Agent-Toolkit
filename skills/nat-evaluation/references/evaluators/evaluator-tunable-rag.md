@@ -90,4 +90,5 @@ Scores are written to `output/rag_quality_output.json`. Each entry contains:
 - Context is escaped and enclosed in separate named data blocks. `reasoning.context_truncated`
   reports whether the context budget omitted evidence. Adjust the budget for the judge's input
   capacity; it counts characters, not tokens, and excludes the question, answers, and rubric.
+  When truncated, `reasoning.retrieved_contexts` is empty; otherwise it retains the original evidence.
 - Allow at least 512 output tokens for the judge's JSON score and reasoning.
