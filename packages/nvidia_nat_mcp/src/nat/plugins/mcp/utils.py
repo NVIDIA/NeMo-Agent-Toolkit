@@ -95,6 +95,9 @@ def truncate_session_id(session_id: str, max_length: int = 10) -> str:
     return session_id
 
 
+SCHEMA_REQUIRED_FIELDS_ATTR = "__mcp_schema_required_fields__"
+
+
 def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
     """
     Create a pydantic model from the input schema of the MCP tool
@@ -338,4 +341,8 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
     elif mcp_input_schema.get("additionalProperties") is True:
         model_config = ConfigDict(extra="allow")
 
-    return create_model(f"{_generate_valid_classname(name)}InputSchema", __config__=model_config, **schema_dict)
+    model = create_model(f"{_generate_valid_classname(name)}InputSchema", __config__=model_config, **schema_dict)
+    # A field can declare a default and still be in `required`, so Pydantic alone cannot tell which keys the
+    # server expects. Keep the schema's list for the client, which must always send these keys.
+    setattr(model, SCHEMA_REQUIRED_FIELDS_ATTR, frozenset(required_fields))
+    return model
