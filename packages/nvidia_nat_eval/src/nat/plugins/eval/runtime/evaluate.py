@@ -679,9 +679,10 @@ class EvaluationRun:
             logger.warning("Failed to wait for local export tasks: %s", e)
 
     def _on_eval_complete(self, dataset_handler: DatasetHandler | None = None) -> None:
-        """Build an EvalResult from collected data and fire the on_eval_complete callback."""
-        if not self.evaluation_results:
-            return
+        """Build an EvalResult from collected data and fire the on_eval_complete callback.
+
+        Fires even when no evaluator produced a result, so the workflow output is still exported.
+        """
         try:
             from nat.plugins.eval.eval_callbacks import build_eval_result
 
