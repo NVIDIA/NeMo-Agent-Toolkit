@@ -640,6 +640,59 @@ async def test_cleanup_expired_jobs_keeps_active(db_engine: "AsyncEngine",
         assert job3.is_expired is False  # last job is not expired
 
 
+@pytest.mark.usefixtures("setup_db")
+async def test_cleanup_expired_jobs_does_not_block_event_loop(db_engine: "AsyncEngine",
+                                                              dask_scheduler_address: str,
+                                                              monkeypatch: pytest.MonkeyPatch):
+    """Test cleanup keeps the event loop responsive when a job's Dask variable is missing."""
+    from nat.front_ends.fastapi.async_jobs import JobStatus
+    from nat.front_ends.fastapi.async_jobs import JobStore
+
+    with monkeypatch.context() as monkey_context:
+        # Lower minimum expiry for testing
+        monkey_context.setattr(JobStore, "MIN_EXPIRY", 0.01, raising=True)
+
+        job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
+
+        # `_create_job` stores no Dask variable, as after a scheduler restart, so expiring the older job waits for
+        # `Variable.get` to time out
+        job_id1 = await job_store._create_job(expiry_seconds=0.01)
+        job_id2 = await job_store._create_job(expiry_seconds=0.01)
+
+        await job_store.update_status(job_id1, JobStatus.SUCCESS)
+        await job_store.update_status(job_id2, JobStatus.SUCCESS)
+
+        # Wait for jobs to expire
+        await asyncio.sleep(0.1)
+
+        loop = asyncio.get_running_loop()
+        stop = asyncio.Event()
+        max_gap = 0.0
+
+        async def ticker():
+            nonlocal max_gap
+            last = loop.time()
+            while not stop.is_set():
+                await asyncio.sleep(0.01)
+                now = loop.time()
+                max_gap = max(max_gap, now - last)
+                last = now
+
+        ticker_task = asyncio.create_task(ticker())
+        try:
+            num_expired = await job_store.cleanup_expired_jobs()
+        finally:
+            stop.set()
+            await ticker_task
+
+        assert num_expired == 1
+        assert max_gap < 1.0, f"event loop was blocked for {max_gap:.2f}s during cleanup"
+
+        job1 = await job_store.get_job(job_id1)
+        assert job1 is not None
+        assert job1.is_expired is True
+
+
 def test_get_db_engine_with_url():
     """Test get_db_engine with provided URL."""
     from nat.front_ends.fastapi.async_jobs import get_db_engine
