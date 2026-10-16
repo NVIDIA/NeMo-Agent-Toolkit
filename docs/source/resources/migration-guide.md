@@ -35,7 +35,7 @@ The `nvidia-nat-ragas` package and `nvidia-nat[ragas]` extra have been removed. 
 `tunable_rag_evaluator`, replace `metric` with an explicit `judge_llm_prompt`, and install
 `nvidia-nat[eval,langchain]`. Enable `include_context` for groundedness and context relevance.
 The ATIF lane remains available through `enable_atif_evaluator`. Scores use different prompts;
-rebaseline evaluation and optimizer thresholds before comparing them with historical Ragas scores.
+establish new evaluation and optimizer thresholds before comparing them with historical Ragas scores.
 See [Migrating from Ragas](../improve-workflows/evaluate.md#migrating-from-ragas).
 
 The dependency update also moves Mem0 to 2.x, Google ADK to 2.x, Datasets to 5.x, Cryptography to 50.x,

@@ -171,7 +171,7 @@ nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/c
 
 ### Understanding Results
 
-The configurable judges replace the retired Ragas integration. Scores use new prompts and must be rebaselined; they are not directly comparable with historical Ragas results.
+The configurable judges replace the retired Ragas integration. Scores use new prompts and require new baselines; they are not directly comparable with historical Ragas results.
 
 After running evaluation, you'll find output files in `./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval/` (or your configured output directory). The evaluation generates comprehensive metrics including:
 

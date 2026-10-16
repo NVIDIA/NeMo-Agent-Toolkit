@@ -236,7 +236,7 @@ results in the legacy lane, or observation results in the ATIF lane. The final m
 as evidence for its own groundedness. Set `enable_atif_evaluator: true` for ATIF input.
 
 The example configurations preserve the `accuracy`, `groundedness`, and `relevance` output names,
-but the prompts and scoring methodology differ from Ragas. Rebaseline quality gates before comparing
+but the prompts and scoring methodology differ from Ragas. Establish new quality gate baselines before comparing
 new scores with historical results. Allow at least 512 output tokens for a score and explanation.
 The `input_obj_field` option selects a field from structured inputs in the legacy lane.
 
