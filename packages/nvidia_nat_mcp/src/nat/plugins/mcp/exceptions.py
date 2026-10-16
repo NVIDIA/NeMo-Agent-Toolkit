@@ -23,6 +23,7 @@ class MCPErrorCategory(StrEnum):
     SSL = "ssl"
     AUTHENTICATION = "authentication"
     TOOL_NOT_FOUND = "tool_not_found"
+    TOOL_ERROR = "tool_error"
     PROTOCOL = "protocol"
     UNKNOWN = "unknown"
 
@@ -112,6 +113,19 @@ class MCPToolNotFoundError(MCPError):
                              "Check that the tool name is spelled correctly"
                          ],
                          original_exception=original_exception)
+
+
+class MCPToolError(MCPError):
+    """Exception for a tool call that the MCP server completed but reported as failed (``isError`` set)."""
+
+    def __init__(self, tool_name: str, url: str, message: str):
+        # Agents pass this message to the LLM, so it names the tool but not the server URL or command,
+        # which can contain credentials or local paths. The URL is still available as `self.url`.
+        super().__init__(f"Tool '{tool_name}' returned an error: {message or '(no error message)'}",
+                         url=url,
+                         category=MCPErrorCategory.TOOL_ERROR,
+                         original_exception=RuntimeError(message))
+        self.tool_name = tool_name
 
 
 class MCPAuthenticationError(MCPError):

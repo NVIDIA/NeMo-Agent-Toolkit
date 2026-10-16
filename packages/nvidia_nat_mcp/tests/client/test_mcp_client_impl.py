@@ -15,22 +15,32 @@
 
 from contextlib import asynccontextmanager
 from typing import Any
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from mcp.types import CallToolResult
+from mcp.types import TextContent
 from pydantic import BaseModel
 
 from nat.builder.function import FunctionGroup
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.mcp.client.client_base import MCPBaseClient
+from nat.plugins.mcp.client.client_base import MCPToolClient
 from nat.plugins.mcp.client.client_config import MCPClientConfig
 from nat.plugins.mcp.client.client_config import MCPServerConfig
 from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
+from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
 from nat.plugins.mcp.client.client_impl import MCPFunctionGroup
 from nat.plugins.mcp.client.client_impl import mcp_apply_tool_alias_and_description
 from nat.plugins.mcp.client.client_impl import mcp_client_function_group
+from nat.plugins.mcp.client.client_impl import mcp_per_user_tool_function
 from nat.plugins.mcp.client.client_impl import mcp_session_tool_function
+from nat.plugins.mcp.client.client_impl import per_user_mcp_client_function_group
+from nat.plugins.mcp.exceptions import MCPError
+from nat.plugins.mcp.exceptions import MCPErrorCategory
+from nat.plugins.mcp.exceptions import MCPToolError
 
 
 class _InputSchema(BaseModel):
@@ -320,3 +330,147 @@ class TestSessionToolSessionPath:
 
         assert result == "ok ping"
         assert acall_was_inside_context is True
+
+
+def _failing_mcp_tool(name: str = "orders") -> MCPToolClient:
+    """Create a real MCPToolClient whose server reports every call as failed (`isError` set)."""
+    parent_client = MagicMock()
+    parent_client.server_name = "stdio:server.py"
+    parent_client.call_tool = AsyncMock(return_value=CallToolResult(
+        content=[TextContent(type="text", text="Order ORD-404 does not exist")], isError=True))
+    return MCPToolClient(session=MagicMock(),
+                         parent_client=parent_client,
+                         tool_name=name,
+                         tool_description="desc",
+                         tool_input_schema={
+                             "type": "object", "properties": {
+                                 "param": {
+                                     "type": "string"
+                                 }
+                             }, "required": ["param"]
+                         })
+
+
+def _raising_server_config() -> MCPServerConfig:
+    return MCPServerConfig(transport="stdio", command="python", args=["server.py"])
+
+
+def _raising_config() -> MCPClientConfig:
+    return MCPClientConfig(server=_raising_server_config(), raise_on_tool_error=True)
+
+
+def test_raise_on_tool_error_defaults_to_false():
+    server_cfg = MCPServerConfig(transport="stdio", command="python", args=["server.py"])
+    assert MCPClientConfig(server=server_cfg).raise_on_tool_error is False
+    assert PerUserMCPClientConfig(server=server_cfg).raise_on_tool_error is False
+
+
+class TestSessionToolErrorHandling:
+    """Tests for how mcp_session_tool_function reports failed tool calls."""
+
+    async def test_tool_error_returned_as_text_by_default(self):
+        group = _make_group()
+        fake_client = _FakeMCPClient(tools={"orders": _failing_mcp_tool()})
+
+        async with fake_client:
+            group.mcp_client = fake_client
+            fn_info = mcp_session_tool_function(_FakeTool("orders"), group)
+            result = await fn_info.single_fn(_InputSchema(param="x"))
+
+        assert result == "MCPToolClient tool call failed: Order ORD-404 does not exist"
+
+    async def test_tool_error_raised_when_configured(self):
+        group = _make_group(client_cfg=_raising_config())
+        fake_client = _FakeMCPClient(tools={"orders": _failing_mcp_tool()})
+
+        async with fake_client:
+            group.mcp_client = fake_client
+            fn_info = mcp_session_tool_function(_FakeTool("orders"), group)
+            with pytest.raises(MCPToolError, match="Order ORD-404 does not exist") as exc_info:
+                await fn_info.single_fn(_InputSchema(param="x"))
+
+        assert "stdio:server.py" not in str(exc_info.value)
+
+    async def test_unavailable_client_raised_when_configured(self):
+        group = _make_group(client_cfg=_raising_config())
+        group.mcp_client = None
+
+        fn_info = mcp_session_tool_function(_FakeTool("orders"), group)
+        with pytest.raises(MCPError, match="Tool temporarily unavailable") as exc_info:
+            await fn_info.single_fn(_InputSchema(param="x"))
+
+        assert exc_info.value.category == MCPErrorCategory.CONNECTION
+
+    async def test_unavailable_session_client_raised_when_configured(self):
+        group = _make_group(client_cfg=_raising_config())
+        group._shared_auth_provider = MagicMock()
+        group._default_user_id = "default-user"
+
+        @asynccontextmanager
+        async def no_client(session_id):
+            yield None
+
+        with patch.object(group, '_get_session_id_from_context', return_value="sess-1"):
+            with patch.object(group, '_session_usage_context', no_client):
+                fn_info = mcp_session_tool_function(_FakeTool("orders"), group)
+                with pytest.raises(MCPError, match="Tool temporarily unavailable") as exc_info:
+                    await fn_info.single_fn(_InputSchema(param="x"))
+
+        assert exc_info.value.category == MCPErrorCategory.CONNECTION
+
+    async def test_missing_session_raised_as_authentication_error_when_configured(self):
+        group = _make_group(client_cfg=_raising_config())
+        group._shared_auth_provider = MagicMock()
+
+        with patch.object(group, '_get_session_id_from_context', return_value=None):
+            fn_info = mcp_session_tool_function(_FakeTool("orders"), group)
+            with pytest.raises(MCPError, match="User not authorized") as exc_info:
+                await fn_info.single_fn(_InputSchema(param="x"))
+
+        assert exc_info.value.category == MCPErrorCategory.AUTHENTICATION
+
+    async def test_function_group_applies_raise_on_tool_error(self):
+        """The config flag reaches the functions that mcp_client_function_group adds to the group."""
+        with patch("nat.plugins.mcp.client.client_base.MCPStdioClient") as mock_client:
+            mock_client.return_value = _FakeMCPClient(tools={"orders": _failing_mcp_tool()},
+                                                      command="python",
+                                                      args=["server.py"])
+
+            async with mcp_client_function_group(_raising_config(), MagicMock(spec=WorkflowBuilder)) as group:
+                accessible = await group.get_accessible_functions()
+                fn = accessible[f"mcp_client{FunctionGroup.SEPARATOR}orders"]
+                with pytest.raises(MCPToolError):
+                    await fn.acall_invoke(param="x")
+
+
+class TestPerUserToolErrorHandling:
+    """Tests for how mcp_per_user_tool_function reports failed tool calls."""
+
+    async def test_tool_error_returned_as_text_by_default(self):
+        fn_info = mcp_per_user_tool_function(_FakeTool("orders"), _FakeMCPClient(tools={"orders": _failing_mcp_tool()}))
+
+        result = await fn_info.single_fn(_InputSchema(param="x"))
+
+        assert result == "MCPToolClient tool call failed: Order ORD-404 does not exist"
+
+    async def test_tool_error_raised_when_configured(self):
+        fn_info = mcp_per_user_tool_function(_FakeTool("orders"),
+                                             _FakeMCPClient(tools={"orders": _failing_mcp_tool()}),
+                                             raise_on_tool_error=True)
+
+        with pytest.raises(MCPToolError, match="Order ORD-404 does not exist"):
+            await fn_info.single_fn(_InputSchema(param="x"))
+
+    async def test_function_group_applies_raise_on_tool_error(self):
+        """The config flag reaches the functions that per_user_mcp_client_function_group adds to the group."""
+        with patch("nat.plugins.mcp.client.client_base.MCPStdioClient") as mock_client:
+            mock_client.return_value = _FakeMCPClient(tools={"orders": _failing_mcp_tool()},
+                                                      command="python",
+                                                      args=["server.py"])
+            config = PerUserMCPClientConfig(server=_raising_server_config(), raise_on_tool_error=True)
+
+            async with per_user_mcp_client_function_group(config, MagicMock(spec=WorkflowBuilder)) as group:
+                accessible = await group.get_accessible_functions()
+                fn = next(f for name, f in accessible.items() if name.endswith(f"{FunctionGroup.SEPARATOR}orders"))
+                with pytest.raises(MCPToolError):
+                    await fn.acall_invoke(param="x")

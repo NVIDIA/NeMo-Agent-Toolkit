@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from abc import ABC
 from abc import abstractmethod
@@ -40,10 +41,10 @@ from mcp.types import TextContent
 from nat.authentication.interfaces import AuthenticatedContext
 from nat.authentication.interfaces import AuthFlowType
 from nat.authentication.interfaces import AuthProviderBase
-from nat.plugins.mcp.exception_handler import convert_to_mcp_error
 from nat.plugins.mcp.exception_handler import format_mcp_error
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
 from nat.plugins.mcp.exceptions import MCPError
+from nat.plugins.mcp.exceptions import MCPToolError
 from nat.plugins.mcp.exceptions import MCPToolNotFoundError
 from nat.plugins.mcp.utils import model_from_mcp_schema
 from nat.utils.type_utils import override
@@ -850,13 +851,15 @@ class MCPToolClient:
         """
         self._tool_description = description
 
-    async def acall(self, tool_args: dict) -> str:
+    async def acall(self, tool_args: dict, *, raise_on_error: bool = False) -> str:
         """
         Call the MCP tool with the provided arguments.
         Session context is now handled at the client level, eliminating the need for metadata injection.
 
         Args:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
+            raise_on_error (bool): If True, raise MCP errors from the call, including an MCPToolError when the
+                server marks the result with `isError`. If False, return a description of an MCP error instead.
         """
         if self._session is None:
             raise RuntimeError("No session available for tool call")
@@ -875,11 +878,19 @@ class MCPToolClient:
                     logger.warning("Got not-text output from %s of type %s", self.name, type(res))
             result_str = "\n".join(output)
 
+            # Servers SHOULD mirror structured content in a text block, but are not required to.
+            # Fall back to the structured content so the result is not silently dropped.
+            if not result_str.strip() and result.structuredContent is not None:
+                result_str = json.dumps(result.structuredContent, ensure_ascii=False)
+
             if result.isError:
-                mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str), self._parent_client.server_name)
-                raise mcp_error
+                raise MCPToolError(self._tool_name, self._parent_client.server_name, result_str)
 
         except MCPError as e:
+            if raise_on_error:
+                # Agents may handle the exception without logging it, so record the failure here
+                logger.warning("MCP tool %s failed: %s", self._tool_name, e)
+                raise
             format_mcp_error(e, include_traceback=False)
             result_str = f"MCPToolClient tool call failed: {e.original_exception}"
 

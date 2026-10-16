@@ -120,6 +120,16 @@ nat info components -t function_group -q mcp_client
 - `reconnect_initial_backoff`: Initial backoff time for reconnect attempts. Defaults to `0.5` seconds.
 - `reconnect_max_backoff`: Maximum backoff time for reconnect attempts. Defaults to `50.0` seconds.
 
+##### Error Handling Configuration
+
+- `raise_on_tool_error`: Whether a failed tool call raises an exception instead of returning the error message as the tool output. Failures include tool results that the server marks with `isError`, timeouts, and connection errors. Defaults to `false`.
+
+By default, a failed tool call returns its error message as the tool output, so the LLM can read the error and decide what to do next. Set `raise_on_tool_error: true` when the rest of the workflow needs to know that the call failed. For example, the ReAct agent `tool_call_max_retries` and `pass_tool_call_errors_to_agent: false` settings only apply to tool calls that raise. The tool calling agent turns a raised error into an error message for the LLM unless its `handle_tool_errors` setting is `false`.
+
+When the agent is configured to retry failed tool calls, a tool that reports an error is called again with the same arguments. Avoid retries for tools with side effects, such as tools that create or update records.
+
+When a tool returns `structuredContent` and no text content, the client returns the structured content as a JSON string.
+
 ##### Session Management Configuration
 
 - `max_sessions`: Maximum number of concurrent session clients. Defaults to `100`.
@@ -150,6 +160,7 @@ function_groups:
     reconnect_max_attempts: 3
     reconnect_initial_backoff: 1.0
     reconnect_max_backoff: 60.0
+    raise_on_tool_error: false  # Return tool errors as text for the LLM
     max_sessions: 50  # Maximum concurrent sessions
     session_idle_timeout: 7200  # 2 hours (in seconds)
     tool_overrides:

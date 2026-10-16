@@ -14,6 +14,7 @@
 # limitations under the License.
 import argparse
 import asyncio
+import json
 import os
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -26,6 +27,8 @@ import pytest
 import uvicorn
 from mcp.client.session import ClientSession
 from mcp.server.fastmcp.server import FastMCP
+from mcp.shared.memory import create_connected_server_and_client_session
+from mcp.types import CallToolResult
 from mcp.types import TextContent
 
 from nat.plugins.mcp.client.client_base import MCPBaseClient
@@ -33,6 +36,9 @@ from nat.plugins.mcp.client.client_base import MCPSSEClient
 from nat.plugins.mcp.client.client_base import MCPStdioClient
 from nat.plugins.mcp.client.client_base import MCPStreamableHTTPClient
 from nat.plugins.mcp.exceptions import MCPConnectionError
+from nat.plugins.mcp.exceptions import MCPErrorCategory
+from nat.plugins.mcp.exceptions import MCPTimeoutError
+from nat.plugins.mcp.exceptions import MCPToolError
 
 
 def _create_test_mcp_server(port: int) -> FastMCP:
@@ -842,6 +848,191 @@ class TestMCPToolClient:
         # Should raise RuntimeError when parent_client is None
         with pytest.raises(RuntimeError, match="MCPToolClient initialized without a parent client"):
             MCPToolClient(session=mock_session, parent_client=None, tool_name="test_tool", tool_description="Test tool")
+
+
+class TestMCPToolClientCall:
+    """Test how MCPToolClient.acall turns a CallToolResult into tool output or an error."""
+
+    @staticmethod
+    def _make_tool(result: CallToolResult | Exception):
+        from nat.plugins.mcp.client.client_base import MCPToolClient
+
+        parent_client = MagicMock()
+        parent_client.server_name = "stdio:test-server"
+        if isinstance(result, Exception):
+            parent_client.call_tool = AsyncMock(side_effect=result)
+        else:
+            parent_client.call_tool = AsyncMock(return_value=result)
+        return MCPToolClient(session=MagicMock(),
+                             parent_client=parent_client,
+                             tool_name="lookup_order",
+                             tool_description="Look up an order")
+
+    async def test_returns_joined_text_content(self):
+        tool = self._make_tool(
+            CallToolResult(content=[TextContent(type="text", text="line 1"), TextContent(type="text", text="line 2")]))
+
+        assert await tool.acall({"order_id": "1"}) == "line 1\nline 2"
+
+    async def test_returns_structured_content_when_no_text(self):
+        structured = {"order_id": "ORD-1", "shipping": "delayed", "eta_days": 3}
+        tool = self._make_tool(CallToolResult(content=[], structuredContent=structured))
+
+        result = await tool.acall({"order_id": "ORD-1"})
+
+        assert json.loads(result) == structured
+
+    async def test_returns_structured_content_when_text_blocks_are_empty(self):
+        tool = self._make_tool(
+            CallToolResult(content=[TextContent(type="text", text="")], structuredContent={"eta_days": 3}))
+
+        assert json.loads(await tool.acall({"order_id": "ORD-1"})) == {"eta_days": 3}
+
+    async def test_returns_structured_content_when_text_is_whitespace(self):
+        tool = self._make_tool(
+            CallToolResult(content=[TextContent(type="text", text="  \n")], structuredContent={"eta_days": 3}))
+
+        assert json.loads(await tool.acall({"order_id": "ORD-1"})) == {"eta_days": 3}
+
+    async def test_structured_content_keeps_non_ascii_text(self):
+        tool = self._make_tool(CallToolResult(content=[], structuredContent={"city": "Zürich"}))
+
+        assert "Zürich" in await tool.acall({"order_id": "ORD-1"})
+
+    async def test_prefers_text_when_text_and_structured_content_present(self):
+        tool = self._make_tool(
+            CallToolResult(content=[TextContent(type="text", text="ORD-1 is delayed")],
+                           structuredContent={"shipping": "delayed"}))
+
+        assert await tool.acall({"order_id": "ORD-1"}) == "ORD-1 is delayed"
+
+    async def test_returns_empty_string_when_result_is_empty(self):
+        tool = self._make_tool(CallToolResult(content=[]))
+
+        assert await tool.acall({"order_id": "ORD-1"}) == ""
+
+    async def test_tool_error_returned_as_text_by_default(self):
+        tool = self._make_tool(
+            CallToolResult(content=[TextContent(type="text", text="Order ORD-404 does not exist")], isError=True))
+
+        result = await tool.acall({"order_id": "ORD-404"})
+
+        assert result == "MCPToolClient tool call failed: Order ORD-404 does not exist"
+
+    async def test_tool_error_raised_when_requested(self):
+        tool = self._make_tool(
+            CallToolResult(content=[TextContent(type="text", text="Order ORD-404 does not exist")], isError=True))
+
+        with pytest.raises(MCPToolError) as exc_info:
+            await tool.acall({"order_id": "ORD-404"}, raise_on_error=True)
+
+        assert exc_info.value.tool_name == "lookup_order"
+        assert exc_info.value.category == MCPErrorCategory.TOOL_ERROR
+        assert exc_info.value.url == "stdio:test-server"
+        assert "Order ORD-404 does not exist" in str(exc_info.value)
+        # The message reaches the LLM, so it must not expose the server URL or command
+        assert "stdio:test-server" not in str(exc_info.value)
+
+    async def test_tool_error_without_message_raises_with_placeholder(self):
+        tool = self._make_tool(CallToolResult(content=[], isError=True))
+
+        with pytest.raises(MCPToolError, match=r"\(no error message\)"):
+            await tool.acall({"order_id": "ORD-404"}, raise_on_error=True)
+
+    async def test_tool_error_without_message_returned_unchanged_by_default(self):
+        tool = self._make_tool(CallToolResult(content=[], isError=True))
+
+        assert await tool.acall({"order_id": "ORD-404"}) == "MCPToolClient tool call failed: "
+
+    async def test_tool_error_text_is_not_classified_as_authentication_failure(self):
+        """A tool's own "Forbidden" error must not be reported as an MCP authentication failure."""
+        tool = self._make_tool(
+            CallToolResult(content=[TextContent(type="text", text="GitHub API returned 403 Forbidden")], isError=True))
+
+        with pytest.raises(MCPToolError):
+            await tool.acall({"order_id": "ORD-1"}, raise_on_error=True)
+
+    async def test_tool_error_with_only_structured_content_raises_with_its_json(self):
+        tool = self._make_tool(CallToolResult(content=[], structuredContent={"error": "not_found"}, isError=True))
+
+        with pytest.raises(MCPToolError, match='"error": "not_found"'):
+            await tool.acall({"order_id": "ORD-404"}, raise_on_error=True)
+
+    async def test_client_error_returned_as_text_by_default(self):
+        tool = self._make_tool(MCPTimeoutError("stdio:test-server", TimeoutError("read timed out")))
+
+        result = await tool.acall({"order_id": "ORD-1"})
+
+        assert result == "MCPToolClient tool call failed: read timed out"
+
+    async def test_client_error_propagates_when_requested(self):
+        error = MCPTimeoutError("stdio:test-server", TimeoutError("read timed out"))
+        tool = self._make_tool(error)
+
+        with pytest.raises(MCPTimeoutError) as exc_info:
+            await tool.acall({"order_id": "ORD-1"}, raise_on_error=True)
+
+        assert exc_info.value is error
+
+
+class _InMemoryMCPClient(MCPBaseClient):
+    """MCP client connected to a FastMCP server through the MCP SDK's in-memory transport."""
+
+    def __init__(self, server: FastMCP):
+        super().__init__("stdio")
+        self._server = server
+
+    @property
+    def server_name(self):
+        return "memory:test-server"
+
+    @asynccontextmanager
+    async def connect_to_server(self):
+        async with create_connected_server_and_client_session(self._server) as session:
+            yield session
+
+
+def _create_orders_server() -> FastMCP:
+    s = FastMCP(name="Orders")
+
+    @s.tool()
+    async def lookup_order(order_id: str) -> str:
+        raise ValueError(f"Order {order_id} does not exist")
+
+    @s.tool()
+    async def structured_only(order_id: str) -> CallToolResult:
+        return CallToolResult(content=[], structuredContent={"order_id": order_id, "eta_days": 3})
+
+    return s
+
+
+class TestMCPToolClientWithServer:
+    """Test MCPToolClient.acall against a real FastMCP server over the MCP protocol."""
+
+    async def test_tool_error_returned_as_text_by_default(self):
+        async with _InMemoryMCPClient(_create_orders_server()) as client:
+            tool = await client.get_tool("lookup_order")
+            result = await tool.acall({"order_id": "ORD-404"})
+
+        assert result.startswith("MCPToolClient tool call failed: ")
+        assert "Order ORD-404 does not exist" in result
+
+    async def test_tool_error_raised_without_reconnecting(self):
+        async with _InMemoryMCPClient(_create_orders_server()) as client:
+            tool = await client.get_tool("lookup_order")
+            with patch.object(client, "_reconnect", new_callable=AsyncMock) as reconnect:
+                with pytest.raises(MCPToolError, match="Order ORD-404 does not exist"):
+                    await tool.acall({"order_id": "ORD-404"}, raise_on_error=True)
+
+        # A tool execution error is a valid response, not a connection problem
+        reconnect.assert_not_awaited()
+
+    async def test_structured_only_result_returned_as_json(self):
+        async with _InMemoryMCPClient(_create_orders_server()) as client:
+            tool = await client.get_tool("structured_only")
+            result = await tool.acall({"order_id": "ORD-1"})
+
+        assert json.loads(result) == {"order_id": "ORD-1", "eta_days": 3}
 
 
 class TestMCPStreamableHTTPClientSessionIdAndHeaders:

@@ -39,6 +39,8 @@ from nat.plugins.mcp.client.client_base import MCPBaseClient
 from nat.plugins.mcp.client.client_config import MCPClientConfig
 from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
 from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
+from nat.plugins.mcp.exceptions import MCPError
+from nat.plugins.mcp.exceptions import MCPErrorCategory
 from nat.plugins.mcp.utils import truncate_session_id
 from nat.runtime.session import SESSION_COOKIE_NAME
 
@@ -89,13 +91,24 @@ class PerUserMCPFunctionGroup(FunctionGroup):
         self.user_id: str | None = None
 
 
-def mcp_per_user_tool_function(tool, client: MCPBaseClient):
+async def _acall_tool(tool, args: dict, raise_on_tool_error: bool) -> str:
+    """Call an MCP tool client, passing `raise_on_error` only when it is enabled.
+
+    Tool clients that predate the `raise_on_error` keyword keep working with the default configuration.
+    """
+    if raise_on_tool_error:
+        return await tool.acall(args, raise_on_error=True)
+    return await tool.acall(args)
+
+
+def mcp_per_user_tool_function(tool, client: MCPBaseClient, raise_on_tool_error: bool = False):
     """
     Create a per-user NAT function for an MCP tool.
 
     Args:
         tool: The MCP tool to create a function for
         client: The MCP client to use for the function
+        raise_on_tool_error: Raise tool call failures instead of returning the error message as the output
 
     Returns:
         The NAT function
@@ -111,7 +124,7 @@ def mcp_per_user_tool_function(tool, client: MCPBaseClient):
 
             if tool_input:
                 args = tool_input.model_dump(exclude_none=True, mode='json')
-                return await mcp_tool.acall(args)
+                return await _acall_tool(mcp_tool, args, raise_on_tool_error)
 
             # kwargs arrives with all optional fields set to None because NAT's framework
             # converts the input dict to a Pydantic model (filling in all Field(default=None)),
@@ -123,8 +136,10 @@ def mcp_per_user_tool_function(tool, client: MCPBaseClient):
             validated_input = mcp_tool.input_schema.model_validate(
                 _drop_invalid_none_values(kwargs, mcp_tool.input_schema))
             args = validated_input.model_dump(exclude_none=True, mode='json')
-            return await mcp_tool.acall(args)
+            return await _acall_tool(mcp_tool, args, raise_on_tool_error)
         except Exception as e:
+            if raise_on_tool_error:
+                raise
             logger.warning("Error calling tool %s", tool.name, exc_info=True)
             return str(e)
 
@@ -492,6 +507,8 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
     """
     from nat.builder.function import FunctionInfo
 
+    raise_on_tool_error = function_group.get_config().raise_on_tool_error
+
     def _convert_from_str(input_str: str) -> tool.input_schema:
         return tool.input_schema.model_validate_json(input_str)
 
@@ -499,7 +516,7 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
         """Invoke the resolved MCP tool with the given arguments."""
         if tool_input:
             args = tool_input.model_dump(exclude_none=True, mode='json')
-            return await session_tool.acall(args)
+            return await _acall_tool(session_tool, args, raise_on_tool_error)
 
         # kwargs arrives with all optional fields set to None because NAT's framework
         # converts the input dict to a Pydantic model (filling in all Field(default=None)),
@@ -511,7 +528,13 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
         validated_input = session_tool.input_schema.model_validate(
             _drop_invalid_none_values(kwargs, session_tool.input_schema))
         args = validated_input.model_dump(exclude_none=True, mode='json')
-        return await session_tool.acall(args)
+        return await _acall_tool(session_tool, args, raise_on_tool_error)
+
+    def _call_failed(message: str, category: MCPErrorCategory) -> str:
+        """Return the failure message as the tool output, or raise it when configured to."""
+        if raise_on_tool_error:
+            raise MCPError(message, url=function_group.mcp_client_server_name or "unknown", category=category)
+        return message
 
     async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
         """Response function for the session-aware tool."""
@@ -521,14 +544,14 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
 
             # If no session is available and default-user fallback is disabled, deny the call
             if function_group._shared_auth_provider and session_id is None:
-                return "User not authorized to call the tool"
+                return _call_failed("User not authorized to call the tool", MCPErrorCategory.AUTHENTICATION)
 
             # Check if this is the default user - if so, use base client directly
             if (not function_group._shared_auth_provider or session_id == function_group._default_user_id):
                 # Use base client directly for default user
                 client = function_group.mcp_client
                 if client is None or not client.is_connected:
-                    return "Tool temporarily unavailable. Try again."
+                    return _call_failed("Tool temporarily unavailable. Try again.", MCPErrorCategory.CONNECTION)
                 session_tool = await client.get_tool(tool.name)
                 return await _invoke_tool(session_tool, tool_input, kwargs)
 
@@ -536,13 +559,15 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
             # entire tool invocation, preventing cleanup from closing the
             # underlying session mid-call.
             if session_id is None:
-                return "Tool temporarily unavailable. Try again."
+                return _call_failed("Tool temporarily unavailable. Try again.", MCPErrorCategory.CONNECTION)
             async with function_group._session_usage_context(session_id) as client:
                 if client is None or not client.is_connected:
-                    return "Tool temporarily unavailable. Try again."
+                    return _call_failed("Tool temporarily unavailable. Try again.", MCPErrorCategory.CONNECTION)
                 session_tool = await client.get_tool(tool.name)
                 return await _invoke_tool(session_tool, tool_input, kwargs)
         except Exception as e:
+            if raise_on_tool_error:
+                raise
             logger.warning("Error calling tool %s", tool.name, exc_info=True)
             return str(e)
 
@@ -805,7 +830,7 @@ async def per_user_mcp_client_function_group(config: PerUserMCPClientConfig, _bu
             description = override.description if override and override.description else tool.description
 
             # Create the tool function according to configuration
-            tool_fn = mcp_per_user_tool_function(tool, client)
+            tool_fn = mcp_per_user_tool_function(tool, client, raise_on_tool_error=config.raise_on_tool_error)
 
             input_schema = tool_fn.input_schema
             # Convert NoneType sentinel to None for FunctionGroup.add_function signature
