@@ -86,7 +86,18 @@ class Mem0Editor(MemoryEditor):
 
         user_id = kwargs.pop("user_id")  # Ensure user ID is in keyword arguments
 
-        search_result = await self._client.search(query, user_id=user_id, top_k=top_k, output_format="v1.1", **kwargs)
+        # Mem0 2.x requires entity identifiers inside filters for search.
+        # Keep the required user scope even when callers supply additional filters.
+        entity_filters = {"user_id": user_id}
+        for name in ("agent_id", "app_id", "run_id"):
+            if name in kwargs:
+                entity_filters[name] = kwargs.pop(name)
+        filters = kwargs.pop("filters", None)
+        if filters:
+            filters = {"AND": [entity_filters, filters]}
+        else:
+            filters = entity_filters
+        search_result = await self._client.search(query, filters=filters, top_k=top_k, **kwargs)
 
         # Construct MemoryItem instances
         memories = []

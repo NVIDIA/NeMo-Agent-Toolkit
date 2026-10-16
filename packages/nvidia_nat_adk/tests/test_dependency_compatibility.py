@@ -13,23 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pathlib
-import tomllib
+from importlib import metadata
 
+import pytest
 from packaging.requirements import Requirement
-from packaging.version import Version
 
 
-def test_adk_dependencies_cap_opentelemetry_exporter_at_compatible_version():
-    """Verify the ADK package prevents an incompatible split OpenTelemetry stack."""
-    pyproject_path = pathlib.Path(__file__).parents[1] / "pyproject.toml"
-    with pyproject_path.open("rb") as pyproject_file:
-        dependencies = tomllib.load(pyproject_file)["tool"]["setuptools_dynamic_dependencies"]["dependencies"]
+@pytest.mark.parametrize("package", ["google-adk", "opentelemetry-exporter-otlp", "opentelemetry-sdk"])
+def test_installed_opentelemetry_dependencies_are_compatible(package):
+    """Check the installed stack against upstream requirements, including ADK 2.x.
 
-    parsed_requirements = (Requirement(dependency) for dependency in dependencies if "{version}" not in dependency)
-    exporter_requirement = next(requirement for requirement in parsed_requirements
-                                if requirement.name == "opentelemetry-exporter-otlp")
-
-    assert Version("1.41.1") in exporter_requirement.specifier
-    for incompatible_version in ("1.42.0", "1.44.0", "2.0.0"):
-        assert Version(incompatible_version) not in exporter_requirement.specifier
+    ADK 1.x needed an exporter cap below 1.42. ADK 2.x supports newer exporters;
+    retaining the old cap conflicts with current framework integrations.
+    """
+    requirements = [Requirement(dependency) for dependency in metadata.requires(package) or []]
+    telemetry_requirements = [
+        requirement for requirement in requirements if requirement.name.startswith("opentelemetry-") and (
+            requirement.marker is None or requirement.marker.evaluate({"extra": ""}))
+    ]
+    assert telemetry_requirements, f"No OpenTelemetry requirements found for {package}"
+    for requirement in telemetry_requirements:
+        assert metadata.version(requirement.name) in requirement.specifier, f"{package} requires {requirement}"

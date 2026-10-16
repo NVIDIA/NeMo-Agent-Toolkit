@@ -23,7 +23,6 @@ Some NeMo Agent Toolkit capabilities ship as separate extras. Install only what 
 | Extra | Provides | Install |
 |---|---|---|
 | `[eval]` | `nat eval` runtime — workflow execution, dataset readers, evaluators | `uv add "nvidia-nat[eval]"` |
-| `[ragas]` | RAGAS evaluators (AnswerAccuracy, ResponseGroundedness, …) | `uv add "nvidia-nat[ragas]"` |
 | `[config-optimizer]` | `nat optimize` CLI for hyperparameter tuning (Optuna) and prompt evolution (GA) | `uv add "nvidia-nat[config-optimizer]"` |
 
 Verify each extra with the matching `--help` (e.g. `nat optimize --help`). If the subcommand prints `Error: No such command`, the extra isn't installed yet.

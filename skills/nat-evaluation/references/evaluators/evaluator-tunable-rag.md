@@ -8,7 +8,7 @@
 - Your agent retrieves context and generates a response based on it
 - You need a single evaluator that produces multiple sub-scores (coverage, correctness, relevance)
 - You want to tune the relative weight of those sub-scores without writing custom Python
-- Fallback when `ragas` is not installed
+- Reference-based accuracy or retrieved-context quality checks without a separate evaluation framework
 
 ## Config fields
 

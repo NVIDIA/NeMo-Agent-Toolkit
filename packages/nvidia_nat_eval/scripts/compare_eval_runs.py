@@ -16,7 +16,7 @@
 """Compare two eval run output directories.
 
 This script compares evaluator outputs from two run directories.
-By default it prioritizes common files (RAGAS, trajectory, and tunable RAG),
+By default it prioritizes common files (trajectory, and tunable RAG),
 and it also auto-discovers any additional ``*_output.json`` evaluator files.
 
 It prints:

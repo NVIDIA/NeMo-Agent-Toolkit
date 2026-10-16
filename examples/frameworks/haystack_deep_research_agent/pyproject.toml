@@ -38,7 +38,7 @@ dependencies = [
   "haystack-ai>=2.18.1,<3.0.0",
   "nvidia-haystack~=0.3.0",
   "opensearch-haystack~=4.2",
-  "pypdf~=6.5",
+  "pypdf~=6.19",
   "trafilatura~=2.0",
   "urllib3>=2.7.0,<3.0.0",
 ]

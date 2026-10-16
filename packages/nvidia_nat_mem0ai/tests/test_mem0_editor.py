@@ -158,3 +158,72 @@ async def test_remove_items_missing_arguments(mem0_editor: Mem0Editor):
     result = await mem0_editor.remove_items()
 
     assert result is None
+
+
+async def test_search_uses_real_mem0_v2_filter_contract(monkeypatch):
+    import json
+
+    import httpx
+    from mem0 import AsyncMemoryClient
+    from mem0.client import main
+
+    def validate(client):
+        client.org_id = "org1"
+        client.project_id = "project1"
+        return "test@example.com"
+
+    monkeypatch.setattr(AsyncMemoryClient, "_validate_api_key", validate)
+    monkeypatch.setattr(main, "capture_client_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(main, "_maybe_alias_anon_to_email", lambda *args: None)
+    monkeypatch.setattr(main, "get_user_id", lambda: "test")
+    requests = []
+
+    def respond(request):
+        requests.append(request)
+        return httpx.Response(200, json={"results": []})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http_client:
+        client = AsyncMemoryClient(api_key="test", client=http_client)
+        editor = Mem0Editor(client)
+        extra_filters = {"categories": {"contains": "vegetarian"}}
+        assert await editor.search("food", user_id="user123", run_id="run1", filters=extra_filters) == []
+
+    payload = json.loads(requests[0].content)
+    assert requests[0].url.path == "/v3/memories/search/"
+    assert payload["filters"] == {"AND": [{"user_id": "user123", "run_id": "run1"}, extra_filters]}
+    assert "user_id" not in payload
+    assert extra_filters == {"categories": {"contains": "vegetarian"}}
+
+
+@pytest.mark.parametrize("requested_org, raises", [("org1", False), ("other-org", True)])
+async def test_memory_factory_uses_api_key_membership(monkeypatch, requested_org, raises):
+    from unittest.mock import MagicMock
+
+    from mem0 import AsyncMemoryClient
+    from mem0.client import main
+
+    from nat.plugins.mem0ai.memory import Mem0MemoryClientConfig
+    from nat.plugins.mem0ai.memory import mem0_memory_client
+
+    clients = []
+
+    def validate(client):
+        client.org_id = "org1"
+        client.project_id = "project1"
+        clients.append(client)
+        return "test@example.com"
+
+    monkeypatch.setenv("MEM0_API_KEY", "test")
+    monkeypatch.setattr(AsyncMemoryClient, "_validate_api_key", validate)
+    monkeypatch.setattr(main, "capture_client_event", lambda *args, **kwargs: None)
+    monkeypatch.setattr(main, "_maybe_alias_anon_to_email", lambda *args: None)
+    monkeypatch.setattr(main, "get_user_id", lambda: "test")
+    config = Mem0MemoryClientConfig(org_id=requested_org, project_id="project1", do_auto_retry=False)
+    if raises:
+        with pytest.raises(ValueError, match="membership"):
+            async with mem0_memory_client(config, MagicMock()):
+                pytest.fail("Mismatched tenant must not yield a memory editor")
+    else:
+        async with mem0_memory_client(config, MagicMock()) as editor:
+            assert isinstance(editor, Mem0Editor)
+    assert clients[0].async_client.is_closed

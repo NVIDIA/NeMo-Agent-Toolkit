@@ -33,7 +33,7 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[langchain,llama-index,mcp,profiler,ragas,test] == {version}",
+  "nvidia-nat[langchain,llama-index,mcp,profiler,test] == {version}",
   "nemo-agent-toolkit-tavily>=0.1.0",
   "langchain-tavily>=0.2.18,<1.0.0",
   "nat_alert_triage_agent",
@@ -42,7 +42,7 @@ dependencies = [
   "ipykernel",
   "nbclient~=0.10",
   "pygments>=2.20.0,<3.0.0",
-  "python-dotenv[cli]~=1.1.1",
+  "python-dotenv[cli]~=1.2",
 ]
 
 [tool.uv.sources]

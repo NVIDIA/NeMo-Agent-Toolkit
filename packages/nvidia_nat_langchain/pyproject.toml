@@ -59,7 +59,7 @@ dependencies = [
   "nvidia-nat-core == {version}",
   "nvidia-nat-eval == {version}",
   "nvidia-nat-opentelemetry == {version}",
-  "langchain>=1.3.3,<2.0.0",
+  "langchain>=1.3.9,<2.0.0",
   "langchain-classic>=1.0.7,<2.0.0",
   "langchain-core>=1.4.0,<2.0.0",
   "langgraph>=1.0.5,<2.0.0",
@@ -80,9 +80,9 @@ huggingface = ["langchain-huggingface>=1.2.2,<2.0.0"]
 judge = ["openevals>=0.1.3,<1.0.0"]
 litellm = ["langchain-litellm>=0.6.5,<1.0.0"]
 milvus = ["langchain-milvus>=0.3.3,<1.0.0"]
-nvidia = ["langchain-nvidia-ai-endpoints>=1.4.1,<2.0.0"]
+nvidia = ["langchain-nvidia-ai-endpoints>=1.4.2,<2.0.0"]
 oci = ["langchain-oci>=0.2.4,<1.0.0"]
-openai = ["langchain-openai>=1.1.6,<2.0.0"]
+openai = ["langchain-openai>=1.1.14,<2.0.0"]
 
 all = [
   # Self-references must stay unversioned: {version} bakes the sha-dependent scm version into uv.lock
