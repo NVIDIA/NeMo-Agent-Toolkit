@@ -31,9 +31,10 @@ def _decode(raw: bytes | None) -> str:
     return raw.decode(errors="replace").replace("\r\n", "\n").replace("\r", "\n")
 
 
-async def run_command(
-    *args: str, check: bool = True, text: bool = False, capture: bool = True
-) -> subprocess.CompletedProcess:
+async def run_command(*args: str,
+                      check: bool = True,
+                      text: bool = False,
+                      capture: bool = True) -> subprocess.CompletedProcess:
     """Run an external command without blocking the event loop.
 
     The registry handlers shell out to package managers (``uv pip install``,

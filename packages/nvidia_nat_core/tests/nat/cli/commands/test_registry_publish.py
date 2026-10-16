@@ -54,8 +54,8 @@ def _fake_registry() -> MagicMock:
 
 async def _run_publish() -> None:
     with (
-        patch("nat.cli.type_registry.GlobalTypeRegistry.get", return_value=_fake_registry()),
-        patch("nat.registry_handlers.package_utils.build_artifact", _slow_build),
+            patch("nat.cli.type_registry.GlobalTypeRegistry.get", return_value=_fake_registry()),
+            patch("nat.registry_handlers.package_utils.build_artifact", _slow_build),
     ):
         await publish_mod.publish_artifact(MagicMock(), package_root=".")
 
@@ -87,8 +87,7 @@ async def test_publish_artifact_does_not_block_the_event_loop() -> None:
     await task
 
     assert during > 0, (
-        "event loop was starved for the whole `uv build`; build_artifact() must be offloaded with asyncio.to_thread"
-    )
+        "event loop was starved for the whole `uv build`; build_artifact() must be offloaded with asyncio.to_thread")
 
 
 async def test_publish_artifact_offloads_the_build_to_a_worker_thread() -> None:
@@ -103,8 +102,7 @@ async def test_publish_artifact_offloads_the_build_to_a_worker_thread() -> None:
 
     assert build_thread, "build_artifact() was never called; the test is not exercising the path"
     assert build_thread[0] is not threading.current_thread(), (
-        "build_artifact() ran on the event loop thread; it must be offloaded with asyncio.to_thread"
-    )
+        "build_artifact() ran on the event loop thread; it must be offloaded with asyncio.to_thread")
 
 
 async def test_publish_artifact_still_reports_build_failures() -> None:
@@ -114,8 +112,8 @@ async def test_publish_artifact_still_reports_build_failures() -> None:
         raise RuntimeError("wheel build failed")
 
     with (
-        patch("nat.cli.type_registry.GlobalTypeRegistry.get", return_value=_fake_registry()),
-        patch("nat.registry_handlers.package_utils.build_artifact", _boom),
+            patch("nat.cli.type_registry.GlobalTypeRegistry.get", return_value=_fake_registry()),
+            patch("nat.registry_handlers.package_utils.build_artifact", _boom),
     ):
         # must not raise: publish_artifact logs and returns
         await publish_mod.publish_artifact(MagicMock(), package_root=".")

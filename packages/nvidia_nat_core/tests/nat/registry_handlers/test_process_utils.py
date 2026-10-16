@@ -56,9 +56,8 @@ class _Heartbeat:
         await asyncio.sleep(0.02)  # let it establish a baseline
         return self
 
-    async def __aexit__(
-        self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: TracebackType | None
-    ) -> None:
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc: BaseException | None,
+                        tb: TracebackType | None) -> None:
         self._stop.set()
         if self._task is not None:
             await self._task
@@ -236,8 +235,7 @@ async def test_run_command_can_leave_output_inherited_for_interactive_prompts():
         assert result.returncode == 0
         assert result.stdout is None, "output should stream, not be captured"
         assert "Enter your PyPI username: " in captured.read_text(), (
-            "the prompt never reached the terminal; stdout was captured instead"
-        )
+            "the prompt never reached the terminal; stdout was captured instead")
     finally:
         captured.unlink(missing_ok=True)
 

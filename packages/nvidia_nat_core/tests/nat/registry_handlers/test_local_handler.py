@@ -124,8 +124,8 @@ async def test_local_handler_remove(mock_run: MagicMock,
 
 
 async def test_local_handler_remove_keeps_event_loop_responsive(local_registry_channel: dict,
-                                                                 global_settings: Settings,
-                                                                 registry: TypeRegistry):
+                                                                global_settings: Settings,
+                                                                registry: TypeRegistry):
     """`remove()` must not block the event loop while the package manager runs.
 
     `uv pip uninstall` is a child process that can take seconds. When this was
