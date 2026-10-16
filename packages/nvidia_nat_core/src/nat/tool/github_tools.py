@@ -256,6 +256,10 @@ async def github_tool(config: GithubGroupConfig, _builder: Builder):
             results = []
             for issue in issues_list.filter_parameters:
                 params = issue.model_dump(exclude_unset=True, exclude_none=True)
+                # GitHub reads `labels` as one comma-separated value. Passing the list would repeat the query
+                # parameter, and GitHub would then filter by the last label only.
+                if "labels" in params:
+                    params["labels"] = ",".join(params["labels"])
                 response = await client.get(url, params=params)
                 response.raise_for_status()
                 results.append(response.json())
