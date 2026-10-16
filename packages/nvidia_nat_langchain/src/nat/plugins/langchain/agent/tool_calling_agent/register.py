@@ -229,6 +229,10 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                                                         start_on="human",
                                                         include_system=True)
             state = ToolCallAgentGraphState(messages=messages)
+            # A turn's tool calls are only sent once the graph runs them: at max_iterations the graph
+            # rejects the next tool request, and the client must not see a call that never runs.
+            held_tool_call_chunks: list[ChatResponseChunk] = []
+            held_step = None
 
             async for msg, metadata in graph.astream(
                     state,
@@ -238,6 +242,11 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                     continue
                 if metadata.get("langgraph_node") != "agent":
                     continue
+                # a new agent step means the tool node ran the held calls
+                if held_tool_call_chunks and metadata.get("langgraph_step") != held_step:
+                    for held in held_tool_call_chunks:
+                        yield held
+                    held_tool_call_chunks = []
 
                 # Each agent LLM call reports its own usage; a turn can make several (one per tool
                 # round), so they are summed rather than overwritten.
@@ -272,19 +281,25 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                                                     name=tc.get("name"),
                                                     arguments=args,
                                                 )))
-                    yield ChatResponseChunk(
-                        id=chunk_id,
-                        choices=[
-                            ChatResponseChunkChoice(
-                                index=0,
-                                delta=ChoiceDelta(tool_calls=delta_tool_calls),
-                                finish_reason=None,
-                            )
-                        ],
-                        created=datetime.datetime.now(datetime.UTC),
-                        model=UNKNOWN_MODEL_SENTINEL,
-                        object="chat.completion.chunk",
-                    )
+                    held_tool_call_chunks.append(
+                        ChatResponseChunk(
+                            id=chunk_id,
+                            choices=[
+                                ChatResponseChunkChoice(
+                                    index=0,
+                                    delta=ChoiceDelta(tool_calls=delta_tool_calls),
+                                    finish_reason=None,
+                                )
+                            ],
+                            created=datetime.datetime.now(datetime.UTC),
+                            model=UNKNOWN_MODEL_SENTINEL,
+                            object="chat.completion.chunk",
+                        ))
+                    held_step = metadata.get("langgraph_step")
+
+            # the graph finished, so the last held calls ran (e.g. a return_direct tool)
+            for held in held_tool_call_chunks:
+                yield held
 
             if include_usage and saw_usage:
                 yield ChatResponseChunk(
