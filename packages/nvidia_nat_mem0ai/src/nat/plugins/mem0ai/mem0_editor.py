@@ -35,9 +35,7 @@ class Mem0Editor(MemoryEditor):
         """
         Initialize class with Predefined Mem0 Client.
 
-        Args:
-        mem0_client (AsyncMemoryClient): Preinstantiated
-        AsyncMemoryClient object for Mem0.
+        :param mem0_client: Preinstantiated AsyncMemoryClient object for Mem0.
         """
         self._client = mem0_client
 
@@ -88,15 +86,11 @@ class Mem0Editor(MemoryEditor):
         """
         Retrieve items relevant to the given query.
 
-        Args:
-            query (str): The query string to match.
-            top_k (int): Maximum number of items to return.
-            kwargs: Other keyword arguments for user-scoped search. Agent entity
-                filters are unsupported because Mem0 stores agent memories separately.
-
-        Returns:
-            list[MemoryItem]: The most relevant
-            MemoryItems for the given query.
+        :param query: The query string to match.
+        :param top_k: Maximum number of items to return.
+        :param kwargs: Other keyword arguments for user-scoped search. Agent entity
+            filters are unsupported because Mem0 stores agent memories separately.
+        :returns: The most relevant MemoryItems for the given query.
         """
 
         user_id = kwargs.pop("user_id")  # Ensure user ID is in keyword arguments
