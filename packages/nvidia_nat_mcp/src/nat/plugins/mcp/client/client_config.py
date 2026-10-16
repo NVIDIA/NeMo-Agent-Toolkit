@@ -106,6 +106,12 @@ class MCPClientBaseConfig(FunctionGroupBaseConfig):
         default=timedelta(seconds=300),
         description="Timeout (in seconds) for the MCP auth flow. When the tool call requires interactive \
         authentication, this timeout is used. Defaults to 300 seconds.")
+    raise_on_tool_error: bool = Field(
+        default=False,
+        description="Whether a failed tool call raises an exception instead of returning the error message as the \
+        tool output. This includes tool results that the server marks with `isError`, timeouts, and connection \
+        failures. When True, agent retry and error-handling settings apply to the failed call. \
+        Defaults to False.")
     reconnect_enabled: bool = Field(
         default=True,
         description="Whether to enable reconnecting to the MCP server if the connection is lost. \

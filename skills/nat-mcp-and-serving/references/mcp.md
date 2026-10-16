@@ -149,6 +149,7 @@ function_groups:
 | `tools/list` succeeds but `tools/call` times out | MCP server not responding to tool invocations | Increase `tool_call_timeout`. Check server logs for errors on the tool handler |
 | Agent generates text but never invokes tools | `use_native_tool_calling: true` with incompatible LLM | Switch to `use_native_tool_calling: false` (text-based ReAct parsing) |
 | Intermittent connection resets | MCP server dropping idle SSE connections | Set `reconnect_enabled: true` and `reconnect_max_attempts: 3` |
+| Agent ignores `tool_call_max_retries` or `pass_tool_call_errors_to_agent: false` for MCP tools | MCP tool failures are returned as text output by default | Set `raise_on_tool_error: true` on the `mcp_client` or `per_user_mcp_client` function group |
 | `ValueError: url is required` | Missing URL in `mcp_client` server config | Ensure `server.url` is set and the env var resolves (e.g., `${MCP_URL}` is in the environment) |
 
 ## Exposing a Workflow as an MCP Server
