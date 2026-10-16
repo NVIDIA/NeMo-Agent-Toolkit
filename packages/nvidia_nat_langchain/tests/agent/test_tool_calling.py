@@ -837,3 +837,80 @@ def test_extract_token_usage_omits_cached_tokens_when_unreported():
 def test_extract_token_usage_returns_none_without_any_usage():
     """No usage at all stays None, so a caller can tell it from a genuine zero."""
     assert extract_token_usage(AIMessage(content="x")) is None
+
+
+async def _run_tool_calling_agent(tool_calls_before_answer: int | None, max_iterations: int, stream: bool = False):
+    """Run the agent with a model that requests the tool `tool_calls_before_answer` times (always if None)."""
+    from langchain_core.language_models import BaseChatModel
+    from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import ChatResult
+    from langchain_core.tools import tool
+
+    from nat.plugins.langchain.agent.tool_calling_agent.register import tool_calling_agent_workflow
+
+    calls = []
+
+    @tool
+    def counter(q: str) -> str:
+        """Counts its calls."""
+        calls.append(q)
+        return f"call {len(calls)}"
+
+    class ScriptedToolCallLLM(BaseChatModel):
+        turns: int = 0
+
+        @property
+        def _llm_type(self) -> str:
+            return "scripted-tool-call"
+
+        def bind_tools(self, tools, **kwargs):
+            return self
+
+        def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+            self.turns += 1
+            if tool_calls_before_answer is not None and self.turns > tool_calls_before_answer:
+                message = AIMessage(content="all done")
+            else:
+                message = AIMessage(content="",
+                                    tool_calls=[{
+                                        "name": "counter", "args": {
+                                            "q": "x"
+                                        }, "id": f"call-{self.turns}"
+                                    }])
+            return ChatResult(generations=[ChatGeneration(message=message)])
+
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=ScriptedToolCallLLM())
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = ToolCallAgentWorkflowConfig(tool_names=["counter"], llm_name="llm", max_iterations=max_iterations)
+    async with tool_calling_agent_workflow(config, builder) as function_info:
+        if stream:
+            from nat.data_models.api_server import ChatRequestOrMessage
+
+            chunks = [chunk async for chunk in function_info.stream_fn(ChatRequestOrMessage(input_message="hi"))]
+            result = "".join(chunk.choices[0].delta.content or "" for chunk in chunks if chunk.choices)
+        else:
+            result = await function_info.single_fn("hi")
+    return result, calls
+
+
+@pytest.mark.parametrize("max_iterations", [1, 2, 5])
+async def test_tool_calling_agent_never_exceeds_max_iterations(max_iterations):
+    """`max_iterations` is the maximum number of tool calls the agent may perform."""
+    result, calls = await _run_tool_calling_agent(None, max_iterations)
+    assert len(calls) == max_iterations
+    assert "could not produce a final answer" in result
+
+
+@pytest.mark.parametrize("max_iterations", [1, 2, 5])
+async def test_tool_calling_agent_can_use_all_max_iterations_then_answer(max_iterations):
+    result, calls = await _run_tool_calling_agent(max_iterations, max_iterations)
+    assert len(calls) == max_iterations
+    assert result == "all done"
+
+
+@pytest.mark.parametrize("max_iterations", [1, 2, 5])
+async def test_tool_calling_agent_stream_never_exceeds_max_iterations(max_iterations):
+    result, calls = await _run_tool_calling_agent(None, max_iterations, stream=True)
+    assert len(calls) == max_iterations
+    assert "could not produce a final answer" in result

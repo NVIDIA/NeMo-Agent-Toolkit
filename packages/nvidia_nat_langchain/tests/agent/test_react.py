@@ -2003,3 +2003,84 @@ def test_build_lc_config_ignores_unknown_model_sentinel():
     # a genuine per-request model is still forwarded as an override
     lc_config = _build_lc_config(5, "nvidia/nemotron-3.5-lightning-30b-a3b")
     assert lc_config["configurable"] == {"model_name": "nvidia/nemotron-3.5-lightning-30b-a3b"}
+
+
+def _counting_tool():
+    from langchain_core.tools import tool
+
+    calls = []
+
+    @tool
+    def counter(q: str) -> str:
+        """Counts its calls."""
+        calls.append(q)
+        return f"call {len(calls)}"
+
+    return counter, calls
+
+
+async def _run_react_agent(responses: list[str], max_tool_calls: int, per_user: bool = False, stream: bool = False):
+    from unittest.mock import AsyncMock
+
+    from langchain_core.language_models.fake_chat_models import FakeListChatModel
+    from langgraph.errors import GraphRecursionError
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+    from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+    from nat.plugins.langchain.agent.react_agent.register_per_user_agent import PerUserReActAgentWorkflowConfig
+    from nat.plugins.langchain.agent.react_agent.register_per_user_agent import per_user_react_agent_workflow
+
+    counter, calls = _counting_tool()
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=FakeListChatModel(responses=responses))
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config_type, workflow = ((PerUserReActAgentWorkflowConfig, per_user_react_agent_workflow) if per_user else
+                             (ReActAgentWorkflowConfig, react_agent_workflow))
+    config = config_type(tool_names=["counter"], llm_name="llm", max_tool_calls=max_tool_calls)
+    request = ChatRequestOrMessage(input_message="hi")
+    async with workflow(config, builder) as function_info:
+        if stream:
+            result = "".join([chunk.choices[0].delta.content async for chunk in function_info.stream_fn(request)])
+        else:
+            try:
+                result = await function_info.single_fn(request)
+            except GraphRecursionError as e:  # the graph raises once the limit is hit
+                result = e
+    return result, calls
+
+
+_REACT_TOOL_CALL = 'Thought: call the tool\nAction: counter\nAction Input: {"q": "x"}'
+
+
+@pytest.mark.parametrize("max_tool_calls", [1, 2, 5])
+async def test_react_agent_never_exceeds_max_tool_calls(max_tool_calls):
+    """`max_tool_calls` is the maximum number of tool calls the agent may take before answering."""
+    from langgraph.errors import GraphRecursionError
+
+    result, calls = await _run_react_agent([_REACT_TOOL_CALL] * 20, max_tool_calls)
+    assert len(calls) == max_tool_calls
+    assert isinstance(result, GraphRecursionError)
+
+
+@pytest.mark.parametrize("max_tool_calls", [1, 2, 5])
+async def test_react_agent_stream_never_exceeds_max_tool_calls(max_tool_calls):
+    result, calls = await _run_react_agent([_REACT_TOOL_CALL] * 20, max_tool_calls, stream=True)
+    assert len(calls) == max_tool_calls
+    assert "could not produce a final answer" in result
+
+
+@pytest.mark.parametrize("max_tool_calls", [1, 2, 5])
+async def test_per_user_react_agent_never_exceeds_max_tool_calls(max_tool_calls):
+    from langgraph.errors import GraphRecursionError
+
+    result, calls = await _run_react_agent([_REACT_TOOL_CALL] * 20, max_tool_calls, per_user=True)
+    assert len(calls) == max_tool_calls
+    assert isinstance(result, GraphRecursionError)
+
+
+@pytest.mark.parametrize("max_tool_calls", [1, 2, 5])
+async def test_react_agent_can_use_all_max_tool_calls_then_answer(max_tool_calls):
+    responses = [_REACT_TOOL_CALL] * max_tool_calls + ["Thought: done\nFinal Answer: all done"]
+    result, calls = await _run_react_agent(responses, max_tool_calls)
+    assert len(calls) == max_tool_calls
+    assert result == "all done"
