@@ -41,6 +41,20 @@ class Mem0Editor(MemoryEditor):
         """
         self._client = mem0_client
 
+    @staticmethod
+    def _validate_user_filters(filters: dict) -> None:
+        """Reject agent entity searches that cannot retain this editor's user scope."""
+        if "agent_id" in filters:
+            raise ValueError("Mem0Editor searches user-scoped memories; agent_id selects a separate entity scope. "
+                             "Use user-scoped metadata filters to select memories for a particular agent.")
+        for operator in ("AND", "OR", "NOT"):
+            clauses = filters.get(operator, [])
+            if isinstance(clauses, dict):
+                clauses = [clauses]
+            for clause in clauses:
+                if isinstance(clause, dict):
+                    Mem0Editor._validate_user_filters(clause)
+
     async def add_items(self, items: list[MemoryItem]) -> None:
         """
         Insert Multiple MemoryItems into the memory.
@@ -77,7 +91,8 @@ class Mem0Editor(MemoryEditor):
         Args:
             query (str): The query string to match.
             top_k (int): Maximum number of items to return.
-            kwargs: Other keyword arguments for search.
+            kwargs: Other keyword arguments for user-scoped search. Agent entity
+                filters are unsupported because Mem0 stores agent memories separately.
 
         Returns:
             list[MemoryItem]: The most relevant
@@ -85,15 +100,19 @@ class Mem0Editor(MemoryEditor):
         """
 
         user_id = kwargs.pop("user_id")  # Ensure user ID is in keyword arguments
+        agent_id = kwargs.pop("agent_id", None)
+        if agent_id is not None:
+            self._validate_user_filters({"agent_id": agent_id})
 
         # Mem0 2.x requires entity identifiers inside filters for search.
         # Keep the required user scope even when callers supply additional filters.
         entity_filters = {"user_id": user_id}
-        for name in ("agent_id", "app_id", "run_id"):
+        for name in ("app_id", "run_id"):
             if name in kwargs:
                 entity_filters[name] = kwargs.pop(name)
         filters = kwargs.pop("filters", None)
         if filters:
+            self._validate_user_filters(filters)
             filters = {"AND": [entity_filters, filters]}
         else:
             filters = entity_filters

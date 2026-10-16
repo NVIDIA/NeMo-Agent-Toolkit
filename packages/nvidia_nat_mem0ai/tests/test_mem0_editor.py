@@ -227,3 +227,47 @@ async def test_memory_factory_uses_api_key_membership(monkeypatch, requested_org
         async with mem0_memory_client(config, MagicMock()) as editor:
             assert isinstance(editor, Mem0Editor)
     assert clients[0].async_client.is_closed
+
+
+@pytest.mark.parametrize("scope",
+                         [
+                             {
+                                 "agent_id": "agent1"
+                             },
+                             {
+                                 "filters": {
+                                     "agent_id": "agent1"
+                                 }
+                             },
+                             {
+                                 "filters": {
+                                     "OR": [{
+                                         "agent_id": "agent1"
+                                     }, {
+                                         "user_id": "user123"
+                                     }]
+                                 }
+                             },
+                             {
+                                 "filters": {
+                                     "AND": [{
+                                         "NOT": {
+                                             "agent_id": "agent1"
+                                         }
+                                     }]
+                                 }
+                             },
+                         ])
+async def test_search_rejects_separate_agent_scope(mem0_editor, mock_mem0_client, scope):
+    with pytest.raises(ValueError, match="separate entity scope"):
+        await mem0_editor.search("query", user_id="user123", **scope)
+    mock_mem0_client.search.assert_not_called()
+
+
+async def test_search_agent_metadata_retains_user_scope(mem0_editor, mock_mem0_client):
+    mock_mem0_client.search.return_value = {"results": []}
+    metadata_filter = {"metadata": {"agent_id": "agent1"}}
+    await mem0_editor.search("query", user_id="user123", filters=metadata_filter)
+    sent_filters = mock_mem0_client.search.call_args.kwargs["filters"]
+    assert sent_filters == {"AND": [{"user_id": "user123"}, metadata_filter]}
+    assert metadata_filter == {"metadata": {"agent_id": "agent1"}}

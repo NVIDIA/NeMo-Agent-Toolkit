@@ -46,6 +46,9 @@ CrewAI 1.15.28 requires MCP 1.28.x. The toolkit uses that declared range without
 Mem0 2.x resolves organization and project membership from the API key. Explicit `org_id` and
 `project_id` settings must match the key's membership. Memory searches now use nested entity filters;
 the toolkit adapter preserves the required user scope when combining additional filters.
+The adapter manages user-scoped memories. Mem0 stores agent memories in a separate entity scope,
+so `agent_id` search filters now raise an explicit error. To select a user's memories by agent,
+store the agent identifier in memory metadata and search with a metadata filter.
 
 #### Redis Package Migration
 

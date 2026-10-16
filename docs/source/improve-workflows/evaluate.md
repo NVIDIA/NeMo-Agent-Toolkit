@@ -234,6 +234,11 @@ The Ragas integration has been removed. Install `nvidia-nat[eval,langchain]` and
 Set `include_context: true` for groundedness and context relevance; this supplies tool and custom event
 results in the legacy lane, or observation results in the ATIF lane. The final model answer is not added
 as evidence for its own groundedness. Set `enable_atif_evaluator: true` for ATIF input.
+Retrieved context is escaped and enclosed in separate named data blocks. `max_context_chars`
+limits these blocks, including delimiters, to 16,000 characters by default. Excess evidence is
+omitted in trajectory order and reported by `reasoning.context_truncated`. Adjust this limit
+for the judge's input capacity, reserving room for the question, answers, and rubric; it is a
+character budget rather than a token limit.
 
 The example configurations preserve the `accuracy`, `groundedness`, and `relevance` output names,
 but the prompts and scoring methodology differ from Ragas. Establish new quality gate baselines before comparing
