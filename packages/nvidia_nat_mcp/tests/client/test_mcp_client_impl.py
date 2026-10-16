@@ -320,3 +320,126 @@ class TestSessionToolSessionPath:
 
         assert result == "ok ping"
         assert acall_was_inside_context is True
+
+
+_NULLABLE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "issue_id": {
+            "type": "string"
+        },
+        "assignee": {
+            "type": ["string", "null"]
+        },
+        "note": {
+            "type": "string"
+        },
+        "filter": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "anyOf": [{
+                        "type": "string"
+                    }, {
+                        "type": "null"
+                    }]
+                }, "limit": {
+                    "type": "integer"
+                }
+            },
+            "required": ["label"],
+        },
+        "rows": {
+            "type": "array",
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "v": {
+                            "type": "integer"
+                        }, "note": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["v"],
+                },
+            },
+        },
+    },
+    "required": ["issue_id", "assignee"],
+}
+
+
+class _RecordingTool:
+    """Fake MCP tool that records the arguments sent to the server."""
+
+    def __init__(self) -> None:
+        from nat.plugins.mcp.utils import model_from_mcp_schema
+
+        self.name = "update_issue"
+        self.description = "desc"
+        self.input_schema = model_from_mcp_schema("update_issue", _NULLABLE_SCHEMA)
+        self.sent: dict[str, Any] | None = None
+
+    async def acall(self, args: dict[str, Any]) -> str:
+        self.sent = args
+        return "ok"
+
+
+async def _call_tool_fn(fn_info, tool: _RecordingTool, tool_args: dict[str, Any]) -> None:
+    # Same path as an agent tool call: the arguments are validated into the input schema, and FunctionInfo
+    # unpacks the model into keyword arguments for the tool function.
+    result = await fn_info.single_fn(tool.input_schema.model_validate(tool_args))
+    assert result == "ok"
+
+
+async def _send_through_per_user_tool(tool_args: dict[str, Any]) -> dict[str, Any] | None:
+    from nat.plugins.mcp.client.client_impl import mcp_per_user_tool_function
+
+    tool = _RecordingTool()
+    client = MagicMock()
+
+    async def get_tool(name):
+        return tool
+
+    client.get_tool = get_tool
+    await _call_tool_fn(mcp_per_user_tool_function(tool, client), tool, tool_args)
+    return tool.sent
+
+
+async def _send_through_session_tool(tool_args: dict[str, Any]) -> dict[str, Any] | None:
+    tool = _RecordingTool()
+    group = _make_group()
+    fake_client = _FakeMCPClient(tools={"update_issue": tool})
+    async with fake_client:
+        group.mcp_client = fake_client
+        await _call_tool_fn(mcp_session_tool_function(tool, group), tool, tool_args)
+    return tool.sent
+
+
+@pytest.fixture(name="send_tool_args", params=["per_user", "session"])
+def fixture_send_tool_args(request):
+    return _send_through_per_user_tool if request.param == "per_user" else _send_through_session_tool
+
+
+async def test_required_nullable_argument_keeps_explicit_null(send_tool_args):
+    """A required field must be present in the call even when its value is null (JSON Schema `required`)."""
+    sent = await send_tool_args({"issue_id": "ISS-1", "assignee": None})
+    assert sent == {"issue_id": "ISS-1", "assignee": None}
+
+
+async def test_nested_required_nullable_argument_keeps_explicit_null(send_tool_args):
+    sent = await send_tool_args({"issue_id": "ISS-1", "assignee": "bob", "filter": {"label": None}})
+    assert sent == {"issue_id": "ISS-1", "assignee": "bob", "filter": {"label": None}}
+
+
+async def test_optional_arguments_left_unset_are_not_sent(send_tool_args):
+    """Optional fields the model did not fill are left out, as many MCP servers reject extra nulls."""
+    sent = await send_tool_args({"issue_id": "ISS-1", "assignee": "bob", "filter": {"label": "bug"}})
+    assert sent == {"issue_id": "ISS-1", "assignee": "bob", "filter": {"label": "bug"}}
+
+
+async def test_optional_arguments_left_unset_in_nested_arrays_are_not_sent(send_tool_args):
+    sent = await send_tool_args({"issue_id": "ISS-1", "assignee": "bob", "rows": [[{"v": 1}], [{"v": 2}]]})
+    assert sent == {"issue_id": "ISS-1", "assignee": "bob", "rows": [[{"v": 1}], [{"v": 2}]]}
