@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import typing
 
 import pytest
 from langchain_core.agents import AgentAction
@@ -1980,6 +1981,92 @@ async def test_stream_fn_propagates_generic_exception(stream_fn_factory):
     with pytest.raises(RuntimeError, match="unexpected streaming error"):
         async for _ in stream_fn(request):
             pass
+
+
+def _react_workflow(per_user: bool):
+    from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+    from nat.plugins.langchain.agent.react_agent.register_per_user_agent import PerUserReActAgentWorkflowConfig
+    from nat.plugins.langchain.agent.react_agent.register_per_user_agent import per_user_react_agent_workflow
+
+    if per_user:
+        return PerUserReActAgentWorkflowConfig, per_user_react_agent_workflow
+    return ReActAgentWorkflowConfig, react_agent_workflow
+
+
+@pytest.mark.parametrize("per_user", [False, True], ids=["react_agent", "per_user_react_agent"])
+async def test_react_workflow_returns_parse_error_when_raise_on_parsing_failure_is_off(per_user):
+    """`raise_on_parsing_failure: false` returns the parsing error as the answer instead of raising."""
+    from unittest.mock import AsyncMock
+
+    from langchain_core.language_models.fake_chat_models import FakeListChatModel
+    from langchain_core.tools import tool
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+
+    @tool
+    def counter(q: str) -> str:
+        """Counts its calls."""
+        return "unused"
+
+    config_type, workflow = _react_workflow(per_user)
+    builder = AsyncMock()
+    # a Thought with no Action can't be parsed, so every attempt fails
+    builder.get_llm = AsyncMock(return_value=FakeListChatModel(responses=["Thought: still thinking"] * 5))
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = config_type(tool_names=["counter"], llm_name="llm", raise_on_parsing_failure=False)
+    async with workflow(config, builder) as function_info:
+        result = await function_info.single_fn(ChatRequestOrMessage(input_message="hi"))
+    assert "Thought: still thinking" in result
+
+
+@pytest.mark.parametrize("per_user", [False, True], ids=["react_agent", "per_user_react_agent"])
+async def test_react_workflow_runs_native_tool_calls_when_use_native_tool_calling_is_on(per_user):
+    """`use_native_tool_calling: true` runs the structured tool_calls the model returns."""
+    from unittest.mock import AsyncMock
+
+    from langchain_core.tools import tool
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+
+    calls = []
+
+    @tool
+    def counter(q: str) -> str:
+        """Counts its calls."""
+        calls.append(q)
+        return f"call {len(calls)}"
+
+    class NativeToolCallLLM(BaseChatModel):
+        turns: int = 0
+
+        @property
+        def _llm_type(self) -> str:
+            return "native-tool-call"
+
+        def bind_tools(self, tools: typing.Any, **kwargs: typing.Any) -> "NativeToolCallLLM":
+            return self
+
+        def _generate(self,
+                      messages: typing.Any,
+                      stop: typing.Any = None,
+                      run_manager: typing.Any = None,
+                      **kwargs: typing.Any) -> ChatResult:
+            self.turns += 1
+            if self.turns == 1:
+                message = AIMessage(content="", tool_calls=[{"name": "counter", "args": {"q": "x"}, "id": "call-1"}])
+            else:
+                message = AIMessage(content="Thought: done\nFinal Answer: all done")
+            return ChatResult(generations=[ChatGeneration(message=message)])
+
+    config_type, workflow = _react_workflow(per_user)
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=NativeToolCallLLM())
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = config_type(tool_names=["counter"], llm_name="llm", use_native_tool_calling=True)
+    async with workflow(config, builder) as function_info:
+        result = await function_info.single_fn(ChatRequestOrMessage(input_message="hi"))
+    assert calls == ["x"]
+    assert result == "all done"
 
 
 def test_build_lc_config_ignores_unknown_model_sentinel():
