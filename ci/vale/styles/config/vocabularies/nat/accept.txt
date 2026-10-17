@@ -187,6 +187,7 @@ spaCy
 Synap
 SQLAlchemy
 SSE
+Starlette
 stderr
 [Ss]treamable
 [Ss]ubcard(s?)

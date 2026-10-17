@@ -74,7 +74,6 @@ opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
 phoenix = ["nvidia-nat-phoenix == {version}"]
 profiler = ["nvidia-nat-profiler == {version}"]
 rag = ["nvidia-nat-rag == {version}"]
-ragas = ["nvidia-nat-ragas == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
 redis = ["nvidia-nat-redis == {version}"]
 s3 = ["nvidia-nat-s3 == {version}"]
@@ -116,7 +115,6 @@ most = [
   "nvidia-nat-opentelemetry == {version}",
   "nvidia-nat-phoenix == {version}",
   "nvidia-nat-profiler == {version}",
-  "nvidia-nat-ragas == {version}",
   "nvidia-nat-redis == {version}",
   "nvidia-nat-s3 == {version}",
   "nvidia-nat-security == {version}",
@@ -195,7 +193,7 @@ dev = [
   "setuptools >= 64",
   "setuptools_scm>=8",
   "twine~=6.0",
-  "uv==0.9.28", # align with .pre-commit-config.yaml
+  "uv>=0.11.15,<0.12", # patched releases compatible with crewai-cli
   "vale~=3.12",
   "yapf==0.43.0", # align with .pre-commit-config.yaml
   # documentation related dependencies
@@ -209,7 +207,7 @@ dev = [
   "sphinx-mermaid",
   "sphinx-reredirects~=1.1",
   # transitive dependencies
-  "werkzeug>=3.1.5",
+  "werkzeug>=3.1.9",
 ]
 
 [tool.setuptools]
@@ -254,7 +252,6 @@ nvidia-nat-opentelemetry = { path = "packages/nvidia_nat_opentelemetry", editabl
 nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
 nvidia-nat-profiler = { path = "packages/nvidia_nat_profiler", editable = true }
 nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
-nvidia-nat-ragas = { path = "packages/nvidia_nat_ragas", editable = true }
 nvidia-nat-mysql = { path = "packages/nvidia_nat_mysql", editable = true }
 nvidia-nat-redis = { path = "packages/nvidia_nat_redis", editable = true }
 nvidia-nat-s3 = { path = "packages/nvidia_nat_s3", editable = true }
