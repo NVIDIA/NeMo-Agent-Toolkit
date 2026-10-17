@@ -39,6 +39,7 @@ from nat.plugins.mcp.client.client_base import MCPBaseClient
 from nat.plugins.mcp.client.client_config import MCPClientConfig
 from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
 from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
+from nat.plugins.mcp.utils import SCHEMA_REQUIRED_FIELDS_ATTR
 from nat.plugins.mcp.utils import truncate_session_id
 from nat.runtime.session import SESSION_COOKIE_NAME
 
@@ -73,6 +74,41 @@ def _drop_invalid_none_values(args: dict, schema: type[BaseModel]) -> dict:
             continue
         filtered[key] = value
     return filtered
+
+
+def _drop_optional_none_values(value: object, dumped: object) -> object:
+    """Drop None values of optional model fields from ``dumped`` (the JSON dump of ``value``), at any depth."""
+    if isinstance(value, BaseModel):
+        fields = type(value).model_fields
+        schema_required = getattr(type(value), SCHEMA_REQUIRED_FIELDS_ATTR, frozenset())
+        filtered = {}
+        # The dump is keyed by field name (no aliases), so each key maps back to its attribute.
+        for key, item_dump in dumped.items():
+            item = getattr(value, key, item_dump)
+            if item is None:
+                if key in schema_required or (key in fields and fields[key].is_required()):
+                    filtered[key] = None
+                continue
+            filtered[key] = _drop_optional_none_values(item, item_dump)
+        return filtered
+    if isinstance(value, list | tuple):
+        return [_drop_optional_none_values(item, item_dump) for item, item_dump in zip(value, dumped)]
+    if isinstance(value, dict):
+        return {
+            key: _drop_optional_none_values(item, item_dump)
+            for (_, item), (key, item_dump) in zip(value.items(), dumped.items())
+        }
+    return dumped
+
+
+def _dump_tool_args(model: BaseModel) -> dict:
+    """Dump MCP tool arguments, leaving out None only for optional fields.
+
+    Optional fields arrive as None when the model did not fill them, and many MCP servers (e.g., Kaggle)
+    reject those extra nulls. A required field keeps an explicit None: JSON Schema requires the key to be
+    present, and null can be a valid value for it.
+    """
+    return _drop_optional_none_values(model, model.model_dump(mode='json'))
 
 
 class PerUserMCPFunctionGroup(FunctionGroup):
@@ -110,19 +146,19 @@ def mcp_per_user_tool_function(tool, client: MCPBaseClient):
             mcp_tool = await client.get_tool(tool.name)
 
             if tool_input:
-                args = tool_input.model_dump(exclude_none=True, mode='json')
+                args = _dump_tool_args(tool_input)
                 return await mcp_tool.acall(args)
 
             # kwargs arrives with all optional fields set to None because NAT's framework
             # converts the input dict to a Pydantic model (filling in all Field(default=None)),
             # then dumps it back to a dict. We need to strip out these None values because
             # many MCP servers (e.g., Kaggle) reject requests with excessive null fields.
-            # We re-validate here (yes, redundant) to leverage Pydantic's exclude_none with
-            # mode='json' for recursive None removal in nested models.
+            # We re-validate here (yes, redundant) so nested values are models again and
+            # _dump_tool_args can drop None from optional fields at every level.
             # Reference: function_info.py:_convert_input_pydantic
             validated_input = mcp_tool.input_schema.model_validate(
                 _drop_invalid_none_values(kwargs, mcp_tool.input_schema))
-            args = validated_input.model_dump(exclude_none=True, mode='json')
+            args = _dump_tool_args(validated_input)
             return await mcp_tool.acall(args)
         except Exception as e:
             logger.warning("Error calling tool %s", tool.name, exc_info=True)
@@ -498,19 +534,19 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
     async def _invoke_tool(session_tool, tool_input: BaseModel | None, kwargs: dict) -> str:
         """Invoke the resolved MCP tool with the given arguments."""
         if tool_input:
-            args = tool_input.model_dump(exclude_none=True, mode='json')
+            args = _dump_tool_args(tool_input)
             return await session_tool.acall(args)
 
         # kwargs arrives with all optional fields set to None because NAT's framework
         # converts the input dict to a Pydantic model (filling in all Field(default=None)),
         # then dumps it back to a dict. We need to strip out these None values because
         # many MCP servers (e.g., Kaggle) reject requests with excessive null fields.
-        # We re-validate here (yes, redundant) to leverage Pydantic's exclude_none with
-        # mode='json' for recursive None removal in nested models.
+        # We re-validate here (yes, redundant) so nested values are models again and
+        # _dump_tool_args can drop None from optional fields at every level.
         # Reference: function_info.py:_convert_input_pydantic
         validated_input = session_tool.input_schema.model_validate(
             _drop_invalid_none_values(kwargs, session_tool.input_schema))
-        args = validated_input.model_dump(exclude_none=True, mode='json')
+        args = _dump_tool_args(validated_input)
         return await session_tool.acall(args)
 
     async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:

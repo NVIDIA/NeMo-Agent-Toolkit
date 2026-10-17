@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+from unittest.mock import MagicMock
+
+import httpx
 import pytest
 from pydantic import ValidationError
 
@@ -71,3 +75,34 @@ async def test_branch_path_syntax_is_rejected_before_git_validation(branch: str,
 
     with pytest.raises(ValueError):
         await github_tools._validate_and_encode_branch(branch)
+
+
+async def test_get_issue_sends_labels_as_one_comma_separated_value(monkeypatch: pytest.MonkeyPatch):
+    from nat.tool.github_tools import GithubGetIssueModel
+    from nat.tool.github_tools import GithubGetIssueModelList
+    from nat.tool.github_tools import GithubGroupConfig
+    from nat.tool.github_tools import github_tool
+
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=[])
+
+    real_async_client = httpx.AsyncClient
+
+    def async_client_with_mock_transport(*args, **kwargs):
+        return real_async_client(*args, transport=httpx.MockTransport(handler), **kwargs)
+
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    monkeypatch.setattr(httpx, "AsyncClient", async_client_with_mock_transport)
+
+    async with github_tool(GithubGroupConfig(repo_name="owner/repo"), MagicMock()) as group:
+        get_issue = (await group.get_all_functions())["github__get_issue"]
+        result = await get_issue.ainvoke(
+            GithubGetIssueModelList(filter_parameters=[GithubGetIssueModel(labels=["bug", "Needs Triage"])]))
+
+    assert json.loads(result) == [[]]
+    assert len(requests) == 1
+    # The GitHub API reads `labels` as one comma-separated value; repeating the parameter keeps only the last label.
+    assert requests[0].url.params.get_list("labels") == ["bug,Needs Triage"]
