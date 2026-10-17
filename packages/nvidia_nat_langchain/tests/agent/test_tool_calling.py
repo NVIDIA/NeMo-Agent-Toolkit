@@ -841,8 +841,13 @@ def test_extract_token_usage_returns_none_without_any_usage():
 
 async def _run_tool_calling_agent(tool_calls_before_answer: int | None,
                                   max_iterations: int,
-                                  stream: bool = False) -> tuple[str, list[str], list[str]]:
+                                  stream: bool = False,
+                                  script: list[str] | None = None) -> tuple[str, list[str], list[str]]:
     """Run the agent with a model that requests the tool `tool_calls_before_answer` times (always if None).
+
+    `script` sets each model turn instead: "tool" (a valid tool call), "bad_tool" (a tool call whose arguments
+    don't parse, so it is never run), "fail" (the model request raises before its first token); turns past the
+    script answer. A stream that raises keeps the chunks sent before the error.
 
     Returns the text output, the tool's calls, and the ids of the tool calls streamed to the client.
     """
@@ -877,11 +882,21 @@ async def _run_tool_calling_agent(tool_calls_before_answer: int | None,
 
         def _next_turn(self) -> AIMessageChunk:
             self.turns += 1
-            if tool_calls_before_answer is not None and self.turns > tool_calls_before_answer:
+            if script is not None:
+                kind = script[self.turns - 1] if self.turns <= len(script) else "answer"
+            else:
+                done = tool_calls_before_answer is not None and self.turns > tool_calls_before_answer
+                kind = "answer" if done else "tool"
+            if kind == "fail":
+                raise RuntimeError("model request failed")
+            if kind == "answer":
                 return AIMessageChunk(content="all done")
-            return AIMessageChunk(content="",
+            # "not json" can't be parsed even partially, so it becomes an invalid tool call and no tool runs;
+            # the text keeps the turn from counting as an empty response, so the graph ends normally
+            args = '{"q": "x"}' if kind == "tool" else "not json"
+            return AIMessageChunk(content="" if kind == "tool" else "no valid call",
                                   tool_call_chunks=[{
-                                      "name": "counter", "args": '{"q": "x"}', "id": f"call-{self.turns}", "index": 0
+                                      "name": "counter", "args": args, "id": f"call-{self.turns}", "index": 0
                                   }])
 
         def _generate(self,
@@ -907,7 +922,12 @@ async def _run_tool_calling_agent(tool_calls_before_answer: int | None,
         if stream:
             from nat.data_models.api_server import ChatRequestOrMessage
 
-            chunks = [chunk async for chunk in function_info.stream_fn(ChatRequestOrMessage(input_message="hi"))]
+            chunks = []
+            try:
+                async for chunk in function_info.stream_fn(ChatRequestOrMessage(input_message="hi")):
+                    chunks.append(chunk)
+            except RuntimeError:
+                pass
             result = "".join(chunk.choices[0].delta.content or "" for chunk in chunks if chunk.choices)
             deltas = [chunk.choices[0].delta for chunk in chunks if chunk.choices]
             streamed_tool_call_ids = [tool_call.id for delta in deltas for tool_call in delta.tool_calls or []]
@@ -946,3 +966,18 @@ async def test_tool_calling_agent_stream_can_use_all_max_iterations_then_answer(
     assert len(calls) == max_iterations
     assert streamed_tool_call_ids == [f"call-{turn}" for turn in range(1, max_iterations + 1)]
     assert result == "all done"
+
+
+async def test_tool_calling_agent_stream_keeps_tool_call_when_next_model_request_fails():
+    """A tool call that ran reaches the client even if the next model request fails before its first token."""
+    _, calls, streamed_tool_call_ids = await _run_tool_calling_agent(None, 2, stream=True, script=["tool", "fail"])
+    assert len(calls) == 1
+    assert streamed_tool_call_ids == ["call-1"]
+
+
+async def test_tool_calling_agent_stream_drops_tool_call_that_never_ran():
+    """Tool-call chunks for a call the graph never runs (its arguments don't parse) are not sent to the client."""
+    result, calls, streamed_tool_call_ids = await _run_tool_calling_agent(None, 2, stream=True, script=["bad_tool"])
+    assert result == "no valid call"  # the graph ended normally, without the tool node
+    assert calls == []
+    assert streamed_tool_call_ids == []
