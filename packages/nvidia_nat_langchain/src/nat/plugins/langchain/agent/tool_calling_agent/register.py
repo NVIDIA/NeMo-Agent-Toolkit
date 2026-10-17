@@ -229,24 +229,25 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                                                         start_on="human",
                                                         include_system=True)
             state = ToolCallAgentGraphState(messages=messages)
-            # A turn's tool calls are only sent once the graph runs them: at max_iterations the graph
-            # rejects the next tool request, and the client must not see a call that never runs.
+            # A turn's tool calls are only sent once the tool node has run them: the graph can end without
+            # running them (max_iterations, or no valid tool call), and the client must not see a call that never ran.
             held_tool_call_chunks: list[ChatResponseChunk] = []
-            held_step = None
 
-            async for msg, metadata in graph.astream(
+            async for mode, event in graph.astream(
                     state,
                     config={'recursion_limit': (config.max_iterations + 1) * 2},
-                    stream_mode="messages"):
+                    stream_mode=["messages", "updates"]):
+                if mode == "updates":
+                    if "tool" in event:
+                        for held in held_tool_call_chunks:
+                            yield held
+                        held_tool_call_chunks = []
+                    continue
+                msg, metadata = event
                 if not isinstance(msg, AIMessageChunk):
                     continue
                 if metadata.get("langgraph_node") != "agent":
                     continue
-                # a new agent step means the tool node ran the held calls
-                if held_tool_call_chunks and metadata.get("langgraph_step") != held_step:
-                    for held in held_tool_call_chunks:
-                        yield held
-                    held_tool_call_chunks = []
 
                 # Each agent LLM call reports its own usage; a turn can make several (one per tool
                 # round), so they are summed rather than overwritten.
@@ -295,11 +296,6 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                             model=UNKNOWN_MODEL_SENTINEL,
                             object="chat.completion.chunk",
                         ))
-                    held_step = metadata.get("langgraph_step")
-
-            # the graph finished, so the last held calls ran (e.g. a return_direct tool)
-            for held in held_tool_call_chunks:
-                yield held
 
             if include_usage and saw_usage:
                 yield ChatResponseChunk(
