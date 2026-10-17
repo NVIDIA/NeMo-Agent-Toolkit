@@ -34,6 +34,7 @@ from langchain_core.prompts import MessagesPlaceholder
 from langchain_core.runnables import Runnable
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
+from langgraph.errors import GraphRecursionError
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -130,7 +131,8 @@ class ReActAgentGraph(DualNodeAgent):
                  pass_tool_call_errors_to_agent: bool = True,
                  normalize_tool_input_quotes: bool = True,
                  raise_on_parsing_failure: bool = True,
-                 use_native_tool_calling: bool = False):
+                 use_native_tool_calling: bool = False,
+                 max_tool_calls: int | None = None):
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
@@ -143,6 +145,7 @@ class ReActAgentGraph(DualNodeAgent):
         self.normalize_tool_input_quotes = normalize_tool_input_quotes
         self.raise_on_parsing_failure = raise_on_parsing_failure
         self.use_native_tool_calling = use_native_tool_calling
+        self.max_tool_calls = max_tool_calls
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
@@ -412,12 +415,17 @@ class ReActAgentGraph(DualNodeAgent):
                 logger.debug("%s Final answer:\n%s", AGENT_LOG_PREFIX, state.final_answer)
                 return AgentDecision.END
             # else the agent wants to call a tool
+            if self.max_tool_calls is not None and len(state.tool_responses) >= self.max_tool_calls:
+                raise GraphRecursionError(f"ReAct Agent reached max_tool_calls ({self.max_tool_calls}) "
+                                          "without a final answer")
             agent_output = state.agent_scratchpad[-1]
             logger.debug("%s The agent wants to call: %s with input: %s",
                          AGENT_LOG_PREFIX,
                          agent_output.tool,
                          agent_output.tool_input)
             return AgentDecision.TOOL
+        except GraphRecursionError:
+            raise
         except Exception as ex:
             logger.exception("Failed to determine whether agent is calling a tool: %s", ex)
             logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
