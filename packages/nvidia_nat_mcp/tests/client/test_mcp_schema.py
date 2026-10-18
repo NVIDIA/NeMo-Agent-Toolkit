@@ -1399,3 +1399,71 @@ def test_property_named_like_a_keyword_is_resolved(filter_definition: dict[str, 
     _model = model_from_mcp_schema("test_keyword_named_property", schema)
 
     assert set(_model.model_fields["default"].annotation.model_fields) == {"status", "limit"}
+
+
+def test_discriminated_union_picks_the_variant_whose_const_matches():
+    """FastMCP emits a discriminated union as a `oneOf` of `$ref`s whose `const` tag tells the variants apart."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Cat": {
+                "type": "object",
+                "properties": {
+                    "pet_type": {
+                        "const": "cat", "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "lives": {
+                        "default": 9, "type": "integer"
+                    }
+                },
+                "required": ["pet_type", "name"],
+                "additionalProperties": False,
+            },
+            "Dog": {
+                "type": "object",
+                "properties": {
+                    "pet_type": {
+                        "const": "dog", "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "good_boy": {
+                        "default": True, "type": "boolean"
+                    },
+                    "lives": {
+                        "default": 1, "type": "integer"
+                    },
+                },
+                "required": ["pet_type", "name"],
+                "additionalProperties": False,
+            },
+        },
+        "properties": {
+            "pet": {
+                "discriminator": {
+                    "mapping": {
+                        "cat": "#/$defs/Cat", "dog": "#/$defs/Dog"
+                    }, "propertyName": "pet_type"
+                },
+                "oneOf": [{
+                    "$ref": "#/$defs/Cat"
+                }, {
+                    "$ref": "#/$defs/Dog"
+                }],
+            }
+        },
+        "required": ["pet"],
+    }
+
+    _model = model_from_mcp_schema("test_discriminated_union", schema)
+
+    dog = _model.model_validate({"pet": {"pet_type": "dog", "name": "Rex"}}).pet
+    assert (dog.pet_type, dog.good_boy, dog.lives) == ("dog", True, 1)
+    cat = _model.model_validate({"pet": {"pet_type": "cat", "name": "Tom"}}).pet
+    assert (cat.pet_type, cat.lives) == ("cat", 9)
+    with pytest.raises(ValidationError):
+        _model.model_validate({"pet": {"pet_type": "bird", "name": "Tweety"}})

@@ -424,6 +424,62 @@ _REF_SCHEMA = {
     "required": ["issue_id", "filter"],
 }
 
+_DISCRIMINATED_UNION_SCHEMA = {
+    "type": "object",
+    "$defs": {
+        "Cat": {
+            "type": "object",
+            "properties": {
+                "pet_type": {
+                    "const": "cat", "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "lives": {
+                    "default": 9, "type": "integer"
+                }
+            },
+            "required": ["pet_type", "name"],
+            "additionalProperties": False,
+        },
+        "Dog": {
+            "type": "object",
+            "properties": {
+                "pet_type": {
+                    "const": "dog", "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "good_boy": {
+                    "default": True, "type": "boolean"
+                },
+                "lives": {
+                    "default": 1, "type": "integer"
+                },
+            },
+            "required": ["pet_type", "name"],
+            "additionalProperties": False,
+        },
+    },
+    "properties": {
+        "pet": {
+            "discriminator": {
+                "mapping": {
+                    "cat": "#/$defs/Cat", "dog": "#/$defs/Dog"
+                }, "propertyName": "pet_type"
+            },
+            "oneOf": [{
+                "$ref": "#/$defs/Cat"
+            }, {
+                "$ref": "#/$defs/Dog"
+            }],
+        }
+    },
+    "required": ["pet"],
+}
+
 
 class _RecordingTool:
     """Fake MCP tool that records the arguments sent to the server."""
@@ -519,3 +575,10 @@ async def test_referenced_nested_argument_is_sent_as_an_object(send_tool_args: C
     """A `$ref` argument (FastMCP nested model) goes out as a plain object, without the unset optional field."""
     sent = await send_tool_args({"issue_id": "ISS-1", "filter": {"label": "bug"}}, _REF_SCHEMA)
     assert sent == {"issue_id": "ISS-1", "filter": {"label": "bug"}}
+
+
+async def test_discriminated_union_argument_is_sent_as_the_matching_variant(
+        send_tool_args: Callable[..., Awaitable[dict[str, Any] | None]]):
+    """The `const` tag selects the variant, so the call carries that variant's fields and defaults."""
+    sent = await send_tool_args({"pet": {"pet_type": "dog", "name": "Rex"}}, _DISCRIMINATED_UNION_SCHEMA)
+    assert sent == {"pet": {"pet_type": "dog", "name": "Rex", "good_boy": True, "lives": 1}}

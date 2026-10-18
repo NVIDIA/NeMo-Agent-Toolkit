@@ -259,6 +259,15 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
             resolved_type = resolved_type if resolved_type is not None else Any
             return _apply_constraints(resolved_type, schema) if apply_constraints else resolved_type
 
+        # A `const` allows a single value. As a `Literal` it also makes a union of object schemas pick the variant
+        # whose tag matches, e.g. the `oneOf` with `const` tags that FastMCP emits for a discriminated union.
+        if "const" in schema:
+            const_value = schema["const"]
+            if const_value is None or const_value == "null":
+                return type(None)
+            if isinstance(const_value, str | int):
+                return Literal[const_value]
+
         # Handle enum values
         enum_vals = schema.get("enum")
         if enum_vals:
