@@ -14,18 +14,26 @@
 # limitations under the License.
 
 import json
+import logging
 from enum import Enum
 from functools import cache
 from typing import Annotated
 from typing import Any
 from typing import Literal
+from urllib.parse import unquote
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import create_model
 
+logger = logging.getLogger(__name__)
+
 _ORDER_INSENSITIVE_SCHEMA_ARRAY_KEYS = frozenset({"enum", "required"})
+
+# Upper bound on the schema objects `_inline_local_refs` may produce. Definitions that reference each other
+# repeatedly grow exponentially when inlined, so a small schema could otherwise expand to millions of objects.
+_MAX_INLINED_SCHEMA_OBJECTS = 10_000
 
 
 @cache
@@ -79,6 +87,10 @@ def _normalize_schema_for_cache(value: Any, key: str | None = None) -> Any:
     return value
 
 
+class _SchemaTooLargeToInlineError(Exception):
+    """Raised by `_inline_local_refs` when inlining exceeds `_MAX_INLINED_SCHEMA_OBJECTS`."""
+
+
 def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
     """
     Replace local `$ref` pointers such as `#/$defs/Filter` with the schema they point to.
@@ -86,14 +98,17 @@ def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
     Pydantic, and so FastMCP, describes a nested model argument as `{"$ref": "#/$defs/<Model>"}` with the model in
     the root `$defs`. Keywords next to the `$ref` (for example `description` or `default`) are kept and take
     precedence. A reference that cannot be resolved, or that points back into a definition being expanded (a
-    recursive model), is left as it is.
+    recursive model), is left as it is. If inlining would produce more than `_MAX_INLINED_SCHEMA_OBJECTS` schema
+    objects, the schema is returned unchanged, so its references stay unresolved.
     """
+    objects_left = _MAX_INLINED_SCHEMA_OBJECTS
 
     def _resolve(ref: str) -> dict[str, Any] | None:
         if not ref.startswith("#/"):
             return None
         node: Any = schema
-        for part in ref[2:].split("/"):
+        # A `$ref` holds a URI fragment, so it is percent-decoded before it is split into JSON Pointer tokens.
+        for part in unquote(ref[2:]).split("/"):
             part = part.replace("~1", "/").replace("~0", "~")
             if not isinstance(node, dict) or part not in node:
                 return None
@@ -101,10 +116,14 @@ def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
         return node if isinstance(node, dict) else None
 
     def _inline(node: Any, expanding: frozenset[str]) -> Any:
+        nonlocal objects_left
         if isinstance(node, list):
             return [_inline(item, expanding) for item in node]
         if not isinstance(node, dict):
             return node
+        objects_left -= 1
+        if objects_left < 0:
+            raise _SchemaTooLargeToInlineError
         ref = node.get("$ref")
         if isinstance(ref, str) and ref not in expanding:
             target = _resolve(ref)
@@ -113,7 +132,12 @@ def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
                 return {**_inline(target, expanding | {ref}), **_inline(siblings, expanding)}
         return {key: _inline(value, expanding) for key, value in node.items()}
 
-    return _inline(schema, frozenset())
+    try:
+        return _inline(schema, frozenset())
+    except _SchemaTooLargeToInlineError:
+        logger.warning("Not resolving $ref in an MCP tool input schema: inlining would exceed %d schema objects",
+                       _MAX_INLINED_SCHEMA_OBJECTS)
+        return schema
 
 
 def truncate_session_id(session_id: str, max_length: int = 10) -> str:

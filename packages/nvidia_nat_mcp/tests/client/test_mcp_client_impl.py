@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Awaitable
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from typing import Any
 from unittest.mock import MagicMock
@@ -511,7 +513,9 @@ async def test_nested_required_argument_with_default_keeps_explicit_null(send_to
     assert sent == {"issue_id": "ISS-1", "reviewer": None, "filter": {"label": None}}
 
 
-async def test_referenced_nested_argument_is_sent_as_an_object(send_tool_args):
+async def test_referenced_nested_argument_is_sent_as_an_object(send_tool_args: Callable[...,
+                                                                                        Awaitable[dict[str, Any]
+                                                                                                  | None]]):
     """A `$ref` argument (FastMCP nested model) goes out as a plain object, without the unset optional field."""
     sent = await send_tool_args({"issue_id": "ISS-1", "filter": {"label": "bug"}}, _REF_SCHEMA)
     assert sent == {"issue_id": "ISS-1", "filter": {"label": "bug"}}

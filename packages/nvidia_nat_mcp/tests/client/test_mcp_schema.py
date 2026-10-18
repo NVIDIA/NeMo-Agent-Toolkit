@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+from typing import Any
 from typing import get_args
 
 import pytest
@@ -1204,7 +1206,7 @@ def test_optional_field_with_explicit_null_default_becomes_nullable():
 
 
 @pytest.fixture(name="filter_definition")
-def _get_filter_definition():
+def fixture_filter_definition() -> dict[str, Any]:
     return {
         "type": "object",
         "properties": {
@@ -1221,7 +1223,7 @@ def _get_filter_definition():
 
 
 @pytest.mark.parametrize("definitions_key", ["$defs", "definitions"])
-def test_local_ref_validates_against_the_referenced_schema(filter_definition, definitions_key):
+def test_local_ref_validates_against_the_referenced_schema(filter_definition: dict[str, Any], definitions_key: str):
     """A `$ref` into the root definitions, as FastMCP emits for a nested model argument, is resolved."""
     schema = {
         "type": "object",
@@ -1251,7 +1253,7 @@ def test_local_ref_validates_against_the_referenced_schema(filter_definition, de
             _model.model_validate({"query": "x", "filter": invalid_filter})
 
 
-def test_local_ref_keeps_sibling_keywords(filter_definition):
+def test_local_ref_keeps_sibling_keywords(filter_definition: dict[str, Any]):
     """Keywords next to a `$ref` apply together with the referenced schema."""
     schema = {
         "type": "object",
@@ -1306,3 +1308,52 @@ def test_recursive_local_ref_is_resolved_once():
     assert m.tree.children == [{"name": "leaf"}]
     with pytest.raises(ValidationError):
         _model.model_validate({"tree": {"children": []}})
+
+
+def test_percent_encoded_local_ref_is_resolved(filter_definition: dict[str, Any]):
+    """A `$ref` is a URI fragment, so a definition name with a space is referenced percent-encoded."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Task Filter": filter_definition
+        },
+        "properties": {
+            "filter": {
+                "$ref": "#/$defs/Task%20Filter"
+            }
+        },
+        "required": ["filter"],
+    }
+
+    _model = model_from_mcp_schema("test_percent_encoded_ref", schema)
+
+    assert set(_model.model_fields["filter"].annotation.model_fields) == {"status", "limit"}
+
+
+def test_local_refs_that_would_expand_exponentially_are_left_unresolved(caplog: pytest.LogCaptureFixture):
+    """Each definition references the previous one twice, so full inlining would produce 2**24 objects."""
+    definitions: dict[str, Any] = {"D0": {"type": "string"}}
+    for i in range(1, 25):
+        definitions[f"D{i}"] = {
+            "type": "object",
+            "properties": {
+                "left": {
+                    "$ref": f"#/$defs/D{i - 1}"
+                }, "right": {
+                    "$ref": f"#/$defs/D{i - 1}"
+                }
+            },
+        }
+    schema = {
+        "type": "object", "$defs": definitions, "properties": {
+            "value": {
+                "$ref": "#/$defs/D24"
+            }
+        }, "required": ["value"]
+    }
+
+    with caplog.at_level(logging.WARNING):
+        _model = model_from_mcp_schema("test_exponential_refs", schema)
+
+    assert _model.model_fields["value"].annotation is Any
+    assert "Not resolving $ref" in caplog.text
