@@ -2171,3 +2171,51 @@ async def test_react_agent_can_use_all_max_tool_calls_then_answer(max_tool_calls
     result, calls = await _run_react_agent(responses, max_tool_calls)
     assert len(calls) == max_tool_calls
     assert result == "all done"
+
+
+class _UsageReportingLLM(BaseChatModel):
+    """Scripted model whose replies carry `usage_metadata`, as LangChain chat models report it."""
+
+    replies: list[tuple[str, int, int]]
+    turns: int = 0
+
+    @property
+    def _llm_type(self) -> str:
+        return "usage-reporting"
+
+    def _generate(self,
+                  messages: typing.Any,
+                  stop: typing.Any = None,
+                  run_manager: typing.Any = None,
+                  **kwargs: typing.Any) -> ChatResult:
+        text, input_tokens, output_tokens = self.replies[self.turns]
+        self.turns += 1
+        message = AIMessage(content=text,
+                            usage_metadata={
+                                "input_tokens": input_tokens,
+                                "output_tokens": output_tokens,
+                                "total_tokens": input_tokens + output_tokens,
+                            })
+        return ChatResult(generations=[ChatGeneration(message=message)])
+
+
+@pytest.mark.parametrize("per_user", [False, True], ids=["react_agent", "per_user_react_agent"])
+async def test_react_workflow_reports_the_token_usage_the_model_reported(per_user):
+    """`usage` on the response is the sum of what the model reported over the run, not a word count."""
+    from unittest.mock import AsyncMock
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+
+    counter, calls = _counting_tool()
+    llm = _UsageReportingLLM(replies=[(_REACT_TOOL_CALL, 100, 20), ("Thought: done\nFinal Answer: all done", 150, 30)])
+    config_type, workflow = _react_workflow(per_user)
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=llm)
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = config_type(tool_names=["counter"], llm_name="llm")
+    request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}])
+    async with workflow(config, builder) as function_info:
+        response = await function_info.single_fn(request)
+    assert calls == ["x"]
+    assert (response.usage.prompt_tokens, response.usage.completion_tokens,
+            response.usage.total_tokens) == (250, 50, 300)

@@ -981,3 +981,57 @@ async def test_tool_calling_agent_stream_drops_tool_call_that_never_ran():
     assert result == "no valid call"  # the graph ended normally, without the tool node
     assert calls == []
     assert streamed_tool_call_ids == []
+
+
+async def test_tool_calling_agent_reports_the_token_usage_the_model_reported():
+    """A chat request gets a response whose `usage` sums what the model reported over the run."""
+    from langchain_core.language_models import BaseChatModel
+    from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import ChatResult
+    from langchain_core.tools import tool
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+    from nat.plugins.langchain.agent.tool_calling_agent.register import tool_calling_agent_workflow
+
+    @tool
+    def counter(q: str) -> str:
+        """Counts its calls."""
+        return "counted"
+
+    class UsageReportingLLM(BaseChatModel):
+        turns: int = 0
+
+        @property
+        def _llm_type(self) -> str:
+            return "usage-reporting"
+
+        def bind_tools(self, tools: typing.Any, **kwargs: typing.Any) -> "UsageReportingLLM":
+            return self
+
+        def _generate(self,
+                      messages: typing.Any,
+                      stop: typing.Any = None,
+                      run_manager: typing.Any = None,
+                      **kwargs: typing.Any) -> ChatResult:
+            self.turns += 1
+            if self.turns == 1:
+                message = AIMessage(content="",
+                                    tool_calls=[{"name": "counter", "args": {"q": "x"}, "id": "call-1"}],
+                                    usage_metadata={"input_tokens": 100, "output_tokens": 20, "total_tokens": 120})
+            else:
+                message = AIMessage(content="all done",
+                                    usage_metadata={"input_tokens": 150, "output_tokens": 30, "total_tokens": 180})
+            return ChatResult(generations=[ChatGeneration(message=message)])
+
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=UsageReportingLLM())
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = ToolCallAgentWorkflowConfig(tool_names=["counter"], llm_name="llm")
+    request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}])
+    async with tool_calling_agent_workflow(config, builder) as function_info:
+        response = await function_info.single_fn(request)
+        text = await function_info.single_fn("hi")  # a plain string request still gets a string back
+    assert response.choices[0].message.content == "all done"
+    assert (response.usage.prompt_tokens, response.usage.completion_tokens,
+            response.usage.total_tokens) == (250, 50, 300)
+    assert isinstance(text, str)
