@@ -372,7 +372,7 @@ class TestCallTool:
         assert "provided an empty response" in result.content
         assert result.name == tool.name
 
-    async def test_tool_call_chat_response_from_a_nested_agent(self, base_agent):
+    async def test_tool_call_chat_response_from_a_nested_agent(self, base_agent: MockBaseAgent):
         """An agent used as a tool can return a ChatResponse; its text becomes the tool message content."""
         from nat.data_models.api_server import ChatResponse
         from nat.data_models.api_server import Usage
