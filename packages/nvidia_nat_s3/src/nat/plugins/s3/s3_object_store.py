@@ -39,7 +39,7 @@ class S3ObjectStore(ObjectStore):
                  access_key: str | None,
                  secret_key: str | None,
                  region: str | None):
-
+        """Configure the bucket and asynchronous S3 client session."""
         super().__init__()
 
         self.bucket_name = bucket_name
@@ -57,6 +57,7 @@ class S3ObjectStore(ObjectStore):
             self._client_args["endpoint_url"] = endpoint_url
 
     async def __aenter__(self) -> "S3ObjectStore":
+        """Open the S3 client and create a missing bucket in its resolved region."""
 
         if self._client_context is not None:
             raise RuntimeError("Connection already established")
@@ -73,7 +74,11 @@ class S3ObjectStore(ObjectStore):
             await self._client.head_bucket(Bucket=self.bucket_name)
         except ClientError as e:
             if e.response['Error']['Code'] == '404':
-                await self._client.create_bucket(Bucket=self.bucket_name)
+                create_args: dict = {"Bucket": self.bucket_name}
+                region = self._client.meta.region_name
+                if region not in ("us-east-1", "aws-global"):
+                    create_args["CreateBucketConfiguration"] = {"LocationConstraint": region}
+                await self._client.create_bucket(**create_args)
                 logger.info("Created bucket %s", self.bucket_name)
 
         return self
