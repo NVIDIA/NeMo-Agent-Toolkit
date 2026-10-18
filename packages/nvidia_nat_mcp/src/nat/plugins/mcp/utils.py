@@ -79,6 +79,43 @@ def _normalize_schema_for_cache(value: Any, key: str | None = None) -> Any:
     return value
 
 
+def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
+    """
+    Replace local `$ref` pointers such as `#/$defs/Filter` with the schema they point to.
+
+    Pydantic, and so FastMCP, describes a nested model argument as `{"$ref": "#/$defs/<Model>"}` with the model in
+    the root `$defs`. Keywords next to the `$ref` (for example `description` or `default`) are kept and take
+    precedence. A reference that cannot be resolved, or that points back into a definition being expanded (a
+    recursive model), is left as it is.
+    """
+
+    def _resolve(ref: str) -> dict[str, Any] | None:
+        if not ref.startswith("#/"):
+            return None
+        node: Any = schema
+        for part in ref[2:].split("/"):
+            part = part.replace("~1", "/").replace("~0", "~")
+            if not isinstance(node, dict) or part not in node:
+                return None
+            node = node[part]
+        return node if isinstance(node, dict) else None
+
+    def _inline(node: Any, expanding: frozenset[str]) -> Any:
+        if isinstance(node, list):
+            return [_inline(item, expanding) for item in node]
+        if not isinstance(node, dict):
+            return node
+        ref = node.get("$ref")
+        if isinstance(ref, str) and ref not in expanding:
+            target = _resolve(ref)
+            if target is not None:
+                siblings = {key: value for key, value in node.items() if key != "$ref"}
+                return {**_inline(target, expanding | {ref}), **_inline(siblings, expanding)}
+        return {key: _inline(value, expanding) for key, value in node.items()}
+
+    return _inline(schema, frozenset())
+
+
 def truncate_session_id(session_id: str, max_length: int = 10) -> str:
     """
     Truncate a session ID for logging purposes.
@@ -102,7 +139,7 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
     """
     Create a pydantic model from the input schema of the MCP tool
     """
-    normalized_schema = _normalize_schema_for_cache(mcp_input_schema)
+    normalized_schema = _normalize_schema_for_cache(_inline_local_refs(mcp_input_schema))
     schema_json = json.dumps(normalized_schema, sort_keys=True, separators=(",", ":"))
     return _model_from_mcp_schema(name, schema_json)
 

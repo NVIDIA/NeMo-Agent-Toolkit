@@ -1201,3 +1201,108 @@ def test_optional_field_with_explicit_null_default_becomes_nullable():
     # Test string value validates
     m2 = _model.model_validate({"cursor": "abc123"})
     assert m2.cursor == "abc123"
+
+
+@pytest.fixture(name="filter_definition")
+def _get_filter_definition():
+    return {
+        "type": "object",
+        "properties": {
+            "status": {
+                "type": "string"
+            },
+            "limit": {
+                "type": "integer", "minimum": 1, "maximum": 100
+            },
+        },
+        "required": ["status", "limit"],
+        "additionalProperties": False,
+    }
+
+
+@pytest.mark.parametrize("definitions_key", ["$defs", "definitions"])
+def test_local_ref_validates_against_the_referenced_schema(filter_definition, definitions_key):
+    """A `$ref` into the root definitions, as FastMCP emits for a nested model argument, is resolved."""
+    schema = {
+        "type": "object",
+        definitions_key: {
+            "Filter": filter_definition
+        },
+        "properties": {
+            "query": {
+                "type": "string"
+            }, "filter": {
+                "$ref": f"#/{definitions_key}/Filter"
+            }
+        },
+        "required": ["query", "filter"],
+    }
+
+    _model = model_from_mcp_schema("test_local_ref", schema)
+
+    assert set(_model.model_fields["filter"].annotation.model_fields) == {"status", "limit"}
+    m = _model.model_validate({"query": "x", "filter": {"status": "open", "limit": 10}})
+    assert m.filter.status == "open"
+    assert m.filter.limit == 10
+
+    invalid_filters = [{"status": "open", "limit": 10, "unexpected": True}, {"status": "open", "limit": 1000}, "open"]
+    for invalid_filter in invalid_filters:
+        with pytest.raises(ValidationError):
+            _model.model_validate({"query": "x", "filter": invalid_filter})
+
+
+def test_local_ref_keeps_sibling_keywords(filter_definition):
+    """Keywords next to a `$ref` apply together with the referenced schema."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Filter": filter_definition
+        },
+        "properties": {
+            "filter": {
+                "$ref": "#/$defs/Filter", "description": "Search filter"
+            }
+        },
+        "required": ["filter"],
+    }
+
+    _model = model_from_mcp_schema("test_local_ref_siblings", schema)
+
+    assert _model.model_fields["filter"].description == "Search filter"
+    assert _model.model_validate({"filter": {"status": "open", "limit": 1}}).filter.limit == 1
+
+
+def test_recursive_local_ref_is_resolved_once():
+    """A model that refers to itself is expanded one level instead of recursing forever."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Node": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    }, "children": {
+                        "type": "array", "items": {
+                            "$ref": "#/$defs/Node"
+                        }
+                    }
+                },
+                "required": ["name"],
+            }
+        },
+        "properties": {
+            "tree": {
+                "$ref": "#/$defs/Node"
+            }
+        },
+        "required": ["tree"],
+    }
+
+    _model = model_from_mcp_schema("test_recursive_ref", schema)
+
+    m = _model.model_validate({"tree": {"name": "root", "children": [{"name": "leaf"}]}})
+    assert m.tree.name == "root"
+    assert m.tree.children == [{"name": "leaf"}]
+    with pytest.raises(ValidationError):
+        _model.model_validate({"tree": {"children": []}})
