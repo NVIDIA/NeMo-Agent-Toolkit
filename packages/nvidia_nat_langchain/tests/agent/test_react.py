@@ -2219,3 +2219,22 @@ async def test_react_workflow_reports_the_token_usage_the_model_reported(per_use
     assert calls == ["x"]
     assert (response.usage.prompt_tokens, response.usage.completion_tokens,
             response.usage.total_tokens) == (250, 50, 300)
+
+
+async def test_react_workflow_falls_back_to_word_counts_when_the_model_reports_no_usage():
+    from unittest.mock import AsyncMock
+
+    from langchain_core.language_models.fake_chat_models import FakeListChatModel
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+    from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+
+    counter, _ = _counting_tool()
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=FakeListChatModel(responses=["Thought: done\nFinal Answer: two words"]))
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = ReActAgentWorkflowConfig(tool_names=["counter"], llm_name="llm")
+    request = ChatRequestOrMessage(messages=[{"role": "user", "content": "say hi"}])
+    async with react_agent_workflow(config, builder) as function_info:
+        response = await function_info.single_fn(request)
+    assert (response.usage.prompt_tokens, response.usage.completion_tokens, response.usage.total_tokens) == (2, 2, 4)
