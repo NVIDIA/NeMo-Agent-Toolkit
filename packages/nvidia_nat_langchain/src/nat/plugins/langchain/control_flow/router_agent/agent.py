@@ -133,7 +133,8 @@ class RouterAgentGraph(BaseAgent):
 
                 # Determine chosen branch based on agent response
                 if state.chosen_branch == "":
-                    for branch in self._branches:
+                    # longest names first, so `web_search` in the response is not taken as `search`
+                    for branch in sorted(self._branches, key=lambda b: len(b.name), reverse=True):
                         if branch.name.lower() in str(agent_response.content).lower():
                             state.chosen_branch = branch.name
                             if self.detailed_logs:
