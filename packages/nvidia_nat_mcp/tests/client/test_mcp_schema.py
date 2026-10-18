@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+from typing import Any
 from typing import get_args
 
 import pytest
@@ -1201,3 +1203,298 @@ def test_optional_field_with_explicit_null_default_becomes_nullable():
     # Test string value validates
     m2 = _model.model_validate({"cursor": "abc123"})
     assert m2.cursor == "abc123"
+
+
+@pytest.fixture(name="filter_definition")
+def fixture_filter_definition() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "properties": {
+            "status": {
+                "type": "string"
+            },
+            "limit": {
+                "type": "integer", "minimum": 1, "maximum": 100
+            },
+        },
+        "required": ["status", "limit"],
+        "additionalProperties": False,
+    }
+
+
+@pytest.mark.parametrize("definitions_key", ["$defs", "definitions"])
+def test_local_ref_validates_against_the_referenced_schema(filter_definition: dict[str, Any], definitions_key: str):
+    """A `$ref` into the root definitions, as FastMCP emits for a nested model argument, is resolved."""
+    schema = {
+        "type": "object",
+        definitions_key: {
+            "Filter": filter_definition
+        },
+        "properties": {
+            "query": {
+                "type": "string"
+            }, "filter": {
+                "$ref": f"#/{definitions_key}/Filter"
+            }
+        },
+        "required": ["query", "filter"],
+    }
+
+    _model = model_from_mcp_schema("test_local_ref", schema)
+
+    assert set(_model.model_fields["filter"].annotation.model_fields) == {"status", "limit"}
+    m = _model.model_validate({"query": "x", "filter": {"status": "open", "limit": 10}})
+    assert m.filter.status == "open"
+    assert m.filter.limit == 10
+
+    invalid_filters = [{"status": "open", "limit": 10, "unexpected": True}, {"status": "open", "limit": 1000}, "open"]
+    for invalid_filter in invalid_filters:
+        with pytest.raises(ValidationError):
+            _model.model_validate({"query": "x", "filter": invalid_filter})
+
+
+def test_local_ref_keeps_sibling_keywords(filter_definition: dict[str, Any]):
+    """Keywords next to a `$ref` apply together with the referenced schema."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Filter": filter_definition
+        },
+        "properties": {
+            "filter": {
+                "$ref": "#/$defs/Filter", "description": "Search filter"
+            }
+        },
+        "required": ["filter"],
+    }
+
+    _model = model_from_mcp_schema("test_local_ref_siblings", schema)
+
+    assert _model.model_fields["filter"].description == "Search filter"
+    assert _model.model_validate({"filter": {"status": "open", "limit": 1}}).filter.limit == 1
+
+
+def test_recursive_local_ref_is_resolved_once():
+    """A model that refers to itself is expanded one level instead of recursing forever."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Node": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    }, "children": {
+                        "type": "array", "items": {
+                            "$ref": "#/$defs/Node"
+                        }
+                    }
+                },
+                "required": ["name"],
+            }
+        },
+        "properties": {
+            "tree": {
+                "$ref": "#/$defs/Node"
+            }
+        },
+        "required": ["tree"],
+    }
+
+    _model = model_from_mcp_schema("test_recursive_ref", schema)
+
+    m = _model.model_validate({"tree": {"name": "root", "children": [{"name": "leaf"}]}})
+    assert m.tree.name == "root"
+    assert m.tree.children == [{"name": "leaf"}]
+    with pytest.raises(ValidationError):
+        _model.model_validate({"tree": {"children": []}})
+
+
+def test_percent_encoded_local_ref_is_resolved(filter_definition: dict[str, Any]):
+    """A `$ref` is a URI fragment, so a definition name with a space is referenced percent-encoded."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Task Filter": filter_definition
+        },
+        "properties": {
+            "filter": {
+                "$ref": "#/$defs/Task%20Filter"
+            }
+        },
+        "required": ["filter"],
+    }
+
+    _model = model_from_mcp_schema("test_percent_encoded_ref", schema)
+
+    assert set(_model.model_fields["filter"].annotation.model_fields) == {"status", "limit"}
+
+
+def test_local_refs_that_would_expand_exponentially_are_left_unresolved(caplog: pytest.LogCaptureFixture):
+    """Each definition references the previous one twice, so full inlining would produce 2**24 objects."""
+    definitions: dict[str, Any] = {"D0": {"type": "string"}}
+    for i in range(1, 25):
+        definitions[f"D{i}"] = {
+            "type": "object",
+            "properties": {
+                "left": {
+                    "$ref": f"#/$defs/D{i - 1}"
+                }, "right": {
+                    "$ref": f"#/$defs/D{i - 1}"
+                }
+            },
+        }
+    schema = {
+        "type": "object", "$defs": definitions, "properties": {
+            "value": {
+                "$ref": "#/$defs/D24"
+            }
+        }, "required": ["value"]
+    }
+
+    with caplog.at_level(logging.WARNING):
+        _model = model_from_mcp_schema("test_exponential_refs", schema)
+
+    assert _model.model_fields["value"].annotation is Any
+    assert "Not resolving $ref" in caplog.text
+
+
+def test_long_chain_of_local_refs_is_left_unresolved(caplog: pytest.LogCaptureFixture):
+    """Each definition references the next one, so full inlining would nest 2000 models."""
+    definitions: dict[str, Any] = {"D2000": {"type": "string"}}
+    for i in range(2000):
+        definitions[f"D{i}"] = {"type": "object", "properties": {"next": {"$ref": f"#/$defs/D{i + 1}"}}}
+    schema = {
+        "type": "object", "$defs": definitions, "properties": {
+            "value": {
+                "$ref": "#/$defs/D0"
+            }
+        }, "required": ["value"]
+    }
+
+    with caplog.at_level(logging.WARNING):
+        _model = model_from_mcp_schema("test_long_ref_chain", schema)
+
+    assert _model.model_fields["value"].annotation is Any
+    assert "Not resolving $ref" in caplog.text
+
+
+def test_ref_inside_default_is_kept_as_instance_data(filter_definition: dict[str, Any]):
+    """A `default` holds instance data, so a `$ref` key inside it is not a reference."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Filter": filter_definition
+        },
+        "properties": {
+            "pointer": {
+                "type": "object", "default": {
+                    "$ref": "#/$defs/Filter"
+                }
+            }
+        },
+        "required": [],
+    }
+
+    _model = model_from_mcp_schema("test_ref_in_default", schema)
+
+    assert _model.model_fields["pointer"].default == {"$ref": "#/$defs/Filter"}
+
+
+def test_property_named_like_a_keyword_is_resolved(filter_definition: dict[str, Any]):
+    """A property called `default` is a schema like any other, so its `$ref` is resolved."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Filter": filter_definition
+        },
+        "properties": {
+            "default": {
+                "$ref": "#/$defs/Filter"
+            }
+        },
+        "required": ["default"],
+    }
+
+    _model = model_from_mcp_schema("test_keyword_named_property", schema)
+
+    assert set(_model.model_fields["default"].annotation.model_fields) == {"status", "limit"}
+
+
+def test_discriminated_union_picks_the_variant_whose_const_matches():
+    """FastMCP emits a discriminated union as a `oneOf` of `$ref`s whose `const` tag tells the variants apart."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Cat": {
+                "type": "object",
+                "properties": {
+                    "pet_type": {
+                        "const": "cat", "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "lives": {
+                        "default": 9, "type": "integer"
+                    }
+                },
+                "required": ["pet_type", "name"],
+                "additionalProperties": False,
+            },
+            "Dog": {
+                "type": "object",
+                "properties": {
+                    "pet_type": {
+                        "const": "dog", "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "good_boy": {
+                        "default": True, "type": "boolean"
+                    },
+                    "lives": {
+                        "default": 1, "type": "integer"
+                    },
+                },
+                "required": ["pet_type", "name"],
+                "additionalProperties": False,
+            },
+        },
+        "properties": {
+            "pet": {
+                "discriminator": {
+                    "mapping": {
+                        "cat": "#/$defs/Cat", "dog": "#/$defs/Dog"
+                    }, "propertyName": "pet_type"
+                },
+                "oneOf": [{
+                    "$ref": "#/$defs/Cat"
+                }, {
+                    "$ref": "#/$defs/Dog"
+                }],
+            }
+        },
+        "required": ["pet"],
+    }
+
+    _model = model_from_mcp_schema("test_discriminated_union", schema)
+
+    dog = _model.model_validate({"pet": {"pet_type": "dog", "name": "Rex"}}).pet
+    assert (dog.pet_type, dog.good_boy, dog.lives) == ("dog", True, 1)
+    cat = _model.model_validate({"pet": {"pet_type": "cat", "name": "Tom"}}).pet
+    assert (cat.pet_type, cat.lives) == ("cat", 9)
+    with pytest.raises(ValidationError):
+        _model.model_validate({"pet": {"pet_type": "bird", "name": "Tweety"}})
+
+
+def test_const_string_null_is_a_string_value():
+    """The string `"null"` is an ordinary value, unlike JSON `null`."""
+    schema = {"type": "object", "properties": {"mode": {"const": "null", "type": "string"}}, "required": ["mode"]}
+
+    _model = model_from_mcp_schema("test_const_string_null", schema)
+
+    assert _model.model_validate({"mode": "null"}).mode == "null"
+    with pytest.raises(ValidationError):
+        _model.model_validate({"mode": "other"})
