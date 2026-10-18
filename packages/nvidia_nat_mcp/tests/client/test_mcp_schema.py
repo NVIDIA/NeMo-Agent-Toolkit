@@ -1359,6 +1359,26 @@ def test_local_refs_that_would_expand_exponentially_are_left_unresolved(caplog: 
     assert "Not resolving $ref" in caplog.text
 
 
+def test_long_chain_of_local_refs_is_left_unresolved(caplog: pytest.LogCaptureFixture):
+    """Each definition references the next one, so full inlining would nest 2000 models."""
+    definitions: dict[str, Any] = {"D2000": {"type": "string"}}
+    for i in range(2000):
+        definitions[f"D{i}"] = {"type": "object", "properties": {"next": {"$ref": f"#/$defs/D{i + 1}"}}}
+    schema = {
+        "type": "object", "$defs": definitions, "properties": {
+            "value": {
+                "$ref": "#/$defs/D0"
+            }
+        }, "required": ["value"]
+    }
+
+    with caplog.at_level(logging.WARNING):
+        _model = model_from_mcp_schema("test_long_ref_chain", schema)
+
+    assert _model.model_fields["value"].annotation is Any
+    assert "Not resolving $ref" in caplog.text
+
+
 def test_ref_inside_default_is_kept_as_instance_data(filter_definition: dict[str, Any]):
     """A `default` holds instance data, so a `$ref` key inside it is not a reference."""
     schema = {
@@ -1467,3 +1487,14 @@ def test_discriminated_union_picks_the_variant_whose_const_matches():
     assert (cat.pet_type, cat.lives) == ("cat", 9)
     with pytest.raises(ValidationError):
         _model.model_validate({"pet": {"pet_type": "bird", "name": "Tweety"}})
+
+
+def test_const_string_null_is_a_string_value():
+    """The string `"null"` is an ordinary value, unlike JSON `null`."""
+    schema = {"type": "object", "properties": {"mode": {"const": "null", "type": "string"}}, "required": ["mode"]}
+
+    _model = model_from_mcp_schema("test_const_string_null", schema)
+
+    assert _model.model_validate({"mode": "null"}).mode == "null"
+    with pytest.raises(ValidationError):
+        _model.model_validate({"mode": "other"})

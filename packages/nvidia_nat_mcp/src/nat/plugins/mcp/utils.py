@@ -34,6 +34,9 @@ _ORDER_INSENSITIVE_SCHEMA_ARRAY_KEYS = frozenset({"enum", "required"})
 # Upper bound on the schema objects `_inline_local_refs` may produce. Definitions that reference each other
 # repeatedly grow exponentially when inlined, so a small schema could otherwise expand to millions of objects.
 _MAX_INLINED_SCHEMA_OBJECTS = 10_000
+# Upper bound on nested `$ref` expansions in `_inline_local_refs`. A long chain of definitions that each reference the
+# next would otherwise build models nested deeper than Python's recursion limit allows.
+_MAX_INLINED_REF_DEPTH = 32
 # Keywords `_inline_local_refs` copies without inlining: instance data, where a `$ref` key is not a reference, and the
 # definitions themselves, which references are resolved against.
 _NOT_INLINED_KEYWORDS = frozenset({"default", "const", "enum", "examples", "$defs", "definitions"})
@@ -93,7 +96,7 @@ def _normalize_schema_for_cache(value: Any, key: str | None = None) -> Any:
 
 
 class _SchemaTooLargeToInlineError(Exception):
-    """Raised by `_inline_local_refs` when inlining exceeds `_MAX_INLINED_SCHEMA_OBJECTS`."""
+    """Raised by `_inline_local_refs` when inlining exceeds one of its limits."""
 
 
 def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
@@ -104,7 +107,8 @@ def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
     the root `$defs`. Keywords next to the `$ref` (for example `description` or `default`) are kept and take
     precedence. A reference that cannot be resolved, or that points back into a definition being expanded (a
     recursive model), is left as it is. If inlining would produce more than `_MAX_INLINED_SCHEMA_OBJECTS` schema
-    objects, the schema is returned unchanged, so its references stay unresolved.
+    objects or nest more than `_MAX_INLINED_REF_DEPTH` references, the schema is returned unchanged, so its
+    references stay unresolved.
     """
     objects_left = _MAX_INLINED_SCHEMA_OBJECTS
 
@@ -128,11 +132,13 @@ def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
             return node
         objects_left -= 1
         if objects_left < 0:
-            raise _SchemaTooLargeToInlineError
+            raise _SchemaTooLargeToInlineError(f"{_MAX_INLINED_SCHEMA_OBJECTS} schema objects")
         ref = node.get("$ref")
         if isinstance(ref, str) and ref not in expanding:
             target = _resolve(ref)
             if target is not None:
+                if len(expanding) >= _MAX_INLINED_REF_DEPTH:
+                    raise _SchemaTooLargeToInlineError(f"{_MAX_INLINED_REF_DEPTH} nested references")
                 siblings = {key: value for key, value in node.items() if key != "$ref"}
                 return {**_inline(target, expanding | {ref}), **_inline(siblings, expanding)}
         return {key: _inline_keyword(key, value, expanding) for key, value in node.items()}
@@ -146,9 +152,8 @@ def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
 
     try:
         return _inline(schema, frozenset())
-    except _SchemaTooLargeToInlineError:
-        logger.warning("Not resolving $ref in an MCP tool input schema: inlining would exceed %d schema objects",
-                       _MAX_INLINED_SCHEMA_OBJECTS)
+    except _SchemaTooLargeToInlineError as error:
+        logger.warning("Not resolving $ref in an MCP tool input schema: inlining would exceed %s", error)
         return schema
 
 
@@ -263,7 +268,7 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
         # whose tag matches, e.g. the `oneOf` with `const` tags that FastMCP emits for a discriminated union.
         if "const" in schema:
             const_value = schema["const"]
-            if const_value is None or const_value == "null":
+            if const_value is None:
                 return type(None)
             if isinstance(const_value, str | int):
                 return Literal[const_value]
