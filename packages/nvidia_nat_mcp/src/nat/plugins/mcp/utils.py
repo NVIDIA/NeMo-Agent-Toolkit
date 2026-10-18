@@ -34,6 +34,11 @@ _ORDER_INSENSITIVE_SCHEMA_ARRAY_KEYS = frozenset({"enum", "required"})
 # Upper bound on the schema objects `_inline_local_refs` may produce. Definitions that reference each other
 # repeatedly grow exponentially when inlined, so a small schema could otherwise expand to millions of objects.
 _MAX_INLINED_SCHEMA_OBJECTS = 10_000
+# Keywords `_inline_local_refs` copies without inlining: instance data, where a `$ref` key is not a reference, and the
+# definitions themselves, which references are resolved against.
+_NOT_INLINED_KEYWORDS = frozenset({"default", "const", "enum", "examples", "$defs", "definitions"})
+# Keywords whose values map names to schemas. The names are not keywords.
+_SCHEMA_MAP_KEYWORDS = frozenset({"properties", "patternProperties", "dependentSchemas"})
 
 
 @cache
@@ -130,7 +135,14 @@ def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
             if target is not None:
                 siblings = {key: value for key, value in node.items() if key != "$ref"}
                 return {**_inline(target, expanding | {ref}), **_inline(siblings, expanding)}
-        return {key: _inline(value, expanding) for key, value in node.items()}
+        return {key: _inline_keyword(key, value, expanding) for key, value in node.items()}
+
+    def _inline_keyword(key: str, value: Any, expanding: frozenset[str]) -> Any:
+        if key in _NOT_INLINED_KEYWORDS:
+            return value
+        if key in _SCHEMA_MAP_KEYWORDS and isinstance(value, dict):
+            return {name: _inline(subschema, expanding) for name, subschema in value.items()}
+        return _inline(value, expanding)
 
     try:
         return _inline(schema, frozenset())

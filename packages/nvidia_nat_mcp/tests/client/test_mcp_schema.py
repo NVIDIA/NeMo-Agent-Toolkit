@@ -1357,3 +1357,45 @@ def test_local_refs_that_would_expand_exponentially_are_left_unresolved(caplog: 
 
     assert _model.model_fields["value"].annotation is Any
     assert "Not resolving $ref" in caplog.text
+
+
+def test_ref_inside_default_is_kept_as_instance_data(filter_definition: dict[str, Any]):
+    """A `default` holds instance data, so a `$ref` key inside it is not a reference."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Filter": filter_definition
+        },
+        "properties": {
+            "pointer": {
+                "type": "object", "default": {
+                    "$ref": "#/$defs/Filter"
+                }
+            }
+        },
+        "required": [],
+    }
+
+    _model = model_from_mcp_schema("test_ref_in_default", schema)
+
+    assert _model.model_fields["pointer"].default == {"$ref": "#/$defs/Filter"}
+
+
+def test_property_named_like_a_keyword_is_resolved(filter_definition: dict[str, Any]):
+    """A property called `default` is a schema like any other, so its `$ref` is resolved."""
+    schema = {
+        "type": "object",
+        "$defs": {
+            "Filter": filter_definition
+        },
+        "properties": {
+            "default": {
+                "$ref": "#/$defs/Filter"
+            }
+        },
+        "required": ["default"],
+    }
+
+    _model = model_from_mcp_schema("test_keyword_named_property", schema)
+
+    assert set(_model.model_fields["default"].annotation.model_fields) == {"status", "limit"}
