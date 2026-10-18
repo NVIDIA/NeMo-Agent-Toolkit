@@ -126,6 +126,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from nat.plugins.langchain.agent.react_agent.agent import ReActGraphState
     from nat.plugins.langchain.agent.react_agent.agent import create_react_agent_prompt
     from nat.plugins.langchain.agent.react_agent.output_parser import FINAL_ANSWER_PATTERN
+    from nat.plugins.langchain.agent.token_usage import TokenUsageCollector
 
     prompt = create_react_agent_prompt(config)
 
@@ -181,10 +182,12 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             state = ReActGraphState(messages=messages)
 
             # run the ReAct Agent Graph
-            state = await graph.ainvoke(state,
-                                        config=_build_lc_config(config.max_tool_calls,
-                                                                message.model,
-                                                                supports_override=_supports_model_override))
+            token_usage = TokenUsageCollector()
+            lc_config = _build_lc_config(config.max_tool_calls,
+                                         message.model,
+                                         supports_override=_supports_model_override)
+            lc_config["callbacks"] = [token_usage]
+            state = await graph.ainvoke(state, config=lc_config)
             # setting recursion_limit: 4 leaves room for 1 tool call and the final answer;
             #   the ReAct Agent graph itself stops before a second tool call
 
@@ -193,11 +196,14 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             output_message = state.messages[-1]
             content = _extract_message_text(output_message.content)
 
-            # Create usage statistics for the response
-            prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
-            completion_tokens = len(content.split()) if content else 0
-            total_tokens = prompt_tokens + completion_tokens
-            usage = Usage(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, total_tokens=total_tokens)
+            usage = token_usage.usage()
+            if usage is None:
+                # the model reported no usage, so fall back to a word count
+                prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
+                completion_tokens = len(content.split()) if content else 0
+                usage = Usage(prompt_tokens=prompt_tokens,
+                              completion_tokens=completion_tokens,
+                              total_tokens=prompt_tokens + completion_tokens)
             response = ChatResponse.from_string(content, usage=usage)
             if chat_request_or_message.is_string:
                 return GlobalTypeConverter.get().convert(response, to_type=str)
