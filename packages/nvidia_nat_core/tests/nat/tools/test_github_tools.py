@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+from typing import Any
 from unittest.mock import MagicMock
 
 import httpx
@@ -128,7 +129,7 @@ async def test_get_file_requests_the_raw_url_for_any_ref(ref: str, monkeypatch: 
 
     real_async_client = httpx.AsyncClient
 
-    def async_client_with_mock_transport(*args, **kwargs):
+    def async_client_with_mock_transport(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
         return real_async_client(*args, transport=httpx.MockTransport(handler), **kwargs)
 
     monkeypatch.setattr(httpx, "AsyncClient", async_client_with_mock_transport)
