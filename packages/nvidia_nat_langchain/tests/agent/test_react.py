@@ -537,6 +537,25 @@ async def test_graph_parsing_error(mock_react_graph_no_raise):
     assert 'fix the input on retry' in response.content
 
 
+async def test_graph_parsing_error_after_tool_call_does_not_rerun_tool(mock_config_react_agent):
+    """A parsing failure after a tool call returns the error message instead of re-running that tool call."""
+    from langchain_core.language_models.fake_chat_models import FakeListChatModel
+
+    counter, calls = _counting_tool()
+    llm = FakeListChatModel(responses=[_REACT_TOOL_CALL] + ["Thought: I am not sure what to do next"] * 5)
+    agent = ReActAgentGraph(llm=llm,
+                            prompt=create_react_agent_prompt(mock_config_react_agent),
+                            tools=[counter],
+                            raise_on_parsing_failure=False,
+                            max_tool_calls=3)
+    graph = await agent.build_graph()
+
+    response = ReActGraphState(**await graph.ainvoke(ReActGraphState(messages=[HumanMessage('hi')])))
+
+    assert len(calls) == 1
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in response.messages[-1].content
+
+
 async def test_graph(mock_react_graph):
     response = await mock_react_graph.ainvoke(ReActGraphState(messages=[HumanMessage('Final Answer: lorem ipsum')]))
     response = ReActGraphState(**response)
