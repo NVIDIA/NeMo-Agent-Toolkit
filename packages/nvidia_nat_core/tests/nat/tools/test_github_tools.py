@@ -141,3 +141,18 @@ async def test_get_file_requests_the_raw_url_for_any_ref(ref: str, monkeypatch: 
     assert len(requests) == 1
     # A refs/heads/ prefix only matches branch names, so commit and tag links would get a 404.
     assert str(requests[0].url) == f"https://raw.githubusercontent.com/owner/repo/{ref}/docs/README.md"
+
+
+@pytest.mark.parametrize("since", ["yesterday", "2026-10-01", "2026-10-01 00:00:00", 20261001])
+def test_get_issue_rejects_since_values_that_are_not_iso_8601_timestamps(since: str | int):
+    from nat.tool.github_tools import GithubGetIssueModel
+
+    with pytest.raises(ValidationError):
+        GithubGetIssueModel(since=since)
+
+
+@pytest.mark.parametrize("since", [None, "2026-10-01T00:00:00Z"])
+def test_get_issue_keeps_valid_since_values(since: str | None):
+    from nat.tool.github_tools import GithubGetIssueModel
+
+    assert GithubGetIssueModel(since=since).since == since

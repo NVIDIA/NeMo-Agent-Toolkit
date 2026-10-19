@@ -106,12 +106,14 @@ class GithubGetIssueModel(BaseModel):
     mentioned: str | None = Field(default=None, description="Name of person mentioned in issue")
     labels: list[str] | None = Field(default=None, description="A list of labels that are assigned to the issue")
     since: str | None = Field(default=None,
-                              description="Only show results that were last updated after the given time.")
+                              description=("Only show results that were last updated after the given time, "
+                                           "as an ISO 8601 timestamp in the form YYYY-MM-DDTHH:MM:SSZ."))
 
-    @classmethod
     @field_validator('since', mode='before')
+    @classmethod
     def validate_since(cls, v):
-        if v is None:
+        if not isinstance(v, str):
+            # None passes, and other types get the field's own string type error.
             return v
         try:
             # Parse the string to a datetime object
