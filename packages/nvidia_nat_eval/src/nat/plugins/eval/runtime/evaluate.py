@@ -71,6 +71,8 @@ try:
     from nat.data_models.user_info import BasicUserInfo
     from nat.data_models.user_info import UserInfo
     from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+    from nat.plugins.eval.runtime.checkpoint import CHECKPOINT_FILE_NAME
+    from nat.plugins.eval.runtime.checkpoint import EvalCheckpoint
     from nat.runtime.session import SessionManager
 except ImportError as import_error:  # pragma: no cover - guarded runtime path
     _raise_full_eval_dependency_error(import_error)
@@ -140,6 +142,10 @@ class EvaluationRun:
 
         # Pre-generated OTEL root span_ids for eager trace linking (item_id -> span_id)
         self._item_span_ids: dict[str, int] = {}
+
+        # Per-item checkpoint of finished workflow runs, and the items restored from it by --resume
+        self.checkpoint: EvalCheckpoint | None = None
+        self._restored_items: set[int] = set()
 
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
@@ -299,6 +305,8 @@ class EvaluationRun:
                         if self.callback_manager:
                             self.callback_manager.on_prediction(item=item, output=output)
                             await self.callback_manager.a_on_usage_stats(item=item, usage_stats_item=usage_stats_item)
+                        if self.checkpoint:
+                            self.checkpoint.record(item)
             finally:
                 if root_span_token is not None:
                     ctx_state._root_span_id.reset(root_span_token)
@@ -310,7 +318,7 @@ class EvaluationRun:
         # if self.config.skip_complete is set skip eval_input_items with a non-empty output_obj
         if self.config.skip_completed_entries:
             eval_input_items = []
-            for item in self.eval_input.eval_input_items:
+            for item in self._items_to_run():
                 if not item.output_obj or (pd.api.types.is_scalar(item.output_obj) and pd.isnull(item.output_obj)):
                     eval_input_items.append(item)
 
@@ -318,20 +326,44 @@ class EvaluationRun:
                 logger.warning("All items have a non-empty output. Skipping workflow pass altogether.")
                 return
         else:
-            eval_input_items = self.eval_input.eval_input_items
+            eval_input_items = self._items_to_run()
         pbar = tqdm(total=len(eval_input_items), desc="Running workflow")
         await asyncio.gather(*[wrapped_run(item) for item in eval_input_items])
         pbar.close()
 
     async def run_workflow_remote(self):
         from nat.plugins.eval.runtime.remote_workflow import EvaluationRemoteWorkflowHandler
-        handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
-        await handler.run_workflow_remote(self.eval_input)
-        for item in self.eval_input.eval_input_items:
+
+        def on_item_complete(item: EvalInputItem) -> None:
+            # failed requests leave output_obj as None; leave those for the next --resume
+            if self.checkpoint and item.output_obj is not None:
+                self.checkpoint.record(item)
+
+        handler = EvaluationRemoteWorkflowHandler(self.config,
+                                                  self.eval_config.general.max_concurrency,
+                                                  on_item_complete=on_item_complete)
+        items_to_run = self._items_to_run()
+        await handler.run_workflow_remote(EvalInput(eval_input_items=items_to_run))
+        for item in items_to_run:
             usage_stats_item = self._compute_usage_stats(item)
             if self.callback_manager:
                 self.callback_manager.on_prediction(item=item, output=item.output_obj)
                 await self.callback_manager.a_on_usage_stats(item=item, usage_stats_item=usage_stats_item)
+
+    def _items_to_run(self) -> list[EvalInputItem]:
+        """The dataset items that still need a workflow run (all of them unless --resume restored some)."""
+        return [item for item in self.eval_input.eval_input_items if id(item) not in self._restored_items]
+
+    def restore_from_checkpoint(self) -> None:
+        """Put back the items an earlier, interrupted run finished, so the workflow skips them."""
+        restored = self.checkpoint.restore(self.eval_input.eval_input_items)
+        for item in restored:
+            self._compute_usage_stats(item)
+        self._restored_items = {id(item) for item in restored}
+        logger.info("Resuming from %s: %d of %d items already finished",
+                    self.checkpoint.path,
+                    len(restored),
+                    len(self.eval_input.eval_input_items))
 
     async def profile_workflow(self) -> ProfilerResults:
         """
@@ -549,8 +581,7 @@ class EvaluationRun:
         if self.workflow_interrupted:
             # Issue a warning if the workflow was not completed on all datasets
             msg = ("Workflow execution was interrupted due to an error. The results may be incomplete. "
-                   "You can re-execute evaluation for incomplete results by running "
-                   "`eval` with the --skip_completed_entries flag.")
+                   "You can finish the incomplete items by running the same `nat eval` command with --resume.")
             logger.warning(msg)
         if self.callback_manager:
             self.callback_manager.on_eval_summary(usage_stats=self.usage_stats,
@@ -740,10 +771,22 @@ class EvaluationRun:
         workflow_alias = self._get_workflow_alias(config.workflow.type)
         logger.debug("Loaded %s evaluation configuration: %s", workflow_alias, self.eval_config)
 
+        if self.config.resume and self.config.skip_workflow:
+            raise ValueError(
+                "--resume continues an interrupted workflow run, so it cannot be used with --skip_workflow")
+        if (self.config.resume and not job_id and self.eval_config.general.output
+                and self.eval_config.general.output.job_management.append_job_id_to_output_dir):
+            raise ValueError(
+                "--resume reads the checkpoint from the output directory, but "
+                "eval.general.output.job_management.append_job_id_to_output_dir gives every run a new one. "
+                "Turn that option off to resume.")
+
         # Cleanup the output directory (skip when reusing existing workflow output)
         if self.eval_config.general.output:
             if self.config.skip_workflow:
                 logger.info("Skipping output directory cleanup because --skip_workflow is set")
+            elif self.config.resume:
+                logger.info("Skipping output directory cleanup because --resume is set")
             else:
                 self.cleanup_output_directory()
 
@@ -814,6 +857,12 @@ class EvaluationRun:
                                        config_effective_file=self.config_effective_file,
                                        config_metadata_file=self.config_metadata_file)
 
+        if self.config.write_output and not self.config.skip_workflow:
+            self.checkpoint = EvalCheckpoint(self.eval_config.general.output_dir / CHECKPOINT_FILE_NAME)
+            if self.config.resume:
+                self.restore_from_checkpoint()
+            self.checkpoint.start(resume=self.config.resume)
+
         # Validate LLM endpoints before running evaluation (opt-in via config)
         if (not self.config.skip_workflow and not self.config.endpoint and config.eval.general.validate_llm_endpoints):
             try:
@@ -865,6 +914,8 @@ class EvaluationRun:
                     if session_manager and not self.config.endpoint:
                         await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
                 finally:
+                    if self.checkpoint:
+                        self.checkpoint.close()
                     if local_session_manager is not None:
                         await local_session_manager.shutdown()
 
@@ -884,8 +935,7 @@ class EvaluationRun:
 
         if self.workflow_interrupted:
             msg = ("Workflow execution was interrupted due to an error. The results may be incomplete. "
-                   "You can re-execute evaluation for incomplete results by running "
-                   "`eval` with the --skip_completed_entries flag.")
+                   "You can finish the incomplete items by running the same `nat eval` command with --resume.")
             logger.warning(msg)
 
         # Retrieve file paths written by FileEvalCallback (if registered)

@@ -75,6 +75,11 @@ class EvaluationRunConfig(BaseModel):
         default=False,
         description="If true, skip dataset entries that already have outputs.",
     )
+    resume: bool = Field(
+        default=False,
+        description="If true, keep the output directory and skip the items an interrupted run already finished, "
+        "as recorded in its workflow output checkpoint.",
+    )
     endpoint: str | None = Field(
         default=None,
         description="Remote workflow endpoint URL. Only used for remote execution.",
