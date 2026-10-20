@@ -1145,6 +1145,200 @@ def test_type_list_with_array_items():
     assert m2.mixed_field is None
 
 
+@pytest.mark.parametrize("point_type", ["array", ["array", "null"]])
+def test_tuple_items_list(point_type: str | list[str]):
+    """A list of `items` schemas (a draft-07 tuple, as the TypeScript MCP SDK emits for `z.tuple()`) builds a model"""
+    schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "point": {
+                "type": point_type,
+                "minItems": 2,
+                "maxItems": 2,
+                "items": [{
+                    "type": "number"
+                }, {
+                    "type": "number"
+                }],
+            }
+        },
+        "required": ["point"],
+        "additionalProperties": False,
+    }
+
+    _model = model_from_mcp_schema("test_tuple_items_list", schema)
+
+    assert _model.model_validate({"point": [3, 4.5]}).point == [3, 4.5]
+    with pytest.raises(ValidationError):
+        _model.model_validate({"point": ["a", "b"]})
+    with pytest.raises(ValidationError):
+        _model.model_validate({"point": [1, 2, 3]})
+    with pytest.raises(ValidationError):
+        _model.model_validate({"point": [1]})
+
+
+def test_tuple_items_list_accepts_every_position_type():
+    """A tuple with different position types accepts each of them and rejects other values"""
+    schema = {
+        "type": "object",
+        "properties": {
+            "pair": {
+                "type": "array", "items": [{
+                    "type": "string"
+                }, {
+                    "type": "integer"
+                }]
+            }
+        },
+        "required": ["pair"],
+    }
+
+    _model = model_from_mcp_schema("test_tuple_items_list_mixed", schema)
+
+    assert _model.model_validate({"pair": ["id", 7]}).pair == ["id", 7]
+    with pytest.raises(ValidationError):
+        _model.model_validate({"pair": ["id", None]})
+
+
+def test_tuple_items_list_with_a_true_position_accepts_any_value():
+    """A `true` tuple position accepts any value"""
+    schema = {
+        "type": "object",
+        "properties": {
+            "pair": {
+                "type": "array", "items": [True, {
+                    "type": "number"
+                }]
+            }
+        },
+        "required": ["pair"],
+    }
+
+    _model = model_from_mcp_schema("test_tuple_items_list_true", schema)
+
+    assert _model.model_validate({"pair": ["any", 1.5]}).pair == ["any", 1.5]
+
+
+@pytest.mark.parametrize("array_keywords, valid, too_long",
+                         [({
+                             "items": [False]
+                         }, [], [1]), ({
+                             "items": [{
+                                 "type": "number"
+                             }, False]
+                         }, [1], [1, 2]), ({
+                             "items": [{
+                                 "type": "number"
+                             }, {
+                                 "type": "number"
+                             }, False], "maxItems": 1
+                         }, [1], [1, 2])])
+def test_tuple_items_list_ends_before_a_false_position(array_keywords: dict[str, Any], valid: list, too_long: list):
+    """A `false` tuple position allows no value, so the array cannot reach it"""
+    schema = {"type": "object", "properties": {"pair": {"type": "array", **array_keywords}}, "required": ["pair"]}
+
+    _model = model_from_mcp_schema("test_tuple_items_list_false", schema)
+
+    assert _model.model_validate({"pair": valid}).pair == valid
+    with pytest.raises(ValidationError):
+        _model.model_validate({"pair": too_long})
+
+
+@pytest.mark.parametrize("items", [True, []])
+def test_array_items_without_a_schema_object_is_an_untyped_list(items: bool | list):
+    """An `items` value that is neither a schema object nor a tuple gives an untyped list"""
+    schema = {"type": "object", "properties": {"values": {"type": "array", "items": items}}, "required": ["values"]}
+
+    _model = model_from_mcp_schema("test_array_items_without_schema_object", schema)
+
+    assert _model.model_validate({"values": [1, "a"]}).values == [1, "a"]
+
+
+def test_prefix_items_with_items_false_is_a_bounded_list():
+    """A draft 2020-12 tuple (`prefixItems` and `items: false`, as TypeScript MCP SDK v2 emits) builds a model"""
+    schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "point": {
+                "type": "array",
+                "prefixItems": [{
+                    "type": "number"
+                }, {
+                    "type": "number"
+                }],
+                "items": False,
+                "minItems": 2,
+                "maxItems": 2,
+            }
+        },
+        "required": ["point"],
+    }
+
+    _model = model_from_mcp_schema("test_prefix_items_with_items_false", schema)
+
+    assert _model.model_validate({"point": [3, 4.5]}).point == [3, 4.5]
+    with pytest.raises(ValidationError):
+        _model.model_validate({"point": ["a", "b"]})
+    with pytest.raises(ValidationError):
+        _model.model_validate({"point": [1, 2, 3]})
+
+
+@pytest.mark.parametrize("array_keywords",
+                         [{
+                             "items": [{
+                                 "type": "number"
+                             }, {
+                                 "type": "number"
+                             }], "additionalItems": False
+                         }, {
+                             "prefixItems": [{
+                                 "type": "number"
+                             }, {
+                                 "type": "number"
+                             }], "items": False
+                         }],
+                         ids=["draft-07", "draft-2020-12"])
+def test_closed_tuple_without_max_items_allows_only_its_positions(array_keywords: dict[str, Any]):
+    """A closed tuple (`additionalItems: false` / `items: false`) rejects extra values even without `maxItems`"""
+    schema = {"type": "object", "properties": {"point": {"type": "array", **array_keywords}}, "required": ["point"]}
+
+    _model = model_from_mcp_schema("test_closed_tuple", schema)
+
+    assert _model.model_validate({"point": [3, 4.5]}).point == [3, 4.5]
+    with pytest.raises(ValidationError):
+        _model.model_validate({"point": ["a", "b"]})
+    with pytest.raises(ValidationError):
+        _model.model_validate({"point": [1, 2, 3]})
+
+
+@pytest.mark.parametrize("array_keywords",
+                         [{
+                             "items": [{
+                                 "type": "integer"
+                             }], "additionalItems": {
+                                 "type": "string"
+                             }
+                         }, {
+                             "prefixItems": [{
+                                 "type": "integer"
+                             }], "items": {
+                                 "type": "string"
+                             }
+                         }],
+                         ids=["draft-07", "draft-2020-12"])
+def test_tuple_with_a_schema_for_later_positions(array_keywords: dict[str, Any]):
+    """A schema for the later positions (`additionalItems` / `items`) adds its type to the tuple"""
+    schema = {"type": "object", "properties": {"row": {"type": "array", **array_keywords}}, "required": ["row"]}
+
+    _model = model_from_mcp_schema("test_tuple_rest", schema)
+
+    assert _model.model_validate({"row": [1, "a", "b"]}).row == [1, "a", "b"]
+    with pytest.raises(ValidationError):
+        _model.model_validate({"row": [1, None]})
+
+
 def test_type_list_with_object_properties():
     """Test that type list containing 'object' properly resolves property types"""
     schema = {
