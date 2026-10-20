@@ -304,11 +304,12 @@ class EvaluationRun:
                         item.output_obj = output
                         item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
                         usage_stats_item = self._compute_usage_stats(item)
+                        # record first, so a cancel or error inside a callback can't lose a finished item
+                        if self.checkpoint:
+                            self.checkpoint.record(item)
                         if self.callback_manager:
                             self.callback_manager.on_prediction(item=item, output=output)
                             await self.callback_manager.a_on_usage_stats(item=item, usage_stats_item=usage_stats_item)
-                        if self.checkpoint:
-                            self.checkpoint.record(item)
             finally:
                 if root_span_token is not None:
                     ctx_state._root_span_id.reset(root_span_token)
