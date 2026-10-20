@@ -70,6 +70,7 @@ dependencies = [
   "networkx~=3.4",
   "nvidia-nat-atif == {version}",
   "numpy~=2.3",
+  "packaging>=24.0",
   "pandas~=2.2",
   "pip>=24.3.1",
   "pkce==1.0.3",
