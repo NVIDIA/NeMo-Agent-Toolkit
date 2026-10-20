@@ -146,6 +146,8 @@ class EvaluationRun:
         # Per-item checkpoint of finished workflow runs, and the items restored from it by --resume
         self.checkpoint: EvalCheckpoint | None = None
         self._restored_items: set[int] = set()
+        # their dataset ids, which survive a pre-eval process function that returns new item objects
+        self._restored_item_ids: set = set()
 
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
@@ -364,6 +366,7 @@ class EvaluationRun:
                 self.callback_manager.on_prediction(item=item, output=item.output_obj)
                 await self.callback_manager.a_on_usage_stats(item=item, usage_stats_item=usage_stats_item)
         self._restored_items = {id(item) for item in restored}
+        self._restored_item_ids = {item.id for item in restored}
         logger.info("Resuming from %s: %d of %d items already finished",
                     self.checkpoint.path,
                     len(restored),
@@ -933,9 +936,11 @@ class EvaluationRun:
         # compute total runtime, skipping items without steps (their timestamps default to 0.0), and items
         # restored by --resume when others ran in this run, since they finished in an earlier one
         usage_items = self.usage_stats.usage_stats_items
-        restored_ids = {item.id for item in self.eval_input.eval_input_items if id(item) in self._restored_items}
-        if any(item_id not in restored_ids for item_id in usage_items):
-            usage_items = {item_id: item for item_id, item in usage_items.items() if item_id not in restored_ids}
+        if any(item_id not in self._restored_item_ids for item_id in usage_items):
+            usage_items = {
+                item_id: item
+                for item_id, item in usage_items.items() if item_id not in self._restored_item_ids
+            }
         timed_items = [item for item in usage_items.values() if item.max_timestamp > 0.0]
         if timed_items:
             self.usage_stats.total_runtime = max(item.max_timestamp for item in timed_items) - \
