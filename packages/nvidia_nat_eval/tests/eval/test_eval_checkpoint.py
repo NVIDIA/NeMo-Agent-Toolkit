@@ -478,6 +478,29 @@ async def test_a_fresh_run_ignores_and_replaces_an_old_checkpoint(tmp_path):
     assert [r["output"] for r in _read_records(output_dir / CHECKPOINT_FILE_NAME)] == ["new q1", "new q2"]
 
 
+@pytest.mark.parametrize("write_checkpoint", [True, False])
+async def test_interrupted_warning_points_to_resume_only_with_a_checkpoint(tmp_path, caplog, write_checkpoint):
+    dataset = _write_dataset(tmp_path / "dataset.json", 2)
+
+    def answer_for(question):
+        if question == "q2":
+            raise RuntimeError("model endpoint down")
+        return f"answer {question}"
+
+    with caplog.at_level("WARNING"):
+        await _run_and_evaluate(_nat_config(dataset, tmp_path / "out"),
+                                _session_manager(answer_for),
+                                write_checkpoint=write_checkpoint)
+
+    interrupted = [r.getMessage() for r in caplog.records if "interrupted" in r.getMessage()]
+    assert interrupted
+    if write_checkpoint:
+        assert all("--resume" in message for message in interrupted)
+    else:
+        assert not any("--resume" in message for message in interrupted)
+        assert all("--skip_completed_entries" in message for message in interrupted)
+
+
 async def test_resume_with_skip_workflow_is_rejected(tmp_path):
     dataset = _write_dataset(tmp_path / "dataset.json", 1)
     with pytest.raises(ValueError, match="resume"):
