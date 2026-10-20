@@ -143,7 +143,7 @@ async def test_get_file_requests_the_raw_url_for_any_ref(ref: str, monkeypatch: 
     assert str(requests[0].url) == f"https://raw.githubusercontent.com/owner/repo/{ref}/docs/README.md"
 
 
-@pytest.mark.parametrize("since", ["yesterday", "2026-10-01", "2026-10-01 00:00:00", 20261001])
+@pytest.mark.parametrize("since", ["yesterday", "2026-10-01", "2026-10-01 00:00:00", "2026-1-1T0:0:0Z", 20261001])
 def test_get_issue_rejects_since_values_that_are_not_iso_8601_timestamps(since: str | int):
     from nat.tool.github_tools import GithubGetIssueModel
 
