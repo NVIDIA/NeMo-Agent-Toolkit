@@ -186,6 +186,67 @@ def test_resumed_start_keeps_old_records_and_appends(tmp_path):
     assert [record["id"] for record in _read_records(path)] == [1, 2]
 
 
+def test_checkpoint_skips_a_torn_line_that_splits_a_character(tmp_path):
+    """A kill can land inside a multi-byte character; resume must still read the finished records."""
+    path = tmp_path / CHECKPOINT_FILE_NAME
+    checkpoint = EvalCheckpoint(path)
+    checkpoint.start(resume=False)
+    checkpoint.record(_answered(1, "q1"))
+    checkpoint.close()
+    with open(path, "ab") as f:
+        f.write('{"id": 2, "input": "caf\u00e9'.encode()[:-1])
+
+    items = [_item(1, "q1"), _item(2, "café")]
+    restored = EvalCheckpoint(path).restore(items)
+
+    assert restored == [items[0]]
+
+
+def test_resuming_after_a_torn_line_keeps_the_next_record(tmp_path):
+    path = tmp_path / CHECKPOINT_FILE_NAME
+    checkpoint = EvalCheckpoint(path)
+    checkpoint.start(resume=False)
+    checkpoint.record(_answered(1, "q1"))
+    checkpoint.close()
+    with open(path, "a", encoding="utf-8") as f:
+        f.write('{"id": 2, "input": "q2", "out')
+
+    resumed = EvalCheckpoint(path)
+    resumed.start(resume=True)
+    resumed.record(_answered(2, "q2"))
+    resumed.close()
+
+    items = [_item(1, "q1"), _item(2, "q2")]
+    assert EvalCheckpoint(path).restore(items) == items
+
+
+def test_checkpoint_keeps_items_with_the_same_input_apart_by_id(tmp_path):
+    checkpoint = EvalCheckpoint(tmp_path / CHECKPOINT_FILE_NAME)
+    checkpoint.start(resume=False)
+    checkpoint.record(_answered(2, "same question"))
+    checkpoint.close()
+
+    items = [_item(1, "same question"), _item(2, "same question")]
+    restored = EvalCheckpoint(tmp_path / CHECKPOINT_FILE_NAME).restore(items)
+
+    assert restored == [items[1]]
+    assert items[0].output_obj is None
+
+
+def test_checkpoint_uses_a_later_record_when_an_earlier_one_is_unreadable(tmp_path):
+    path = tmp_path / CHECKPOINT_FILE_NAME
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(json.dumps({"id": 1, "input": "q1", "output": "old", "trajectory": [{"not": "a step"}]}) + "\n")
+        f.write(json.dumps({"id": 1, "input": "q1", "output": "answer q1", "trajectory": []}) + "\n")
+        f.write(json.dumps({"id": 2, "input": "q2"}) + "\n")  # missing fields
+
+    items = [_item(1, "q1"), _item(2, "q2")]
+    restored = EvalCheckpoint(path).restore(items)
+
+    assert restored == [items[0]]
+    assert items[0].output_obj == "answer q1"
+
+
 # --- local workflow runs --------------------------------------------------------------------------------------------
 
 
@@ -316,7 +377,7 @@ def _nat_config(dataset: Path, output_dir: Path, **output) -> Config:
     return config
 
 
-async def _run_and_evaluate(config: Config, session_manager, **run_config):
+async def _run_and_evaluate(config: Config, session_manager, job_id: str | None = None, **run_config):
     evaluation_run = EvaluationRun(EvaluationRunConfig(config_file=config, **run_config))
     eval_builder = MagicMock()
 
@@ -330,7 +391,7 @@ async def _run_and_evaluate(config: Config, session_manager, **run_config):
          patch("nat.plugins.eval.runtime.evaluate._get_output_uploader_cls",
                return_value=MagicMock(return_value=uploader)), \
          patch.object(evaluation_run, "profile_workflow", AsyncMock(return_value=ProfilerResults())):
-        output = await evaluation_run.run_and_evaluate(session_manager=session_manager)
+        output = await evaluation_run.run_and_evaluate(session_manager=session_manager, job_id=job_id)
     return evaluation_run, output
 
 
@@ -348,7 +409,9 @@ async def test_resume_runs_only_the_unfinished_items(tmp_path):
         return f"answer {question}"
 
     with pytest.raises(asyncio.CancelledError):
-        await _run_and_evaluate(_nat_config(dataset, output_dir), _session_manager(first_pass_answer))
+        await _run_and_evaluate(_nat_config(dataset, output_dir),
+                                _session_manager(first_pass_answer),
+                                write_checkpoint=True)
 
     # items run concurrently, so every item that finished before the cancel is kept, and only those
     assert sorted(r["id"] for r in _read_records(output_dir / CHECKPOINT_FILE_NAME)) == sorted(finished_first_pass)
@@ -393,7 +456,8 @@ async def test_a_fresh_run_ignores_and_replaces_an_old_checkpoint(tmp_path):
 
     # cleanup=False keeps the directory, so only the fresh start can clear the old records
     await _run_and_evaluate(_nat_config(dataset, output_dir, cleanup=False),
-                            _session_manager(lambda q: f"new {q}", on_call=calls.append))
+                            _session_manager(lambda q: f"new {q}", on_call=calls.append),
+                            write_checkpoint=True)
 
     assert calls == ["q1", "q2"]
     assert [r["output"] for r in _read_records(output_dir / CHECKPOINT_FILE_NAME)] == ["new q1", "new q2"]
@@ -414,6 +478,104 @@ async def test_resume_with_a_new_job_directory_per_run_is_rejected(tmp_path):
     config.eval.general.output.job_management.append_job_id_to_output_dir = True
     with pytest.raises(ValueError, match="append_job_id_to_output_dir"):
         await _run_and_evaluate(config, _session_manager(lambda q: q), resume=True)
+
+
+async def test_resume_with_an_explicit_job_id_is_allowed(tmp_path):
+    """FastAPI passes a job_id, so the output directory is the same on every run."""
+    dataset = _write_dataset(tmp_path / "dataset.json", 1)
+    config = _nat_config(dataset, tmp_path / "out")
+    config.eval.general.output.job_management.append_job_id_to_output_dir = True
+    job_dir = tmp_path / "out" / "jobs" / "job_1"
+    job_dir.mkdir(parents=True)
+    checkpoint = EvalCheckpoint(job_dir / CHECKPOINT_FILE_NAME)
+    checkpoint.start(resume=False)
+    checkpoint.record(_answered(1, "q1"))
+    checkpoint.close()
+
+    _, output = await _run_and_evaluate(config,
+                                        _session_manager(lambda q: pytest.fail("q1 already finished")),
+                                        job_id="job_1",
+                                        resume=True)
+
+    assert output.eval_input.eval_input_items[0].output_obj == "answer q1"
+
+
+async def test_resume_without_writing_output_is_rejected(tmp_path):
+    dataset = _write_dataset(tmp_path / "dataset.json", 1)
+    with pytest.raises(ValueError, match="write_output"):
+        await _run_and_evaluate(_nat_config(dataset, tmp_path / "out"),
+                                _session_manager(lambda q: q),
+                                resume=True,
+                                write_output=False)
+
+
+async def test_no_checkpoint_unless_asked(tmp_path):
+    """Programmatic runs (optimizer, profiler) share output directories, so they don't write one by default."""
+    dataset = _write_dataset(tmp_path / "dataset.json", 1)
+    output_dir = tmp_path / "out"
+    await _run_and_evaluate(_nat_config(dataset, output_dir), _session_manager(lambda q: f"answer {q}"))
+    assert not (output_dir / CHECKPOINT_FILE_NAME).exists()
+
+
+async def test_checkpoint_is_closed_when_the_run_fails_before_the_workflow(tmp_path):
+    dataset = _write_dataset(tmp_path / "dataset.json", 1)
+    config = _nat_config(dataset, tmp_path / "out")
+    config.eval.general.validate_llm_endpoints = True
+    evaluation_run = EvaluationRun(EvaluationRunConfig(config_file=config, write_checkpoint=True))
+    with patch("nat.plugins.eval.runtime.evaluate.validate_llm_endpoints", AsyncMock(side_effect=RuntimeError("404"))):
+        with pytest.raises(RuntimeError, match="404"):
+            await evaluation_run.run_and_evaluate(session_manager=_session_manager(lambda q: q))
+    assert evaluation_run.checkpoint is None or evaluation_run.checkpoint._file is None
+
+
+async def test_restored_items_reach_the_eval_callbacks(tmp_path):
+    """Exporters such as Weave log every prediction of the run, so restored items are reported too."""
+    dataset = _write_dataset(tmp_path / "dataset.json", 2)
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    checkpoint = EvalCheckpoint(output_dir / CHECKPOINT_FILE_NAME)
+    checkpoint.start(resume=False)
+    checkpoint.record(_answered(1, "q1"))
+    checkpoint.close()
+
+    evaluation_run = EvaluationRun(EvaluationRunConfig(config_file=_nat_config(dataset, output_dir), resume=True))
+    predictions: list[str] = []
+    usage_items: list = []
+    evaluation_run.callback_manager.on_prediction = lambda item, output: predictions.append(output)
+
+    async def on_usage(item, usage_stats_item):
+        usage_items.append(item.id)
+
+    evaluation_run.callback_manager.a_on_usage_stats = on_usage
+    evaluation_run.eval_input = EvalInput(eval_input_items=[_item(1, "q1"), _item(2, "q2")])
+    evaluation_run.eval_config = _eval_config(output_dir)
+    evaluation_run.checkpoint = EvalCheckpoint(output_dir / CHECKPOINT_FILE_NAME)
+    await evaluation_run.restore_from_checkpoint()
+
+    assert predictions == ["answer q1"]
+    assert usage_items == [1]
+
+
+async def test_total_runtime_counts_only_this_run_after_a_resume(tmp_path):
+    """Restored items finished in an earlier run; the gap until the resume is not runtime."""
+    dataset = _write_dataset(tmp_path / "dataset.json", 2)
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    old = _answered(1, "q1")
+    for step in old.trajectory:
+        step.payload.event_timestamp = 1000.0  # finished long before this run
+    checkpoint = EvalCheckpoint(output_dir / CHECKPOINT_FILE_NAME)
+    checkpoint.start(resume=False)
+    checkpoint.record(old)
+    checkpoint.close()
+
+    now_steps = [_llm_end_step("q2", "answer q2")]
+    with patch("nat.builder.runtime_event_subscriber.pull_intermediate", AsyncMock(return_value=now_steps)):
+        evaluation_run, _ = await _run_and_evaluate(_nat_config(dataset, output_dir),
+                                                    _session_manager(lambda q: f"answer {q}"),
+                                                    resume=True)
+
+    assert evaluation_run.usage_stats.total_runtime < 60
 
 
 # --- remote workflow runs -------------------------------------------------------------------------------------------
@@ -441,7 +603,7 @@ async def test_remote_resume_sends_only_unfinished_items(tmp_path):
     evaluation_run.checkpoint.record(_answered(1, "q1"))
     evaluation_run.checkpoint.close()
     evaluation_run.checkpoint = EvalCheckpoint(tmp_path / CHECKPOINT_FILE_NAME)
-    evaluation_run.restore_from_checkpoint()
+    await evaluation_run.restore_from_checkpoint()
     sent: list[str] = []
 
     async def fake_single(self, session, item):
