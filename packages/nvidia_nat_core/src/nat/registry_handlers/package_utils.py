@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import base64
+import glob
 import importlib.metadata
 import logging
 import os
@@ -476,8 +477,9 @@ def build_wheel(package_root: str) -> WheelData:
     result = subprocess.run(["uv", "build", "--wheel"], check=True)
     result.check_returncode()
 
-    whl_file = sorted(os.listdir("dist"), reverse=True)[0]
-    whl_file_path = os.path.join("dist", whl_file)
+    # dist/ can still hold wheels from earlier builds, and a name sort ranks 0.9.0 above 0.10.0,
+    # so take the wheel that was just written.
+    whl_file_path = max(glob.glob(os.path.join("dist", "*.whl")), key=os.path.getmtime)
 
     with open(whl_file_path, "rb") as whl:
         whl_bytes = whl.read()

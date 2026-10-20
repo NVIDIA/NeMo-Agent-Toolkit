@@ -16,6 +16,7 @@
 import os
 import tempfile
 import textwrap
+import zipfile
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -43,6 +44,32 @@ def test_build_wheel():
 
     assert isinstance(wheel_data, WheelData)
     assert wheel_data.package_root == package_root
+
+
+def _write_wheel(dist_dir, version: str) -> str:
+    whl_path = os.path.join(dist_dir, f"demo_pkg-{version}-py3-none-any.whl")
+    with zipfile.ZipFile(whl_path, "w") as whl:
+        whl.writestr(f"demo_pkg-{version}.dist-info/METADATA",
+                     f"Metadata-Version: 2.1\nName: demo-pkg\nVersion: {version}\n")
+    return whl_path
+
+
+def test_build_wheel_picks_new_wheel_over_older_builds(tmp_path):
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "demo-pkg"\nversion = "0.10.0"\n')
+    dist_dir = tmp_path / "dist"
+    dist_dir.mkdir()
+    old_wheel = _write_wheel(dist_dir, "0.9.0")
+    os.utime(old_wheel, (1_000_000_000, 1_000_000_000))
+
+    def fake_uv_build(*args, **kwargs):
+        _write_wheel("dist", "0.10.0")
+        return Mock()
+
+    with patch("nat.registry_handlers.package_utils.subprocess.run", side_effect=fake_uv_build):
+        wheel_data = build_wheel(package_root=str(tmp_path))
+
+    assert wheel_data.whl_version == "0.10.0"
+    assert wheel_data.whl_path.endswith("demo_pkg-0.10.0-py3-none-any.whl")
 
 
 @pytest.mark.parametrize("use_wheel_data", [
