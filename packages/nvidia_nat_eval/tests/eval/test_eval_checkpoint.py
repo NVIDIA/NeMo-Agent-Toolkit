@@ -36,9 +36,9 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
-from nat.data_models.token_usage import TokenUsageBaseModel
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
+from nat.data_models.token_usage import TokenUsageBaseModel
 from nat.plugins.eval.runtime.checkpoint import CHECKPOINT_FILE_NAME
 from nat.plugins.eval.runtime.checkpoint import EvalCheckpoint
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
@@ -52,9 +52,8 @@ def _llm_end_step(question: str, answer: str, total_tokens: int = 7) -> Intermed
                                 event_type=IntermediateStepType.LLM_END,
                                 name="llm",
                                 data=StreamEventData(input=question, output=answer),
-                                usage_info=UsageInfo(token_usage=TokenUsageBaseModel(prompt_tokens=total_tokens - 2,
-                                                                                     completion_tokens=2,
-                                                                                     total_tokens=total_tokens))))
+                                usage_info=UsageInfo(token_usage=TokenUsageBaseModel(
+                                    prompt_tokens=total_tokens - 2, completion_tokens=2, total_tokens=total_tokens))))
 
 
 def _item(item_id, question: str) -> EvalInputItem:
@@ -206,7 +205,9 @@ def _session_manager(answer_for, on_call=None):
 
         async def result():
             if on_call is not None:
-                on_call(question)
+                called = on_call(question)
+                if asyncio.iscoroutine(called):
+                    await called
             return answer_for(question)
 
         runner.result = AsyncMock(side_effect=result)
@@ -250,10 +251,16 @@ def fixture_no_intermediate_steps():
 
 
 async def test_each_item_is_on_disk_as_soon_as_it_finishes(tmp_path):
+    """While q2 is still running, q1's answer is already in the checkpoint file."""
     seen_on_disk_during_q2: list[dict] = []
 
-    def on_call(question):
+    async def on_call(question):
         if question == "q2":
+            # items run concurrently, so give q1 a moment to finish first
+            for _ in range(100):
+                if _read_records(tmp_path / CHECKPOINT_FILE_NAME):
+                    break
+                await asyncio.sleep(0.01)
             seen_on_disk_during_q2.extend(_read_records(tmp_path / CHECKPOINT_FILE_NAME))
 
     evaluation_run = _evaluation_run(tmp_path, [_item(1, "q1"), _item(2, "q2")])
@@ -284,18 +291,28 @@ async def test_failed_items_are_not_checkpointed(tmp_path):
 
 
 def _write_dataset(path: Path, n: int) -> Path:
-    path.write_text(json.dumps([{"id": i, "question": f"q{i}", "answer": f"expected q{i}"} for i in range(1, n + 1)]),
+    path.write_text(json.dumps([{
+        "id": i, "question": f"q{i}", "answer": f"expected q{i}"
+    } for i in range(1, n + 1)]),
                     encoding="utf-8")
     return path
 
 
 def _nat_config(dataset: Path, output_dir: Path, **output) -> Config:
+    # built from a dict like a loaded YAML file, so output_dir follows output.dir
     config = Config()
-    config.eval = EvalConfig()
-    config.eval.general.max_concurrency = 1
-    config.eval.general.dataset = EvalDatasetJsonConfig(file_path=dataset)
-    config.eval.general.output = EvalOutputConfig(dir=output_dir, **output)
-    config.eval.evaluators = {}
+    config.eval = EvalConfig.model_validate({
+        "general": {
+            "max_concurrency": 1,
+            "dataset": {
+                "_type": "json", "file_path": str(dataset)
+            },
+            "output": {
+                "dir": str(output_dir), **output
+            },
+        },
+        "evaluators": {},
+    })
     return config
 
 
@@ -321,27 +338,31 @@ async def test_resume_runs_only_the_unfinished_items(tmp_path):
     dataset = _write_dataset(tmp_path / "dataset.json", 4)
     output_dir = tmp_path / "out"
     calls: list[str] = []
+    finished_first_pass: list[int] = []
 
     def first_pass_answer(question):
         if question == "q3":
             # Ctrl-C under asyncio.run cancels the running tasks
             raise asyncio.CancelledError
+        finished_first_pass.append(int(question[1:]))
         return f"answer {question}"
 
     with pytest.raises(asyncio.CancelledError):
         await _run_and_evaluate(_nat_config(dataset, output_dir), _session_manager(first_pass_answer))
 
-    assert [r["id"] for r in _read_records(output_dir / CHECKPOINT_FILE_NAME)] == [1, 2]
+    # items run concurrently, so every item that finished before the cancel is kept, and only those
+    assert sorted(r["id"] for r in _read_records(output_dir / CHECKPOINT_FILE_NAME)) == sorted(finished_first_pass)
+    assert 3 not in finished_first_pass
 
     evaluation_run, output = await _run_and_evaluate(_nat_config(dataset, output_dir),
                                                      _session_manager(lambda q: f"answer {q}", on_call=calls.append),
                                                      resume=True)
 
-    assert calls == ["q3", "q4"]
+    assert sorted(calls) == sorted(f"q{i}" for i in range(1, 5) if i not in finished_first_pass)
     assert [item.output_obj for item in output.eval_input.eval_input_items] == [f"answer q{i}" for i in range(1, 5)]
     workflow_output = json.loads((output_dir / "workflow_output.json").read_text(encoding="utf-8"))
     assert [row["generated_answer"] for row in workflow_output] == [f"answer q{i}" for i in range(1, 5)]
-    assert [r["id"] for r in _read_records(output_dir / CHECKPOINT_FILE_NAME)] == [1, 2, 3, 4]
+    assert sorted(r["id"] for r in _read_records(output_dir / CHECKPOINT_FILE_NAME)) == [1, 2, 3, 4]
 
 
 async def test_resume_restores_usage_stats_for_finished_items(tmp_path):
