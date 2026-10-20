@@ -389,6 +389,9 @@ class ReActAgentGraph(DualNodeAgent):
                         combined_content = str(ex.observation) + '\n' + str(output_message.content)
                         output_message.content = combined_content
                         state.messages += [output_message]
+                        # mark the run as finished, so the conditional edge ends it instead of
+                        # re-running the previous tool call from the scratchpad
+                        state.final_answer = combined_content
                         return state
                     # retry parsing errors, if configured
                     logger.info("%s Retrying ReAct Agent, including output parsing Observation", AGENT_LOG_PREFIX)
