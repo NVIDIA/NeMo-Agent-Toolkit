@@ -333,6 +333,21 @@ async def test_each_item_is_on_disk_as_soon_as_it_finishes(tmp_path):
                                                                                                 (2, "answer q2")]
 
 
+async def test_an_item_is_checkpointed_before_the_callbacks_run(tmp_path):
+    """Ctrl-C can land while an exporter callback awaits; the item's answer is already paid for."""
+    evaluation_run = _evaluation_run(tmp_path, [_item(1, "q1")])
+
+    async def cancelled_while_exporting(item, usage_stats_item):
+        raise asyncio.CancelledError
+
+    evaluation_run.callback_manager.a_on_usage_stats = cancelled_while_exporting
+    with pytest.raises(asyncio.CancelledError):
+        await evaluation_run.run_workflow_local(_session_manager(lambda q: f"answer {q}"))
+    evaluation_run.checkpoint.close()
+
+    assert [(r["id"], r["output"]) for r in _read_records(tmp_path / CHECKPOINT_FILE_NAME)] == [(1, "answer q1")]
+
+
 async def test_failed_items_are_not_checkpointed(tmp_path):
 
     def answer_for(question):
