@@ -578,6 +578,34 @@ async def test_total_runtime_counts_only_this_run_after_a_resume(tmp_path):
     assert evaluation_run.usage_stats.total_runtime < 60
 
 
+async def test_total_runtime_after_a_resume_survives_a_pre_eval_function_that_copies_items(tmp_path):
+    """A custom pre-eval process function may return new EvalInputItem objects instead of the restored ones."""
+    from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
+
+    dataset = _write_dataset(tmp_path / "dataset.json", 2)
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    old = _answered(1, "q1")
+    for step in old.trajectory:
+        step.payload.event_timestamp = 1000.0
+    checkpoint = EvalCheckpoint(output_dir / CHECKPOINT_FILE_NAME)
+    checkpoint.start(resume=False)
+    checkpoint.record(old)
+    checkpoint.close()
+
+    def copy_items(self, eval_input):
+        return EvalInput(eval_input_items=[item.model_copy() for item in eval_input.eval_input_items])
+
+    now_steps = [_llm_end_step("q2", "answer q2")]
+    with patch("nat.builder.runtime_event_subscriber.pull_intermediate", AsyncMock(return_value=now_steps)), \
+         patch.object(DatasetHandler, "pre_eval_process_eval_input", copy_items):
+        evaluation_run, _ = await _run_and_evaluate(_nat_config(dataset, output_dir),
+                                                    _session_manager(lambda q: f"answer {q}"),
+                                                    resume=True)
+
+    assert evaluation_run.usage_stats.total_runtime < 60
+
+
 # --- remote workflow runs -------------------------------------------------------------------------------------------
 
 
