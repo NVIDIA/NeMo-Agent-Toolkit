@@ -295,6 +295,7 @@ def process_nat_eval(
         "skip_workflow": skip_workflow,
         "skip_completed_entries": skip_completed_entries,
         "resume": resume,
+        "write_checkpoint": True,
         "endpoint": endpoint,
         "endpoint_timeout": endpoint_timeout,
         "reps": reps,

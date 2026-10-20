@@ -354,11 +354,15 @@ class EvaluationRun:
         """The dataset items that still need a workflow run (all of them unless --resume restored some)."""
         return [item for item in self.eval_input.eval_input_items if id(item) not in self._restored_items]
 
-    def restore_from_checkpoint(self) -> None:
+    async def restore_from_checkpoint(self) -> None:
         """Put back the items an earlier, interrupted run finished, so the workflow skips them."""
         restored = self.checkpoint.restore(self.eval_input.eval_input_items)
         for item in restored:
-            self._compute_usage_stats(item)
+            usage_stats_item = self._compute_usage_stats(item)
+            # report them like items run now, so exporters see every prediction of this run
+            if self.callback_manager:
+                self.callback_manager.on_prediction(item=item, output=item.output_obj)
+                await self.callback_manager.a_on_usage_stats(item=item, usage_stats_item=usage_stats_item)
         self._restored_items = {id(item) for item in restored}
         logger.info("Resuming from %s: %d of %d items already finished",
                     self.checkpoint.path,
@@ -771,6 +775,9 @@ class EvaluationRun:
         workflow_alias = self._get_workflow_alias(config.workflow.type)
         logger.debug("Loaded %s evaluation configuration: %s", workflow_alias, self.eval_config)
 
+        if self.config.resume and not self.config.write_output:
+            raise ValueError("--resume reads and writes the checkpoint in the output directory, "
+                             "so it needs write_output")
         if self.config.resume and self.config.skip_workflow:
             raise ValueError(
                 "--resume continues an interrupted workflow run, so it cannot be used with --skip_workflow")
@@ -857,12 +864,6 @@ class EvaluationRun:
                                        config_effective_file=self.config_effective_file,
                                        config_metadata_file=self.config_metadata_file)
 
-        if self.config.write_output and not self.config.skip_workflow:
-            self.checkpoint = EvalCheckpoint(self.eval_config.general.output_dir / CHECKPOINT_FILE_NAME)
-            if self.config.resume:
-                self.restore_from_checkpoint()
-            self.checkpoint.start(resume=self.config.resume)
-
         # Validate LLM endpoints before running evaluation (opt-in via config)
         if (not self.config.skip_workflow and not self.config.endpoint and config.eval.general.validate_llm_endpoints):
             try:
@@ -885,6 +886,13 @@ class EvaluationRun:
                 # Run workflow
                 local_session_manager: SessionManager | None = None
                 try:
+                    if (self.config.write_output and not self.config.skip_workflow
+                            and (self.config.write_checkpoint or self.config.resume)):
+                        self.checkpoint = EvalCheckpoint(self.eval_config.general.output_dir / CHECKPOINT_FILE_NAME)
+                        if self.config.resume:
+                            await self.restore_from_checkpoint()
+                        self.checkpoint.start(resume=self.config.resume)
+
                     if self.config.endpoint:
                         await self.run_workflow_remote()
                     elif not self.config.skip_workflow:
@@ -922,8 +930,13 @@ class EvaluationRun:
         # Profile the workflow
         profiler_results = await self.profile_workflow()
 
-        # compute total runtime, skipping items without steps (their timestamps default to 0.0)
-        timed_items = [item for item in self.usage_stats.usage_stats_items.values() if item.max_timestamp > 0.0]
+        # compute total runtime, skipping items without steps (their timestamps default to 0.0), and items
+        # restored by --resume when others ran in this run, since they finished in an earlier one
+        usage_items = self.usage_stats.usage_stats_items
+        restored_ids = {item.id for item in self.eval_input.eval_input_items if id(item) in self._restored_items}
+        if any(item_id not in restored_ids for item_id in usage_items):
+            usage_items = {item_id: item for item_id, item in usage_items.items() if item_id not in restored_ids}
+        timed_items = [item for item in usage_items.values() if item.max_timestamp > 0.0]
         if timed_items:
             self.usage_stats.total_runtime = max(item.max_timestamp for item in timed_items) - \
                 min(item.min_timestamp for item in timed_items)

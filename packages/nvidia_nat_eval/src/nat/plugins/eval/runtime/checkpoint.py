@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 CHECKPOINT_FILE_NAME = "workflow_output_checkpoint.jsonl"
 
+_REQUIRED_KEYS = {"id", "input", "output", "trajectory"}
+
 
 def _key(item_id, item_input) -> tuple[str, str]:
     return str(item_id), str(item_input)
@@ -53,6 +55,10 @@ class EvalCheckpoint:
         """Open the checkpoint for writing; a fresh run starts it empty, a resumed run appends to it."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._file = open(self.path, "a" if resume else "w", encoding="utf-8")  # noqa: SIM115 closed in close()
+        if resume and self._ends_in_a_torn_line():
+            # end the partial line so the next record starts on its own line
+            self._file.write("\n")
+            self._file.flush()
 
     def record(self, item: EvalInputItem) -> None:
         """Write one finished item and flush it, so it survives the process being stopped right after."""
@@ -72,21 +78,32 @@ class EvalCheckpoint:
             self._file.close()
             self._file = None
 
+    def _ends_in_a_torn_line(self) -> bool:
+        with open(self.path, "rb") as f:
+            f.seek(0, 2)
+            if f.tell() == 0:
+                return False
+            f.seek(-1, 2)
+            return f.read(1) != b"\n"
+
     def _load(self) -> dict[tuple[str, str], list[dict]]:
         records: dict[tuple[str, str], list[dict]] = defaultdict(list)
         if not self.path.exists():
             logger.warning("No checkpoint found at %s; running every item", self.path)
             return records
         skipped = 0
-        with open(self.path, encoding="utf-8") as f:
-            for line in f:
-                if not line.strip():
+        with open(self.path, "rb") as f:
+            for raw_line in f:
+                if not raw_line.strip():
                     continue
                 try:
-                    record = json.loads(line)
+                    # decode per line: a run stopped mid-write can cut a multi-byte character
+                    record = json.loads(raw_line.decode("utf-8"))
+                    if not _REQUIRED_KEYS.issubset(record):
+                        raise KeyError("missing fields")
                     records[_key(record["id"], record["input"])].append(record)
-                except (json.JSONDecodeError, KeyError, TypeError):
-                    # a run stopped mid-write leaves a partial last line
+                except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError):
+                    # a run stopped mid-write leaves a partial line
                     skipped += 1
         if skipped:
             logger.warning("Skipped %d unreadable line(s) in checkpoint %s", skipped, self.path)
@@ -97,16 +114,16 @@ class EvalCheckpoint:
         records = self._load()
         restored = []
         for item in items:
-            matches = records.get(_key(item.id, item.input_obj))
-            if not matches:
-                continue
-            record = matches.pop(0)
-            try:
-                trajectory = [IntermediateStep.model_validate(step) for step in record["trajectory"]]
-            except (ValidationError, TypeError):
-                logger.warning("Checkpoint record for item %r has an unreadable trajectory; running it again", item.id)
-                continue
-            item.output_obj = record["output"]
-            item.trajectory = trajectory
-            restored.append(item)
+            matches = records.get(_key(item.id, item.input_obj), [])
+            while matches:
+                record = matches.pop(0)
+                try:
+                    trajectory = [IntermediateStep.model_validate(step) for step in record["trajectory"]]
+                except (ValidationError, TypeError):
+                    logger.warning("Skipping a checkpoint record for item %r with an unreadable trajectory", item.id)
+                    continue
+                item.output_obj = record["output"]
+                item.trajectory = trajectory
+                restored.append(item)
+                break
         return restored
