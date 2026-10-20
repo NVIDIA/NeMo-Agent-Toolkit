@@ -1016,11 +1016,19 @@ async def test_tool_calling_agent_reports_the_token_usage_the_model_reported():
             self.turns += 1
             if self.turns == 1:
                 message = AIMessage(content="",
-                                    tool_calls=[{"name": "counter", "args": {"q": "x"}, "id": "call-1"}],
-                                    usage_metadata={"input_tokens": 100, "output_tokens": 20, "total_tokens": 120})
+                                    tool_calls=[{
+                                        "name": "counter", "args": {
+                                            "q": "x"
+                                        }, "id": "call-1"
+                                    }],
+                                    usage_metadata={
+                                        "input_tokens": 100, "output_tokens": 20, "total_tokens": 120
+                                    })
             else:
                 message = AIMessage(content="all done",
-                                    usage_metadata={"input_tokens": 150, "output_tokens": 30, "total_tokens": 180})
+                                    usage_metadata={
+                                        "input_tokens": 150, "output_tokens": 30, "total_tokens": 180
+                                    })
             return ChatResult(generations=[ChatGeneration(message=message)])
 
     builder = AsyncMock()
