@@ -32,7 +32,6 @@ from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.api_server import UNKNOWN_MODEL_SENTINEL
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatRequestOrMessage
-from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import ChatResponseChunkChoice
 from nat.data_models.api_server import ChoiceDelta
@@ -113,7 +112,6 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
 
     from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
     from nat.plugins.langchain.agent.base import _extract_message_text
-    from nat.plugins.langchain.agent.token_usage import TokenUsageCollector
     from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
     from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
     from nat.plugins.langchain.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
@@ -147,7 +145,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
         max_iterations=config.max_iterations,
     ).build_graph()
 
-    async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
+    async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> str:
         """
         Main workflow entry function for the Tool Calling Agent.
 
@@ -157,8 +155,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             chat_request_or_message (ChatRequestOrMessage): The input message to process
 
         Returns:
-            ChatResponse | str: A ChatResponse carrying the token usage the model reported, for a chat request
-            when usage was reported; otherwise the response text or error message
+            str: The response from the agent or error message
         """
         try:
             message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
@@ -173,25 +170,14 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             state = ToolCallAgentGraphState(messages=messages)
 
             # run the Tool Calling Agent Graph
-            token_usage = TokenUsageCollector()
-            state = await graph.ainvoke(state,
-                                        config={
-                                            'recursion_limit': (config.max_iterations + 1) * 2,
-                                            'callbacks': [token_usage],
-                                        })
+            state = await graph.ainvoke(state, config={'recursion_limit': (config.max_iterations + 1) * 2})
             # setting recursion_limit: 4 leaves room for 1 tool call and the final answer;
             #   the Tool Calling Agent graph itself stops before a second tool call
 
             # get and return the output from the state
             state = ToolCallAgentGraphState(**state)
             output_message = state.messages[-1]
-            text = _extract_message_text(output_message.content)
-            usage = token_usage.usage()
-            is_chat_request = isinstance(chat_request_or_message,
-                                         ChatRequestOrMessage) and not chat_request_or_message.is_string
-            if usage is None or not is_chat_request:
-                return text
-            return ChatResponse.from_string(text, usage=usage)
+            return _extract_message_text(output_message.content)
 
         except GraphRecursionError:
             logger.warning(

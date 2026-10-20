@@ -24,6 +24,7 @@ from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import ChatResponse
 from nat.plugins.langchain.agent.react_agent.register import ReActAgentWorkflowConfig
 from nat.plugins.langchain.agent.react_agent.register import _build_lc_config
+from nat.plugins.langchain.agent.react_agent.register import _token_usage_collector
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,6 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
     from nat.plugins.langchain.agent.react_agent.agent import ReActAgentGraph
     from nat.plugins.langchain.agent.react_agent.agent import ReActGraphState
     from nat.plugins.langchain.agent.react_agent.agent import create_react_agent_prompt
-    from nat.plugins.langchain.agent.token_usage import TokenUsageCollector
     from nat.utils.type_converter import GlobalTypeConverter
 
     prompt = create_react_agent_prompt(config)
@@ -89,11 +89,10 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
                                                         start_on="human",
                                                         include_system=True)
             state = ReActGraphState(messages=messages)
-            token_usage = TokenUsageCollector()
             lc_config = _build_lc_config(config.max_tool_calls,
                                          message.model,
                                          supports_override=_supports_model_override)
-            lc_config["callbacks"] = [token_usage]
+            token_usage = _token_usage_collector(lc_config)
             state = await graph.ainvoke(state, config=lc_config)
             state = ReActGraphState(**state)
             output_message = state.messages[-1]

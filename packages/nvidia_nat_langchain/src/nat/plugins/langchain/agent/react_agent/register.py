@@ -46,7 +46,11 @@ _MODEL_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._/:@\- ]{0,254}$")
 
 
 def _build_lc_config(max_tool_calls: int, model: str | None, *, supports_override: bool = True) -> dict:
+    from nat.plugins.langchain.agent.token_usage import TokenUsageCollector
+
     lc_config: dict = {"recursion_limit": (max_tool_calls + 1) * 2}
+    # a new collector per request; read it back with _token_usage_collector
+    lc_config.setdefault("callbacks", []).append(TokenUsageCollector())
     if model is not None and model != UNKNOWN_MODEL_SENTINEL:
         if not _MODEL_NAME_RE.match(model):
             raise ValueError(f"Invalid model name: {model!r}")
@@ -56,6 +60,13 @@ def _build_lc_config(max_tool_calls: int, model: str | None, *, supports_overrid
                              f"(e.g. NIM, OpenAI, Bedrock). Requested: {model!r}")
         lc_config["configurable"] = {"model_name": model}
     return lc_config
+
+
+def _token_usage_collector(lc_config: dict):
+    """The TokenUsageCollector that `_build_lc_config` added to `lc_config`."""
+    from nat.plugins.langchain.agent.token_usage import TokenUsageCollector
+
+    return next(cb for cb in lc_config["callbacks"] if isinstance(cb, TokenUsageCollector))
 
 
 class ReActAgentWorkflowConfig(AgentBaseConfig, OptimizableMixin, name="react_agent"):
@@ -126,8 +137,6 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from nat.plugins.langchain.agent.react_agent.agent import ReActGraphState
     from nat.plugins.langchain.agent.react_agent.agent import create_react_agent_prompt
     from nat.plugins.langchain.agent.react_agent.output_parser import FINAL_ANSWER_PATTERN
-    from nat.plugins.langchain.agent.token_usage import TokenUsageCollector
-
     prompt = create_react_agent_prompt(config)
 
     # we can choose an LLM for the ReAct agent in the config file
@@ -182,11 +191,10 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             state = ReActGraphState(messages=messages)
 
             # run the ReAct Agent Graph
-            token_usage = TokenUsageCollector()
             lc_config = _build_lc_config(config.max_tool_calls,
                                          message.model,
                                          supports_override=_supports_model_override)
-            lc_config["callbacks"] = [token_usage]
+            token_usage = _token_usage_collector(lc_config)
             state = await graph.ainvoke(state, config=lc_config)
             # setting recursion_limit: 4 leaves room for 1 tool call and the final answer;
             #   the ReAct Agent graph itself stops before a second tool call
