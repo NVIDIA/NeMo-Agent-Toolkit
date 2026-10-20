@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -31,12 +32,12 @@ async def _pull(packages: list[str]) -> PullRequestPackages:
     class _Handler:
 
         @asynccontextmanager
-        async def pull(self, packages: PullRequestPackages):
+        async def pull(self, packages: PullRequestPackages) -> AsyncIterator[None]:
             pulled.append(packages)
             yield
 
     @asynccontextmanager
-    async def _build_fn(config):
+    async def _build_fn(config) -> AsyncIterator[_Handler]:
         yield _Handler()
 
     registry = MagicMock()
