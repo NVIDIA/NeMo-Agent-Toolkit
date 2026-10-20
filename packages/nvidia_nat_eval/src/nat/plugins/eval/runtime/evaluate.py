@@ -353,6 +353,13 @@ class EvaluationRun:
                 self.callback_manager.on_prediction(item=item, output=item.output_obj)
                 await self.callback_manager.a_on_usage_stats(item=item, usage_stats_item=usage_stats_item)
 
+    def _interrupted_message(self) -> str:
+        msg = "Workflow execution was interrupted due to an error. The results may be incomplete. "
+        if self.checkpoint is not None:
+            return msg + "You can finish the incomplete items by running the same `nat eval` command with --resume."
+        return msg + ("You can re-execute evaluation for incomplete results by running "
+                      "`eval` with the --skip_completed_entries flag.")
+
     def _items_to_run(self) -> list[EvalInputItem]:
         """The dataset items that still need a workflow run (all of them unless --resume restored some)."""
         return [item for item in self.eval_input.eval_input_items if id(item) not in self._restored_items]
@@ -588,8 +595,7 @@ class EvaluationRun:
 
         if self.workflow_interrupted:
             # Issue a warning if the workflow was not completed on all datasets
-            msg = ("Workflow execution was interrupted due to an error. The results may be incomplete. "
-                   "You can finish the incomplete items by running the same `nat eval` command with --resume.")
+            msg = self._interrupted_message()
             logger.warning(msg)
         if self.callback_manager:
             self.callback_manager.on_eval_summary(usage_stats=self.usage_stats,
@@ -953,8 +959,7 @@ class EvaluationRun:
         self._on_eval_complete(dataset_handler)
 
         if self.workflow_interrupted:
-            msg = ("Workflow execution was interrupted due to an error. The results may be incomplete. "
-                   "You can finish the incomplete items by running the same `nat eval` command with --resume.")
+            msg = self._interrupted_message()
             logger.warning(msg)
 
         # Retrieve file paths written by FileEvalCallback (if registered)
