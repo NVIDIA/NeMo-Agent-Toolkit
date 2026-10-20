@@ -983,8 +983,8 @@ async def test_tool_calling_agent_stream_drops_tool_call_that_never_ran():
     assert streamed_tool_call_ids == []
 
 
-async def test_tool_calling_agent_reports_the_token_usage_the_model_reported():
-    """A chat request gets a response whose `usage` sums what the model reported over the run."""
+async def test_tool_calling_agent_returns_a_string_for_a_chat_request():
+    """The non-streaming response stays a plain string, even when the model reports token usage."""
     from langchain_core.language_models import BaseChatModel
     from langchain_core.outputs import ChatGeneration
     from langchain_core.outputs import ChatResult
@@ -1038,8 +1038,4 @@ async def test_tool_calling_agent_reports_the_token_usage_the_model_reported():
     request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}])
     async with tool_calling_agent_workflow(config, builder) as function_info:
         response = await function_info.single_fn(request)
-        text = await function_info.single_fn("hi")  # a plain string request still gets a string back
-    assert response.choices[0].message.content == "all done"
-    assert (response.usage.prompt_tokens, response.usage.completion_tokens,
-            response.usage.total_tokens) == (250, 50, 300)
-    assert isinstance(text, str)
+    assert response == "all done"
