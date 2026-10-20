@@ -54,22 +54,23 @@ def _write_wheel(dist_dir, version: str) -> str:
     return whl_path
 
 
-def test_build_wheel_picks_new_wheel_over_older_builds(tmp_path):
+@pytest.mark.parametrize("stale_mtime", [1_000_000_000, 4_000_000_000], ids=["older", "future"])
+def test_build_wheel_picks_new_wheel_over_older_builds(tmp_path, stale_mtime):
     (tmp_path / "pyproject.toml").write_text('[project]\nname = "demo-pkg"\nversion = "0.10.0"\n')
     dist_dir = tmp_path / "dist"
     dist_dir.mkdir()
-    old_wheel = _write_wheel(dist_dir, "0.9.0")
-    os.utime(old_wheel, (1_000_000_000, 1_000_000_000))
+    stale_wheel = _write_wheel(dist_dir, "0.9.0")
+    os.utime(stale_wheel, (stale_mtime, stale_mtime))
 
-    def fake_uv_build(*args, **kwargs):
-        _write_wheel("dist", "0.10.0")
+    def fake_uv_build(cmd, **kwargs):
+        _write_wheel(cmd[cmd.index("--out-dir") + 1], "0.10.0")
         return Mock()
 
     with patch("nat.registry_handlers.package_utils.subprocess.run", side_effect=fake_uv_build):
         wheel_data = build_wheel(package_root=str(tmp_path))
 
     assert wheel_data.whl_version == "0.10.0"
-    assert wheel_data.whl_path.endswith("demo_pkg-0.10.0-py3-none-any.whl")
+    assert wheel_data.whl_path == str(dist_dir / "demo_pkg-0.10.0-py3-none-any.whl")
 
 
 @pytest.mark.parametrize("use_wheel_data", [
