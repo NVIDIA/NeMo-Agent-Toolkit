@@ -1039,17 +1039,17 @@ eval:
 ```
 
 ### Pickup where you left off
-When running the evaluation on a large dataset, it is recommended to resume the evaluation from where it was left off. This is particularly useful while using overloaded services that may timeout while running the workflow. When that happens a workflow interrupted warning is issued and workflow output is saved to a file.
+When running the evaluation on a large dataset, a run can stop before it finishes: you interrupt it, the job is killed, or an overloaded service makes the workflow fail. `nat eval` writes each item to `workflow_output_checkpoint.jsonl` in the output directory as soon as its workflow run finishes, so finished items are kept even if the process stops right after.
 
-You can then re-run evaluation on that output file along with `--skip_completed_entries` options.
-
-Pass-1:
+To finish the run, run the same command again with `--resume`:
+```bash
+nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --resume
 ```
-nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
-```
-This pass results in workflow interrupted warning. You can then do another pass.
+`--resume` keeps the output directory instead of cleaning it, restores the finished items from the checkpoint, runs the workflow only for the rest, and then evaluates every item. An item is matched to its checkpoint record by its ID and its question, so an item whose question changed runs again. Items whose workflow run failed are not in the checkpoint, so they run again too. A run without `--resume` starts a new checkpoint.
 
-Pass-2:
+`--resume` can't be used with `--skip_workflow`, or when `eval.general.output.job_management.append_job_id_to_output_dir` is set, since that gives every run a new output directory.
+
+You can also re-run evaluation on a saved workflow output file with the `--skip_completed_entries` option, which skips entries that already have a generated answer:
 ```bash
 cp .tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval/workflow_output.json .tmp/simple_workflow_output.json
 nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json

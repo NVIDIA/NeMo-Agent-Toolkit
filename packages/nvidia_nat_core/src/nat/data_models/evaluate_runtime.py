@@ -75,6 +75,16 @@ class EvaluationRunConfig(BaseModel):
         default=False,
         description="If true, skip dataset entries that already have outputs.",
     )
+    write_checkpoint: bool = Field(
+        default=False,
+        description="If true, write each finished item to a checkpoint file in the output directory as soon as "
+        "it finishes, so an interrupted run can be resumed. `nat eval` turns this on.",
+    )
+    resume: bool = Field(
+        default=False,
+        description="If true, keep the output directory and skip the items an interrupted run already finished, "
+        "as recorded in its workflow output checkpoint.",
+    )
     endpoint: str | None = Field(
         default=None,
         description="Remote workflow endpoint URL. Only used for remote execution.",
