@@ -88,6 +88,54 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
     return client
 
 
+_SAMPLING_OPTIONS = ("temperature", "top_p", "seed")
+
+
+def _patch_with_sampling_defaults(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
+    """
+    Fill the sampling options the caller left unset with the ones from the LLM config.
+
+    Semantic Kernel takes sampling options per call, from the execution settings, so values in the config
+    never reached the request. Settings the caller sets explicitly still win. This wraps the methods as they
+    are on the client now, so it must run after the other patches.
+    """
+    import functools
+    import inspect
+    import types
+
+    defaults = {
+        name: getattr(llm_config, name)
+        for name in _SAMPLING_OPTIONS if getattr(llm_config, name, None) is not None
+    }
+    if not defaults:
+        return client
+
+    def with_defaults(service, settings):
+        settings = service.get_prompt_execution_settings_from_settings(settings)
+        missing = {name: value for name, value in defaults.items() if getattr(settings, name, 0) is None}
+        return settings.model_copy(update=missing) if missing else settings
+
+    for name in ("get_chat_message_contents", "get_streaming_chat_message_contents"):
+        current = getattr(client, name)
+        if inspect.isasyncgenfunction(current):
+
+            @functools.wraps(current)
+            async def streaming(self, chat_history, settings, *args, _current=current, **kwargs):
+                async for chunk in _current(chat_history, with_defaults(self, settings), *args, **kwargs):
+                    yield chunk
+
+            object.__setattr__(client, name, types.MethodType(streaming, client))
+        else:
+
+            @functools.wraps(current)
+            async def single(self, chat_history, settings, *args, _current=current, **kwargs):
+                return await _current(chat_history, with_defaults(self, settings), *args, **kwargs)
+
+            object.__setattr__(client, name, types.MethodType(single, client))
+
+    return client
+
+
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
 async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _builder: Builder):
 
@@ -102,9 +150,9 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
                                     azure_endpoint=llm_config.azure_endpoint,
                                     azure_deployment=llm_config.azure_deployment,
                                     http_client=http_client) as async_client:
-            llm = AzureChatCompletion(async_client=async_client)
+            llm = AzureChatCompletion(deployment_name=llm_config.azure_deployment, async_client=async_client)
 
-            yield _patch_llm_based_on_config(llm, llm_config)
+            yield _patch_with_sampling_defaults(_patch_llm_based_on_config(llm, llm_config), llm_config)
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
@@ -119,6 +167,9 @@ async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builde
         api_key = get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")
         base_url = llm_config.base_url or os.getenv("OPENAI_BASE_URL")
 
-        async with AsyncOpenAI(api_key=api_key, base_url=base_url, http_client=http_client) as async_client:
+        async with AsyncOpenAI(api_key=api_key,
+                               base_url=base_url,
+                               http_client=http_client,
+                               max_retries=llm_config.max_retries) as async_client:
             llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name, async_client=async_client)
-            yield _patch_llm_based_on_config(llm, llm_config)
+            yield _patch_with_sampling_defaults(_patch_llm_based_on_config(llm, llm_config), llm_config)
