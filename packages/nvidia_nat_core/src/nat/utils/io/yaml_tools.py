@@ -384,8 +384,14 @@ def yaml_loads(config: str, base_path: Path) -> dict:
     try:
         config_data = yaml.load(stream, Loader=_env_var_loader(references))  # noqa: S506  # a SafeLoader
     except yaml.YAMLError as e:
-        logger.error("Error loading YAML: %s", config_text)
-        raise ValueError(f"Error loading YAML: {e}") from e
+        # Parser messages and source snippets can contain interpolated credentials.
+        # Report only the error type and numeric location, including in tracebacks.
+        error_detail = type(e).__name__
+        if isinstance(e, yaml.MarkedYAMLError) and e.problem_mark is not None:
+            mark = e.problem_mark
+            error_detail += f" at line {mark.line + 1}, column {mark.column + 1}"
+        logger.error("Error loading YAML: %s", error_detail)
+        raise ValueError(f"Error loading YAML: {error_detail}") from None
 
     if not isinstance(config_data, dict):
         raise ValueError(f"Error loading YAML: the top level must be a mapping, got {type(config_data).__name__}")
