@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import yaml
 
 from nat.cli.commands.workflow.workflow_commands import _get_nat_dependency
 from nat.cli.commands.workflow.workflow_commands import _get_nat_version
@@ -79,11 +81,13 @@ def test_get_nat_dependency(mock_get_version, versioned, expected_dep):
     assert result == expected_dep
 
 
-def test_nat_workflow_create(tmp_path):
+@pytest.mark.parametrize("workflow_name, module_name", [("test_workflow", "test_workflow"),
+                                                        ("my-workflow", "my_workflow")])
+def test_nat_workflow_create(tmp_path, workflow_name: str, module_name: str):
     """Test that 'nat workflow create' command creates expected structure."""
     # Run the nat workflow create command
     result = subprocess.run(
-        ["nat", "workflow", "create", "--no-install", "--workflow-dir", str(tmp_path), "test_workflow"],
+        ["nat", "workflow", "create", "--no-install", "--workflow-dir", str(tmp_path), workflow_name],
         capture_output=True,
         text=True,
         check=True)
@@ -92,9 +96,9 @@ def test_nat_workflow_create(tmp_path):
     assert result.returncode == 0
 
     # Define the expected paths
-    workflow_root = tmp_path / "test_workflow"
+    workflow_root = tmp_path / workflow_name
     src_dir = workflow_root / "src"
-    test_workflow_src = src_dir / "test_workflow"
+    test_workflow_src = src_dir / module_name
 
     # Group all expected output paths
     expected_output_paths = [
@@ -123,6 +127,15 @@ def test_nat_workflow_create(tmp_path):
     for expected_symlink, target in expected_symlinks_and_targets:
         assert expected_symlink.is_symlink()
         assert expected_symlink.resolve() == target.resolve()
+
+    # The generated config must refer to the function by the name the generated module registers it under
+    workflow_module = (test_workflow_src / f"{module_name}.py").read_text()
+    registered_names = re.findall(r'\(FunctionBaseConfig, name="([^"]+)"\)', workflow_module)
+    assert len(registered_names) == 1
+
+    config = yaml.safe_load((test_workflow_src / "configs" / "config.yml").read_text())
+    assert config["functions"][module_name]["_type"] == registered_names[0]
+    assert module_name in config["workflow"]["tool_names"]
 
 
 def test_create_workflow_with_invalid_name(tmp_path):
