@@ -598,3 +598,37 @@ def test_decorator_registration(mock_global_registry):
     assert registry._llm_client_map[(OCIModelConfig, LLMFrameworkEnum.LANGCHAIN)] is oci_langchain
     assert registry._llm_client_map[(AWSBedrockModelConfig, LLMFrameworkEnum.LANGCHAIN)] is aws_bedrock_langchain
     assert registry._llm_client_map[(DynamoModelConfig, LLMFrameworkEnum.LANGCHAIN)] is dynamo_langchain
+
+
+@pytest.mark.parametrize("thinking", [None, True], ids=["thinking_unset", "thinking_on"])
+async def test_nim_langchain_retries_a_rate_limit_with_thinking(thinking):
+    """Turning thinking on must not turn automatic retries off."""
+    from langchain_core.messages import AIMessage
+    from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import ChatResult
+    from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
+    from nat.builder.workflow_builder import WorkflowBuilder
+
+    class RateLimited(Exception):
+        status_code = 429
+
+    calls: list[list[str]] = []
+
+    async def fake_agenerate(self, messages, *args, **kwargs):
+        calls.append([m.content for m in messages])
+        if len(calls) == 1:
+            raise RateLimited("429 Too Many Requests")
+        return ChatResult(generations=[ChatGeneration(message=AIMessage(content="ok"))])
+
+    config = NIMModelConfig(model_name="nvidia/nvidia-nemotron-nano-9b-v2", api_key="test", thinking=thinking)
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("llm", config)
+        llm = await builder.get_llm("llm", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        with patch.object(ChatNVIDIA, "_agenerate", fake_agenerate), patch("asyncio.sleep"):
+            result = await llm.ainvoke("hi")
+
+    assert result.content == "ok"
+    assert len(calls) == 2
+    if thinking:
+        assert all(attempt[0] == "/think" for attempt in calls)
