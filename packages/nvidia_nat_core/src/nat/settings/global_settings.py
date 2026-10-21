@@ -24,7 +24,6 @@ from copy import deepcopy
 from platformdirs import user_config_dir
 from pydantic import ConfigDict
 from pydantic import Discriminator
-from pydantic import SecretStr
 from pydantic import Tag
 from pydantic import ValidationError
 from pydantic import ValidationInfo
@@ -242,14 +241,7 @@ class Settings(HashableBaseModel):
 
         import yaml
 
-        remote_channels = self.model_dump(mode="json", by_alias=True)
-
-        # The dump above holds secrets in plain text, mask them before they are logged
-        for channel_name, channel in self.channels.items():
-            for field_name, field_info in type(channel).model_fields.items():
-                value = getattr(channel, field_name)
-                if isinstance(value, SecretStr):
-                    remote_channels["channels"][channel_name][field_info.serialization_alias or field_name] = str(value)
+        remote_channels = self.model_dump(mode="json", by_alias=True, context={"mask_secrets": True})
 
         if (not remote_channels or not remote_channels.get("channels")):
             logger.warning("No configured channels to list.")
