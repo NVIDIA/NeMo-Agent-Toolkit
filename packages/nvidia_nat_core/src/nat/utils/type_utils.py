@@ -352,15 +352,33 @@ class DecomposedType:
             True if the current type is a subtype of the specified class or tuple of classes, False otherwise
         """
 
-        base_root = self.get_base_type().root
+        base = self.get_base_type()
+        if base.is_union:
+            # A union source is a subtype of the target only when every member is, so a
+            # union stays a subtype of itself (e.g. int | None is a subtype of int | None).
+            return all(DecomposedType(arg).is_subtype(class_or_tuple) for arg in base.args)
+
+        base_root = base.root
 
         if not inspect.isclass(base_root):
             return False
 
         if (isinstance(class_or_tuple, tuple)):
-            return any(issubclass(base_root, DecomposedType(cls).root) for cls in class_or_tuple)
+            return any(self.is_subtype(cls) for cls in class_or_tuple)
 
-        return issubclass(base_root, DecomposedType(class_or_tuple).root)
+        target = DecomposedType(class_or_tuple).get_base_type()
+        if target.is_union:
+            # A union's root is the `typing.Union` / `types.UnionType` class itself, which
+            # `issubclass` rejects, so a union target is resolved member by member instead.
+            return any(self.is_subtype(arg) for arg in target.args)
+
+        target_root = target.root
+        if not inspect.isclass(target_root):
+            # No usable `issubclass` target (for example a bare `typing.Union` left inside an
+            # annotation); treat it as "not a subtype" instead of raising.
+            return False
+
+        return issubclass(base_root, target_root)
 
     def is_instance(self, instance: typing.Any) -> bool:
         """
@@ -386,6 +404,15 @@ class DecomposedType:
         root = base_type.root
         if root is typing.Any:
             return True
+        if root is typing.Literal:
+            # `Literal[...]` constrains the value, not the class, so it is checked against the
+            # literal arguments instead of an `isinstance` target. `type` is compared alongside the
+            # value so `True` does not match `Literal[1]` and vice versa.
+            return any(type(instance) is type(arg) and instance == arg for arg in base_type.args)
+        if not inspect.isclass(root):
+            # Not usable as an `isinstance` target (for example `Callable[..., str]` is resolved
+            # through its origin above, but some constructs keep a non-class root).
+            return False
         return isinstance(instance, root)
 
     def get_pydantic_schema(self,

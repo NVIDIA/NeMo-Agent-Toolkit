@@ -172,13 +172,12 @@ class EvaluationRun:
 
         # find llm latency by calculating p95 of all llm calls
         llm_latencies = []
-        previous_llm_start_time = None
+        llm_start_times: dict[str, float] = {}
         for step in item.trajectory:
             if step.event_type == IntermediateStepType.LLM_START:
-                previous_llm_start_time = step.event_timestamp
-            elif step.event_type == IntermediateStepType.LLM_END and previous_llm_start_time is not None:
-                llm_latencies.append(step.event_timestamp - previous_llm_start_time)
-                previous_llm_start_time = None
+                llm_start_times[step.UUID] = step.event_timestamp
+            elif step.event_type == IntermediateStepType.LLM_END and step.UUID in llm_start_times:
+                llm_latencies.append(step.event_timestamp - llm_start_times.pop(step.UUID))
 
         # Calculate p95 LLM latency (or 0 if no LLM calls)
         if llm_latencies:
@@ -312,7 +311,7 @@ class EvaluationRun:
         if self.config.skip_completed_entries:
             eval_input_items = []
             for item in self.eval_input.eval_input_items:
-                if not item.output_obj or pd.isnull(item.output_obj):
+                if not item.output_obj or (pd.api.types.is_scalar(item.output_obj) and pd.isnull(item.output_obj)):
                     eval_input_items.append(item)
 
             if not eval_input_items:
@@ -680,9 +679,10 @@ class EvaluationRun:
             logger.warning("Failed to wait for local export tasks: %s", e)
 
     def _on_eval_complete(self, dataset_handler: DatasetHandler | None = None) -> None:
-        """Build an EvalResult from collected data and fire the on_eval_complete callback."""
-        if not self.evaluation_results:
-            return
+        """Build an EvalResult from collected data and fire the on_eval_complete callback.
+
+        Fires even when no evaluator produced a result, so the workflow output is still exported.
+        """
         try:
             from nat.plugins.eval.eval_callbacks import build_eval_result
 

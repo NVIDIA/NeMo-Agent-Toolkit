@@ -14,18 +14,36 @@
 # limitations under the License.
 
 import json
+import logging
+import operator
 from enum import Enum
 from functools import cache
+from functools import reduce
 from typing import Annotated
 from typing import Any
 from typing import Literal
+from urllib.parse import unquote
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import create_model
 
+logger = logging.getLogger(__name__)
+
 _ORDER_INSENSITIVE_SCHEMA_ARRAY_KEYS = frozenset({"enum", "required"})
+
+# Upper bound on the schema objects `_inline_local_refs` may produce. Definitions that reference each other
+# repeatedly grow exponentially when inlined, so a small schema could otherwise expand to millions of objects.
+_MAX_INLINED_SCHEMA_OBJECTS = 10_000
+# Upper bound on nested `$ref` expansions in `_inline_local_refs`. A long chain of definitions that each reference the
+# next would otherwise build models nested deeper than Python's recursion limit allows.
+_MAX_INLINED_REF_DEPTH = 32
+# Keywords `_inline_local_refs` copies without inlining: instance data, where a `$ref` key is not a reference, and the
+# definitions themselves, which references are resolved against.
+_NOT_INLINED_KEYWORDS = frozenset({"default", "const", "enum", "examples", "$defs", "definitions"})
+# Keywords whose values map names to schemas. The names are not keywords.
+_SCHEMA_MAP_KEYWORDS = frozenset({"properties", "patternProperties", "dependentSchemas"})
 
 
 @cache
@@ -79,6 +97,68 @@ def _normalize_schema_for_cache(value: Any, key: str | None = None) -> Any:
     return value
 
 
+class _SchemaTooLargeToInlineError(Exception):
+    """Raised by `_inline_local_refs` when inlining exceeds one of its limits."""
+
+
+def _inline_local_refs(schema: dict[str, Any]) -> dict[str, Any]:
+    """
+    Replace local `$ref` pointers such as `#/$defs/Filter` with the schema they point to.
+
+    Pydantic, and so FastMCP, describes a nested model argument as `{"$ref": "#/$defs/<Model>"}` with the model in
+    the root `$defs`. Keywords next to the `$ref` (for example `description` or `default`) are kept and take
+    precedence. A reference that cannot be resolved, or that points back into a definition being expanded (a
+    recursive model), is left as it is. If inlining would produce more than `_MAX_INLINED_SCHEMA_OBJECTS` schema
+    objects or nest more than `_MAX_INLINED_REF_DEPTH` references, the schema is returned unchanged, so its
+    references stay unresolved.
+    """
+    objects_left = _MAX_INLINED_SCHEMA_OBJECTS
+
+    def _resolve(ref: str) -> dict[str, Any] | None:
+        if not ref.startswith("#/"):
+            return None
+        node: Any = schema
+        # A `$ref` holds a URI fragment, so it is percent-decoded before it is split into JSON Pointer tokens.
+        for part in unquote(ref[2:]).split("/"):
+            part = part.replace("~1", "/").replace("~0", "~")
+            if not isinstance(node, dict) or part not in node:
+                return None
+            node = node[part]
+        return node if isinstance(node, dict) else None
+
+    def _inline(node: Any, expanding: frozenset[str]) -> Any:
+        nonlocal objects_left
+        if isinstance(node, list):
+            return [_inline(item, expanding) for item in node]
+        if not isinstance(node, dict):
+            return node
+        objects_left -= 1
+        if objects_left < 0:
+            raise _SchemaTooLargeToInlineError(f"{_MAX_INLINED_SCHEMA_OBJECTS} schema objects")
+        ref = node.get("$ref")
+        if isinstance(ref, str) and ref not in expanding:
+            target = _resolve(ref)
+            if target is not None:
+                if len(expanding) >= _MAX_INLINED_REF_DEPTH:
+                    raise _SchemaTooLargeToInlineError(f"{_MAX_INLINED_REF_DEPTH} nested references")
+                siblings = {key: value for key, value in node.items() if key != "$ref"}
+                return {**_inline(target, expanding | {ref}), **_inline(siblings, expanding)}
+        return {key: _inline_keyword(key, value, expanding) for key, value in node.items()}
+
+    def _inline_keyword(key: str, value: Any, expanding: frozenset[str]) -> Any:
+        if key in _NOT_INLINED_KEYWORDS:
+            return value
+        if key in _SCHEMA_MAP_KEYWORDS and isinstance(value, dict):
+            return {name: _inline(subschema, expanding) for name, subschema in value.items()}
+        return _inline(value, expanding)
+
+    try:
+        return _inline(schema, frozenset())
+    except _SchemaTooLargeToInlineError as error:
+        logger.warning("Not resolving $ref in an MCP tool input schema: inlining would exceed %s", error)
+        return schema
+
+
 def truncate_session_id(session_id: str, max_length: int = 10) -> str:
     """
     Truncate a session ID for logging purposes.
@@ -95,11 +175,14 @@ def truncate_session_id(session_id: str, max_length: int = 10) -> str:
     return session_id
 
 
+SCHEMA_REQUIRED_FIELDS_ATTR = "__mcp_schema_required_fields__"
+
+
 def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
     """
     Create a pydantic model from the input schema of the MCP tool
     """
-    normalized_schema = _normalize_schema_for_cache(mcp_input_schema)
+    normalized_schema = _normalize_schema_for_cache(_inline_local_refs(mcp_input_schema))
     schema_json = json.dumps(normalized_schema, sort_keys=True, separators=(",", ":"))
     return _model_from_mcp_schema(name, schema_json)
 
@@ -155,6 +238,40 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
             return field_type
         return Annotated[field_type, Field(**constraints)]
 
+    def _resolve_array_type(schema: dict[str, Any], name: str) -> Any:
+        """Resolve an array schema to a `list` of the types its items may have"""
+        items = schema.get("items")
+        prefix_items = schema.get("prefixItems")
+        if isinstance(items, list):
+            # Before draft 2020-12, `items` can list one schema per position (a tuple), which is what TypeScript
+            # MCP SDK v1 emits for `z.tuple()`, and `additionalItems` covers the positions after them
+            positions, rest = items, schema.get("additionalItems")
+        elif isinstance(prefix_items, list) and (items is False or (isinstance(items, dict) and items)):
+            # Draft 2020-12 lists the positions in `prefixItems`, and `items` covers the ones after them.
+            # TypeScript MCP SDK v2 emits `items: false` for `z.tuple()`.
+            positions, rest = prefix_items, items
+        elif isinstance(items, dict) and items:
+            # Recursively resolve item type (handles nested anyOf/oneOf)
+            return list[_resolve_schema_type(items, name)]
+        else:
+            return list
+
+        # Accept any of the position types at every position; `minItems` and `maxItems` still bound the length.
+        # A position can also be a boolean schema: `true` allows any value, and `false` allows none, so the array
+        # ends before it. A `false` for the later positions ends the array after the listed ones.
+        first_false = next((i for i, item in enumerate(positions) if item is False), None)
+        if first_false is not None:
+            item_schemas, max_length = positions[:first_false], first_false
+        else:
+            item_schemas = positions + ([rest] if isinstance(rest, dict) and rest else [])
+            max_length = len(positions) if rest is False else None
+        item_types = [Any if item is True else _resolve_schema_type(item, name) for item in item_schemas]
+        array_type = list[reduce(operator.or_, item_types)] if item_types else list
+        if max_length is None:
+            return array_type
+        # This bound takes precedence over the one built from `maxItems`, so keep the smaller of the two
+        return Annotated[array_type, Field(max_length=min(max_length, schema.get("maxItems", max_length)))]
+
     def _resolve_schema_type(schema: dict[str, Any], name: str, apply_constraints: bool = True) -> Any:
         """
         Recursively resolve a JSON schema to a Python type.
@@ -182,6 +299,15 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
 
             resolved_type = resolved_type if resolved_type is not None else Any
             return _apply_constraints(resolved_type, schema) if apply_constraints else resolved_type
+
+        # A `const` allows a single value. As a `Literal` it also makes a union of object schemas pick the variant
+        # whose tag matches, e.g. the `oneOf` with `const` tags that FastMCP emits for a discriminated union.
+        if "const" in schema:
+            const_value = schema["const"]
+            if const_value is None:
+                return type(None)
+            if isinstance(const_value, str | int):
+                return Literal[const_value]
 
         # Handle enum values
         enum_vals = schema.get("enum")
@@ -211,13 +337,7 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
             list_type: Any = None
             for t in schema_type:
                 if t == "array":
-                    # Incorporate the mapped type of items
-                    item_schema = schema.get("items", {})
-                    if item_schema:
-                        item_type = _resolve_schema_type(item_schema, name)
-                        mapped = list[item_type]
-                    else:
-                        mapped = _type_map.get(t, Any)
+                    mapped = _resolve_array_type(schema, name)
                 elif t == "object":
                     # Incorporate the mapped type from properties
                     if "properties" in schema:
@@ -240,11 +360,8 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
             return model_from_mcp_schema(name=name, mcp_input_schema=schema)
 
         # Handle array type
-        if schema_type == "array" and "items" in schema:
-            item_schema = schema.get("items", {})
-            # Recursively resolve item type (handles nested anyOf/oneOf)
-            item_type = _resolve_schema_type(item_schema, name)
-            resolved_array = list[item_type]
+        if schema_type == "array":
+            resolved_array = _resolve_array_type(schema, name)
             return _apply_constraints(resolved_array, schema) if apply_constraints else resolved_array
 
         # Handle primitive types
@@ -338,4 +455,8 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
     elif mcp_input_schema.get("additionalProperties") is True:
         model_config = ConfigDict(extra="allow")
 
-    return create_model(f"{_generate_valid_classname(name)}InputSchema", __config__=model_config, **schema_dict)
+    model = create_model(f"{_generate_valid_classname(name)}InputSchema", __config__=model_config, **schema_dict)
+    # A field can declare a default and still be in `required`, so Pydantic alone cannot tell which keys the
+    # server expects. Keep the schema's list for the client, which must always send these keys.
+    setattr(model, SCHEMA_REQUIRED_FIELDS_ATTR, frozenset(required_fields))
+    return model

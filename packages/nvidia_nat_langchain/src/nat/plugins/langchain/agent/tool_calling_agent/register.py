@@ -142,6 +142,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
         max_truncation_retries=config.truncation_retry.max_retries,
         truncation_scaling_fn=config.truncation_retry.build_scaling_fn(),
         max_empty_response_retries=config.max_empty_response_retries,
+        max_iterations=config.max_iterations,
     ).build_graph()
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> str:
@@ -170,9 +171,8 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
 
             # run the Tool Calling Agent Graph
             state = await graph.ainvoke(state, config={'recursion_limit': (config.max_iterations + 1) * 2})
-            # setting recursion_limit: 4 allows 1 tool call
-            #   - allows the Tool Calling Agent to perform 1 cycle / call 1 single tool,
-            #   - but stops the agent when it tries to call a tool a second time
+            # setting recursion_limit: 4 leaves room for 1 tool call and the final answer;
+            #   the Tool Calling Agent graph itself stops before a second tool call
 
             # get and return the output from the state
             state = ToolCallAgentGraphState(**state)
@@ -229,11 +229,21 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                                                         start_on="human",
                                                         include_system=True)
             state = ToolCallAgentGraphState(messages=messages)
+            # A turn's tool calls are only sent once the tool node has run them: the graph can end without
+            # running them (max_iterations, or no valid tool call), and the client must not see a call that never ran.
+            held_tool_call_chunks: list[ChatResponseChunk] = []
 
-            async for msg, metadata in graph.astream(
+            async for mode, event in graph.astream(
                     state,
                     config={'recursion_limit': (config.max_iterations + 1) * 2},
-                    stream_mode="messages"):
+                    stream_mode=["messages", "updates"]):
+                if mode == "updates":
+                    if "tool" in event:
+                        for held in held_tool_call_chunks:
+                            yield held
+                        held_tool_call_chunks = []
+                    continue
+                msg, metadata = event
                 if not isinstance(msg, AIMessageChunk):
                     continue
                 if metadata.get("langgraph_node") != "agent":
@@ -272,19 +282,20 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                                                     name=tc.get("name"),
                                                     arguments=args,
                                                 )))
-                    yield ChatResponseChunk(
-                        id=chunk_id,
-                        choices=[
-                            ChatResponseChunkChoice(
-                                index=0,
-                                delta=ChoiceDelta(tool_calls=delta_tool_calls),
-                                finish_reason=None,
-                            )
-                        ],
-                        created=datetime.datetime.now(datetime.UTC),
-                        model=UNKNOWN_MODEL_SENTINEL,
-                        object="chat.completion.chunk",
-                    )
+                    held_tool_call_chunks.append(
+                        ChatResponseChunk(
+                            id=chunk_id,
+                            choices=[
+                                ChatResponseChunkChoice(
+                                    index=0,
+                                    delta=ChoiceDelta(tool_calls=delta_tool_calls),
+                                    finish_reason=None,
+                                )
+                            ],
+                            created=datetime.datetime.now(datetime.UTC),
+                            model=UNKNOWN_MODEL_SENTINEL,
+                            object="chat.completion.chunk",
+                        ))
 
             if include_usage and saw_usage:
                 yield ChatResponseChunk(

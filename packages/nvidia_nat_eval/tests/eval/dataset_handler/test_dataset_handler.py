@@ -500,6 +500,30 @@ def test_get_eval_input_from_dataset_without_filters(tmp_path: Path, mock_input_
     assert [item.expected_output_obj for item in eval_input.eval_input_items] == mock_input_df["answer"].tolist()
 
 
+def test_json_dataset_keeps_values_as_written(tmp_path: Path):
+    """A json dataset loads string values as strings, like a jsonl dataset does."""
+    records = [
+        {
+            "id": "001",
+            "question": "Zip code of Beverly Hills?",
+            "answer": "90210",
+            "created_at": "2024-01-02",
+            "score": 3
+        },
+        {
+            "id": "002", "question": "Area code for Boston?", "answer": "0617", "created_at": "2024-01-03", "score": 4
+        },
+    ]
+    dataset_path = tmp_path / "dataset.json"
+    dataset_path.write_text(json.dumps(records))
+    dataset_handler = DatasetHandler(EvalDatasetJsonConfig(file_path=dataset_path), reps=1, concurrency=1)
+
+    items = dataset_handler.get_eval_input_from_dataset("").eval_input_items
+
+    assert [(item.id, item.expected_output_obj) for item in items] == [("001", "90210"), ("002", "0617")]
+    assert [item.full_dataset_entry for item in items] == records
+
+
 def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
     dataset_handler = DatasetHandler(custom_dataset_config, reps=1, concurrency=1)
 

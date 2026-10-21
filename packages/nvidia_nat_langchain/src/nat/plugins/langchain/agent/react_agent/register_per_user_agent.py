@@ -66,6 +66,8 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
         llm=llm,
         prompt=prompt,
         tools=tools,
+        raise_on_parsing_failure=config.raise_on_parsing_failure,
+        use_native_tool_calling=config.use_native_tool_calling,
         use_tool_schema=config.include_tool_input_schema_in_tool_description,
         detailed_logs=config.verbose,
         log_response_max_chars=config.log_response_max_chars,
@@ -73,7 +75,8 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
         parse_agent_response_max_retries=config.parse_agent_response_max_retries,
         tool_call_max_retries=config.tool_call_max_retries,
         pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent,
-        normalize_tool_input_quotes=config.normalize_tool_input_quotes).build_graph()
+        normalize_tool_input_quotes=config.normalize_tool_input_quotes,
+        max_tool_calls=config.max_tool_calls).build_graph()
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         try:

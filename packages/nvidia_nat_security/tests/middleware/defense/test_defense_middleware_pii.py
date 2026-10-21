@@ -23,7 +23,6 @@ import pytest
 from pydantic import BaseModel
 
 from nat.builder.function import FunctionGroup
-from nat.data_models.api_server import ChatResponseChunk
 from nat.middleware.common import TargetLocation
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.plugins.security.middleware.defense.defense_middleware_pii import PIIDefenseMiddleware
@@ -493,7 +492,10 @@ class TestPIIDefenseStreaming:
         assert chunks == ["Hello ", "world"]
         assert mock_analyzer.analyze.called
 
-    async def test_streaming_analyzes_structured_chunks_as_text(self, mock_builder, middleware_context):
+    async def test_streaming_analyzes_structured_chunks_as_text(self,
+                                                                mock_builder,
+                                                                middleware_context,
+                                                                structured_chunk_stream):
         """Structured stream chunks are analyzed as text, not as their repr."""
         config = PIIDefenseMiddlewareConfig(action="redirection")
         middleware = PIIDefenseMiddleware(config, mock_builder)
@@ -503,12 +505,10 @@ class TestPIIDefenseStreaming:
         middleware._analyzer = mock_analyzer
         middleware._anonymizer = MagicMock()
 
-        async def mock_stream(_value):
-            yield ChatResponseChunk.create_streaming_chunk("Hello ", id_="echo")
-            yield ChatResponseChunk.create_streaming_chunk("world", id_="echo")
-
         chunks = []
-        async for chunk in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
+        async for chunk in middleware.function_middleware_stream({},
+                                                                 call_next=structured_chunk_stream,
+                                                                 context=middleware_context):
             chunks.append(chunk)
 
         assert len(chunks) == 2

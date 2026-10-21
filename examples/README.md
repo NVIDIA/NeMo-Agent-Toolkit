@@ -144,6 +144,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 ### Memory
 - **[`redis`](memory/redis/README.md)**: Basic long-term memory example using redis **[🟨 Intermediate]**
 - **[`memmachine`](memory/memmachine/README.md)**: Long-term episodic and semantic memory using MemMachine (PostgreSQL + Neo4j) **[🟨 Intermediate]**
+- **[`memanto`](memory/memanto/README.md)**: Per-user long-term memory using the Memanto third-party plugin **[🟢 Beginner]**
 
 ### Object Store
 - **[`user_report`](object_store/user_report/README.md)**: User report generation and storage system using object store (S3, MySQL, and/or memory) **[🟨 Intermediate]**

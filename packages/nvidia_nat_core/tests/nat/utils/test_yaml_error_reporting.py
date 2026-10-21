@@ -25,12 +25,12 @@ from nat.utils.io.yaml_tools import yaml_loads
 
 
 @pytest.mark.parametrize("invalid_value", ["*DUMMY_SECRET_ALIAS", "@DUMMY_SECRET_SCANNER", "[DUMMY_SECRET_FLOW"])
-def test_yaml_errors_do_not_expose_expanded_config(invalid_value: str,
-                                                   monkeypatch: pytest.MonkeyPatch,
-                                                   caplog: pytest.LogCaptureFixture):
+def test_yaml_errors_do_not_expose_config(invalid_value: str,
+                                          monkeypatch: pytest.MonkeyPatch,
+                                          caplog: pytest.LogCaptureFixture):
     monkeypatch.setenv("NAT_TEST_PASSWORD", "DUMMY_PRIVATE_PASSWORD")
-    monkeypatch.setenv("NAT_TEST_TOKEN", invalid_value)
-    config = "password: ${NAT_TEST_PASSWORD}\ntoken: ${NAT_TEST_TOKEN}\n"
+    # Environment values are now expanded after parsing; trigger an error in the YAML itself.
+    config = f"password: ${{NAT_TEST_PASSWORD}}\ntoken: {invalid_value}\n"
 
     with caplog.at_level(logging.ERROR, logger="nat.utils.io.yaml_tools"):
         with pytest.raises(ValueError, match="Error loading YAML") as exc_info:
@@ -58,10 +58,10 @@ def test_yaml_load_error_retains_safe_location(tmp_path: Path, caplog: pytest.Lo
 
 def test_unmarked_yaml_error_does_not_expose_message(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture):
 
-    def fail_load(stream):
+    def fail_load(stream, **kwargs):
         raise yaml.YAMLError("DUMMY_SECRET_IN_PARSER_MESSAGE")
 
-    monkeypatch.setattr(yaml, "safe_load", fail_load)
+    monkeypatch.setattr(yaml, "load", fail_load)
     with pytest.raises(ValueError, match="Error loading YAML: YAMLError") as exc_info:
         yaml_loads("value: ok", Path("."))
 
@@ -83,3 +83,10 @@ def test_valid_yaml_interpolation_and_file_loading_are_unchanged(tmp_path: Path,
         "count": 42,
         "enabled": True,
     }
+
+
+@pytest.mark.parametrize("value", ["*DUMMY_SECRET_ALIAS", "@DUMMY_SECRET_SCANNER", "[DUMMY_SECRET_FLOW"])
+def test_yaml_indicator_env_values_remain_strings(value: str, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("NAT_TEST_TOKEN", value)
+
+    assert yaml_loads("token: ${NAT_TEST_TOKEN}\n", Path(".")) == {"token": value}

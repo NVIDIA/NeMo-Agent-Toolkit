@@ -152,7 +152,7 @@ The environment variable interpolation process follows the rules below.
 Bare `$VAR` (without braces) is not supported. Use `${VAR}` instead.
 
 If YAML parsing fails, the error reports the parser error type and, when available,
-the line and column in the expanded configuration. Configuration contents and
+the line and column in the parser input. Configuration contents and
 parser source snippets are omitted from logs and rendered tracebacks because they
 can contain credentials from environment variables.
 

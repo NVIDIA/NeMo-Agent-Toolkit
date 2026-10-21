@@ -152,7 +152,8 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent,
         normalize_tool_input_quotes=config.normalize_tool_input_quotes,
         raise_on_parsing_failure=config.raise_on_parsing_failure,
-        use_native_tool_calling=config.use_native_tool_calling).build_graph()
+        use_native_tool_calling=config.use_native_tool_calling,
+        max_tool_calls=config.max_tool_calls).build_graph()
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         """
@@ -184,9 +185,8 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
                                         config=_build_lc_config(config.max_tool_calls,
                                                                 message.model,
                                                                 supports_override=_supports_model_override))
-            # setting recursion_limit: 4 allows 1 tool call
-            #   - allows the ReAct Agent to perform 1 cycle / call 1 single tool,
-            #   - but stops the agent when it tries to call a tool a second time
+            # setting recursion_limit: 4 leaves room for 1 tool call and the final answer;
+            #   the ReAct Agent graph itself stops before a second tool call
 
             # get and return the output from the state
             state = ReActGraphState(**state)

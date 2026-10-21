@@ -118,6 +118,7 @@ LLM(s?)
 Loghub
 [Ll]ogprob(s?)
 Mem0
+Memanto
 [Mm]iddleware
 Milvus
 # Minimax the algorithm, not the MiniMax model
@@ -126,6 +127,7 @@ Minimax
 [Mm]ixin(s?)
 MLflow
 MLOps
+Moorcheh
 Morpheus
 [Mm]ultimodal
 [Nn]amespac(e|ed|es|ing)

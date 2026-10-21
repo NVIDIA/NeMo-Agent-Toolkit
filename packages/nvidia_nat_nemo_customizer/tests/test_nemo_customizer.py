@@ -32,6 +32,7 @@ from nat.data_models.finetuning import TrainingJobStatus
 from nat.data_models.finetuning import TrainingStatusEnum
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryCollection
+from nat.data_models.intermediate_step import StreamEventData
 from nat.plugins.customizer.dpo.config import DPOSpecificHyperparameters
 from nat.plugins.customizer.dpo.config import NeMoCustomizerHyperparameters
 from nat.plugins.customizer.dpo.config import NeMoCustomizerTrainerAdapterConfig
@@ -324,6 +325,55 @@ class TestNeMoCustomizerTrainerAdapter:
         assert len(result) == 2
         assert result[0] == {"role": "system", "content": "System message"}
         assert result[1] == {"role": "user", "content": "User message"}
+
+    def test_format_prompt_carries_tool_and_function_identifiers(self, trainer_adapter: NeMoCustomizerTrainerAdapter):
+        """A tool or function message keeps what matches it to the call it answers."""
+        trainer_adapter.adapter_config.use_full_message_history = True
+
+        messages = [
+            OpenAIMessage(role="tool", content="sunny, 18C", tool_call_id="call_abc"),
+            OpenAIMessage(role="function", content="sunny, 18C", name="get_weather"),
+        ]
+
+        result = trainer_adapter._format_prompt(messages)
+
+        assert result[0] == {"role": "tool", "content": "sunny, 18C", "tool_call_id": "call_abc"}
+        assert result[1] == {"role": "function", "content": "sunny, 18C", "name": "get_weather"}
+
+    def test_format_prompt_omits_unset_identifiers(self, trainer_adapter: NeMoCustomizerTrainerAdapter):
+        """A user or assistant message gains no null keys.
+
+        The fields are optional, so emitting them unconditionally would put
+        nulls in every message of every DPO record.
+        """
+        trainer_adapter.adapter_config.use_full_message_history = True
+
+        result = trainer_adapter._format_prompt([OpenAIMessage(role="user", content="weather?")])
+
+        assert result[0] == {"role": "user", "content": "weather?"}
+
+    def test_unset_identifiers_are_omitted_when_nested(self):
+        """A message serialized inside another model also gains no null keys.
+
+        An OpenAIMessage can be carried in StreamEventData.input, which
+        subscribers serialize with a plain model_dump, so the caller has no
+        chance to pass exclude_none. The omission has to come from the model.
+        """
+        messages = [
+            OpenAIMessage(role="user", content="weather?"),
+            OpenAIMessage(role="tool", content="sunny", tool_call_id="call_abc"),
+        ]
+
+        dumped = StreamEventData(input=messages).model_dump()["input"]
+
+        assert dumped == [
+            {
+                "role": "user", "content": "weather?"
+            },
+            {
+                "role": "tool", "content": "sunny", "tool_call_id": "call_abc"
+            },
+        ]
 
     def test_format_prompt_full_history_with_string(self, trainer_adapter):
         """Test prompt formatting with string prompt in full history mode."""

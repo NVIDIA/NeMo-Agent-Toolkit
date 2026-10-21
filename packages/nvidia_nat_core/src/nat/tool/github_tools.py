@@ -256,6 +256,10 @@ async def github_tool(config: GithubGroupConfig, _builder: Builder):
             results = []
             for issue in issues_list.filter_parameters:
                 params = issue.model_dump(exclude_unset=True, exclude_none=True)
+                # GitHub reads `labels` as one comma-separated value. Passing the list would repeat the query
+                # parameter, and GitHub would then filter by the last label only.
+                if "labels" in params:
+                    params["labels"] = ",".join(params["labels"])
                 response = await client.get(url, params=params)
                 response.raise_for_status()
                 results.append(response.json())
@@ -484,8 +488,9 @@ async def github_files_tool(config: GithubFilesGroupConfig, _builder: Builder):
 
             file_metadata = FileMetadata(**match.groupdict())
 
-            # The following URL is the raw URL of the file. refs/heads/ always points to the top commit of the branch
-            raw_url = f"https://raw.githubusercontent.com/{file_metadata.repo_path}/refs/heads/{file_metadata.file_path}"
+            # The following URL is the raw URL of the file. Without a refs/heads/ prefix, raw.githubusercontent.com
+            # accepts any ref from the link, so branch, tag and commit links all work.
+            raw_url = f"https://raw.githubusercontent.com/{file_metadata.repo_path}/{file_metadata.file_path}"
             try:
                 response = await client.get(raw_url)
                 response.raise_for_status()
