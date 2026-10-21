@@ -14,10 +14,13 @@
 # limitations under the License.
 
 import base64
+import glob
 import importlib.metadata
 import logging
 import os
+import shutil
 import subprocess
+import tempfile
 from functools import lru_cache
 
 from packaging.requirements import Requirement
@@ -473,11 +476,15 @@ def build_wheel(package_root: str) -> WheelData:
     working_dir = os.getcwd()
     os.chdir(package_root)
 
-    result = subprocess.run(["uv", "build", "--wheel"], check=True)
-    result.check_returncode()
+    # Build into an empty directory so wheels left in dist/ by earlier builds can't be picked up.
+    with tempfile.TemporaryDirectory() as build_dir:
+        result = subprocess.run(["uv", "build", "--wheel", "--out-dir", build_dir], check=True)
+        result.check_returncode()
 
-    whl_file = sorted(os.listdir("dist"), reverse=True)[0]
-    whl_file_path = os.path.join("dist", whl_file)
+        built_whl_path = glob.glob(os.path.join(build_dir, "*.whl"))[0]
+        os.makedirs("dist", exist_ok=True)
+        whl_file_path = os.path.join("dist", os.path.basename(built_whl_path))
+        shutil.copyfile(built_whl_path, whl_file_path)
 
     with open(whl_file_path, "rb") as whl:
         whl_bytes = whl.read()

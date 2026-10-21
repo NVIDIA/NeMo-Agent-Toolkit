@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Awaitable
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from typing import Any
 from unittest.mock import MagicMock
@@ -320,3 +322,263 @@ class TestSessionToolSessionPath:
 
         assert result == "ok ping"
         assert acall_was_inside_context is True
+
+
+_NULLABLE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "issue_id": {
+            "type": "string"
+        },
+        "assignee": {
+            "type": ["string", "null"]
+        },
+        "note": {
+            "type": "string"
+        },
+        "filter": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "anyOf": [{
+                        "type": "string"
+                    }, {
+                        "type": "null"
+                    }]
+                }, "limit": {
+                    "type": "integer"
+                }
+            },
+            "required": ["label"],
+        },
+        "rows": {
+            "type": "array",
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "v": {
+                            "type": "integer"
+                        }, "note": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["v"],
+                },
+            },
+        },
+    },
+    "required": ["issue_id", "assignee"],
+}
+
+# Required fields that also declare a default, at the top level and in a nested object.
+_REQUIRED_WITH_DEFAULT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "issue_id": {
+            "type": "string"
+        },
+        "reviewer": {
+            "type": ["string", "null"], "default": None
+        },
+        "filter": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": ["string", "null"], "default": None
+                },
+                "limit": {
+                    "type": ["integer", "null"]
+                },
+            },
+            "required": ["label"],
+        },
+    },
+    "required": ["issue_id", "reviewer"],
+}
+
+_REF_SCHEMA = {
+    "type": "object",
+    "$defs": {
+        "Filter": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+            },
+            "required": ["label"],
+        }
+    },
+    "properties": {
+        "issue_id": {
+            "type": "string"
+        }, "filter": {
+            "$ref": "#/$defs/Filter"
+        }
+    },
+    "required": ["issue_id", "filter"],
+}
+
+_DISCRIMINATED_UNION_SCHEMA = {
+    "type": "object",
+    "$defs": {
+        "Cat": {
+            "type": "object",
+            "properties": {
+                "pet_type": {
+                    "const": "cat", "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "lives": {
+                    "default": 9, "type": "integer"
+                }
+            },
+            "required": ["pet_type", "name"],
+            "additionalProperties": False,
+        },
+        "Dog": {
+            "type": "object",
+            "properties": {
+                "pet_type": {
+                    "const": "dog", "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "good_boy": {
+                    "default": True, "type": "boolean"
+                },
+                "lives": {
+                    "default": 1, "type": "integer"
+                },
+            },
+            "required": ["pet_type", "name"],
+            "additionalProperties": False,
+        },
+    },
+    "properties": {
+        "pet": {
+            "discriminator": {
+                "mapping": {
+                    "cat": "#/$defs/Cat", "dog": "#/$defs/Dog"
+                }, "propertyName": "pet_type"
+            },
+            "oneOf": [{
+                "$ref": "#/$defs/Cat"
+            }, {
+                "$ref": "#/$defs/Dog"
+            }],
+        }
+    },
+    "required": ["pet"],
+}
+
+
+class _RecordingTool:
+    """Fake MCP tool that records the arguments sent to the server."""
+
+    def __init__(self, schema: dict[str, Any]) -> None:
+        from nat.plugins.mcp.utils import model_from_mcp_schema
+
+        self.name = "update_issue"
+        self.description = "desc"
+        self.input_schema = model_from_mcp_schema("update_issue", schema)
+        self.sent: dict[str, Any] | None = None
+
+    async def acall(self, args: dict[str, Any]) -> str:
+        self.sent = args
+        return "ok"
+
+
+async def _call_tool_fn(fn_info, tool: _RecordingTool, tool_args: dict[str, Any]) -> None:
+    # Same path as an agent tool call: the arguments are validated into the input schema, and FunctionInfo
+    # unpacks the model into keyword arguments for the tool function.
+    result = await fn_info.single_fn(tool.input_schema.model_validate(tool_args))
+    assert result == "ok"
+
+
+async def _send_through_per_user_tool(tool_args: dict[str, Any],
+                                      schema: dict[str, Any] = _NULLABLE_SCHEMA) -> dict[str, Any] | None:
+    from nat.plugins.mcp.client.client_impl import mcp_per_user_tool_function
+
+    tool = _RecordingTool(schema)
+    client = MagicMock()
+
+    async def get_tool(name):
+        return tool
+
+    client.get_tool = get_tool
+    await _call_tool_fn(mcp_per_user_tool_function(tool, client), tool, tool_args)
+    return tool.sent
+
+
+async def _send_through_session_tool(tool_args: dict[str, Any],
+                                     schema: dict[str, Any] = _NULLABLE_SCHEMA) -> dict[str, Any] | None:
+    tool = _RecordingTool(schema)
+    group = _make_group()
+    fake_client = _FakeMCPClient(tools={"update_issue": tool})
+    async with fake_client:
+        group.mcp_client = fake_client
+        await _call_tool_fn(mcp_session_tool_function(tool, group), tool, tool_args)
+    return tool.sent
+
+
+@pytest.fixture(name="send_tool_args", params=["per_user", "session"])
+def fixture_send_tool_args(request):
+    return _send_through_per_user_tool if request.param == "per_user" else _send_through_session_tool
+
+
+async def test_required_nullable_argument_keeps_explicit_null(send_tool_args):
+    """A required field must be present in the call even when its value is null (JSON Schema `required`)."""
+    sent = await send_tool_args({"issue_id": "ISS-1", "assignee": None})
+    assert sent == {"issue_id": "ISS-1", "assignee": None}
+
+
+async def test_nested_required_nullable_argument_keeps_explicit_null(send_tool_args):
+    sent = await send_tool_args({"issue_id": "ISS-1", "assignee": "bob", "filter": {"label": None}})
+    assert sent == {"issue_id": "ISS-1", "assignee": "bob", "filter": {"label": None}}
+
+
+async def test_optional_arguments_left_unset_are_not_sent(send_tool_args):
+    """Optional fields the model did not fill are left out, as many MCP servers reject extra nulls."""
+    sent = await send_tool_args({"issue_id": "ISS-1", "assignee": "bob", "filter": {"label": "bug"}})
+    assert sent == {"issue_id": "ISS-1", "assignee": "bob", "filter": {"label": "bug"}}
+
+
+async def test_optional_arguments_left_unset_in_nested_arrays_are_not_sent(send_tool_args):
+    sent = await send_tool_args({"issue_id": "ISS-1", "assignee": "bob", "rows": [[{"v": 1}], [{"v": 2}]]})
+    assert sent == {"issue_id": "ISS-1", "assignee": "bob", "rows": [[{"v": 1}], [{"v": 2}]]}
+
+
+async def test_required_argument_with_default_is_sent_when_left_unset(send_tool_args):
+    """A schema default does not lift `required`: the key is still sent, carrying the default."""
+    sent = await send_tool_args({"issue_id": "ISS-1"}, _REQUIRED_WITH_DEFAULT_SCHEMA)
+    assert sent == {"issue_id": "ISS-1", "reviewer": None}
+
+
+async def test_nested_required_argument_with_default_keeps_explicit_null(send_tool_args):
+    tool_args = {"issue_id": "ISS-1", "reviewer": None, "filter": {"label": None}}
+    sent = await send_tool_args(tool_args, _REQUIRED_WITH_DEFAULT_SCHEMA)
+    assert sent == {"issue_id": "ISS-1", "reviewer": None, "filter": {"label": None}}
+
+
+async def test_referenced_nested_argument_is_sent_as_an_object(send_tool_args: Callable[...,
+                                                                                        Awaitable[dict[str, Any]
+                                                                                                  | None]]):
+    """A `$ref` argument (FastMCP nested model) goes out as a plain object, without the unset optional field."""
+    sent = await send_tool_args({"issue_id": "ISS-1", "filter": {"label": "bug"}}, _REF_SCHEMA)
+    assert sent == {"issue_id": "ISS-1", "filter": {"label": "bug"}}
+
+
+async def test_discriminated_union_argument_is_sent_as_the_matching_variant(
+        send_tool_args: Callable[..., Awaitable[dict[str, Any] | None]]):
+    """The `const` tag selects the variant, so the call carries that variant's fields and defaults."""
+    sent = await send_tool_args({"pet": {"pet_type": "dog", "name": "Rex"}}, _DISCRIMINATED_UNION_SCHEMA)
+    assert sent == {"pet": {"pet_type": "dog", "name": "Rex", "good_boy": True, "lives": 1}}

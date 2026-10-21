@@ -22,6 +22,7 @@ from nat.data_models.api_server import ErrorTypes
 from nat.data_models.api_server import ResponseATIFStep
 from nat.data_models.api_server import ResponseATIFTrajectory
 from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.api_server import ResponseObservabilityTrace
 from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import ResponseSerializable
 from nat.data_models.step_adaptor import StepAdaptorConfig
@@ -174,6 +175,8 @@ async def generate_streaming_response_full(payload: typing.Any,
                 if (isinstance(item, ResponseIntermediateStep)):
                     if allowed_types is None or item.type in allowed_types:
                         yield item
+                elif (isinstance(item, ResponseObservabilityTrace)):
+                    yield item
                 else:
                     yield ResponsePayloadOutput(payload=item)
 
@@ -200,7 +203,7 @@ async def generate_streaming_response_full_as_str(payload: typing.Any,
                                                            result_type=result_type,
                                                            output_type=output_type,
                                                            filter_steps=filter_steps):
-            if (isinstance(item, ResponseIntermediateStep) or isinstance(item, ResponsePayloadOutput)):
+            if (isinstance(item, ResponseIntermediateStep | ResponsePayloadOutput | ResponseObservabilityTrace)):
                 yield item.get_stream_data()
             else:
                 raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +

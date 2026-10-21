@@ -27,6 +27,7 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import BaseTool
+from langgraph.errors import GraphRecursionError
 from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
@@ -50,6 +51,7 @@ logger = logging.getLogger(__name__)
 class ToolCallAgentGraphState(BaseModel):
     """State schema for the Tool Calling Agent Graph"""
     messages: list[BaseMessage] = Field(default_factory=list)  # input and output of the Agent
+    tool_iterations: int = Field(default=0)  # tool node runs in this invocation; messages may hold chat history
 
 
 def cached_input_details(details: dict | None) -> dict:
@@ -114,6 +116,7 @@ class ToolCallAgentGraph(DualNodeAgent):
         max_truncation_retries: int = 0,
         truncation_scaling_fn: typing.Callable[[int], int] | None = None,
         max_empty_response_retries: int = 0,
+        max_iterations: int | None = None,
     ):
         super().__init__(llm=llm,
                          tools=tools,
@@ -151,6 +154,7 @@ class ToolCallAgentGraph(DualNodeAgent):
         self._truncation_scaling_fn: typing.Callable[[int], int] = truncation_scaling_fn or (lambda c: c + 1024)
         self._current_max_tokens: int | None = getattr(llm, "max_tokens", None)
         self._max_empty_response_retries: int = max_empty_response_retries
+        self.max_iterations = max_iterations
 
         logger.debug("%s Initialized Tool Calling Agent Graph", AGENT_LOG_PREFIX)
 
@@ -378,11 +382,16 @@ class ToolCallAgentGraph(DualNodeAgent):
             last_message = state.messages[-1]
             if last_message.tool_calls:
                 # the agent wants to call a tool
+                if self.max_iterations is not None and state.tool_iterations >= self.max_iterations:
+                    raise GraphRecursionError(f"Tool Calling Agent reached max_iterations ({self.max_iterations}) "
+                                              "without a final answer")
                 logger.debug("%s Agent is calling a tool", AGENT_LOG_PREFIX)
                 return AgentDecision.TOOL
             if self.detailed_logs:
                 logger.debug("%s Final answer:\n%s", AGENT_LOG_PREFIX, state.messages[-1].content)
             return AgentDecision.END
+        except GraphRecursionError:
+            raise
         except Exception as ex:
             logger.exception("%s Failed to determine whether agent is calling a tool: %s", AGENT_LOG_PREFIX, ex)
             logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
@@ -393,6 +402,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             logger.debug("%s Starting Tool Node", AGENT_LOG_PREFIX)
             tool_calls = state.messages[-1].tool_calls
             tools = [tool.get("name") for tool in tool_calls]
+            state.tool_iterations += 1
             tool_input = state.messages[-1]
 
             tool_response = await self.tool_caller.ainvoke(
