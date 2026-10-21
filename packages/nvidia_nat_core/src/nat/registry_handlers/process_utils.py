@@ -51,21 +51,19 @@ async def run_command(*args: str,
 
     This is the :func:`asyncio` equivalent of ``subprocess.run(cmd, check=True,
     capture_output=True)``, and deliberately mirrors its behaviour so callers
-    keep the same error types and messages:
-
-    * a non-zero exit raises :class:`subprocess.CalledProcessError`
-    * ``text=True`` decodes the output to ``str`` instead of ``bytes``
+    keep the same error types and messages. A non-zero exit raises
+    :class:`subprocess.CalledProcessError`, and ``text=True`` decodes the output
+    to ``str`` instead of ``bytes``.
 
     Args:
-        *args: Program and arguments, as passed to :func:`subprocess.run`.
+        args: Program and arguments, as passed to :func:`subprocess.run`.
         check: Raise :class:`subprocess.CalledProcessError` on a non-zero exit.
         text: Decode ``stdout``/``stderr`` to ``str``.
         capture: Capture ``stdout``/``stderr`` into the returned object. Pass
-            ``False`` for commands that may prompt on the terminal, such as
-            ``twine upload`` to a private index, which calls ``input()`` when
-            no username is configured. Capturing hides that prompt while the
-            child still blocks waiting for an answer, and stdin is inherited
-            either way.
+        ``False`` for commands that may prompt on the terminal, such as
+        ``twine upload`` to a private index, which calls ``input()`` when no
+        username is configured. Capturing hides that prompt while the child
+        still blocks waiting for an answer, and stdin is inherited either way.
 
     Returns:
         A :class:`subprocess.CompletedProcess` for the finished command. With
