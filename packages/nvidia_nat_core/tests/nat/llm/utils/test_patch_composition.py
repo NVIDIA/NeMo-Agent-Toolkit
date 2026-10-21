@@ -14,6 +14,8 @@
 # limitations under the License.
 """The framework LLM wrappers apply patch_with_retry and then patch_with_thinking; both must stay in effect."""
 
+from collections.abc import AsyncGenerator
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -34,27 +36,27 @@ class Client:
     def __init__(self):
         self.calls: list[list[str]] = []
 
-    def _attempt(self, messages):
+    def _attempt(self, messages: list[str]):
         self.calls.append(list(messages))
         if len(self.calls) == 1:
             raise RateLimited("429 Too Many Requests")
 
-    def invoke(self, messages):
+    def invoke(self, messages: list[str]) -> str:
         self._attempt(messages)
         return "ok"
 
-    async def ainvoke(self, messages):
+    async def ainvoke(self, messages: list[str]) -> str:
         self._attempt(messages)
         return "ok"
 
-    async def astream(self, messages):
+    async def astream(self, messages: list[str]) -> AsyncGenerator[str, None]:
         self._attempt(messages)
         yield "ok"
 
 
 class PrependThink(BaseThinkingInjector):
 
-    def inject(self, messages, *args, **kwargs) -> FunctionArgumentWrapper:
+    def inject(self, messages: list[str], *args: Any, **kwargs: Any) -> FunctionArgumentWrapper:
         return FunctionArgumentWrapper(["/think", *messages], *args, **kwargs)
 
 
