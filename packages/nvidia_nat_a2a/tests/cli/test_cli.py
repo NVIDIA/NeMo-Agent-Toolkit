@@ -47,7 +47,7 @@ def test_client_commands_exit_nonzero_when_agent_unreachable(command, monkeypatc
 
     result = CliRunner().invoke(commands.a2a_command, args)
 
-    assert result.exit_code != 0
+    assert result.exit_code == 1
     assert "Error: Failed to fetch agent card from http://localhost:1" in result.output
 
 
@@ -60,7 +60,7 @@ def test_call_exits_nonzero_on_invalid_auth_options(extra_args, expected):
     args = ["client", "call", "--url", "http://localhost:1", "--message", "hi", *extra_args]
     result = CliRunner().invoke(commands.a2a_command, args)
 
-    assert result.exit_code != 0
+    assert result.exit_code == 1
     assert expected in result.output
 
 
@@ -73,5 +73,5 @@ def test_call_exits_nonzero_on_auth_config_without_auth_provider(tmp_path):
     args = ["client", "call", "--url", "http://localhost:1", "--message", "hi", "--auth-config", str(auth_config)]
     result = CliRunner().invoke(commands.a2a_command, args)
 
-    assert result.exit_code != 0
+    assert result.exit_code == 1
     assert "Error: --auth-provider is required with --auth-config" in result.output
