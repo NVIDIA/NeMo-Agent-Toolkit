@@ -516,6 +516,20 @@ def _retry_decorator(
     return decorate
 
 
+def _method_to_wrap(obj: Any, cls: type, name: str, descriptor: Any) -> Any:
+    """
+    The function to wrap for `name`: the one already patched onto this instance, if any, else the class's.
+
+    Patching an instance twice (for example with retries and then with a thinking prompt) must keep both, so
+    the second patch wraps the first instead of the original class method.
+    """
+    if not inspect.isclass(obj):
+        current = getattr(obj, "__dict__", {}).get(name)
+        if isinstance(current, types.MethodType) and current.__self__ is obj:
+            return current.__func__
+    return descriptor.__func__ if isinstance(descriptor, types.MethodType) else descriptor
+
+
 def patch_with_retry(
     obj: Any,
     *,
@@ -585,7 +599,7 @@ def patch_with_retry(
         if name.startswith("_") or isinstance(descriptor, property | staticmethod | classmethod):
             continue
 
-        original = descriptor.__func__ if isinstance(descriptor, types.MethodType) else descriptor
+        original = _method_to_wrap(obj, cls, name, descriptor)
         wrapped = deco(original)
 
         try:  # instance‑level first
