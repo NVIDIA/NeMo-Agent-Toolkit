@@ -15,8 +15,10 @@
 
 import json
 import logging
+import operator
 from enum import Enum
 from functools import cache
+from functools import reduce
 from typing import Annotated
 from typing import Any
 from typing import Literal
@@ -236,6 +238,40 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
             return field_type
         return Annotated[field_type, Field(**constraints)]
 
+    def _resolve_array_type(schema: dict[str, Any], name: str) -> Any:
+        """Resolve an array schema to a `list` of the types its items may have"""
+        items = schema.get("items")
+        prefix_items = schema.get("prefixItems")
+        if isinstance(items, list):
+            # Before draft 2020-12, `items` can list one schema per position (a tuple), which is what TypeScript
+            # MCP SDK v1 emits for `z.tuple()`, and `additionalItems` covers the positions after them
+            positions, rest = items, schema.get("additionalItems")
+        elif isinstance(prefix_items, list) and (items is False or (isinstance(items, dict) and items)):
+            # Draft 2020-12 lists the positions in `prefixItems`, and `items` covers the ones after them.
+            # TypeScript MCP SDK v2 emits `items: false` for `z.tuple()`.
+            positions, rest = prefix_items, items
+        elif isinstance(items, dict) and items:
+            # Recursively resolve item type (handles nested anyOf/oneOf)
+            return list[_resolve_schema_type(items, name)]
+        else:
+            return list
+
+        # Accept any of the position types at every position; `minItems` and `maxItems` still bound the length.
+        # A position can also be a boolean schema: `true` allows any value, and `false` allows none, so the array
+        # ends before it. A `false` for the later positions ends the array after the listed ones.
+        first_false = next((i for i, item in enumerate(positions) if item is False), None)
+        if first_false is not None:
+            item_schemas, max_length = positions[:first_false], first_false
+        else:
+            item_schemas = positions + ([rest] if isinstance(rest, dict) and rest else [])
+            max_length = len(positions) if rest is False else None
+        item_types = [Any if item is True else _resolve_schema_type(item, name) for item in item_schemas]
+        array_type = list[reduce(operator.or_, item_types)] if item_types else list
+        if max_length is None:
+            return array_type
+        # This bound takes precedence over the one built from `maxItems`, so keep the smaller of the two
+        return Annotated[array_type, Field(max_length=min(max_length, schema.get("maxItems", max_length)))]
+
     def _resolve_schema_type(schema: dict[str, Any], name: str, apply_constraints: bool = True) -> Any:
         """
         Recursively resolve a JSON schema to a Python type.
@@ -301,13 +337,7 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
             list_type: Any = None
             for t in schema_type:
                 if t == "array":
-                    # Incorporate the mapped type of items
-                    item_schema = schema.get("items", {})
-                    if item_schema:
-                        item_type = _resolve_schema_type(item_schema, name)
-                        mapped = list[item_type]
-                    else:
-                        mapped = _type_map.get(t, Any)
+                    mapped = _resolve_array_type(schema, name)
                 elif t == "object":
                     # Incorporate the mapped type from properties
                     if "properties" in schema:
@@ -330,11 +360,8 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
             return model_from_mcp_schema(name=name, mcp_input_schema=schema)
 
         # Handle array type
-        if schema_type == "array" and "items" in schema:
-            item_schema = schema.get("items", {})
-            # Recursively resolve item type (handles nested anyOf/oneOf)
-            item_type = _resolve_schema_type(item_schema, name)
-            resolved_array = list[item_type]
+        if schema_type == "array":
+            resolved_array = _resolve_array_type(schema, name)
             return _apply_constraints(resolved_array, schema) if apply_constraints else resolved_array
 
         # Handle primitive types

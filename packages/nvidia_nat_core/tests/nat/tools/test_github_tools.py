@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+from typing import Any
 from unittest.mock import MagicMock
 
 import httpx
@@ -106,3 +107,37 @@ async def test_get_issue_sends_labels_as_one_comma_separated_value(monkeypatch: 
     assert len(requests) == 1
     # The GitHub API reads `labels` as one comma-separated value; repeating the parameter keeps only the last label.
     assert requests[0].url.params.get_list("labels") == ["bug,Needs Triage"]
+
+
+@pytest.mark.parametrize(
+    "ref",
+    [
+        "2545d2c9d34a948cf776471a305742986268dc92",  # commit permalink
+        "v1.9.0",  # tag
+        "develop",  # branch
+        "feature/new-parser",  # branch with a slash
+    ])
+async def test_get_file_requests_the_raw_url_for_any_ref(ref: str, monkeypatch: pytest.MonkeyPatch):
+    from nat.tool.github_tools import GithubFilesGroupConfig
+    from nat.tool.github_tools import github_files_tool
+
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, text="first line\nsecond line\n")
+
+    real_async_client = httpx.AsyncClient
+
+    def async_client_with_mock_transport(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
+        return real_async_client(*args, transport=httpx.MockTransport(handler), **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", async_client_with_mock_transport)
+
+    async with github_files_tool(GithubFilesGroupConfig(), MagicMock()) as function_info:
+        result = await function_info.single_fn(f"https://github.com/owner/repo/blob/{ref}/docs/README.md#L2")
+
+    assert result == "```second line\n```"
+    assert len(requests) == 1
+    # A refs/heads/ prefix only matches branch names, so commit and tag links would get a 404.
+    assert str(requests[0].url) == f"https://raw.githubusercontent.com/owner/repo/{ref}/docs/README.md"

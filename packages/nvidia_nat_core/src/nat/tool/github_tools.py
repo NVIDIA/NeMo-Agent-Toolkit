@@ -488,8 +488,9 @@ async def github_files_tool(config: GithubFilesGroupConfig, _builder: Builder):
 
             file_metadata = FileMetadata(**match.groupdict())
 
-            # The following URL is the raw URL of the file. refs/heads/ always points to the top commit of the branch
-            raw_url = f"https://raw.githubusercontent.com/{file_metadata.repo_path}/refs/heads/{file_metadata.file_path}"
+            # The following URL is the raw URL of the file. Without a refs/heads/ prefix, raw.githubusercontent.com
+            # accepts any ref from the link, so branch, tag and commit links all work.
+            raw_url = f"https://raw.githubusercontent.com/{file_metadata.repo_path}/{file_metadata.file_path}"
             try:
                 response = await client.get(raw_url)
                 response.raise_for_status()
