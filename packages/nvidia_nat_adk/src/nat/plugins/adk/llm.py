@@ -45,8 +45,9 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
     class ADKThinkingInjector(BaseThinkingInjector):
 
         def inject(self, llm_request, *args, **kwargs) -> FunctionArgumentWrapper:
-            # ADK sends the request's system_instruction as the system message
-            llm_request = llm_request.model_copy(deep=True)
+            # ADK sends the request's system_instruction as the system message. Copy only the config: the
+            # request also holds tool objects (an MCP tool keeps a lock), which can't be deep-copied.
+            llm_request = llm_request.model_copy(update={"config": llm_request.config.model_copy()})
             instruction = llm_request.config.system_instruction
             if instruction is None:
                 llm_request.config.system_instruction = self.system_prompt
@@ -58,10 +59,12 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
             return FunctionArgumentWrapper(llm_request, *args, **kwargs)
 
     if isinstance(llm_config, RetryMixin) and llm_config.do_auto_retry:
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
+        # retry the litellm call itself, not generate_content_async: retrying that generator after it has
+        # yielded part of a stream would send the same chunks twice
+        patch_with_retry(client.llm_client,
+                         retries=llm_config.num_retries,
+                         retry_codes=llm_config.retry_on_status_codes,
+                         retry_on_messages=llm_config.retry_on_errors)
 
     if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
         client = patch_with_thinking(
