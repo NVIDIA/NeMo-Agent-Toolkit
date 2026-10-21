@@ -28,6 +28,7 @@ from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -296,7 +297,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         return tool_input_parsed
 
-    async def planner_node(self, state: ReWOOGraphState):
+    async def planner_node(self, state: ReWOOGraphState, config: RunnableConfig | None = None):
         try:
             logger.debug("%s Starting the ReWOO Planner Node", AGENT_LOG_PREFIX)
 
@@ -311,6 +312,7 @@ class ReWOOAgentGraph(BaseAgent):
                 {
                     "task": task, "chat_history": chat_history
                 },
+                config,
             )
 
             steps = self._parse_planner_output(str(plan.content))
@@ -468,7 +470,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         return tool_response
 
-    async def solver_node(self, state: ReWOOGraphState):
+    async def solver_node(self, state: ReWOOGraphState, config: RunnableConfig | None = None):
         try:
             logger.debug("%s Starting the ReWOO Solver Node", AGENT_LOG_PREFIX)
 
@@ -502,7 +504,7 @@ class ReWOOAgentGraph(BaseAgent):
             solver_prompt = self.solver_prompt.partial(plan=plan)
             solver = solver_prompt | self.llm
 
-            output_message = await self._stream_llm(solver, {"task": task})
+            output_message = await self._stream_llm(solver, {"task": task}, config)
 
             if self.detailed_logs:
                 solver_output_log_message = AGENT_CALL_LOG_MESSAGE % (task, str(output_message.content))

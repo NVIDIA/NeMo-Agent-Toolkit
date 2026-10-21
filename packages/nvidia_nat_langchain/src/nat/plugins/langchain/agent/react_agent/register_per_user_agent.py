@@ -24,6 +24,7 @@ from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import ChatResponse
 from nat.plugins.langchain.agent.react_agent.register import ReActAgentWorkflowConfig
 from nat.plugins.langchain.agent.react_agent.register import _build_lc_config
+from nat.plugins.langchain.agent.react_agent.register import _token_usage_collector
 
 logger = logging.getLogger(__name__)
 
@@ -88,19 +89,23 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
                                                         start_on="human",
                                                         include_system=True)
             state = ReActGraphState(messages=messages)
-            state = await graph.ainvoke(state,
-                                        config=_build_lc_config(config.max_tool_calls,
-                                                                message.model,
-                                                                supports_override=_supports_model_override))
+            lc_config = _build_lc_config(config.max_tool_calls,
+                                         message.model,
+                                         supports_override=_supports_model_override)
+            token_usage = _token_usage_collector(lc_config)
+            state = await graph.ainvoke(state, config=lc_config)
             state = ReActGraphState(**state)
             output_message = state.messages[-1]
             content = str(output_message.content)
 
-            prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
-            completion_tokens = len(content.split()) if content else 0
-            usage = Usage(prompt_tokens=prompt_tokens,
-                          completion_tokens=completion_tokens,
-                          total_tokens=prompt_tokens + completion_tokens)
+            usage = token_usage.usage()
+            if usage is None:
+                # the model reported no usage, so fall back to a word count
+                prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
+                completion_tokens = len(content.split()) if content else 0
+                usage = Usage(prompt_tokens=prompt_tokens,
+                              completion_tokens=completion_tokens,
+                              total_tokens=prompt_tokens + completion_tokens)
             response = ChatResponse.from_string(content, usage=usage)
 
             if chat_request_or_message.is_string:

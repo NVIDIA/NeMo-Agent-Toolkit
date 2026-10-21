@@ -2190,3 +2190,113 @@ async def test_react_agent_can_use_all_max_tool_calls_then_answer(max_tool_calls
     result, calls = await _run_react_agent(responses, max_tool_calls)
     assert len(calls) == max_tool_calls
     assert result == "all done"
+
+
+class _UsageReportingLLM(BaseChatModel):
+    """Scripted model whose replies carry `usage_metadata`, as LangChain chat models report it."""
+
+    replies: list[tuple[str, int, int]]
+    turns: int = 0
+
+    @property
+    def _llm_type(self) -> str:
+        return "usage-reporting"
+
+    def _generate(self,
+                  messages: typing.Any,
+                  stop: typing.Any = None,
+                  run_manager: typing.Any = None,
+                  **kwargs: typing.Any) -> ChatResult:
+        text, input_tokens, output_tokens = self.replies[self.turns]
+        self.turns += 1
+        message = AIMessage(content=text,
+                            usage_metadata={
+                                "input_tokens": input_tokens,
+                                "output_tokens": output_tokens,
+                                "total_tokens": input_tokens + output_tokens,
+                            })
+        return ChatResult(generations=[ChatGeneration(message=message)])
+
+
+@pytest.mark.parametrize("per_user", [False, True], ids=["react_agent", "per_user_react_agent"])
+async def test_react_workflow_reports_the_token_usage_the_model_reported(per_user):
+    """`usage` on the response is the sum of what the model reported over the run, not a word count."""
+    from unittest.mock import AsyncMock
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+
+    counter, calls = _counting_tool()
+    llm = _UsageReportingLLM(replies=[(_REACT_TOOL_CALL, 100, 20), ("Thought: done\nFinal Answer: all done", 150, 30)])
+    config_type, workflow = _react_workflow(per_user)
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=llm)
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = config_type(tool_names=["counter"], llm_name="llm")
+    request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}])
+    async with workflow(config, builder) as function_info:
+        response = await function_info.single_fn(request)
+    assert calls == ["x"]
+    assert (response.usage.prompt_tokens, response.usage.completion_tokens,
+            response.usage.total_tokens) == (250, 50, 300)
+
+
+async def test_react_workflow_falls_back_to_word_counts_when_the_model_reports_no_usage():
+    from unittest.mock import AsyncMock
+
+    from langchain_core.language_models.fake_chat_models import FakeListChatModel
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+    from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+
+    counter, _ = _counting_tool()
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=FakeListChatModel(responses=["Thought: done\nFinal Answer: two words"]))
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = ReActAgentWorkflowConfig(tool_names=["counter"], llm_name="llm")
+    request = ChatRequestOrMessage(messages=[{"role": "user", "content": "say hi"}])
+    async with react_agent_workflow(config, builder) as function_info:
+        response = await function_info.single_fn(request)
+    assert (response.usage.prompt_tokens, response.usage.completion_tokens, response.usage.total_tokens) == (2, 2, 4)
+
+
+def test_build_lc_config_adds_one_token_usage_collector():
+    from nat.plugins.langchain.agent.react_agent.register import _build_lc_config
+    from nat.plugins.langchain.agent.react_agent.register import _token_usage_collector
+    from nat.plugins.langchain.agent.token_usage import TokenUsageCollector
+
+    lc_config = _build_lc_config(5, None)
+    collectors = [cb for cb in lc_config["callbacks"] if isinstance(cb, TokenUsageCollector)]
+    assert len(collectors) == 1
+    assert _token_usage_collector(lc_config) is collectors[0]
+    assert _build_lc_config(5, None)["callbacks"][0] is not collectors[0]  # a new one per request
+
+
+@pytest.mark.parametrize("per_user", [False, True], ids=["react_agent", "per_user_react_agent"])
+async def test_react_workflow_keeps_the_callbacks_of_a_parent_run(per_user):
+    """Run inside a parent runnable: the parent's callbacks still see the model calls, and usage is still summed."""
+    from unittest.mock import AsyncMock
+
+    from langchain_core.callbacks import AsyncCallbackHandler
+    from langchain_core.runnables import RunnableLambda
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+
+    class CountLLMEnds(AsyncCallbackHandler):
+        calls: int = 0
+
+        async def on_llm_end(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+            type(self).calls += 1
+
+    counter, _ = _counting_tool()
+    llm = _UsageReportingLLM(replies=[(_REACT_TOOL_CALL, 100, 20), ("Thought: done\nFinal Answer: all done", 150, 30)])
+    config_type, workflow = _react_workflow(per_user)
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=llm)
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = config_type(tool_names=["counter"], llm_name="llm")
+    request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}])
+    async with workflow(config, builder) as function_info:
+        response = await RunnableLambda(function_info.single_fn).ainvoke(request,
+                                                                         config={"callbacks": [CountLLMEnds()]})
+    assert CountLLMEnds.calls == 2
+    assert response.usage.total_tokens == 300

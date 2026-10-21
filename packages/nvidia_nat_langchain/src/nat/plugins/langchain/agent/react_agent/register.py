@@ -46,7 +46,11 @@ _MODEL_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._/:@\- ]{0,254}$")
 
 
 def _build_lc_config(max_tool_calls: int, model: str | None, *, supports_override: bool = True) -> dict:
+    from nat.plugins.langchain.agent.token_usage import TokenUsageCollector
+
     lc_config: dict = {"recursion_limit": (max_tool_calls + 1) * 2}
+    # a new collector per request; read it back with _token_usage_collector
+    lc_config.setdefault("callbacks", []).append(TokenUsageCollector())
     if model is not None and model != UNKNOWN_MODEL_SENTINEL:
         if not _MODEL_NAME_RE.match(model):
             raise ValueError(f"Invalid model name: {model!r}")
@@ -56,6 +60,13 @@ def _build_lc_config(max_tool_calls: int, model: str | None, *, supports_overrid
                              f"(e.g. NIM, OpenAI, Bedrock). Requested: {model!r}")
         lc_config["configurable"] = {"model_name": model}
     return lc_config
+
+
+def _token_usage_collector(lc_config: dict):
+    """The TokenUsageCollector that `_build_lc_config` added to `lc_config`."""
+    from nat.plugins.langchain.agent.token_usage import TokenUsageCollector
+
+    return next(cb for cb in lc_config["callbacks"] if isinstance(cb, TokenUsageCollector))
 
 
 class ReActAgentWorkflowConfig(AgentBaseConfig, OptimizableMixin, name="react_agent"):
@@ -126,7 +137,6 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from nat.plugins.langchain.agent.react_agent.agent import ReActGraphState
     from nat.plugins.langchain.agent.react_agent.agent import create_react_agent_prompt
     from nat.plugins.langchain.agent.react_agent.output_parser import FINAL_ANSWER_PATTERN
-
     prompt = create_react_agent_prompt(config)
 
     # we can choose an LLM for the ReAct agent in the config file
@@ -181,10 +191,11 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             state = ReActGraphState(messages=messages)
 
             # run the ReAct Agent Graph
-            state = await graph.ainvoke(state,
-                                        config=_build_lc_config(config.max_tool_calls,
-                                                                message.model,
-                                                                supports_override=_supports_model_override))
+            lc_config = _build_lc_config(config.max_tool_calls,
+                                         message.model,
+                                         supports_override=_supports_model_override)
+            token_usage = _token_usage_collector(lc_config)
+            state = await graph.ainvoke(state, config=lc_config)
             # setting recursion_limit: 4 leaves room for 1 tool call and the final answer;
             #   the ReAct Agent graph itself stops before a second tool call
 
@@ -193,11 +204,14 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             output_message = state.messages[-1]
             content = _extract_message_text(output_message.content)
 
-            # Create usage statistics for the response
-            prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
-            completion_tokens = len(content.split()) if content else 0
-            total_tokens = prompt_tokens + completion_tokens
-            usage = Usage(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, total_tokens=total_tokens)
+            usage = token_usage.usage()
+            if usage is None:
+                # the model reported no usage, so fall back to a word count
+                prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
+                completion_tokens = len(content.split()) if content else 0
+                usage = Usage(prompt_tokens=prompt_tokens,
+                              completion_tokens=completion_tokens,
+                              total_tokens=prompt_tokens + completion_tokens)
             response = ChatResponse.from_string(content, usage=usage)
             if chat_request_or_message.is_string:
                 return GlobalTypeConverter.get().convert(response, to_type=str)
