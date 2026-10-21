@@ -246,11 +246,11 @@ class Settings(HashableBaseModel):
 
         if (channel_type is not None):
             filter_channels = []
-            for channel, settings in remote_channels.items():
-                if (settings["type"] != channel_type):
+            for channel, settings in remote_channels["channels"].items():
+                if (settings["_type"] != channel_type):
                     filter_channels.append(channel)
             for channel in filter_channels:
-                del remote_channels[channel]
+                del remote_channels["channels"][channel]
 
         if (remote_channels):
             logger.info(yaml.dump(remote_channels, allow_unicode=True, default_flow_style=False))
