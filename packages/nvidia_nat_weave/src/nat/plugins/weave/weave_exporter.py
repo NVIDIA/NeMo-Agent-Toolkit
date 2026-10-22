@@ -313,8 +313,19 @@ class WeaveExporter(SpanExporter[Span, Span]):
                 if value := getattr(metadata, field, None):
                     call.summary[field] = value
 
-        # Finish the call with outputs
-        self._gc.finish_call(call, outputs)
+        # Finish the call with outputs; a step that failed (an `error` entry in its END metadata) is finished
+        # as failed, so Weave doesn't show it as a normal completion
+        error = self._end_event_error(step)
+        if error is not None:
+            self._gc.finish_call(call, outputs, exception=Exception(error.get("type", "Error")))
+        else:
+            self._gc.finish_call(call, outputs)
+
+    @staticmethod
+    def _end_event_error(step: IntermediateStep) -> dict | None:
+        metadata = step.payload.metadata
+        error = metadata.get("error") if isinstance(metadata, dict) else getattr(metadata, "error", None)
+        return error if isinstance(error, dict) else None
 
     async def _cleanup_weave_calls(self) -> None:
         """
