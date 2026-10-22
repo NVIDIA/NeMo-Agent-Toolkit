@@ -23,6 +23,7 @@ from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import Message
 from nat.data_models.api_server import OAuthMode
 from nat.data_models.api_server import OAuthModePreferencePayload
+from nat.utils.type_converter import GlobalTypeConverter
 
 
 def test_oauth_mode_preference_payload_parses_via_union():
@@ -53,3 +54,26 @@ def test_chat_request_accepts_non_empty_messages():
 
     assert len(request.messages) == 1
     assert ChatRequestOrMessage(input_message="hi").messages is None
+
+
+def _text(text: str) -> dict:
+    return {"type": "text", "text": text}
+
+
+_IMAGE = {"type": "image_url", "image_url": {"url": "http://example.com/cat.png"}}
+
+
+@pytest.mark.parametrize("model", [ChatRequest, ChatRequestOrMessage])
+@pytest.mark.parametrize("content, expected",
+                         [
+                             ("hi", "hi"),
+                             ([_text("hi")], "hi"),
+                             ([_text("describe this"), _IMAGE, _text("briefly")], "describe this\nbriefly"),
+                             ([_IMAGE], ""),
+                         ])
+def test_chat_request_content_parts_convert_to_text(model, content, expected):
+    # OpenAI clients send content as a list of parts. A workflow that takes a str
+    # used to receive the repr of the parsed parts instead of the text.
+    request = model(messages=[{"role": "user", "content": content}])
+
+    assert GlobalTypeConverter.convert(request, to_type=str) == expected
