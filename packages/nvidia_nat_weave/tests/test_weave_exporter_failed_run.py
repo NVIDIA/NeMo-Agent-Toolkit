@@ -32,8 +32,8 @@ class WeaveFailingWorkflowConfig(FunctionBaseConfig, name="weave_failing_workflo
     pass
 
 
-@pytest.fixture(scope="module", autouse=True)
-def _register():
+@pytest.fixture(name="register_workflow", scope="module", autouse=True)
+def register_workflow_fixture():
 
     @register_function(config_type=WeaveFailingWorkflowConfig)
     async def _workflow(config, builder: Builder):
@@ -90,29 +90,35 @@ async def test_failed_run_root_call_is_finished_with_the_error():
     assert isinstance(root_finish.args[1], dict)
 
 
-@pytest.mark.parametrize("metadata, expected",
-                         [
-                             (None, None),
-                             ({
-                                 "error": {
-                                     "type": "TimeoutError"
-                                 }
-                             }, {
-                                 "type": "TimeoutError"
-                             }),
-                             ({
-                                 "chat_responses": ["ok"]
-                             }, None),
-                             ({
-                                 "error": "connection reset"
-                             }, {
-                                 "type": "Error"
-                             }),
-                             ({
-                                 "error": ""
-                             }, None),
-                         ],
-                         ids=["no_metadata", "error_entry", "other_metadata", "string_error", "empty_string_error"])
+@pytest.mark.parametrize(
+    "metadata, expected",
+    [
+        (None, None),
+        ({
+            "error": {
+                "type": "TimeoutError"
+            }
+        }, {
+            "type": "TimeoutError"
+        }),
+        ({
+            "chat_responses": ["ok"]
+        }, None),
+        ({
+            "error": "connection reset"
+        }, {
+            "type": "Error"
+        }),
+        (
+            {
+                # error=str(exception) for an exception without a message, e.g. TimeoutError()
+                "error": ""
+            },
+            {
+                "type": "Error"
+            }),
+    ],
+    ids=["no_metadata", "error_entry", "other_metadata", "string_error", "empty_string_error"])
 def test_end_event_error(metadata, expected):
     """AutoGen's handler already reports failures as a string `error`; those count as failed too."""
     from nat.data_models.intermediate_step import IntermediateStep

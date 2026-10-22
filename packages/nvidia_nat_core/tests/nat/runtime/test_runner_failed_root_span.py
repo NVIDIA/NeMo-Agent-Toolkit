@@ -63,8 +63,8 @@ class WaitsForeverConfig(FunctionBaseConfig, name="root_span_slow_workflow"):
     pass
 
 
-@pytest.fixture(scope="module", autouse=True)
-def _register():
+@pytest.fixture(name="register_workflows", scope="module", autouse=True)
+def register_workflows_fixture():
 
     @register_function(config_type=FailingToolConfig)
     async def _tool(config, builder: Builder):
@@ -107,8 +107,8 @@ def _register():
         yield _inner
 
 
-@pytest.fixture(autouse=True)
-def _reset():
+@pytest.fixture(name="reset_state", autouse=True)
+def reset_state_fixture():
     EXPORTED.clear()
     WORKFLOW_ENDS.clear()
     STARTED.clear()
