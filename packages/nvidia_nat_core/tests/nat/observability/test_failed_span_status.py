@@ -54,8 +54,8 @@ class RecoveringWorkflowConfig(FunctionBaseConfig, name="span_status_recovering_
     pass
 
 
-@pytest.fixture(scope="module", autouse=True)
-def _register():
+@pytest.fixture(name="register_workflows", scope="module", autouse=True)
+def register_workflows_fixture():
 
     @register_function(config_type=FlakyToolConfig)
     async def _tool(config, builder: Builder):
@@ -79,8 +79,8 @@ def _register():
         yield _inner
 
 
-@pytest.fixture(autouse=True)
-def _clear():
+@pytest.fixture(name="clear_exported", autouse=True)
+def clear_exported_fixture():
     EXPORTED.clear()
 
 
@@ -169,19 +169,22 @@ def _event(event_type: IntermediateStepType, uuid: str, metadata=None) -> Interm
                                                             metadata=metadata))
 
 
-@pytest.mark.parametrize("metadata, expected",
-                         [
-                             (None, (SpanStatusCode.OK, None)),
-                             (TraceMetadata(error={"type": "RuntimeError"}), (SpanStatusCode.ERROR, "RuntimeError")),
-                             ({
-                                 "error": {
-                                     "type": "CancelledError"
-                                 }
-                             }, (SpanStatusCode.ERROR, "CancelledError")),
-                             (TraceMetadata(chat_responses=["ok"]), (SpanStatusCode.OK, None)),
-                             (TraceMetadata(error="connection reset"), (SpanStatusCode.ERROR, "Error")),
-                         ],
-                         ids=["no_error", "trace_metadata_error", "dict_error", "other_metadata", "string_error"])
+@pytest.mark.parametrize(
+    "metadata, expected",
+    [
+        (None, (SpanStatusCode.OK, None)),
+        (TraceMetadata(error={"type": "RuntimeError"}), (SpanStatusCode.ERROR, "RuntimeError")),
+        ({
+            "error": {
+                "type": "CancelledError"
+            }
+        }, (SpanStatusCode.ERROR, "CancelledError")),
+        (TraceMetadata(chat_responses=["ok"]), (SpanStatusCode.OK, None)),
+        (TraceMetadata(error="connection reset"), (SpanStatusCode.ERROR, "Error")),
+        # error=str(exception) for an exception without a message, e.g. TimeoutError()
+        (TraceMetadata(error=""), (SpanStatusCode.ERROR, "Error")),
+    ],
+    ids=["no_error", "trace_metadata_error", "dict_error", "other_metadata", "string_error", "empty_string_error"])
 def test_span_exporter_sets_the_status_from_the_end_event(metadata, expected):
     exporter = CollectingSpanExporter()
     exporter.export(_event(IntermediateStepType.FUNCTION_START, "s1"))
