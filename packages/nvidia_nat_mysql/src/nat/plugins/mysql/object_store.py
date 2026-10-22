@@ -50,11 +50,11 @@ class MySQLObjectStoreClientConfig(ObjectStoreBaseConfig, name="mysql"):
     )
     username: str | None = Field(
         default=os.environ.get(USERNAME_ENV),
-        description=f"The username used to connect to the MySQL server (uses {USERNAME_ENV} if unspecifed)",
+        description=f"The username used to connect to the MySQL server (uses {USERNAME_ENV} if unspecified)",
     )
     password: OptionalSecretStr = Field(
         default=os.environ.get(PASSWORD_ENV),
-        description=f"The password used to connect to the MySQL server (uses {PASSWORD_ENV} if unspecifed)",
+        description=f"The password used to connect to the MySQL server (uses {PASSWORD_ENV} if unspecified)",
     )
 
 
