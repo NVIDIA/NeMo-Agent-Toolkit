@@ -218,22 +218,23 @@ class Runner:
                                             metadata=start_metadata,
                                             data=StreamEventData(input=self._input_message)))
 
-                result = await self._entry_fn.ainvoke(self._input_message, to_type=to_type)  # type: ignore
+                try:
+                    result = await self._entry_fn.ainvoke(self._input_message, to_type=to_type)  # type: ignore
+                except BaseException as e:
+                    # end the root span, so a failed or cancelled run is still exported as a complete trace
+                    self._push_workflow_end(workflow_step_uuid,
+                                            workflow_name,
+                                            workflow_run_id,
+                                            workflow_trace_id,
+                                            error=e)
+                    raise
 
                 # Emit WORKFLOW_END with output
-                end_metadata = TraceMetadata(
-                    provided_metadata={
-                        "workflow_run_id": workflow_run_id,
-                        "workflow_trace_id": f"{workflow_trace_id:032x}",
-                        "conversation_id": self._context_state.conversation_id.get(),
-                        "display_name": self._entry_fn.display_name,
-                    })
-                self._context.intermediate_step_manager.push_intermediate_step(
-                    IntermediateStepPayload(UUID=workflow_step_uuid,
-                                            event_type=IntermediateStepType.WORKFLOW_END,
-                                            name=workflow_name,
-                                            metadata=end_metadata,
-                                            data=StreamEventData(output=result)))
+                self._push_workflow_end(workflow_step_uuid,
+                                        workflow_name,
+                                        workflow_run_id,
+                                        workflow_trace_id,
+                                        output=result)
 
                 event_stream = self._context_state.event_stream.get()
                 if event_stream:
@@ -254,6 +255,35 @@ class Runner:
                 self._context_state.workflow_run_id.reset(token_run_id)
             if token_trace_id is not None:
                 self._context_state.workflow_trace_id.reset(token_trace_id)
+
+    def _push_workflow_end(self,
+                           workflow_step_uuid: str,
+                           workflow_name: str,
+                           workflow_run_id: str,
+                           workflow_trace_id: int,
+                           output: typing.Any = None,
+                           error: BaseException | None = None) -> None:
+        """
+        Emit WORKFLOW_END for the run.
+
+        A failed or cancelled run gets an `error` entry with the exception type (not its message, which can
+        carry user input), so exporters can show the run as failed.
+        """
+        end_metadata = TraceMetadata(
+            provided_metadata={
+                "workflow_run_id": workflow_run_id,
+                "workflow_trace_id": f"{workflow_trace_id:032x}",
+                "conversation_id": self._context_state.conversation_id.get(),
+                "display_name": self._entry_fn.display_name,
+            })
+        if error is not None:
+            end_metadata.error = {"type": type(error).__name__}
+        self._context.intermediate_step_manager.push_intermediate_step(
+            IntermediateStepPayload(UUID=workflow_step_uuid,
+                                    event_type=IntermediateStepType.WORKFLOW_END,
+                                    name=workflow_name,
+                                    metadata=end_metadata,
+                                    data=StreamEventData(output=output)))
 
     async def result_stream(self, to_type: type | None = None):
 
@@ -313,25 +343,34 @@ class Runner:
                 # Collect preview of streaming results for the WORKFLOW_END event
                 output_preview = []
 
-                async for m in self._entry_fn.astream(self._input_message, to_type=to_type):  # type: ignore
-                    if len(output_preview) < 50:
-                        output_preview.append(m)
-                    yield m
+                try:
+                    async for m in self._entry_fn.astream(self._input_message, to_type=to_type):  # type: ignore
+                        if len(output_preview) < 50:
+                            output_preview.append(m)
+                        yield m
+                except GeneratorExit:
+                    # the consumer stopped reading; end the root span without marking it failed
+                    self._push_workflow_end(workflow_step_uuid,
+                                            workflow_name,
+                                            workflow_run_id,
+                                            workflow_trace_id,
+                                            output=output_preview)
+                    raise
+                except BaseException as e:
+                    # no output: the partial chunks are not the run's answer
+                    self._push_workflow_end(workflow_step_uuid,
+                                            workflow_name,
+                                            workflow_run_id,
+                                            workflow_trace_id,
+                                            error=e)
+                    raise
 
                 # Emit WORKFLOW_END
-                end_metadata = TraceMetadata(
-                    provided_metadata={
-                        "workflow_run_id": workflow_run_id,
-                        "workflow_trace_id": f"{workflow_trace_id:032x}",
-                        "conversation_id": self._context_state.conversation_id.get(),
-                        "display_name": self._entry_fn.display_name,
-                    })
-                self._context.intermediate_step_manager.push_intermediate_step(
-                    IntermediateStepPayload(UUID=workflow_step_uuid,
-                                            event_type=IntermediateStepType.WORKFLOW_END,
-                                            name=workflow_name,
-                                            metadata=end_metadata,
-                                            data=StreamEventData(output=output_preview)))
+                self._push_workflow_end(workflow_step_uuid,
+                                        workflow_name,
+                                        workflow_run_id,
+                                        workflow_trace_id,
+                                        output=output_preview)
                 self._state = RunnerState.COMPLETED
 
                 # Close the intermediate stream
