@@ -348,6 +348,8 @@ def reinstall_command(workflow_name):
     Args:
         workflow_name (str): The name of the workflow to reinstall.
     """
+    if not workflow_name or not workflow_name.strip():
+        raise click.BadParameter("Workflow name cannot be empty.")  # noqa: TRY003
     try:
         editable = get_repo_root() is not None
 
@@ -386,6 +388,8 @@ def delete_command(workflow_name: str, yes_flag: bool):
     Args:
         workflow_name (str): The name of the workflow to delete.
     """
+    if not workflow_name or not workflow_name.strip():
+        raise click.BadParameter("Workflow name cannot be empty.")  # noqa: TRY003
     try:
         if not yes_flag and not click.confirm(f"Are you sure you want to delete the workflow '{workflow_name}'?"):
             click.echo("Workflow deletion cancelled.")

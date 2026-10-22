@@ -226,3 +226,13 @@ def test_delete_workflow_cancelled_succeeds():
 
     assert result.exit_code == 0
     assert "Workflow deletion cancelled." in result.output
+
+
+@pytest.mark.parametrize("command,args", [(reinstall_command, [" "]), (delete_command, [" "]),
+                                          (delete_command, ["--yes", " "])])
+def test_reinstall_and_delete_reject_empty_workflow_name(command, args):
+    """reinstall and delete reject an empty name before any lookup or prompt, like create."""
+    result = CliRunner().invoke(command, args)
+
+    assert result.exit_code == 2
+    assert "Workflow name cannot be empty" in result.output
