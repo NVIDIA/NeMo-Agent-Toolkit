@@ -205,8 +205,7 @@ def a2a_client_discover(url: str, json_output: bool, verbose: bool, save: str | 
         elapsed = time.time() - start_time
 
         if not agent_card:
-            click.echo(f"[ERROR] Failed to discover agent at {url}", err=True)
-            return
+            raise click.ClickException(f"Failed to discover agent at {url}")
 
         # JSON output
         if json_output:
@@ -231,9 +230,11 @@ def a2a_client_discover(url: str, json_output: bool, verbose: bool, save: str | 
 
             click.echo(f"\n✓ Discovery completed in {elapsed:.2f}s")
 
+    except click.ClickException:
+        raise
     except Exception as e:
-        click.echo(f"[ERROR] {e}", err=True)
         logger.error(f"Error in discover command: {e}", exc_info=True)
+        raise click.ClickException(str(e)) from e
 
 
 async def _create_bearer_token_auth(
@@ -490,13 +491,12 @@ def a2a_client_get_info(url: str, json_output: bool, timeout: int, user_id: str 
             # Load A2A function group
             builder, group, fns = await get_a2a_function_group(url, timeout=timeout, user_id=user_id)
             if not builder:
-                return
+                raise click.ClickException(f"Failed to load A2A client for {url}")
 
             # Get the get_info function
             fn = fns.get("a2a_client__get_info")
             if not fn:
-                click.echo(f"[ERROR] get_info function not found. Available: {list(fns.keys())}", err=True)
-                return
+                raise click.ClickException(f"get_info function not found. Available: {list(fns.keys())}")
 
             # Call the function
             info = await fn.acall_invoke()
@@ -506,9 +506,11 @@ def a2a_client_get_info(url: str, json_output: bool, timeout: int, user_id: str 
             else:
                 format_info_display(info)
 
+        except click.ClickException:
+            raise
         except Exception as e:
-            click.echo(f"[ERROR] {e}", err=True)
             logger.error(f"Error in get_info command: {e}", exc_info=True)
+            raise click.ClickException(str(e)) from e
         finally:
             if builder:
                 await builder.__aexit__(None, None, None)
@@ -545,13 +547,12 @@ def a2a_client_get_skills(url: str, json_output: bool, timeout: int, user_id: st
             # Load A2A function group
             builder, group, fns = await get_a2a_function_group(url, timeout=timeout, user_id=user_id)
             if not builder:
-                return
+                raise click.ClickException(f"Failed to load A2A client for {url}")
 
             # Get the get_skills function
             fn = fns.get("a2a_client__get_skills")
             if not fn:
-                click.echo(f"[ERROR] get_skills function not found. Available: {list(fns.keys())}", err=True)
-                return
+                raise click.ClickException(f"get_skills function not found. Available: {list(fns.keys())}")
 
             # Call the function
             skills_data = await fn.acall_invoke()
@@ -561,9 +562,11 @@ def a2a_client_get_skills(url: str, json_output: bool, timeout: int, user_id: st
             else:
                 format_skills_display(skills_data)
 
+        except click.ClickException:
+            raise
         except Exception as e:
-            click.echo(f"[ERROR] {e}", err=True)
             logger.error(f"Error in get_skills command: {e}", exc_info=True)
+            raise click.ClickException(str(e)) from e
         finally:
             if builder:
                 await builder.__aexit__(None, None, None)
@@ -658,12 +661,10 @@ def a2a_client_call(url: str,
             auth_methods = sum([bool(bearer_token or bearer_token_env), bool(auth_config), bool(auth_json)])
 
             if auth_methods > 1:
-                click.echo("[ERROR] Use only one authentication method", err=True)
-                return
+                raise click.ClickException("Use only one authentication method")
 
             if auth_provider and not auth_config:
-                click.echo("[ERROR] --auth-provider requires --auth-config", err=True)
-                return
+                raise click.ClickException("--auth-provider requires --auth-config")
 
             # Setup authentication if provided
             auth_provider_name = None
@@ -676,8 +677,7 @@ def a2a_client_call(url: str,
                 try:
                     auth_provider_name = await _create_bearer_token_auth(builder, bearer_token, bearer_token_env)
                 except Exception as e:
-                    click.echo(f"[ERROR] Failed to configure bearer token authentication: {e}", err=True)
-                    return
+                    raise click.ClickException(f"Failed to configure bearer token authentication: {e}") from e
 
             elif auth_config:
                 # Config-based auth
@@ -685,14 +685,12 @@ def a2a_client_call(url: str,
                 builder = WorkflowBuilder()
                 await builder.__aenter__()
 
+                if not auth_provider:
+                    raise click.ClickException("--auth-provider is required with --auth-config")
                 try:
-                    if not auth_provider:
-                        click.echo("[ERROR] --auth-provider is required with --auth-config", err=True)
-                        return
                     auth_provider_name = await _load_auth_from_config(builder, auth_config, auth_provider)
                 except Exception as e:
-                    click.echo(f"[ERROR] Failed to load auth from config: {e}", err=True)
-                    return
+                    raise click.ClickException(f"Failed to load auth from config: {e}") from e
 
             elif auth_json:
                 # Inline JSON auth
@@ -703,8 +701,7 @@ def a2a_client_call(url: str,
                 try:
                     auth_provider_name = await _create_auth_from_json(builder, auth_json)
                 except Exception as e:
-                    click.echo(f"[ERROR] Failed to parse auth JSON: {e}", err=True)
-                    return
+                    raise click.ClickException(f"Failed to parse auth JSON: {e}") from e
 
             # Load A2A function group (with or without auth)
             start_time = time.time()
@@ -734,13 +731,12 @@ def a2a_client_call(url: str,
                 # No auth, use helper function
                 builder, group, fns = await get_a2a_function_group(url, timeout=timeout, user_id=user_id)
                 if not builder:
-                    return
+                    raise click.ClickException(f"Failed to load A2A client for {url}")
 
             # Get the call function
             fn = fns.get("a2a_client__call")
             if not fn:
-                click.echo(f"[ERROR] call function not found. Available: {list(fns.keys())}", err=True)
-                return
+                raise click.ClickException(f"call function not found. Available: {list(fns.keys())}")
 
             # Call the agent with the message
             response = await fn.acall_invoke(query=message, task_id=task_id, context_id=context_id)
@@ -756,9 +752,11 @@ def a2a_client_call(url: str,
             else:
                 format_call_response_display(message, response, elapsed)
 
+        except click.ClickException:
+            raise
         except Exception as e:
-            click.echo(f"[ERROR] {e}", err=True)
             logger.error(f"Error in call command: {e}", exc_info=True)
+            raise click.ClickException(str(e)) from e
         finally:
             if builder:
                 await builder.__aexit__(None, None, None)
