@@ -1,0 +1,9 @@
+{#
+SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+#}
+{# Keep the theme's styling. Strip pathto's same-page '#' before adding the section anchor. #}
+{% set theme_announcement %}
+⚠️ <strong>Deprecation Notice:</strong> NVIDIA NeMo Agent Toolkit has been deprecated as of October 2026 and will reach end of life (EOL) by end of year<strong> 2026</strong>.  See <a href="{{ pathto('resources/migration-guide').rstrip('#') }}#nemo-agent-toolkit-depreciation">Migration Guide</a> for Details.
+{% endset %}
+{% include "pydata_sphinx_theme/sections/announcement.html" %}
