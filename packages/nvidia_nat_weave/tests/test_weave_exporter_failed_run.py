@@ -79,11 +79,52 @@ async def test_failed_run_root_call_is_finished_with_the_error():
     client = await _run("please fail")
 
     finishes = client.finish_call.call_args_list
-    assert finishes, "the root call must be finished"
+    # every call is finished exactly once
+    assert len(finishes) == client.create_call.call_count
+    assert len({id(finish.args[0]) for finish in finishes}) == len(finishes)
     root_finish = finishes[-1]
     exception = root_finish.kwargs.get("exception")
     assert isinstance(exception, Exception)
     assert "RuntimeError" in str(exception)
+    # the outputs dict is still passed (it holds usage info); only the exception is added
+    assert isinstance(root_finish.args[1], dict)
+
+
+@pytest.mark.parametrize("metadata, expected",
+                         [
+                             (None, None),
+                             ({
+                                 "error": {
+                                     "type": "TimeoutError"
+                                 }
+                             }, {
+                                 "type": "TimeoutError"
+                             }),
+                             ({
+                                 "chat_responses": ["ok"]
+                             }, None),
+                             ({
+                                 "error": "connection reset"
+                             }, {
+                                 "type": "Error"
+                             }),
+                             ({
+                                 "error": ""
+                             }, None),
+                         ],
+                         ids=["no_metadata", "error_entry", "other_metadata", "string_error", "empty_string_error"])
+def test_end_event_error(metadata, expected):
+    """AutoGen's handler already reports failures as a string `error`; those count as failed too."""
+    from nat.data_models.intermediate_step import IntermediateStep
+    from nat.data_models.intermediate_step import IntermediateStepPayload
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.data_models.invocation_node import InvocationNode
+    from nat.plugins.weave.weave_exporter import WeaveExporter
+
+    step = IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(function_id="f", function_name="f"),
+                            payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END, metadata=metadata))
+    assert WeaveExporter._end_event_error(step) == expected
 
 
 async def test_successful_run_root_call_is_finished_without_an_error():

@@ -32,10 +32,16 @@ from nat.observability.exporter_manager import ExporterManager
 from nat.runtime.runner import Runner
 
 EXPORTED: list[Span] = []
+WORKFLOW_ENDS: list[str] = []
 STARTED = asyncio.Event()
 
 
 class CollectingSpanExporter(SpanExporter[Span, Span]):
+
+    def export(self, event) -> None:
+        if getattr(event, "event_type", None) == IntermediateStepType.WORKFLOW_END:
+            WORKFLOW_ENDS.append(event.UUID)
+        super().export(event)
 
     async def export_processed(self, item: Span) -> None:
         EXPORTED.append(item)
@@ -104,6 +110,7 @@ def _register():
 @pytest.fixture(autouse=True)
 def _reset():
     EXPORTED.clear()
+    WORKFLOW_ENDS.clear()
     STARTED.clear()
 
 
@@ -117,6 +124,8 @@ def _runner(entry_fn, message: str) -> Runner:
 
 
 def _roots() -> list[Span]:
+    """The exported root spans; also checks the run sent exactly one WORKFLOW_END."""
+    assert len(WORKFLOW_ENDS) == 1, f"expected one WORKFLOW_END, got {len(WORKFLOW_ENDS)}"
     return [span for span in EXPORTED if span.parent is None]
 
 
@@ -209,3 +218,5 @@ async def test_a_consumer_that_stops_reading_ends_the_root_span_without_an_error
     roots = _roots()
     assert len(roots) == 1
     assert _end_error(roots[0]) is None
+    # the chunks the consumer did read are kept as the run's output
+    assert "first chunk" in roots[0].attributes["output.value"]
