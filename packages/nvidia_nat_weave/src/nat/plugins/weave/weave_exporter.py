@@ -328,8 +328,9 @@ class WeaveExporter(SpanExporter[Span, Span]):
         error = metadata.get("error") if isinstance(metadata, dict) else getattr(metadata, "error", None)
         if isinstance(error, dict):
             return error
-        if error:
-            # e.g. the AutoGen handler's error=str(exception); keep the text out of the reported type
+        if isinstance(error, str):
+            # e.g. the AutoGen handler's error=str(exception), which is "" for an exception without a message;
+            # keep the text out of the reported type
             return {"type": "Error"}
         return None
 
