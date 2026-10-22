@@ -22,6 +22,8 @@
 ⚠️ **Deprecation Notice:** NVIDIA NeMo Agent Toolkit has been deprecated as of October 2026 and will reach end of life (EOL) by end of year **2026**. Depending on your needs, migrate to: [NeMo Relay](<https://github.com/NVIDIA/NeMo-Relay>) for observability, middleware, and governance. [NeMo Helix](<https://github.com/NVIDIA-NeMo/nemo-helix>) for a unified CLI with evaluation, optimization, and hardening capabilities. [NeMo Fabric](<https://github.com/NVIDIA/NeMo-Fabric>) for a consistent interface to run agent harnesses and custom agents.
 We recommend completing your migration before the EOL date.
 
+## Alternatives
+
 Choose the projects that match the capabilities you use in NeMo Agent Toolkit. You can use them together when your application needs observability, agent execution, and evaluation or optimization.
 
 ### NeMo Relay: Observability, Middleware, and Governance
@@ -41,14 +43,6 @@ Use NeMo Fabric to configure models, tools, skills, and MCP servers, validate su
 [NVIDIA NeMo Helix](https://github.com/NVIDIA-NeMo/nemo-helix) is an open source control plane for improving and hardening production agents. It runs on your infrastructure and exposes repeatable workflows through a unified CLI, REST APIs, and a Python SDK.
 
 Use NeMo Helix to evaluate agent behavior, optimize prompts and configurations, and test agent safety with guardrails and red-teaming tools. Its modular plugins let you connect agent execution, sandboxing, storage, secrets, and other infrastructure to your platform. Start with the [NeMo Helix documentation](https://docs.nvidia.com/nemo-helix).
-
-## Migrating to a new version of NeMo Agent Toolkit
-
-The following sections document migration between historical NeMo Agent Toolkit versions. For migration away from the deprecated toolkit, use the projects described above.
-
-NeMo Agent Toolkit is designed to be backwards compatible with the previous version of the toolkit except for changes documented on this page.
-
-It is strongly encouraged to migrate any existing code to the latest conventions and remove any deprecated functionality.
 
 ## Version Specific Changes
 

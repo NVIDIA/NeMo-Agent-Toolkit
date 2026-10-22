@@ -30,7 +30,6 @@
 import glob
 import os
 import shutil
-import subprocess
 import textwrap
 import typing
 from pathlib import Path
@@ -94,9 +93,9 @@ project = 'NVIDIA NeMo Agent Toolkit'
 copyright = '2025, NVIDIA'
 author = 'NVIDIA Corporation'
 
-# Retrieve the version number from git via setuptools_scm
-called_proc = subprocess.run('python -m setuptools_scm', shell=True, capture_output=True, check=True)
-release = called_proc.stdout.strip().decode('utf-8')
+# Keep the deprecation documentation on the final release line instead of advertising
+# the next version inferred from develop. Package versions remain managed by setuptools_scm.
+release = '1.9.0'
 version = '.'.join(release.split('.')[:2])
 
 # -- General configuration ---------------------------------------------------
