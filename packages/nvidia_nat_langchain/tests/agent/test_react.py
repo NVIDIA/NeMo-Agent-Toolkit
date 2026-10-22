@@ -2002,6 +2002,82 @@ async def test_stream_fn_propagates_generic_exception(stream_fn_factory):
             pass
 
 
+class _StatusError(RuntimeError):
+    """A provider error carrying an HTTP status code, like openai.NotFoundError."""
+
+    def __init__(self, message: str, status_code: int):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+@pytest.mark.parametrize("error", ["404 page not found", "[###] Unknown Error\nage not found"])
+async def test_stream_fn_names_model_rejected_by_backend(stream_fn_factory, error):
+    """A backend 404 for a per-request model override names the model (#2378)."""
+    from unittest.mock import patch
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        raise _StatusError(error, 404)
+        yield  # make it an async generator
+
+    # treat the mock LLM as one that supports per-request model overrides, as NIM does
+    with patch("langchain_core.runnables.configurable.RunnableConfigurableFields", object):
+        stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("hi", model="placeholder")
+    with pytest.raises(ValueError, match="rejected the requested model 'placeholder'") as exc_info:
+        async for _ in stream_fn(request):
+            pass
+    assert isinstance(exc_info.value.__cause__, _StatusError)
+
+    # without a per-request override the original error is unchanged
+    with pytest.raises(_StatusError, match="not found"):
+        async for _ in stream_fn(ChatRequest.from_string("hi")):
+            pass
+
+
+async def test_response_fn_names_model_rejected_by_backend(mock_llm, mock_tool):
+    """The non-streaming path also names the rejected model and chains the provider's 404 (#2378)."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import MagicMock
+    from unittest.mock import patch
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+    from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+
+    provider_error = _StatusError("404 page not found", 404)
+    mock_graph = MagicMock()
+    mock_graph.ainvoke = AsyncMock(side_effect=provider_error)
+    mock_builder = AsyncMock()
+    mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+    mock_builder.get_tools = AsyncMock(return_value=[mock_tool('Tool A')])
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+
+    # treat the mock LLM as one that supports per-request model overrides, as NIM does
+    with patch("langchain_core.runnables.configurable.RunnableConfigurableFields", object), \
+            patch.object(ReActAgentGraph, 'build_graph', new=AsyncMock(return_value=mock_graph)):
+        async with react_agent_workflow(config, mock_builder) as function_info:
+            request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}], model="placeholder")
+            with pytest.raises(ValueError, match="rejected the requested model 'placeholder'") as exc_info:
+                await function_info.single_fn(request)
+
+    assert exc_info.value.__cause__ is provider_error
+
+
+def test_rejected_model_error_ignores_unrelated_failures():
+    from nat.plugins.langchain.agent.react_agent.register import _build_lc_config
+    from nat.plugins.langchain.agent.react_agent.register import _rejected_model_error
+
+    override = _build_lc_config(5, "placeholder")
+    assert _rejected_model_error(RuntimeError("connection reset"), override) is None
+    # "not found" text without a 404 status (e.g. a tool error) is not a model rejection
+    assert _rejected_model_error(RuntimeError("file not found"), override) is None
+    assert _rejected_model_error(_StatusError("bad request", 400), override) is None
+    assert _rejected_model_error(_StatusError("404 page not found", 404), _build_lc_config(5, None)) is None
+    assert "'placeholder'" in str(_rejected_model_error(_StatusError("404 page not found", 404), override))
+
+
 def _react_workflow(per_user: bool):
     from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
     from nat.plugins.langchain.agent.react_agent.register_per_user_agent import PerUserReActAgentWorkflowConfig
