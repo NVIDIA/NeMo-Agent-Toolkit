@@ -323,9 +323,15 @@ class WeaveExporter(SpanExporter[Span, Span]):
 
     @staticmethod
     def _end_event_error(step: IntermediateStep) -> dict | None:
+        """The `error` entry of an END event's metadata, if the step failed."""
         metadata = step.payload.metadata
         error = metadata.get("error") if isinstance(metadata, dict) else getattr(metadata, "error", None)
-        return error if isinstance(error, dict) else None
+        if isinstance(error, dict):
+            return error
+        if error:
+            # e.g. the AutoGen handler's error=str(exception); keep the text out of the reported type
+            return {"type": "Error"}
+        return None
 
     async def _cleanup_weave_calls(self) -> None:
         """
