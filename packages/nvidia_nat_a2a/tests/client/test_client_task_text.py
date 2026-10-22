@@ -35,28 +35,28 @@ class TestExtractTextFromTask:
     def fixture_client(self) -> A2ABaseClient:
         return A2ABaseClient(base_url="http://localhost:10000")
 
-    def test_failed_task_returns_status_message_text(self, client):
+    def test_failed_task_returns_status_message_text(self, client: A2ABaseClient):
         task = _task(TaskState.failed, "Upstream rate service is down")
 
         assert client.extract_text_from_events([(task, None)]) == "Task failed: Upstream rate service is down"
 
-    def test_failed_task_without_message(self, client):
+    def test_failed_task_without_message(self, client: A2ABaseClient):
         task = _task(TaskState.failed)
 
         assert client.extract_text_from_task(task) == "Task failed: Unknown error"
 
     @pytest.mark.parametrize("state", [TaskState.input_required, TaskState.auth_required])
-    def test_follow_up_question_is_returned(self, client, state):
+    def test_follow_up_question_is_returned(self, client: A2ABaseClient, state: TaskState):
         task = _task(state, "Which currency do you want to convert to?")
 
         assert client.extract_text_from_events([(task, None)]) == "Which currency do you want to convert to?"
 
-    def test_input_required_without_message(self, client):
+    def test_input_required_without_message(self, client: A2ABaseClient):
         task = _task(TaskState.input_required)
 
         assert client.extract_text_from_task(task) == "Task in progress (state: input-required)"
 
-    def test_working_task_reports_state(self, client):
+    def test_working_task_reports_state(self, client: A2ABaseClient):
         task = _task(TaskState.working, "Looking up rates")
 
         assert client.extract_text_from_task(task) == "Task in progress (state: working)"
