@@ -60,8 +60,7 @@ class UserManager:
 
         Args:
             subject: The stable subject identifier supplied by the identity provider.
-            issuer: The issuer that vouched for `subject`. When given, the ID is
-                scoped by issuer, matching the verified JWT paths.
+            issuer: The issuer that vouched for `subject`. When given, the ID is scoped by issuer.
 
         Returns:
             A user identity whose ID is derived from the validated subject.
