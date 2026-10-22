@@ -14,6 +14,7 @@
 # limitations under the License.
 """A function that raises is exported with an ERROR status, even when the run around it succeeds."""
 
+import asyncio
 from datetime import datetime
 
 import pytest
@@ -121,6 +122,21 @@ def test_function_end_records_the_exception_type():
     assert end.payload.metadata.error == {"type": "ValueError"}
 
 
+async def test_a_cancelled_function_records_the_cancellation():
+    events: list[IntermediateStep] = []
+    context = Context.get()
+    subscription = context.intermediate_step_manager.subscribe(events.append)
+    try:
+        with pytest.raises(asyncio.CancelledError):
+            with context.push_active_function("slow_tool", input_data="x"):
+                raise asyncio.CancelledError
+    finally:
+        subscription.unsubscribe()
+
+    end = next(event for event in events if event.event_type == IntermediateStepType.FUNCTION_END)
+    assert end.payload.metadata.error == {"type": "CancelledError"}
+
+
 def test_a_stream_closed_early_is_not_recorded_as_an_error():
     events: list[IntermediateStep] = []
     context = Context.get()
@@ -162,8 +178,10 @@ def _event(event_type: IntermediateStepType, uuid: str, metadata=None) -> Interm
                                      "type": "CancelledError"
                                  }
                              }, (SpanStatusCode.ERROR, "CancelledError")),
+                             (TraceMetadata(chat_responses=["ok"]), (SpanStatusCode.OK, None)),
+                             (TraceMetadata(error="connection reset"), (SpanStatusCode.ERROR, "Error")),
                          ],
-                         ids=["no_error", "trace_metadata_error", "dict_error"])
+                         ids=["no_error", "trace_metadata_error", "dict_error", "other_metadata", "string_error"])
 def test_span_exporter_sets_the_status_from_the_end_event(metadata, expected):
     exporter = CollectingSpanExporter()
     exporter.export(_event(IntermediateStepType.FUNCTION_START, "s1"))
