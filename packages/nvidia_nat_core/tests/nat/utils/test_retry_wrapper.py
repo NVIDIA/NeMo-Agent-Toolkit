@@ -25,6 +25,40 @@ from nat.utils.exception_handlers import automatic_retries as ar
 # Helpers --------------------------------------------------------------------
 
 
+@pytest.mark.parametrize("async_call", [False, True])
+async def test_retry_with_cyclic_exception_context(async_call):
+    """Reusing an exception can create a cycle through ordinary exception chaining."""
+    original = RuntimeError("provider failure")
+    try:
+        try:
+            raise original
+        except RuntimeError:
+            raise ValueError("wrapper failure") from original
+    except ValueError:
+        try:
+            raise original
+        except RuntimeError:
+            pass
+
+    assert original.__context__.__cause__ is original
+    attempts = 0
+
+    def operation():
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise original
+        return "recovered"
+
+    async def async_operation():
+        return operation()
+
+    wrapped = ar._retry_decorator(retries=2, base_delay=0)(async_operation if async_call else operation)
+    result = await wrapped() if async_call else wrapped()
+    assert result == "recovered"
+    assert attempts == 2
+
+
 class APIError(Exception):
     """
     Lightweight HTTP‑style error for tests.
