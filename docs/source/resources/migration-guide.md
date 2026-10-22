@@ -17,7 +17,7 @@
 
 # Migration Guide
 
-## NeMo Agent Toolkit depreciation
+## NeMo Agent Toolkit deprecation
 
 :::{attention}
 
@@ -44,7 +44,7 @@ Use NeMo Fabric to configure models, tools, skills, and MCP servers, validate su
 
 ### NeMo Helix: Evaluation, Optimization, and Hardening
 
-[NVIDIA NeMo Helix](https://github.com/NVIDIA-NeMo/nemo-helix) is an open source control plane for improving and hardening production agents. It runs on your infrastructure and exposes repeatable workflows through a unified CLI, REST APIs, and a Python SDK.
+[NVIDIA NeMo Helix](https://github.com/NVIDIA-NeMo/nemo-helix) is an open-source control plane for improving and hardening production agents. It runs on your infrastructure and exposes repeatable workflows through a unified CLI, REST APIs, and a Python SDK.
 
 Use NeMo Helix to evaluate agent behavior, optimize prompts and configurations, and test agent safety with guardrails and red-teaming tools. Its modular plugins let you connect agent execution, sandboxing, storage, secrets, and other infrastructure to your platform. Start with the [NeMo Helix documentation](https://docs.nvidia.com/nemo-helix).
 
