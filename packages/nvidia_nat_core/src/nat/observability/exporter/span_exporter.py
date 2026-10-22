@@ -359,7 +359,12 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         """The `error` entry of an END event's metadata, if the step failed."""
         metadata = event.payload.metadata
         error = metadata.get("error") if isinstance(metadata, dict) else getattr(metadata, "error", None)
-        return error if isinstance(error, dict) else None
+        if isinstance(error, dict):
+            return error
+        if error:
+            # e.g. the AutoGen handler's error=str(exception); keep the text out of the status
+            return {"type": "Error"}
+        return None
 
     def _to_json_string(self, data: typing.Any) -> str:
         """Transform payload into a JSON string for span attributes.
