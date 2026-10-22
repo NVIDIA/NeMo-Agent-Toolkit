@@ -106,20 +106,25 @@ class GithubGetIssueModel(BaseModel):
     mentioned: str | None = Field(default=None, description="Name of person mentioned in issue")
     labels: list[str] | None = Field(default=None, description="A list of labels that are assigned to the issue")
     since: str | None = Field(default=None,
-                              description="Only show results that were last updated after the given time.")
+                              description=("Only show results that were last updated after the given time, "
+                                           "as an ISO 8601 timestamp in the form YYYY-MM-DDTHH:MM:SSZ."))
 
-    @classmethod
     @field_validator('since', mode='before')
+    @classmethod
     def validate_since(cls, v):
-        if v is None:
+        if not isinstance(v, str):
+            # None passes, and other types get the field's own string type error.
             return v
         try:
             # Parse the string to a datetime object
             parsed_date = datetime.strptime(v, "%Y-%m-%dT%H:%M:%SZ")
-            # Return the formatted string
-            return parsed_date.isoformat() + 'Z'
         except ValueError as e:
             raise ValueError("since must be in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ") from e
+        # strptime also accepts missing leading zeros, such as 2026-1-1T0:0:0Z, so require the exact form
+        if parsed_date.strftime("%Y-%m-%dT%H:%M:%SZ") != v:
+            raise ValueError("since must be in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ")
+        # Return the formatted string
+        return parsed_date.isoformat() + 'Z'
 
 
 class GithubGetIssueModelList(BaseModel):
