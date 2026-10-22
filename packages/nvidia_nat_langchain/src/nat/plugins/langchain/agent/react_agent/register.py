@@ -238,6 +238,8 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
 
         Uses graph.astream with stream_mode="messages" to yield token-level content chunks from the LLM,
         enabling real-time SSE streaming over the OpenAI-compatible /v1/chat/completions endpoint.
+        The "updates" mode carries the agent node's final answer, yielded when no "Final Answer:" is
+        streamed, so the result matches the non-streaming response.
 
         Args:
             chat_request_or_message (ChatRequestOrMessage): The input message to process
@@ -260,11 +262,19 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             # buffer tokens until "Final Answer:" is found, then yield only the answer content
             buffer = ""
             found_final_answer = False
+            # the answer the agent node settled on; single_fn returns the same text
+            graph_final_answer = None
 
             lc_config = _build_lc_config(config.max_tool_calls,
                                          message.model,
                                          supports_override=_supports_model_override)
-            async for msg, metadata in graph.astream(state, config=lc_config, stream_mode="messages"):
+            async for mode, event in graph.astream(state, config=lc_config, stream_mode=["messages", "updates"]):
+                if mode == "updates":
+                    agent_update = event.get("agent")
+                    if isinstance(agent_update, dict) and agent_update.get("final_answer"):
+                        graph_final_answer = agent_update["final_answer"]
+                    continue
+                msg, metadata = event
                 if not isinstance(msg, AIMessageChunk):
                     continue
                 if not isinstance(metadata, dict) or metadata.get("langgraph_node") != "agent":
@@ -284,9 +294,13 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
                                 yield ChatResponseChunk.create_streaming_chunk(after_marker, id_=chunk_id)
                             buffer = ""
 
-            # fallback: if the LLM answered directly without ReAct format, yield the stripped buffer
-            if not found_final_answer and buffer:
-                yield ChatResponseChunk.create_streaming_chunk(remove_r1_think_tags(buffer), id_=chunk_id)
+            # fallback: no "Final Answer:" was streamed. Yield the answer the graph settled on (a direct answer, or
+            # the parsing error when raise_on_parsing_failure is False), not the buffered text of every turn
+            if not found_final_answer:
+                if graph_final_answer:
+                    yield ChatResponseChunk.create_streaming_chunk(graph_final_answer, id_=chunk_id)
+                elif buffer:
+                    yield ChatResponseChunk.create_streaming_chunk(remove_r1_think_tags(buffer), id_=chunk_id)
 
         except GraphRecursionError:
             logger.warning(
