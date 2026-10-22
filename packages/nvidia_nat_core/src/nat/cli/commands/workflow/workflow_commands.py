@@ -258,8 +258,8 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         data_dir = base_dir / 'data'
 
         # Create directory structure
-        created = True
         base_dir.mkdir(parents=True)
+        created = True
         # Create config directory
         configs_dir.mkdir(parents=True)
         # Create data directory
@@ -393,6 +393,8 @@ def delete_command(workflow_name: str, yes_flag: bool):
         editable = get_repo_root() is not None
 
         workflow_dir = get_workflow_path_from_name(workflow_name)
+        if not workflow_dir or not workflow_dir.exists():
+            raise click.ClickException(f"Workflow '{workflow_name}' does not exist.")
         package_name = _get_module_name(workflow_name)
 
         if editable:
@@ -409,10 +411,6 @@ def delete_command(workflow_name: str, yes_flag: bool):
             return
         click.echo(
             f"Workflow '{workflow_name}' (package '{package_name}') successfully uninstalled from python environment")
-
-        if not workflow_dir or not workflow_dir.exists():
-            click.echo(f"Unable to locate local files for {workflow_name}. Nothing will be deleted.")
-            return
 
         # Remove the workflow directory
         click.echo(f"Deleting workflow directory '{workflow_dir}'...")

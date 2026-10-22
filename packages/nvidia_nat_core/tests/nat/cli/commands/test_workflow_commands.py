@@ -202,10 +202,18 @@ def test_reinstall_missing_workflow_fails():
     assert "Workflow 'nat_workflow_that_is_not_installed' does not exist" in result.output
 
 
-def test_delete_workflow_with_failed_uninstall_fails():
+def test_delete_missing_workflow_fails():
+    result = CliRunner().invoke(delete_command, ["--yes", "nat_workflow_that_is_not_installed"])
+
+    assert result.exit_code == 1
+    assert "Workflow 'nat_workflow_that_is_not_installed' does not exist" in result.output
+
+
+def test_delete_workflow_with_failed_uninstall_fails(tmp_path):
     uninstall_error = subprocess.CalledProcessError(2, ["uv", "pip", "uninstall"], stderr="uninstall failed")
 
-    with patch("nat.cli.commands.workflow.workflow_commands.subprocess.run", side_effect=uninstall_error):
+    with patch("nat.cli.commands.workflow.workflow_commands.get_workflow_path_from_name", return_value=tmp_path), \
+            patch("nat.cli.commands.workflow.workflow_commands.subprocess.run", side_effect=uninstall_error):
         result = CliRunner().invoke(delete_command, ["--yes", "nat_workflow_that_is_not_installed"])
 
     assert result.exit_code == 1
