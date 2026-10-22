@@ -45,6 +45,23 @@ class TestExtractTextFromTask:
 
         assert client.extract_text_from_task(task) == "Task failed: Unknown error"
 
+    @pytest.mark.parametrize("state, expected",
+                             [(TaskState.rejected, "Task rejected: I can only convert currency."),
+                              (TaskState.canceled, "Task canceled: I can only convert currency.")])
+    def test_rejected_or_canceled_task_returns_status_message_text(self,
+                                                                   client: A2ABaseClient,
+                                                                   state: TaskState,
+                                                                   expected: str):
+        task = _task(state, "I can only convert currency.")
+
+        assert client.extract_text_from_events([(task, None)]) == expected
+
+    @pytest.mark.parametrize("state", [TaskState.rejected, TaskState.canceled])
+    def test_rejected_or_canceled_task_without_message(self, client: A2ABaseClient, state: TaskState):
+        task = _task(state)
+
+        assert client.extract_text_from_task(task) == f"Task {state.value}"
+
     @pytest.mark.parametrize("state", [TaskState.input_required, TaskState.auth_required])
     def test_follow_up_question_is_returned(self, client: A2ABaseClient, state: TaskState):
         task = _task(state, "Which currency do you want to convert to?")

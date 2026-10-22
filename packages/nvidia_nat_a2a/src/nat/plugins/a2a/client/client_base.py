@@ -299,6 +299,9 @@ class A2ABaseClient:
                 status_text = " ".join(self.extract_text_from_parts(task.status.message.parts))
             if task.status.state == TaskState.failed:
                 return f"Task failed: {status_text or 'Unknown error'}"
+            if task.status.state in (TaskState.rejected, TaskState.canceled):
+                outcome = f"Task {task.status.state.value}"
+                return f"{outcome}: {status_text}" if status_text else outcome
             # The agent's follow-up question for the caller is carried in the status message
             if task.status.state in (TaskState.input_required, TaskState.auth_required) and status_text:
                 return status_text
