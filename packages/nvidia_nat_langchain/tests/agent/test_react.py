@@ -2037,6 +2037,34 @@ async def test_stream_fn_names_model_rejected_by_backend(stream_fn_factory, erro
             pass
 
 
+async def test_response_fn_names_model_rejected_by_backend(mock_llm, mock_tool):
+    """The non-streaming path also names the rejected model and chains the provider's 404 (#2378)."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import MagicMock
+    from unittest.mock import patch
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+    from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+
+    provider_error = _StatusError("404 page not found", 404)
+    mock_graph = MagicMock()
+    mock_graph.ainvoke = AsyncMock(side_effect=provider_error)
+    mock_builder = AsyncMock()
+    mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+    mock_builder.get_tools = AsyncMock(return_value=[mock_tool('Tool A')])
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+
+    # treat the mock LLM as one that supports per-request model overrides, as NIM does
+    with patch("langchain_core.runnables.configurable.RunnableConfigurableFields", object), \
+            patch.object(ReActAgentGraph, 'build_graph', new=AsyncMock(return_value=mock_graph)):
+        async with react_agent_workflow(config, mock_builder) as function_info:
+            request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}], model="placeholder")
+            with pytest.raises(ValueError, match="rejected the requested model 'placeholder'") as exc_info:
+                await function_info.single_fn(request)
+
+    assert exc_info.value.__cause__ is provider_error
+
+
 def test_rejected_model_error_ignores_unrelated_failures():
     from nat.plugins.langchain.agent.react_agent.register import _build_lc_config
     from nat.plugins.langchain.agent.react_agent.register import _rejected_model_error
