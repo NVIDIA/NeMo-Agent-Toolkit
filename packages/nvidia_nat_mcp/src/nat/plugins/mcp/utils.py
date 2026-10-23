@@ -178,6 +178,29 @@ def truncate_session_id(session_id: str, max_length: int = 10) -> str:
 SCHEMA_REQUIRED_FIELDS_ATTR = "__mcp_schema_required_fields__"
 
 
+def _field_names_for_properties(property_names: list[str]) -> dict[str, str]:
+    """Map each schema property name to the name of its Pydantic field.
+
+    JSON Schema allows any property name, but Pydantic rejects field names with a leading underscore (e.g. `_id`)
+    and names of its own `model_` members (e.g. `model_config`). Such a property gets a field named after it with
+    the leading underscores stripped and a trailing underscore added, and keeps its own name as the field alias.
+    Every other property keeps its name.
+    """
+    taken = set(property_names)
+    field_names = {}
+    for property_name in property_names:
+        if not property_name.startswith("_") and not (property_name.startswith("model_")
+                                                      and hasattr(BaseModel, property_name)):
+            field_names[property_name] = property_name
+            continue
+        field_name = (property_name.lstrip("_") or "field") + "_"
+        while field_name in taken:
+            field_name += "_"
+        taken.add(field_name)
+        field_names[property_name] = field_name
+    return field_names
+
+
 def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
     """
     Create a pydantic model from the input schema of the MCP tool
@@ -403,7 +426,7 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
 
         return False
 
-    def _generate_field(field_name: str, field_properties: dict[str, Any]) -> tuple:
+    def _generate_field(field_name: str, field_properties: dict[str, Any], aliased: bool = False) -> tuple:
         """
         Generate a Pydantic field from JSON schema properties.
         Uses _resolve_schema_type for type resolution and handles field-specific logic.
@@ -444,16 +467,28 @@ def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseMo
             field_type = field_type | None
 
         description = field_properties.get("description", "")
+        # A field Pydantic cannot name after its property keeps the property's name as its alias
+        alias_kwargs = {"alias": field_name} if aliased else {}
 
-        return field_type, Field(default=default_value, description=description, **_constraint_kwargs(field_properties))
+        return field_type, Field(default=default_value,
+                                 description=description,
+                                 **alias_kwargs,
+                                 **_constraint_kwargs(field_properties))
 
+    field_names = _field_names_for_properties(list(properties))
     for field_name, field_props in properties.items():
-        schema_dict[field_name] = _generate_field(field_name=field_name, field_properties=field_props)
-    model_config = None
+        schema_dict[field_names[field_name]] = _generate_field(field_name=field_name,
+                                                               field_properties=field_props,
+                                                               aliased=field_names[field_name] != field_name)
+    model_config = ConfigDict()
     if mcp_input_schema.get("additionalProperties") is False:
-        model_config = ConfigDict(extra="forbid")
+        model_config["extra"] = "forbid"
     elif mcp_input_schema.get("additionalProperties") is True:
-        model_config = ConfigDict(extra="allow")
+        model_config["extra"] = "allow"
+    if any(field_names[property_name] != property_name for property_name in properties):
+        # The input arrives keyed by the schema's names from the model, and by field name when NAT passes the
+        # validated input on as keyword arguments, so accept both
+        model_config["validate_by_name"] = True
 
     model = create_model(f"{_generate_valid_classname(name)}InputSchema", __config__=model_config, **schema_dict)
     # A field can declare a default and still be in `required`, so Pydantic alone cannot tell which keys the
