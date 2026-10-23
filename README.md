@@ -19,6 +19,10 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit
 
+> [!WARNING]
+> ⚠️ **Deprecation Notice:** NVIDIA NeMo Agent Toolkit has been deprecated as of October 2026 and will reach end of life (EOL) by end of year **2026**. Depending on your needs, migrate to: [NeMo Relay](<https://github.com/NVIDIA/NeMo-Relay>) for observability, middleware, and governance. [NeMo Helix](<https://github.com/NVIDIA-NeMo/nemo-helix>) for a unified CLI with evaluation, optimization, and hardening capabilities. [NeMo Fabric](<https://github.com/NVIDIA/NeMo-Fabric>) for a consistent interface to run agent harnesses and custom agents.
+> We recommend completing your migration before the EOL date.
+
 <!-- vale off (due to hyperlinks) -->
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-green.svg)](https://opensource.org/licenses/Apache-2.0)
 [![GitHub Release](https://img.shields.io/github/v/release/NVIDIA/NeMo-Agent-Toolkit)](https://github.com/NVIDIA/NeMo-Agent-Toolkit/releases)

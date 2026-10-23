@@ -35,6 +35,9 @@
         },
         {
             "pattern": "^https://build\\.nvidia\\.com"
+        },
+        {
+            "pattern": "^https://deepwiki\\.com"
         }
     ]
 }
