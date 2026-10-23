@@ -27,11 +27,15 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 from fastmcp import FastMCP
+from fastmcp.server.context import Context
 from nat.builder.function import Function  # type: ignore[reportMissingImports]
 from nat.builder.function_base import FunctionBase  # type: ignore[reportMissingImports]
 from nat.runtime.session import SessionManager  # type: ignore[reportMissingImports]
 
 logger = logging.getLogger(__name__)
+
+# Reserved wrapper parameter for FastMCP request Context injection.
+INJECTED_CONTEXT_PARAM = "_nat_mcp_context"
 
 # Sentinel: marks "optional; let Pydantic supply default/factory"
 _USE_PYDANTIC_DEFAULT = object()
@@ -186,6 +190,102 @@ def _is_chat_request_schema(schema: Any) -> bool:
     return schema_name == "ChatRequest" or "ChatRequest" in schema_qualname
 
 
+def _schema_wrapper_parameter_names(input_schema: Any) -> set[str]:
+    """Return collision-safe wrapper parameter names derived from the input schema."""
+    if _is_chat_request_schema(input_schema):
+        return {"query"}
+    if not hasattr(input_schema, "model_fields"):
+        return set()
+
+    name_map = _build_name_mapping(list(input_schema.model_fields.keys()))
+    return set(name_map.values())
+
+
+def _validate_input_schema_for_context_injection(input_schema: Any) -> None:
+    """Reject schemas whose fields collide with the injected `Context` parameter."""
+    schema_params = _schema_wrapper_parameter_names(input_schema)
+    if INJECTED_CONTEXT_PARAM in schema_params:
+        raise ValueError(
+            f"Workflow input schema cannot declare a field that maps to reserved MCP parameter "
+            f"{INJECTED_CONTEXT_PARAM!r}.", )
+    if "ctx" in getattr(input_schema, "model_fields", {}):
+        raise ValueError(
+            "Workflow input schema cannot declare a field named 'ctx'; that name is reserved for "
+            "MCP request context injection.", )
+
+
+def _http_request_from_ctx(ctx: Any) -> Any | None:
+    """Return the HTTP request carried by an MCP context, or None when absent."""
+    if ctx is None:
+        return None
+    try:
+        request_context = ctx.request_context
+    except (LookupError, ValueError):
+        return None
+    if request_context is None:
+        return None
+    try:
+        return request_context.request
+    except (LookupError, ValueError, AttributeError):
+        return None
+
+
+def _verified_access_token(request: Any) -> Any | None:
+    """Return the access token accepted for this request, if server auth ran."""
+    from nat.runtime.user_manager import UserManager
+
+    access_token = UserManager.verified_access_token_from_connection(request)
+    if access_token is not None:
+        return access_token
+
+    from fastmcp.server.dependencies import get_access_token
+
+    return get_access_token()
+
+
+def _append_context_parameter(signature: Signature) -> Signature:
+    """Append the FastMCP `Context` parameter used for request injection."""
+    param_names = {param.name for param in signature.parameters.values()}
+    if INJECTED_CONTEXT_PARAM in param_names:
+        raise ValueError(
+            f"Workflow input schema cannot declare a field that maps to reserved MCP parameter "
+            f"{INJECTED_CONTEXT_PARAM!r}.", )
+
+    ctx_param = Parameter(
+        INJECTED_CONTEXT_PARAM,
+        Parameter.KEYWORD_ONLY,
+        default=None,
+        annotation=Context | None,
+    )
+    return signature.replace(parameters=[*signature.parameters.values(), ctx_param])
+
+
+async def _run_through_session_manager(session_manager: "SessionManager", payload: Any, ctx: Any | None = None) -> Any:
+    """Execute a payload through SessionManager, including per-user workflows."""
+    if session_manager.is_workflow_per_user:
+        from nat.builder.context import Context
+        from nat.runtime.user_manager import UserManager
+
+        user_id = Context.get().user_id
+        http_connection = _http_request_from_ctx(ctx)
+        if http_connection is not None:
+            access_token = _verified_access_token(http_connection)
+            if access_token is not None:
+                # A validated principal wins. Do not let nat-session override it.
+                user_id = UserManager.user_id_from_verified_access_token(http_connection, access_token)
+            elif user_id is None:
+                user_info = UserManager.extract_user_from_connection(http_connection)
+                if user_info is not None:
+                    user_id = user_info.get_user_id()
+
+        async with session_manager.session(user_id=user_id, http_connection=http_connection) as session:
+            async with session.run(payload) as runner:
+                return await runner.result()
+
+    async with session_manager.run(payload) as runner:
+        return await runner.result()
+
+
 def create_function_wrapper(
     function_name: str,
     session_manager: "SessionManager",
@@ -199,8 +299,9 @@ def create_function_wrapper(
         input_schema: Input schema for the workflow/function.
     """
     signature, alias_map = _build_signature_from_schema(input_schema)
+    _validate_input_schema_for_context_injection(input_schema)
 
-    async def wrapper_func(**kwargs: Any) -> Any:
+    async def wrapper_func(_nat_mcp_context: Context | None = None, **kwargs: Any) -> Any:
         if _is_chat_request_schema(input_schema):
             from nat.data_models.api_server import ChatRequest  # type: ignore[reportMissingImports]
 
@@ -214,8 +315,7 @@ def create_function_wrapper(
             payload = input_schema.model_validate(cleaned_kwargs) if hasattr(input_schema,
                                                                              "model_validate") else cleaned_kwargs
 
-        async with session_manager.run(payload) as runner:
-            result = await runner.result()
+        result = await _run_through_session_manager(session_manager, payload, ctx=_nat_mcp_context)
 
         if isinstance(result, str):
             return result
@@ -223,8 +323,11 @@ def create_function_wrapper(
             return json.dumps(result, default=str)
         return str(result)
 
-    wrapper_func.__signature__ = signature  # type: ignore[attr-defined]
-    wrapper_func.__annotations__ = _build_annotations_from_schema(input_schema)
+    wrapper_func.__signature__ = _append_context_parameter(signature)  # type: ignore[attr-defined]
+    annotations = _build_annotations_from_schema(input_schema)
+    annotations[INJECTED_CONTEXT_PARAM] = Context | None
+    annotations["return"] = Any
+    wrapper_func.__annotations__ = annotations
     wrapper_func.__name__ = function_name
     wrapper_func.__doc__ = "Auto-generated wrapper for a NeMo Agent Toolkit workflow."
     return wrapper_func
@@ -273,18 +376,17 @@ def register_function_with_mcp(mcp: FastMCP,
     """
     logger.info("Registering function %s with FastMCP", function_name)
 
-    # Get the workflow from the session manager
-    workflow = session_manager.workflow
+    if session_manager.is_workflow_per_user:
+        input_schema = session_manager.get_workflow_input_schema()
+        workflow_config = session_manager.config.workflow
+        function_description = getattr(workflow_config, "description", None) or function_name
+    else:
+        workflow = session_manager.workflow
+        target_function = function or workflow
+        input_schema = getattr(target_function, "input_schema", workflow.input_schema)
+        function_description = get_function_description(target_function)
 
-    # Prefer the function's schema/description when available, fall back to workflow
-    target_function = function or workflow
-
-    # Get the input schema from the most specific object available
-    input_schema = getattr(target_function, "input_schema", workflow.input_schema)
     logger.info("Function %s has input schema: %s", function_name, input_schema)
-
-    # Get function description
-    function_description = get_function_description(target_function)
 
     # Create and register the wrapper function with FastMCP
     wrapper_func = create_function_wrapper(function_name, session_manager, input_schema)
