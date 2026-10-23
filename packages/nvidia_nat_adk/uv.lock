@@ -1122,12 +1122,12 @@ resolution-markers = [
     "python_full_version < '3.12'",
 ]
 dependencies = [
-    { name = "google-api-core" },
-    { name = "google-auth" },
-    { name = "google-cloud-core" },
-    { name = "google-crc32c" },
-    { name = "google-resumable-media" },
-    { name = "requests" },
+    { name = "google-api-core", marker = "python_full_version < '3.13'" },
+    { name = "google-auth", marker = "python_full_version < '3.13'" },
+    { name = "google-cloud-core", marker = "python_full_version < '3.13'" },
+    { name = "google-crc32c", marker = "python_full_version < '3.13'" },
+    { name = "google-resumable-media", marker = "python_full_version < '3.13'" },
+    { name = "requests", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f7/b1/4f0798e88285b50dfc60ed3a7de071def538b358db2da468c2e0deecbb40/google_cloud_storage-3.9.0.tar.gz", hash = "sha256:f2d8ca7db2f652be757e92573b2196e10fbc09649b5c016f8b422ad593c641cc", size = 17298544, upload-time = "2026-02-02T13:36:34.119Z" }
 wheels = [
@@ -1142,12 +1142,12 @@ resolution-markers = [
     "python_full_version >= '3.13'",
 ]
 dependencies = [
-    { name = "google-api-core" },
-    { name = "google-auth" },
-    { name = "google-cloud-core" },
-    { name = "google-crc32c" },
-    { name = "google-resumable-media" },
-    { name = "requests" },
+    { name = "google-api-core", marker = "python_full_version >= '3.13'" },
+    { name = "google-auth", marker = "python_full_version >= '3.13'" },
+    { name = "google-cloud-core", marker = "python_full_version >= '3.13'" },
+    { name = "google-crc32c", marker = "python_full_version >= '3.13'" },
+    { name = "google-resumable-media", marker = "python_full_version >= '3.13'" },
+    { name = "requests", marker = "python_full_version >= '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/22/09/8953e2993e604c8882fd441b5b2de624a2dfe7e6144c6166d7b477509596/google_cloud_storage-3.11.0.tar.gz", hash = "sha256:498bf37c999028f69a245f586b5e50d89f59df1fafc0e3a93783ac56be2a456b", size = 17335639, upload-time = "2026-06-03T16:14:04.649Z" }
 wheels = [
@@ -2202,6 +2202,7 @@ dependencies = [
     { name = "networkx" },
     { name = "numpy" },
     { name = "nvidia-nat-atif" },
+    { name = "packaging" },
     { name = "pandas" },
     { name = "pip" },
     { name = "pkce" },
@@ -2244,6 +2245,7 @@ requires-dist = [
     { name = "nvidia-nat-atif", editable = "../nvidia_nat_atif" },
     { name = "nvidia-nat-eval", extras = ["full"], marker = "extra == 'test'", editable = "../nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
+    { name = "packaging", specifier = ">=24.0" },
     { name = "pandas", specifier = "~=2.2" },
     { name = "pip", specifier = ">=24.3.1" },
     { name = "pkce", specifier = "==1.0.3" },

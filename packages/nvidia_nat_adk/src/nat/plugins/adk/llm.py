@@ -15,19 +15,66 @@
 
 import logging
 import os
+from typing import TypeVar
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.llm.utils.http_client import _handle_litellm_verify_ssl  # ADK uses litellm under the hood
+from nat.llm.utils.thinking import BaseThinkingInjector
+from nat.llm.utils.thinking import FunctionArgumentWrapper
+from nat.llm.utils.thinking import patch_with_thinking
+from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 from nat.utils.responses_api import validate_no_responses_api
 
 logger = logging.getLogger(__name__)
+
+ModelType = TypeVar("ModelType")
+
+
+def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
+
+    class ADKThinkingInjector(BaseThinkingInjector):
+
+        def inject(self, llm_request, *args, **kwargs) -> FunctionArgumentWrapper:
+            # ADK sends the request's system_instruction as the system message. Copy only the config: the
+            # request also holds tool objects (an MCP tool keeps a lock), which can't be deep-copied.
+            llm_request = llm_request.model_copy(update={"config": llm_request.config.model_copy()})
+            instruction = llm_request.config.system_instruction
+            if instruction is None:
+                llm_request.config.system_instruction = self.system_prompt
+            elif isinstance(instruction, str):
+                if self.system_prompt not in instruction:
+                    llm_request.config.system_instruction = f"{instruction}\n{self.system_prompt}"
+            else:
+                logger.warning("Cannot add the thinking prompt to a %s system instruction", type(instruction).__name__)
+            return FunctionArgumentWrapper(llm_request, *args, **kwargs)
+
+    if isinstance(llm_config, RetryMixin) and llm_config.do_auto_retry:
+        # retry the litellm call itself, not generate_content_async: retrying that generator after it has
+        # yielded part of a stream would send the same chunks twice
+        patch_with_retry(client.llm_client,
+                         retries=llm_config.num_retries,
+                         retry_codes=llm_config.retry_on_status_codes,
+                         retry_on_messages=llm_config.retry_on_errors)
+
+    if isinstance(llm_config, ThinkingMixin) and llm_config.thinking_system_prompt is not None:
+        client = patch_with_thinking(
+            client,
+            ADKThinkingInjector(
+                system_prompt=llm_config.thinking_system_prompt,
+                function_names=["generate_content_async"],
+            ))
+
+    return client
 
 
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
@@ -67,7 +114,7 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
     config_dict["api_version"] = config.api_version
     _handle_litellm_verify_ssl(config)
 
-    yield LiteLlm(f"azure/{config.azure_deployment}", **config_dict)
+    yield _patch_llm_based_on_config(LiteLlm(f"azure/{config.azure_deployment}", **config_dict), config)
 
 
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
@@ -77,12 +124,13 @@ async def litellm_adk(litellm_config: LiteLlmModelConfig, _builder: Builder):
     validate_no_responses_api(litellm_config, LLMFrameworkEnum.ADK)
 
     _handle_litellm_verify_ssl(litellm_config)
-    yield LiteLlm(**litellm_config.model_dump(
+    client = LiteLlm(**litellm_config.model_dump(
         exclude={"api_type", "max_retries", "thinking", "type", "verify_ssl"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
     ))
+    yield _patch_llm_based_on_config(client, litellm_config)
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
@@ -116,7 +164,7 @@ async def nim_adk(config: NIMModelConfig, _builder: Builder):
 
     _handle_litellm_verify_ssl(config)
 
-    yield LiteLlm(f"nvidia_nim/{config.model_name}", **config_dict)
+    yield _patch_llm_based_on_config(LiteLlm(f"nvidia_nim/{config.model_name}", **config_dict), config)
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
@@ -157,7 +205,7 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
 
     _handle_litellm_verify_ssl(config)
 
-    yield LiteLlm(config.model_name, **config_dict)
+    yield _patch_llm_based_on_config(LiteLlm(config.model_name, **config_dict), config)
 
 
 @register_llm_client(config_type=DynamoModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
@@ -212,4 +260,4 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
             http_client=http_client,
         )
         config_dict["client"] = openai_client
-        yield LiteLlm(config.model_name, **config_dict)
+        yield _patch_llm_based_on_config(LiteLlm(config.model_name, **config_dict), config)

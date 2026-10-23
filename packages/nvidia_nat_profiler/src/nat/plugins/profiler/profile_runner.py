@@ -419,22 +419,22 @@ class ProfilerRunner:
         """
         Computes 90, 95, 99% confidence intervals for the mean LLM latency.
         LLM latency is defined as the difference between an LLM_END event_timestamp and
-        the immediately preceding LLM_START event_timestamp, across all usage_stats.
+        the event_timestamp of the LLM_START with the same UUID, across all usage_stats.
         """
         latencies = []
         for req_data in self.all_steps:
 
             usage_stats_sorted = sorted(req_data, key=lambda x: x.event_timestamp)
 
-            previous_llm_start_time = None
+            # Pair by UUID so overlapping LLM calls are each matched to their own start.
+            llm_start_times: dict[str, float] = {}
             for u in usage_stats_sorted:
                 event_type = u.event_type.value
                 ts = u.event_timestamp
                 if event_type == "LLM_START":
-                    previous_llm_start_time = ts
-                elif event_type == "LLM_END" and previous_llm_start_time is not None:
-                    latencies.append(ts - previous_llm_start_time)
-                    previous_llm_start_time = None
+                    llm_start_times[u.UUID] = ts
+                elif event_type == "LLM_END" and u.UUID in llm_start_times:
+                    latencies.append(ts - llm_start_times.pop(u.UUID))
 
         return self._compute_confidence_intervals(latencies, "LLM Latency")
 

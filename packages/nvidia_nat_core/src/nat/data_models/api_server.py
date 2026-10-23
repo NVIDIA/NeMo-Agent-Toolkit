@@ -1017,13 +1017,16 @@ GlobalTypeConverter.register_converter(_generate_response_to_chat_response)
 
 
 # ======== ChatRequest Converters ========
-def _nat_chat_request_to_string(data: ChatRequest) -> str:
-    content = data.messages[-1].content
+def _message_content_to_string(content: str | list[UserContent] | None) -> str:
     if content is None:
         return ""
     if isinstance(content, str):
         return content
-    return str(content)
+    return "\n".join(part.text for part in content if isinstance(part, TextContent))
+
+
+def _nat_chat_request_to_string(data: ChatRequest) -> str:
+    return _message_content_to_string(data.messages[-1].content)
 
 
 GlobalTypeConverter.register_converter(_nat_chat_request_to_string)
@@ -1058,12 +1061,7 @@ def _chat_request_or_message_to_string(data: ChatRequestOrMessage) -> str:
     # Extract content from last message in conversation
     if data.messages is None:
         return ""
-    content = data.messages[-1].content
-    if content is None:
-        return ""
-    if isinstance(content, str):
-        return content
-    return str(content)
+    return _message_content_to_string(data.messages[-1].content)
 
 
 GlobalTypeConverter.register_converter(_chat_request_or_message_to_string)

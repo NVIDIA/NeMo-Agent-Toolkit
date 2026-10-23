@@ -148,3 +148,17 @@ class TestA365ToolingFunctionGroupDiscovery:
         )
         assert config.reconnect_initial_backoff == 0.5
         assert config.reconnect_max_backoff == 50.0
+
+
+class TestA365ToolingConfigRoundTrip:
+    """`nat serve` dumps the config and its workers load it back, so the token must survive the round trip."""
+
+    @staticmethod
+    def _round_trip(config: A365MCPToolingConfig) -> A365MCPToolingConfig:
+        # same dump as FastApiFrontEndPlugin.run before it writes the config for the workers
+        dumped = config.model_dump(mode="json", by_alias=True, round_trip=True)
+        return A365MCPToolingConfig.model_validate(dumped)
+
+    def test_auth_token_survives_round_trip(self):
+        config = A365MCPToolingConfig(agentic_app_id="app", auth_token="tok-synthetic-123")
+        assert get_secret_value(self._round_trip(config).auth_token) == "tok-synthetic-123"
