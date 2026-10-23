@@ -90,21 +90,26 @@ def _clear_exception_context(exc: BaseException) -> None:
     if exc is None:
         return
 
-    # Clear the exception's traceback to break reference cycles
-    # This is the main memory optimization
-    try:
-        exc.__traceback__ = None
-    except AttributeError:
-        pass
-
-    # Also try to clear any chained exceptions
-    try:
-        if hasattr(exc, '__cause__') and exc.__cause__ is not None:
-            _clear_exception_context(exc.__cause__)
-        if hasattr(exc, '__context__') and exc.__context__ is not None:
-            _clear_exception_context(exc.__context__)
-    except AttributeError:
-        pass
+    pending = [exc]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        try:
+            current.__traceback__ = None
+        except AttributeError:
+            pass
+        # Exception chains can cycle when a wrapped exception is re-raised.
+        # Keep their links intact while clearing each traceback only once.
+        try:
+            if current.__cause__ is not None:
+                pending.append(current.__cause__)
+            if current.__context__ is not None:
+                pending.append(current.__context__)
+        except AttributeError:
+            pass
 
 
 def _run_gc_if_needed(attempt: int, gc_frequency: int = 3) -> None:
