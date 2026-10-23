@@ -1692,3 +1692,58 @@ def test_const_string_null_is_a_string_value():
     assert _model.model_validate({"mode": "null"}).mode == "null"
     with pytest.raises(ValidationError):
         _model.model_validate({"mode": "other"})
+
+
+@pytest.mark.parametrize("property_name, field_name", [("_id", "id_"), ("model_config", "model_config_")])
+def test_property_pydantic_cannot_name_a_field_after_keeps_its_name_as_alias(property_name: str, field_name: str):
+    """Pydantic rejects `_id` (common on MongoDB-style servers) and `model_config` as field names."""
+    schema = {"type": "object", "properties": {property_name: {"type": "string"}}, "required": [property_name]}
+
+    _model = model_from_mcp_schema(f"test_{property_name}_property", schema)
+
+    assert _model.model_fields[field_name].alias == property_name
+    assert list(_model.model_json_schema()["properties"]) == [property_name]
+    assert getattr(_model.model_validate({property_name: "doc-1"}), field_name) == "doc-1"
+    assert getattr(_model.model_validate({field_name: "doc-1"}), field_name) == "doc-1"
+    with pytest.raises(ValidationError):
+        _model.model_validate({})
+
+
+def test_renamed_field_does_not_take_the_name_of_another_property():
+    schema = {"type": "object", "properties": {"_id": {"type": "string"}, "id_": {"type": "integer"}}}
+
+    _model = model_from_mcp_schema("test_renamed_field_collision", schema)
+
+    assert {name: field.alias for name, field in _model.model_fields.items()} == {"id__": "_id", "id_": None}
+    assert _model.model_validate({"_id": "doc-1", "id_": 1}).model_dump(by_alias=True) == {"_id": "doc-1", "id_": 1}
+
+
+def test_nested_property_with_leading_underscore_keeps_its_name_as_alias():
+    schema = {
+        "type": "object",
+        "properties": {
+            "filter": {
+                "type": "object", "properties": {
+                    "_id": {
+                        "type": "string"
+                    }
+                }, "required": ["_id"]
+            }
+        },
+        "required": ["filter"],
+    }
+
+    _model = model_from_mcp_schema("test_nested_underscore_property", schema)
+
+    instance = _model.model_validate({"filter": {"_id": "doc-1"}})
+    assert instance.filter.id_ == "doc-1"
+    assert instance.model_dump(by_alias=True) == {"filter": {"_id": "doc-1"}}
+
+
+def test_ordinary_property_names_get_no_alias():
+    schema = {"type": "object", "properties": {"id": {"type": "string"}, "model_name": {"type": "string"}}}
+
+    _model = model_from_mcp_schema("test_ordinary_property_names", schema)
+
+    assert {name: field.alias for name, field in _model.model_fields.items()} == {"id": None, "model_name": None}
+    assert "validate_by_name" not in _model.model_config

@@ -81,12 +81,14 @@ def _drop_optional_none_values(value: object, dumped: object) -> object:
     if isinstance(value, BaseModel):
         fields = type(value).model_fields
         schema_required = getattr(type(value), SCHEMA_REQUIRED_FIELDS_ATTR, frozenset())
+        # The dump is keyed by alias, which is the schema's name for a field Pydantic could not name after it
+        field_names = {field.alias or name: name for name, field in fields.items()}
         filtered = {}
-        # The dump is keyed by field name (no aliases), so each key maps back to its attribute.
         for key, item_dump in dumped.items():
-            item = getattr(value, key, item_dump)
+            name = field_names.get(key, key)
+            item = getattr(value, name, item_dump)
             if item is None:
-                if key in schema_required or (key in fields and fields[key].is_required()):
+                if key in schema_required or (name in fields and fields[name].is_required()):
                     filtered[key] = None
                 continue
             filtered[key] = _drop_optional_none_values(item, item_dump)
@@ -108,7 +110,7 @@ def _dump_tool_args(model: BaseModel) -> dict:
     reject those extra nulls. A required field keeps an explicit None: JSON Schema requires the key to be
     present, and null can be a valid value for it.
     """
-    return _drop_optional_none_values(model, model.model_dump(mode='json'))
+    return _drop_optional_none_values(model, model.model_dump(mode='json', by_alias=True))
 
 
 class PerUserMCPFunctionGroup(FunctionGroup):
