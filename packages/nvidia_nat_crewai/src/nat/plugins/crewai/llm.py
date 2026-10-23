@@ -106,7 +106,8 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
             "thinking",
             "api_type",
             "api_version",
-            "request_timeout"
+            "request_timeout",
+            "verify_ssl",
         },
         by_alias=True,
         exclude_none=True,
@@ -143,7 +144,7 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
 
     client = LLM(
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking", "api_type"},
+            exclude={"type", "model_name", "thinking", "api_type", "verify_ssl"},
             by_alias=True,
             exclude_none=True,
             exclude_unset=True,
@@ -162,7 +163,7 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
     validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
 
     config_dict = llm_config.model_dump(
-        exclude={"type", "thinking", "api_type", "api_key", "base_url", "request_timeout"},
+        exclude={"type", "thinking", "api_type", "api_key", "base_url", "request_timeout", "verify_ssl"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -192,6 +193,6 @@ async def litellm_crewai(llm_config: LiteLlmModelConfig, _builder: Builder):
     _handle_litellm_verify_ssl(llm_config)
 
     client = LLM(**llm_config.model_dump(
-        exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+        exclude={"type", "thinking", "api_type", "verify_ssl"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
     yield _patch_llm_based_on_config(client, llm_config)
