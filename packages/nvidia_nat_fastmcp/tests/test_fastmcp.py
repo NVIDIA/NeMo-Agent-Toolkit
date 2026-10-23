@@ -28,6 +28,7 @@ from starlette.testclient import TestClient
 from watchfiles import Change
 
 from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
+from nat.builder.function import FunctionGroup
 from nat.builder.function_base import FunctionBase
 from nat.data_models.authentication import TokenValidationResult
 from nat.data_models.config import Config
@@ -301,3 +302,25 @@ def test_fastmcp_health_endpoint():
         data = resp.json()
         assert data["status"] == "healthy"
         assert data["server_name"] == "Test Server"
+
+
+async def test_fastmcp_tool_names_accepts_function_group_name(monkeypatch: pytest.MonkeyPatch):
+    config = Config(general=GeneralConfig(front_end=FastMCPFrontEndConfig(tool_names=["calculator"])))
+    worker = FastMCPFrontEndPluginWorker(config)
+
+    sep = FunctionGroup.SEPARATOR
+    all_functions = {
+        f"calculator{sep}add": _RegularFunction(),
+        f"calculator{sep}subtract": _RegularFunction(),
+        f"calculator_extra{sep}add": _RegularFunction(),
+        "current_datetime": _RegularFunction(),
+    }
+    monkeypatch.setattr(worker, "_get_all_functions", AsyncMock(return_value=all_functions))
+    session_create = AsyncMock()
+    monkeypatch.setattr("nat.plugins.fastmcp.server.front_end_plugin_worker.SessionManager.create", session_create)
+    monkeypatch.setattr("nat.plugins.fastmcp.server.tool_converter.register_function_with_mcp", lambda *a, **k: None)
+
+    await worker._default_add_routes(FastMCP("Test Server"), SimpleNamespace(build=AsyncMock()))
+
+    published = {call.kwargs["entry_function"] for call in session_create.call_args_list}
+    assert published == {f"calculator{sep}add", f"calculator{sep}subtract"}
