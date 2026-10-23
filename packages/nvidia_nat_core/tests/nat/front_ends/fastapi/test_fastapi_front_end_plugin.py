@@ -45,6 +45,7 @@ from nat.front_ends.fastapi.routes.generate import _GenerateEndpointType
 from nat.front_ends.fastapi.routes.generate import add_generate_route
 from nat.front_ends.fastapi.routes.v1_chat_completions import add_v1_chat_completions_route
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
+from nat.runtime.session import SessionManager
 from nat.test.functions import EchoFunctionConfig
 from nat.test.functions import HeaderCaptureFunctionConfig
 from nat.test.functions import StreamingEchoFunctionConfig
@@ -149,6 +150,46 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
 
                 assert event_source.response.status_code == 200
                 assert response == values
+
+
+@pytest.mark.parametrize("concurrency_config",
+                         [{}, {
+                             "max_concurrency": 1
+                         }, {
+                             "max_concurrency": 16
+                         }, {
+                             "max_concurrency": 0
+                         }, {
+                             "max_concurrency": -1
+                         }])
+async def test_session_manager_max_concurrency(concurrency_config: dict):
+    """Default and custom routes use the configured session concurrency."""
+    front_end_config = FastApiFrontEndConfig(
+        **concurrency_config,
+        endpoints=[
+            FastApiFrontEndConfig.Endpoint(path="/echo",
+                                           method="POST",
+                                           description="Echo function",
+                                           function_name="echo"),
+        ],
+    )
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        functions={"echo": EchoFunctionConfig()},
+        workflow=EchoFunctionConfig(),
+    )
+
+    with patch.object(SessionManager, "create", wraps=SessionManager.create) as create_session_manager:
+        async with build_nat_client(config) as client:
+            assert create_session_manager.await_count == 2
+            assert [call.kwargs["entry_function"] for call in create_session_manager.await_args_list] == [None, "echo"]
+            for call in create_session_manager.await_args_list:
+                assert call.kwargs["max_concurrency"] == concurrency_config.get("max_concurrency", 8)
+
+            for path in (front_end_config.workflow.path, "/echo"):
+                response = await client.post(path, json={"message": "Hello"})
+                assert response.status_code == 200
+                assert response.json() == {"value": "Hello"}
 
 
 async def test_custom_endpoint():

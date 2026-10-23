@@ -65,6 +65,28 @@ Setting `disable_legacy_routes` to `true` removes the legacy paths entirely. Set
 or `legacy_openai_api_path` to `null` on individual endpoints to disable specific legacy routes
 while keeping others.
 
+### Configuring Workflow Concurrency
+
+Set `general.front_end.max_concurrency` in your workflow configuration to control how many
+workflow executions can run simultaneously:
+
+```yaml
+general:
+  front_end:
+    _type: fastapi
+    max_concurrency: 16
+```
+
+The default is `8`. Set the value to `0` or `-1` for unlimited concurrency. Values below `-1`
+are rejected during configuration validation. When the limit is reached, additional executions
+wait until an active execution finishes.
+
+The limit applies separately to the session manager for the default workflow and to each custom
+endpoint in each server worker. Routes for the same endpoint, such as streaming and non-streaming
+routes, share that endpoint's session manager. For per-user workflows, each user has a separate
+limit. Dask background jobs use the separate concurrency settings described in
+[Asynchronous Generate](#asynchronous-generate).
+
 ### HTTP Interactive Extensions
 
 Interactive workflows (Human-in-the-Loop and OAuth) can be used over plain HTTP without
