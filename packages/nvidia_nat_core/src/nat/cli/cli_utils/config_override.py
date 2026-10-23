@@ -215,11 +215,9 @@ def load_and_override_config(config_file: Path, overrides: tuple[tuple[str, str]
         try:
             # Validate using the temporary file
             validate_yaml(None, None, tmp_path)
-            # If validation succeeds, print the config
-            logger.info(
-                "\n\nConfiguration after overrides:\n\n%s",
-                yaml.dump(effective_config, default_flow_style=False),
-            )
+            # If validation succeeds, report which paths were overridden. The effective config is not logged because
+            # environment variable references are already expanded by this point, so it can contain secrets.
+            logger.info("Configuration validated after overriding: %s", ", ".join(sorted(config.overrides)))
         except Exception as e:
             logger.error("Modified configuration failed validation: %s", e)
             raise click.BadParameter(f"Modified configuration failed validation: {str(e)}")
