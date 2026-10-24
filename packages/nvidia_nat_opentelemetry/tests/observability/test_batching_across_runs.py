@@ -19,19 +19,31 @@ import asyncio
 import pytest
 
 from nat.builder.builder import Builder
+from nat.builder.context import ContextState
 from nat.builder.function_info import FunctionInfo
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
 from nat.cli.register_workflow import register_telemetry_exporter
 from nat.data_models.config import Config
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.span import Span
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.observability.processor.batching_processor import BatchingProcessor
+from nat.observability.processor.processor import Processor
 from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 from nat.runtime.session import SessionManager
 
 EXPORT_CALLS: list[int] = []
 RUNS = 4
 SPANS_PER_RUN = 6  # workflow + its function + four tool calls
+
+
+class SlowProcessor(Processor[Span, Span]):
+    """A processor that awaits before passing the span on, like the redaction processors do."""
+
+    async def process(self, item: Span) -> Span:
+        await asyncio.sleep(0.02)
+        return item
 
 
 class RecordingOtelExporter(OtelSpanExporter):
@@ -43,6 +55,7 @@ class RecordingOtelExporter(OtelSpanExporter):
 class RecordingExporterConfig(TelemetryExporterBaseConfig, name="batching_test_otel"):
     batch_size: int = 100
     flush_interval: float = 3600.0
+    slow_first_processor: bool = False
 
 
 class EchoToolConfig(FunctionBaseConfig, name="batching_test_tool"):
@@ -58,7 +71,10 @@ def register_components_fixture():
 
     @register_telemetry_exporter(config_type=RecordingExporterConfig)
     async def _exporter(config: RecordingExporterConfig, builder: Builder):
-        yield RecordingOtelExporter(batch_size=config.batch_size, flush_interval=config.flush_interval)
+        exporter = RecordingOtelExporter(batch_size=config.batch_size, flush_interval=config.flush_interval)
+        if config.slow_first_processor:
+            exporter.add_processor(SlowProcessor(), position=0)
+        yield exporter
 
     @register_function(config_type=EchoToolConfig)
     async def _tool(config, builder: Builder):
@@ -85,13 +101,14 @@ def clear_calls_fixture():
     EXPORT_CALLS.clear()
 
 
-async def test_spans_stay_batched_after_the_first_run():
+@pytest.mark.parametrize("slow_first_processor", [False, True], ids=["plain", "slow_processor_before_batcher"])
+async def test_spans_stay_batched_after_the_first_run(slow_first_processor):
     config = Config.model_validate({
         "general": {
             "telemetry": {
                 "tracing": {
                     "recording": {
-                        "_type": "batching_test_otel"
+                        "_type": "batching_test_otel", "slow_first_processor": slow_first_processor
                     }
                 }
             }
@@ -108,18 +125,28 @@ async def test_spans_stay_batched_after_the_first_run():
     calls_per_run: list[list[int]] = []
     async with WorkflowBuilder.from_config(config=config) as builder:
         session_manager = await SessionManager.create(config=config, shared_builder=builder, max_concurrency=1)
-        exporter = (await session_manager.workflow.get_all_exporters())["recording"]
         try:
             for _ in range(RUNS):
                 before = len(EXPORT_CALLS)
                 async with session_manager.session() as session:
                     async with session.run("hi") as runner:
                         assert await runner.result(to_type=str) == "hi"
-                await exporter.wait_for_tasks()
                 await asyncio.sleep(0)
                 calls_per_run.append(EXPORT_CALLS[before:])
         finally:
             await session_manager.shutdown()
 
-    # every run's spans leave in one batch, not one export call per span
+    # every run's spans leave in one batch, not one export call per span, and none are left behind
     assert calls_per_run == [[SPANS_PER_RUN]] * RUNS
+    assert sum(EXPORT_CALLS) == SPANS_PER_RUN * RUNS
+
+
+async def test_only_the_original_exporter_shuts_its_batcher_down():
+    exporter = RecordingOtelExporter(batch_size=100, flush_interval=3600.0)
+    batcher = next(p for p in exporter._processors if isinstance(p, BatchingProcessor))
+
+    await exporter.create_isolated_instance(ContextState())._cleanup()
+    assert not batcher._shutdown_requested
+
+    await exporter._cleanup()
+    assert batcher._shutdown_requested
