@@ -544,7 +544,10 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         """
         # Shutdown all processors that support it. A per-run (isolated) copy shares its processors with the
         # original exporter, so it only flushes them: shutting a shared batcher down would make every later run
-        # export one item per call.
+        # export one item per call. It first waits for the run's export tasks, so spans still on their way to
+        # the batcher are in that flush instead of being left in the shared queue.
+        if self.is_isolated_instance:
+            await self.wait_for_tasks()
         shutdown_tasks = []
         for processor in getattr(self, '_processors', []):
             flush_method = getattr(processor, 'flush', None) if self.is_isolated_instance else None
