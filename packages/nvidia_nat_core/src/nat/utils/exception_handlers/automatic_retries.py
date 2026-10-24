@@ -237,7 +237,8 @@ def _response_headers(exc: BaseException) -> dict[str, str] | None:
     response = getattr(exc, "response", None)
     if isinstance(response, dict):
         # botocore ClientError (e.g. Bedrock throttling)
-        headers = response.get("ResponseMetadata", {}).get("HTTPHeaders")
+        metadata = response.get("ResponseMetadata")
+        headers = metadata.get("HTTPHeaders") if isinstance(metadata, dict) else None
     else:
         # httpx / requests responses, as on LiteLLM and OpenAI errors
         headers = getattr(response, "headers", None)
@@ -284,7 +285,12 @@ def _retry_after_seconds(exc: BaseException) -> float | None:
 
 def _wait_before_retry(exc: BaseException, delay: float, max_wait: float) -> float:
     """Wait for the provider's Retry-After when it sent one (at most `max_wait`), else the backoff delay."""
-    retry_after = _retry_after_seconds(exc)
+    try:
+        retry_after = _retry_after_seconds(exc)
+    except Exception:
+        # reading the header must never cost the retry itself
+        logger.debug("Could not read Retry-After from %s", type(exc).__name__, exc_info=True)
+        retry_after = None
     return min(retry_after, max_wait) if retry_after is not None else delay
 
 

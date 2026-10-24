@@ -30,6 +30,7 @@ class RetryMixin(BaseModel):
                              exclude=True)
     retry_max_wait: float = Field(default=60.0,
                                   ge=0,
+                                  allow_inf_nan=False,
                                   description="Longest wait in seconds before a retry when the provider asks for one"
                                   " in a Retry-After header. Without the header, retries use exponential backoff.",
                                   exclude=True)
