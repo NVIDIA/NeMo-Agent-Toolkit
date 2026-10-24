@@ -1402,6 +1402,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             # Only protect the shared state modifications (serialized)
             exporter = await self._get_exit_stack().enter_async_context(exporter_context_manager)
+            if isinstance(exporter, BaseExporter):
+                # runs use per-run copies of the exporter, so this instance may never be started or stopped
+                self._get_exit_stack().push_async_callback(exporter.close)
 
         self._telemetry_exporters[name] = ConfiguredTelemetryExporter(config=config, instance=exporter)
 
