@@ -41,9 +41,27 @@ SPANS_PER_RUN = 6  # workflow + its function + four tool calls
 class SlowProcessor(Processor[Span, Span]):
     """A processor that awaits before passing the span on, like the redaction processors do."""
 
+    def __init__(self, delay: float):
+        super().__init__()
+        self._delay = delay
+
     async def process(self, item: Span) -> Span:
-        await asyncio.sleep(0.02)
+        await asyncio.sleep(self._delay)
         return item
+
+
+class ShutdownOnlyProcessor(Processor[Span, Span]):
+    """A user processor with cleanup but no flush."""
+
+    def __init__(self):
+        super().__init__()
+        self.shut_down = False
+
+    async def process(self, item: Span) -> Span:
+        return item
+
+    async def shutdown(self) -> None:
+        self.shut_down = True
 
 
 class RecordingOtelExporter(OtelSpanExporter):
@@ -56,6 +74,7 @@ class RecordingExporterConfig(TelemetryExporterBaseConfig, name="batching_test_o
     batch_size: int = 100
     flush_interval: float = 3600.0
     slow_first_processor: bool = False
+    slow_processor_delay: float = 0.02
 
 
 class EchoToolConfig(FunctionBaseConfig, name="batching_test_tool"):
@@ -73,7 +92,7 @@ def register_components_fixture():
     async def _exporter(config: RecordingExporterConfig, builder: Builder):
         exporter = RecordingOtelExporter(batch_size=config.batch_size, flush_interval=config.flush_interval)
         if config.slow_first_processor:
-            exporter.add_processor(SlowProcessor(), position=0)
+            exporter.add_processor(SlowProcessor(config.slow_processor_delay), position=0)
         yield exporter
 
     @register_function(config_type=EchoToolConfig)
@@ -150,3 +169,55 @@ async def test_only_the_original_exporter_shuts_its_batcher_down():
 
     await exporter._cleanup()
     assert batcher._shutdown_requested
+
+
+async def test_an_export_still_running_when_the_run_ends_is_not_cancelled(monkeypatch):
+    from nat.observability.exporter import processing_exporter
+
+    # the run's spans take longer to reach the batcher than the run end waits for
+    monkeypatch.setattr(processing_exporter, "_RUN_END_WAIT_SECONDS", 0.05)
+    config = Config.model_validate({
+        "general": {
+            "telemetry": {
+                "tracing": {
+                    "recording": {
+                        "_type": "batching_test_otel",
+                        "slow_first_processor": True,
+                        "slow_processor_delay": 0.3,
+                        "flush_interval": 0.2,
+                    }
+                }
+            }
+        },
+        "functions": {
+            "tool": {
+                "_type": "batching_test_tool"
+            }
+        },
+        "workflow": {
+            "_type": "batching_test_workflow"
+        },
+    })
+    async with WorkflowBuilder.from_config(config=config) as builder:
+        session_manager = await SessionManager.create(config=config, shared_builder=builder, max_concurrency=1)
+        try:
+            async with session_manager.session() as session:
+                async with session.run("hi") as runner:
+                    assert await runner.result(to_type=str) == "hi"
+            await asyncio.sleep(1.0)  # the late spans reach the batcher and leave with its timed flush
+        finally:
+            await session_manager.shutdown()
+
+    assert sum(EXPORT_CALLS) == SPANS_PER_RUN
+
+
+async def test_a_run_never_shuts_down_a_shared_processor():
+    exporter = RecordingOtelExporter(batch_size=100, flush_interval=3600.0)
+    processor = ShutdownOnlyProcessor()
+    exporter.add_processor(processor, position=0)
+
+    await exporter.create_isolated_instance(ContextState())._cleanup()
+    assert not processor.shut_down
+
+    await exporter._cleanup()
+    assert processor.shut_down
