@@ -28,6 +28,11 @@ class RetryMixin(BaseModel):
                              description="Maximum total number of attempts for a method call that fails"
                              " with a retryable error, including the initial call and any retries.",
                              exclude=True)
+    retry_max_wait: float = Field(default=60.0,
+                                  ge=0,
+                                  description="Longest wait in seconds before a retry when the provider asks for one"
+                                  " in a Retry-After header. Without the header, retries use exponential backoff.",
+                                  exclude=True)
     retry_on_status_codes: list[int | str] = Field(default_factory=lambda: [429, 500, 502, 503, 504],
                                                    description="List of HTTP status codes that should trigger a retry.",
                                                    exclude=True)
