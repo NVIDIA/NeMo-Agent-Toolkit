@@ -37,6 +37,7 @@ from nat.builder.workflow_builder import ConfiguredFunctionGroup
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.builder.workflow_builder import _build_function_group_impl
 from nat.builder.workflow_builder import _build_function_impl
+from nat.builder.workflow_builder import _find_function_group_function
 from nat.builder.workflow_builder import _log_build_failure
 from nat.cli.type_registry import GlobalTypeRegistry
 from nat.cli.type_registry import TypeRegistry
@@ -697,8 +698,15 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Use workflow (could be per-user or shared)
             entry_fn_obj = self.get_workflow()
         else:
-            # Use specified function (could be per-user or shared)
-            entry_fn_obj = await self.get_function(entry_function)
+            # Use specified function (could be per-user or shared, or a function a group makes available as a tool)
+            try:
+                entry_fn_obj = await self.get_function(entry_function)
+            except ValueError:
+                entry_fn_obj = await _find_function_group_function(
+                    self._check_backwards_compatibility_function_name(entry_function),
+                    [*self._per_user_function_groups.values(), *self._shared_builder._function_groups.values()])
+                if entry_fn_obj is None:
+                    raise
 
         # Collect function names that are included by function groups (shared + per-user)
         # These will be skipped when populating function_configs and all_functions

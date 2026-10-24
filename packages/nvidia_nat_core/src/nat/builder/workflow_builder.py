@@ -189,6 +189,15 @@ class ConfiguredTrajectoryBuilder:
     instance: TrajectoryBuilder
 
 
+async def _find_function_group_function(name: str, function_groups: list[ConfiguredFunctionGroup]) -> Function | None:
+    """A function one of the groups makes available as a tool (`group__fn`), even if it isn't globally registered."""
+    for function_group in function_groups:
+        accessible_functions = await function_group.instance.get_accessible_functions()
+        if name in accessible_functions:
+            return accessible_functions[name]
+    return None
+
+
 def _log_build_failure(component_name: str,
                        component_type: str,
                        completed_components: list[tuple[str, str]],
@@ -538,7 +547,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         if (entry_function is None):
             entry_fn_obj = self.get_workflow()
         else:
-            entry_fn_obj = await self.get_function(entry_function)
+            entry_fn_obj = await self._get_entry_function(entry_function)
 
         workflow = Workflow.from_entry_fn(config=config,
                                           entry_fn=entry_fn_obj,
@@ -702,6 +711,17 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         })
 
         return build_result.instance
+
+    async def _get_entry_function(self, name: str) -> Function:
+        """A registered function, or one a function group makes available as a tool (MCP servers publish both)."""
+        try:
+            return await self.get_function(name)
+        except ValueError:
+            group_function = await _find_function_group_function(
+                self._check_backwards_compatibility_function_name(name), list(self._function_groups.values()))
+            if group_function is None:
+                raise
+            return group_function
 
     def _check_backwards_compatibility_function_name(self, name: str) -> str:
         if name in self._functions:
