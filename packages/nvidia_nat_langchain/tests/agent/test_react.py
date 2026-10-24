@@ -1839,8 +1839,10 @@ async def test_stream_fn_yields_content_after_final_answer_marker(stream_fn_fact
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="Thought: I know the answer\nFinal Answer: "), {"langgraph_node": "agent"})
-        yield (AIMessageChunk(content="The result is 42"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="Thought: I know the answer\nFinal Answer: "), {
+            "langgraph_node": "agent"
+        }))
+        yield ("messages", (AIMessageChunk(content="The result is 42"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1858,8 +1860,8 @@ async def test_stream_fn_handles_split_final_answer(stream_fn_factory):
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="Final An"), {"langgraph_node": "agent"})
-        yield (AIMessageChunk(content="swer: The result is 42"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="Final An"), {"langgraph_node": "agent"}))
+        yield ("messages", (AIMessageChunk(content="swer: The result is 42"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1877,7 +1879,7 @@ async def test_stream_fn_yields_after_marker_in_same_chunk(stream_fn_factory):
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="Final Answer: Direct response"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="Final Answer: Direct response"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1895,8 +1897,8 @@ async def test_stream_fn_tokens_after_found_final_answer(stream_fn_factory):
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="Final Answer: Part one"), {"langgraph_node": "agent"})
-        yield (AIMessageChunk(content=" and part two"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="Final Answer: Part one"), {"langgraph_node": "agent"}))
+        yield ("messages", (AIMessageChunk(content=" and part two"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1915,7 +1917,9 @@ async def test_stream_fn_fallback_when_no_final_answer_marker(stream_fn_factory)
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="This is a direct answer without ReAct format"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="This is a direct answer without ReAct format"), {
+            "langgraph_node": "agent"
+        }))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1933,8 +1937,8 @@ async def test_stream_fn_filters_non_agent_node_messages(stream_fn_factory):
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="should be ignored"), {"langgraph_node": "tool"})
-        yield (AIMessageChunk(content="Final Answer: visible"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="should be ignored"), {"langgraph_node": "tool"}))
+        yield ("messages", (AIMessageChunk(content="Final Answer: visible"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1954,8 +1958,8 @@ async def test_stream_fn_filters_tool_call_chunks(stream_fn_factory):
 
     async def mock_astream(state, config=None, stream_mode=None):
         tool_chunk = AIMessageChunk(content="", tool_call_chunks=[{"name": "Tool A", "args": "", "id": "1"}])
-        yield (tool_chunk, {"langgraph_node": "agent"})
-        yield (AIMessageChunk(content="Final Answer: clean answer"), {"langgraph_node": "agent"})
+        yield ("messages", (tool_chunk, {"langgraph_node": "agent"}))
+        yield ("messages", (AIMessageChunk(content="Final Answer: clean answer"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -2000,6 +2004,82 @@ async def test_stream_fn_propagates_generic_exception(stream_fn_factory):
     with pytest.raises(RuntimeError, match="unexpected streaming error"):
         async for _ in stream_fn(request):
             pass
+
+
+class _StatusError(RuntimeError):
+    """A provider error carrying an HTTP status code, like openai.NotFoundError."""
+
+    def __init__(self, message: str, status_code: int):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+@pytest.mark.parametrize("error", ["404 page not found", "[###] Unknown Error\nage not found"])
+async def test_stream_fn_names_model_rejected_by_backend(stream_fn_factory, error):
+    """A backend 404 for a per-request model override names the model (#2378)."""
+    from unittest.mock import patch
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        raise _StatusError(error, 404)
+        yield  # make it an async generator
+
+    # treat the mock LLM as one that supports per-request model overrides, as NIM does
+    with patch("langchain_core.runnables.configurable.RunnableConfigurableFields", object):
+        stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("hi", model="placeholder")
+    with pytest.raises(ValueError, match="rejected the requested model 'placeholder'") as exc_info:
+        async for _ in stream_fn(request):
+            pass
+    assert isinstance(exc_info.value.__cause__, _StatusError)
+
+    # without a per-request override the original error is unchanged
+    with pytest.raises(_StatusError, match="not found"):
+        async for _ in stream_fn(ChatRequest.from_string("hi")):
+            pass
+
+
+async def test_response_fn_names_model_rejected_by_backend(mock_llm, mock_tool):
+    """The non-streaming path also names the rejected model and chains the provider's 404 (#2378)."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import MagicMock
+    from unittest.mock import patch
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+    from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+
+    provider_error = _StatusError("404 page not found", 404)
+    mock_graph = MagicMock()
+    mock_graph.ainvoke = AsyncMock(side_effect=provider_error)
+    mock_builder = AsyncMock()
+    mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+    mock_builder.get_tools = AsyncMock(return_value=[mock_tool('Tool A')])
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+
+    # treat the mock LLM as one that supports per-request model overrides, as NIM does
+    with patch("langchain_core.runnables.configurable.RunnableConfigurableFields", object), \
+            patch.object(ReActAgentGraph, 'build_graph', new=AsyncMock(return_value=mock_graph)):
+        async with react_agent_workflow(config, mock_builder) as function_info:
+            request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}], model="placeholder")
+            with pytest.raises(ValueError, match="rejected the requested model 'placeholder'") as exc_info:
+                await function_info.single_fn(request)
+
+    assert exc_info.value.__cause__ is provider_error
+
+
+def test_rejected_model_error_ignores_unrelated_failures():
+    from nat.plugins.langchain.agent.react_agent.register import _build_lc_config
+    from nat.plugins.langchain.agent.react_agent.register import _rejected_model_error
+
+    override = _build_lc_config(5, "placeholder")
+    assert _rejected_model_error(RuntimeError("connection reset"), override) is None
+    # "not found" text without a 404 status (e.g. a tool error) is not a model rejection
+    assert _rejected_model_error(RuntimeError("file not found"), override) is None
+    assert _rejected_model_error(_StatusError("bad request", 400), override) is None
+    assert _rejected_model_error(_StatusError("404 page not found", 404), _build_lc_config(5, None)) is None
+    assert "'placeholder'" in str(_rejected_model_error(_StatusError("404 page not found", 404), override))
 
 
 def _react_workflow(per_user: bool):
@@ -2125,7 +2205,11 @@ def _counting_tool():
     return counter, calls
 
 
-async def _run_react_agent(responses: list[str], max_tool_calls: int, per_user: bool = False, stream: bool = False):
+async def _run_react_agent(responses: list[str],
+                           max_tool_calls: int,
+                           per_user: bool = False,
+                           stream: bool = False,
+                           raise_on_parsing_failure: bool = True):
     from unittest.mock import AsyncMock
 
     from langchain_core.language_models.fake_chat_models import FakeListChatModel
@@ -2142,7 +2226,10 @@ async def _run_react_agent(responses: list[str], max_tool_calls: int, per_user: 
     builder.get_tools = AsyncMock(return_value=[counter])
     config_type, workflow = ((PerUserReActAgentWorkflowConfig, per_user_react_agent_workflow) if per_user else
                              (ReActAgentWorkflowConfig, react_agent_workflow))
-    config = config_type(tool_names=["counter"], llm_name="llm", max_tool_calls=max_tool_calls)
+    config = config_type(tool_names=["counter"],
+                         llm_name="llm",
+                         max_tool_calls=max_tool_calls,
+                         raise_on_parsing_failure=raise_on_parsing_failure)
     request = ChatRequestOrMessage(input_message="hi")
     async with workflow(config, builder) as function_info:
         if stream:
@@ -2190,6 +2277,28 @@ async def test_react_agent_can_use_all_max_tool_calls_then_answer(max_tool_calls
     result, calls = await _run_react_agent(responses, max_tool_calls)
     assert len(calls) == max_tool_calls
     assert result == "all done"
+
+
+_UNPARSEABLE = "Thought: I am not sure what to do next"
+
+
+@pytest.mark.parametrize(
+    "responses",
+    [
+        pytest.param(["The answer is 42."], id="direct-answer"),
+        pytest.param(["<think>check the facts</think>The answer is 42."], id="think-wrapped-direct-answer"),
+        pytest.param([_REACT_TOOL_CALL, "The answer is 42."], id="tool-call-then-direct-answer"),
+        pytest.param([_UNPARSEABLE] * 5, id="parsing-error"),
+        pytest.param([_REACT_TOOL_CALL] + [_UNPARSEABLE] * 5, id="tool-call-then-parsing-error"),
+    ])
+async def test_react_agent_stream_returns_the_answer_single_fn_returns(responses):
+    """Without a "Final Answer:" marker, stream_fn yields the answer single_fn returns, not every turn's text."""
+    single, single_calls = await _run_react_agent(responses, 3, raise_on_parsing_failure=False)
+    streamed, stream_calls = await _run_react_agent(responses, 3, stream=True, raise_on_parsing_failure=False)
+
+    assert streamed == single
+    assert len(stream_calls) == len(single_calls)
+    assert "<think>" not in streamed
 
 
 class _UsageReportingLLM(BaseChatModel):

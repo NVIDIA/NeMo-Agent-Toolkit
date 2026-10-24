@@ -480,6 +480,30 @@ _DISCRIMINATED_UNION_SCHEMA = {
     "required": ["pet"],
 }
 
+_UNDERSCORE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "_id": {
+            "type": "string"
+        },
+        "model_config": {
+            "type": "string"
+        },
+        "filter": {
+            "type": "object",
+            "properties": {
+                "_id": {
+                    "type": "string"
+                }, "_rev": {
+                    "type": "string"
+                }
+            },
+            "required": ["_id"],
+        },
+    },
+    "required": ["_id"],
+}
+
 
 class _RecordingTool:
     """Fake MCP tool that records the arguments sent to the server."""
@@ -582,3 +606,15 @@ async def test_discriminated_union_argument_is_sent_as_the_matching_variant(
     """The `const` tag selects the variant, so the call carries that variant's fields and defaults."""
     sent = await send_tool_args({"pet": {"pet_type": "dog", "name": "Rex"}}, _DISCRIMINATED_UNION_SCHEMA)
     assert sent == {"pet": {"pet_type": "dog", "name": "Rex", "good_boy": True, "lives": 1}}
+
+
+async def test_arguments_renamed_for_pydantic_are_sent_under_their_schema_names(send_tool_args):
+    """`_id` is a field named `id_` in the input schema, but the server expects the key `_id`."""
+    tool_args = {"_id": "doc-1", "model_config": "strict", "filter": {"_id": "doc-2"}}
+    sent = await send_tool_args(tool_args, _UNDERSCORE_SCHEMA)
+    assert sent == {"_id": "doc-1", "model_config": "strict", "filter": {"_id": "doc-2"}}
+
+
+async def test_renamed_optional_arguments_left_unset_are_not_sent(send_tool_args):
+    sent = await send_tool_args({"_id": "doc-1", "filter": {"_id": "doc-2"}}, _UNDERSCORE_SCHEMA)
+    assert sent == {"_id": "doc-1", "filter": {"_id": "doc-2"}}

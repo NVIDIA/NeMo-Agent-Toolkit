@@ -197,8 +197,11 @@ class Settings(HashableBaseModel):
         if not os.path.exists(self.configuration_directory):
             os.mkdir(self.configuration_directory)
 
+        # Avoid serialize_as_any here. From pydantic 2.12 on it skips the PlainSerializer on OptionalSecretStr and
+        # writes channel tokens as "**********". The `channels` annotation is already the union of the registered
+        # handler configs, so every channel field is still written.
         with open(self.configuration_file, mode="w", encoding="utf-8") as f:
-            f.write(self.model_dump_json(indent=4, by_alias=True, serialize_as_any=True))
+            f.write(self.model_dump_json(indent=4, by_alias=True))
 
         self._settings_changed()
 
@@ -238,7 +241,7 @@ class Settings(HashableBaseModel):
 
         import yaml
 
-        remote_channels = self.model_dump(serialize_as_any=True, by_alias=True)
+        remote_channels = self.model_dump(mode="json", by_alias=True, context={"mask_secrets": True})
 
         if (not remote_channels or not remote_channels.get("channels")):
             logger.warning("No configured channels to list.")
@@ -246,11 +249,11 @@ class Settings(HashableBaseModel):
 
         if (channel_type is not None):
             filter_channels = []
-            for channel, settings in remote_channels.items():
-                if (settings["type"] != channel_type):
+            for channel, settings in remote_channels["channels"].items():
+                if (settings["_type"] != channel_type):
                     filter_channels.append(channel)
             for channel in filter_channels:
-                del remote_channels[channel]
+                del remote_channels["channels"][channel]
 
         if (remote_channels):
             logger.info(yaml.dump(remote_channels, allow_unicode=True, default_flow_style=False))

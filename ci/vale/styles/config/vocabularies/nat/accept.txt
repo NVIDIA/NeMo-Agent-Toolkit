@@ -2,6 +2,7 @@
 # "cuDF" or "cuML", we want to ensure that they are capitalized the same way they're written by the product owners.
 # Regular expressions are parsed according to the Go syntax: https://golang.org/pkg/regexp/syntax/
 
+AffixIO
 [Aa]gentic
 [Aa]gno
 # Allow AIQ for AIQ Blueprint

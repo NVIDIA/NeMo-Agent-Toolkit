@@ -20,11 +20,15 @@ from unittest.mock import patch
 
 import pytest
 import yaml
+from click.testing import CliRunner
 
 from nat.cli.commands.workflow.workflow_commands import _get_nat_dependency
 from nat.cli.commands.workflow.workflow_commands import _get_nat_version
 from nat.cli.commands.workflow.workflow_commands import _is_nat_version_prerelease
+from nat.cli.commands.workflow.workflow_commands import create_command
+from nat.cli.commands.workflow.workflow_commands import delete_command
 from nat.cli.commands.workflow.workflow_commands import get_repo_root
+from nat.cli.commands.workflow.workflow_commands import reinstall_command
 
 
 def test_get_repo_root(project_dir: str):
@@ -148,3 +152,87 @@ def test_create_workflow_with_invalid_name(tmp_path):
     )
     assert result.returncode != 0
     assert "Workflow name cannot be empty" in result.stderr
+
+
+def test_create_workflow_that_already_exists_fails(tmp_path):
+    (tmp_path / "test_workflow").mkdir()
+
+    result = CliRunner().invoke(create_command, ["--no-install", "--workflow-dir", str(tmp_path), "test_workflow"])
+
+    assert result.exit_code == 1
+    assert "Workflow 'test_workflow' already exists" in result.output
+
+
+def test_create_workflow_with_failed_install_fails_and_cleans_up(tmp_path):
+    install_error = subprocess.CalledProcessError(1, ["uv", "pip", "install"], stderr="no matching distribution")
+
+    with patch("nat.cli.commands.workflow.workflow_commands.subprocess.run", side_effect=install_error):
+        result = CliRunner().invoke(create_command, ["--workflow-dir", str(tmp_path), "test_workflow"])
+
+    assert result.exit_code == 1
+    assert "An error occurred while creating the workflow" in result.output
+    assert "no matching distribution" in result.output
+    # The partial workflow is removed, so the same command can be run again
+    assert not (tmp_path / "test_workflow").exists()
+
+
+def test_create_workflow_with_failed_install_keeps_other_files(tmp_path):
+    (tmp_path / "other").mkdir()
+    install_error = subprocess.CalledProcessError(1, ["uv", "pip", "install"])
+
+    with patch("nat.cli.commands.workflow.workflow_commands.subprocess.run", side_effect=install_error):
+        result = CliRunner().invoke(create_command, ["--workflow-dir", str(tmp_path), "test_workflow"])
+
+    assert result.exit_code == 1
+    assert (tmp_path / "other").is_dir()
+
+
+def test_create_workflow_in_missing_directory_fails(tmp_path):
+    result = CliRunner().invoke(create_command,
+                                ["--no-install", "--workflow-dir", str(tmp_path / "missing"), "test_workflow"])
+
+    assert result.exit_code == 1
+    assert "does not exist" in result.output
+
+
+def test_reinstall_missing_workflow_fails():
+    result = CliRunner().invoke(reinstall_command, ["nat_workflow_that_is_not_installed"])
+
+    assert result.exit_code == 1
+    assert "Workflow 'nat_workflow_that_is_not_installed' does not exist" in result.output
+
+
+def test_delete_missing_workflow_fails():
+    result = CliRunner().invoke(delete_command, ["--yes", "nat_workflow_that_is_not_installed"])
+
+    assert result.exit_code == 1
+    assert "Workflow 'nat_workflow_that_is_not_installed' does not exist" in result.output
+
+
+def test_delete_workflow_with_failed_uninstall_fails(tmp_path):
+    uninstall_error = subprocess.CalledProcessError(2, ["uv", "pip", "uninstall"], stderr="uninstall failed")
+
+    with patch("nat.cli.commands.workflow.workflow_commands.get_workflow_path_from_name", return_value=tmp_path), \
+            patch("nat.cli.commands.workflow.workflow_commands.subprocess.run", side_effect=uninstall_error):
+        result = CliRunner().invoke(delete_command, ["--yes", "nat_workflow_that_is_not_installed"])
+
+    assert result.exit_code == 1
+    assert "An error occurred while deleting the workflow" in result.output
+    assert "uninstall failed" in result.output
+
+
+def test_delete_workflow_cancelled_succeeds():
+    result = CliRunner().invoke(delete_command, ["test_workflow"], input="n\n")
+
+    assert result.exit_code == 0
+    assert "Workflow deletion cancelled." in result.output
+
+
+@pytest.mark.parametrize("command,args", [(reinstall_command, [" "]), (delete_command, [" "]),
+                                          (delete_command, ["--yes", " "])])
+def test_reinstall_and_delete_reject_empty_workflow_name(command, args):
+    """reinstall and delete reject an empty name before any lookup or prompt, like create."""
+    result = CliRunner().invoke(command, args)
+
+    assert result.exit_code == 2
+    assert "Workflow name cannot be empty" in result.output

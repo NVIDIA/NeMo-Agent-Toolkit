@@ -115,6 +115,13 @@ def _get_module_name(workflow_name: str):
     return workflow_name.replace("-", "_")
 
 
+def _describe_error(error: Exception) -> str:
+    """Describe an error for the user, including the output of a failed install or uninstall command."""
+    if isinstance(error, subprocess.CalledProcessError) and error.stderr:
+        return f"{error}\n{error.stderr.strip()}"
+    return str(error)
+
+
 def _generate_valid_classname(class_name: str):
     return class_name.replace('_', ' ').replace('-', ' ').title().replace(' ', '')
 
@@ -219,6 +226,8 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
     # Fail fast with Click's standard exit code (2) for bad params.
     if not workflow_name or not workflow_name.strip():
         raise click.BadParameter("Workflow name cannot be empty.")  # noqa: TRY003
+    new_workflow_dir: Path | None = None
+    created = False
     try:
         # Get the repository root
         try:
@@ -241,8 +250,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
 
         # Check if the workflow already exists
         if new_workflow_dir.exists():
-            click.echo(f"Workflow '{workflow_name}' already exists.")
-            return
+            raise click.ClickException(f"Workflow '{workflow_name}' already exists at '{new_workflow_dir}'.")
 
         base_dir = new_workflow_dir / 'src' / package_name
 
@@ -251,6 +259,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
 
         # Create directory structure
         base_dir.mkdir(parents=True)
+        created = True
         # Create config directory
         configs_dir.mkdir(parents=True)
         # Create data directory
@@ -320,9 +329,14 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
             click.echo(f"Workflow '{workflow_name}' installed successfully.")
 
         click.echo(f"Workflow '{workflow_name}' created successfully in '{new_workflow_dir}'.")
+    except click.ClickException:
+        raise
     except Exception as e:
-        logger.exception("An error occurred while creating the workflow: %s", e)
-        click.echo(f"An error occurred while creating the workflow: {e}")
+        logger.debug("An error occurred while creating the workflow", exc_info=True)
+        if created and new_workflow_dir is not None:
+            # Remove the partial workflow so that the same command can be run again.
+            shutil.rmtree(new_workflow_dir, ignore_errors=True)
+        raise click.ClickException(f"An error occurred while creating the workflow: {_describe_error(e)}") from e
 
 
 @click.command()
@@ -334,13 +348,14 @@ def reinstall_command(workflow_name):
     Args:
         workflow_name (str): The name of the workflow to reinstall.
     """
+    if not workflow_name or not workflow_name.strip():
+        raise click.BadParameter("Workflow name cannot be empty.")  # noqa: TRY003
     try:
         editable = get_repo_root() is not None
 
         workflow_dir = get_workflow_path_from_name(workflow_name)
         if not workflow_dir or not workflow_dir.exists():
-            click.echo(f"Workflow '{workflow_name}' does not exist.")
-            return
+            raise click.ClickException(f"Workflow '{workflow_name}' does not exist.")
 
         # Reinstall the package without changing directories
         click.echo(f"Reinstalling workflow '{workflow_name}'...")
@@ -356,9 +371,11 @@ def reinstall_command(workflow_name):
             return
 
         click.echo(f"Workflow '{workflow_name}' reinstalled successfully.")
+    except click.ClickException:
+        raise
     except Exception as e:
-        logger.exception("An error occurred while reinstalling the workflow: %s", e)
-        click.echo(f"An error occurred while reinstalling the workflow: {e}")
+        logger.debug("An error occurred while reinstalling the workflow", exc_info=True)
+        raise click.ClickException(f"An error occurred while reinstalling the workflow: {_describe_error(e)}") from e
 
 
 @click.command()
@@ -371,6 +388,8 @@ def delete_command(workflow_name: str, yes_flag: bool):
     Args:
         workflow_name (str): The name of the workflow to delete.
     """
+    if not workflow_name or not workflow_name.strip():
+        raise click.BadParameter("Workflow name cannot be empty.")  # noqa: TRY003
     try:
         if not yes_flag and not click.confirm(f"Are you sure you want to delete the workflow '{workflow_name}'?"):
             click.echo("Workflow deletion cancelled.")
@@ -378,6 +397,8 @@ def delete_command(workflow_name: str, yes_flag: bool):
         editable = get_repo_root() is not None
 
         workflow_dir = get_workflow_path_from_name(workflow_name)
+        if not workflow_dir or not workflow_dir.exists():
+            raise click.ClickException(f"Workflow '{workflow_name}' does not exist.")
         package_name = _get_module_name(workflow_name)
 
         if editable:
@@ -395,15 +416,13 @@ def delete_command(workflow_name: str, yes_flag: bool):
         click.echo(
             f"Workflow '{workflow_name}' (package '{package_name}') successfully uninstalled from python environment")
 
-        if not workflow_dir or not workflow_dir.exists():
-            click.echo(f"Unable to locate local files for {workflow_name}. Nothing will be deleted.")
-            return
-
         # Remove the workflow directory
         click.echo(f"Deleting workflow directory '{workflow_dir}'...")
         shutil.rmtree(workflow_dir)
 
         click.echo(f"Workflow '{workflow_name}' deleted successfully.")
+    except click.ClickException:
+        raise
     except Exception as e:
-        logger.exception("An error occurred while deleting the workflow: %s", e)
-        click.echo(f"An error occurred while deleting the workflow: {e}")
+        logger.debug("An error occurred while deleting the workflow", exc_info=True)
+        raise click.ClickException(f"An error occurred while deleting the workflow: {_describe_error(e)}") from e

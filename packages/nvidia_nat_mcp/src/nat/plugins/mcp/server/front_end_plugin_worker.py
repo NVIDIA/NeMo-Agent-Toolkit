@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
 from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.builder.function_base import FunctionBase
 from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import WorkflowBuilder
@@ -153,11 +154,14 @@ class MCPFrontEndPluginWorkerBase(ABC):
         if self.front_end_config.tool_names:
             logger.info("Filtering functions based on tool_names: %s", self.front_end_config.tool_names)
             filtered_functions: dict[str, Function] = {}
+            # An exact function name is not also a group prefix, otherwise `group__fn` would pull in `group__fn__x`
+            group_prefixes = tuple(f"{name}{FunctionGroup.SEPARATOR}" for name in self.front_end_config.tool_names
+                                   if name not in functions)
             for function_name, function in functions.items():
                 if function_name in self.front_end_config.tool_names:
                     # Treat current tool_names as function names, so check if the function name is in the list
                     filtered_functions[function_name] = function
-                elif any(function_name.startswith(f"{group_name}.") for group_name in self.front_end_config.tool_names):
+                elif function_name.startswith(group_prefixes):
                     # Treat tool_names as function group names, so check if the function name starts with the group name
                     filtered_functions[function_name] = function
                 else:

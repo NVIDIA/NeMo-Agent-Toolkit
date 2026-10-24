@@ -51,6 +51,7 @@ FAST_API_FRONT_END_CONFIG_ALL_VALUES = {
     "port": 8080,
     "reload": True,
     "workers": 4,
+    "max_concurrency": 16,
     "step_adaptor": {
         "mode": "custom", "custom_event_types": ["CUSTOM_START", "CUSTOM_END"]
     },
@@ -63,6 +64,18 @@ FAST_API_FRONT_END_CONFIG_ALL_VALUES = {
 }
 
 FAST_API_FRONT_END_CONFIG_REQUIRES_VALUES = {}
+
+
+@pytest.mark.parametrize("max_concurrency", [-1, 0, 1, 16])
+def test_max_concurrency(max_concurrency: int):
+    config = FastApiFrontEndConfig(max_concurrency=max_concurrency)
+    assert config.max_concurrency == max_concurrency
+
+
+@pytest.mark.parametrize("max_concurrency", [-2, 1.5, None, "invalid"])
+def test_max_concurrency_invalid(max_concurrency):
+    with pytest.raises(ValueError, match="max_concurrency"):
+        FastApiFrontEndConfig(max_concurrency=max_concurrency)
 
 
 def _test_model_instantiation(model_class, model_kwargs):
@@ -142,6 +155,7 @@ def test_fast_api_front_end_config(config_kwargs: dict):
         assert isinstance(model.reload, bool)
         assert isinstance(model.workers, int)
         assert model.workers >= 1
+        assert model.max_concurrency == 8
         assert isinstance(model.step_adaptor, StepAdaptorConfig)
         assert isinstance(model.workflow, FastApiFrontEndConfig.EndpointBase)
         assert isinstance(model.endpoints, list)

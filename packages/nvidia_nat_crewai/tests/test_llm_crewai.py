@@ -23,8 +23,12 @@ from pydantic import SecretStr
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
+from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
+from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.crewai.llm import azure_openai_crewai
+from nat.plugins.crewai.llm import litellm_crewai
 from nat.plugins.crewai.llm import nim_crewai
 from nat.plugins.crewai.llm import openai_crewai
 
@@ -134,6 +138,52 @@ class TestOpenAICrewAI:
         openai_cfg = OpenAIModelConfig(model_name="gpt-4o", verify_ssl=verify_ssl)
         async with openai_crewai(openai_cfg, mock_builder):
             mock_handle_verify_ssl.assert_called_once_with(openai_cfg)
+
+
+# ---------------------------------------------------------------------------
+# verify_ssl must not reach crewai.LLM
+# ---------------------------------------------------------------------------
+
+_AZURE_KWARGS = {"azure_deployment": "gpt-4o", "azure_endpoint": "https://test.openai.azure.com", "api_key": "test-key"}
+
+_VERIFY_SSL_CASES = [
+    pytest.param(nim_crewai, NIMModelConfig, {"model_name": "test-nim"}, id="nim"),
+    pytest.param(openai_crewai, OpenAIModelConfig, {"model_name": "gpt-4o"}, id="openai"),
+    pytest.param(litellm_crewai, LiteLlmModelConfig, {"model_name": "openai/gpt-4o"}, id="litellm"),
+    pytest.param(azure_openai_crewai, AzureOpenAIModelConfig, _AZURE_KWARGS, id="azure_openai"),
+]
+
+
+@patch.dict(os.environ)
+@patch("nat.plugins.crewai.llm._handle_litellm_verify_ssl", new=MagicMock())
+@patch("crewai.LLM")
+@pytest.mark.parametrize("wrapper, config_cls, config_kwargs", _VERIFY_SSL_CASES)
+@pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+async def test_verify_ssl_not_forwarded_to_llm(mock_llm, wrapper, config_cls, config_kwargs, verify_ssl, mock_builder):
+    """verify_ssl is applied through _handle_litellm_verify_ssl.
+
+    crewai.LLM sends unknown kwargs with every request, so the native OpenAI client raises a TypeError from
+    create() and the LiteLLM path puts verify_ssl into the request body.
+    """
+    cfg = config_cls(**config_kwargs, verify_ssl=verify_ssl)
+    async with wrapper(cfg, mock_builder):
+        pass
+    assert "verify_ssl" not in mock_llm.call_args.kwargs
+
+
+@patch.dict(os.environ)
+@patch("nat.plugins.crewai.llm._handle_litellm_verify_ssl", new=MagicMock())
+@patch("crewai.LLM")
+@pytest.mark.parametrize("wrapper, config_cls, config_kwargs", _VERIFY_SSL_CASES)
+async def test_verify_ssl_not_forwarded_after_round_trip(mock_llm, wrapper, config_cls, config_kwargs, mock_builder):
+    """`nat serve` reloads a round-trip dump of the config, which marks verify_ssl as set."""
+    cfg = config_cls(**config_kwargs)
+    cfg = config_cls.model_validate(cfg.model_dump(mode="json", by_alias=True, round_trip=True))
+    assert "verify_ssl" in cfg.model_fields_set
+
+    async with wrapper(cfg, mock_builder):
+        pass
+    assert "verify_ssl" not in mock_llm.call_args.kwargs
 
 
 # ---------------------------------------------------------------------------
