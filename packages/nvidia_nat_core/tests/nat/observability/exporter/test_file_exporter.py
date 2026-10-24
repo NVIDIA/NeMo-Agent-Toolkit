@@ -28,6 +28,7 @@ from nat.data_models.invocation_node import InvocationNode
 from nat.observability.exporter.file_exporter import FileExporter
 from nat.observability.exporter.raw_exporter import RawExporter
 from nat.observability.mixin.file_mixin import FileExportMixin
+from nat.observability.mixin.file_mode import FileMode
 from nat.observability.processor.intermediate_step_serializer import IntermediateStepSerializer
 
 
@@ -194,6 +195,23 @@ class TestFileExporterFunctionality:
             assert len(lines) == 2
             assert lines[0].strip() == '{"line": 1}'
             assert lines[1].strip() == '{"line": 2}'
+
+    async def test_overwrite_mode_clears_file_once_across_runs(self, mock_context_state, temp_file):
+        """Each workflow run exports through an isolated copy, so overwrite mode must clear the file only once."""
+        with open(temp_file, "w", encoding="utf-8") as f:
+            f.write('{"stale": true}\n')
+
+        exporter = FileExporter(context_state=mock_context_state,
+                                output_path=temp_file,
+                                project="test_project",
+                                mode=FileMode.OVERWRITE)
+
+        for run in range(3):
+            run_exporter = exporter.create_isolated_instance(mock_context_state)
+            await run_exporter.export_processed(f'{{"run": {run}}}')
+
+        with open(temp_file, encoding="utf-8") as f:
+            assert f.read() == '{"run": 0}\n{"run": 1}\n{"run": 2}\n'
 
     @patch('aiofiles.open')
     async def test_export_processed_file_error_handling(self, mock_aiofiles_open, mock_context_state,
