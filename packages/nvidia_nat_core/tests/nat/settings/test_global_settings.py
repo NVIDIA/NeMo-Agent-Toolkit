@@ -16,6 +16,7 @@
 import logging
 
 import pytest
+import yaml
 
 from nat.data_models.common import get_secret_value
 from nat.settings.global_settings import GlobalSettings
@@ -51,6 +52,29 @@ def test_saved_channel_tokens_survive_reload(rest_registry_channel: dict, global
     loaded = Settings.from_file()
     assert list(loaded.channels) == ["rest_channel"]
     assert get_secret_value(loaded.channels["rest_channel"].token) == "test-token"
+
+
+@pytest.mark.usefixtures("config_dir")
+def test_override_settings_applies_the_config_file(tmp_path,
+                                                   global_settings: Settings,
+                                                   rest_registry_channel: dict,
+                                                   local_registry_channel: dict):
+    """A --config_file passed to the registry commands must override the saved channel settings."""
+    global_settings.update_settings(rest_registry_channel)
+    assert list(global_settings.channels) == ["rest_channel"]
+
+    override_file = tmp_path / "override.yml"
+    override_file.write_text(yaml.dump({**local_registry_channel, "fallback_timezone": "system"}))
+
+    global_settings.override_settings(str(override_file))
+
+    assert list(global_settings.channels) == ["local_channel"]
+    assert global_settings.fallback_timezone == "system"
+
+    # The override applies to the current command only; it must not be persisted.
+    on_disk = Settings.from_file()
+    assert list(on_disk.channels) == ["rest_channel"]
+    assert on_disk.fallback_timezone == "utc"
 
 
 @pytest.mark.usefixtures("config_dir")
