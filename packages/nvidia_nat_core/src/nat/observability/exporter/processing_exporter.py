@@ -555,14 +555,21 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             _, still_running = await asyncio.wait(set(self._tasks), timeout=_RUN_END_WAIT_SECONDS)
             if still_running:
                 logger.debug("%s: %d export tasks still running at run end", self.name, len(still_running))
+        if self.is_isolated_instance:
+            # in pipeline order: an upstream flush can route items into a downstream processor's buffer
+            for processor in getattr(self, '_processors', []):
+                flush_method = getattr(processor, 'flush', None)
+                if inspect.iscoroutinefunction(flush_method):
+                    try:
+                        await flush_method()
+                    except Exception as e:
+                        logger.exception("Error flushing processor %s: %s", processor.__class__.__name__, e)
+            await super()._cleanup()
+            return
+
         shutdown_tasks = []
         for processor in getattr(self, '_processors', []):
-            if self.is_isolated_instance:
-                shutdown_method = getattr(processor, 'flush', None)
-                if not inspect.iscoroutinefunction(shutdown_method):
-                    shutdown_method = None
-            else:
-                shutdown_method = getattr(processor, 'shutdown', None)
+            shutdown_method = getattr(processor, 'shutdown', None)
             if shutdown_method:
                 logger.debug("Shutting down processor: %s", processor.__class__.__name__)
                 shutdown_tasks.append(shutdown_method())
