@@ -27,6 +27,7 @@ import functools
 import gc
 import inspect
 import logging
+import math
 import re
 import threading
 import time
@@ -261,7 +262,7 @@ def _retry_after_seconds(exc: BaseException) -> float | None:
     if value is not None:
         try:
             wait_ms = float(value)
-            if wait_ms >= 0:
+            if math.isfinite(wait_ms) and wait_ms >= 0:
                 return wait_ms / 1000
         except ValueError:
             pass
@@ -271,7 +272,7 @@ def _retry_after_seconds(exc: BaseException) -> float | None:
         return None
     try:
         wait = float(value)
-        return wait if wait >= 0 else None
+        return wait if math.isfinite(wait) and wait >= 0 else None
     except ValueError:
         pass
     try:
