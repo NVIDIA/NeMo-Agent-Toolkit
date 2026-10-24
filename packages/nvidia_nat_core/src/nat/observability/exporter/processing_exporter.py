@@ -542,10 +542,13 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         Each processor is responsible for its own cleanup, including routing
         any final batches through the remaining pipeline via their done callbacks.
         """
-        # Shutdown all processors that support it
+        # Shutdown all processors that support it. A per-run (isolated) copy shares its processors with the
+        # original exporter, so it only flushes them: shutting a shared batcher down would make every later run
+        # export one item per call.
         shutdown_tasks = []
         for processor in getattr(self, '_processors', []):
-            shutdown_method = getattr(processor, 'shutdown', None)
+            flush_method = getattr(processor, 'flush', None) if self.is_isolated_instance else None
+            shutdown_method = flush_method or getattr(processor, 'shutdown', None)
             if shutdown_method:
                 logger.debug("Shutting down processor: %s", processor.__class__.__name__)
                 shutdown_tasks.append(shutdown_method())

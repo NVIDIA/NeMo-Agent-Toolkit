@@ -228,6 +228,24 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
         async with self._batch_lock:
             return await self._create_batch()
 
+    async def flush(self) -> None:
+        """Route the queued items through the rest of the pipeline now, and keep batching afterwards.
+
+        Unlike `shutdown`, the processor stays usable. Per-run exporter copies share their processors with the
+        original exporter, so a finished run flushes instead of shutting the shared processor down.
+        """
+        async with self._batch_lock:
+            if not self._batch_queue:
+                return
+            batch = await self._create_batch()
+        if self._done_callback is not None:
+            try:
+                await self._done_callback(batch)
+            except Exception as e:
+                logger.exception("Error routing flushed batch through pipeline: %s", e)
+        else:
+            logger.warning("Flushed batch of %d items but no pipeline callback set", len(batch))
+
     async def shutdown(self) -> None:
         """Shutdown the processor and ensure all items are processed.
 
