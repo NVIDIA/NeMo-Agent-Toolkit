@@ -22,6 +22,7 @@ import pytest
 
 from nat.data_models.dataset_handler import EvalDatasetCustomConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
+from nat.data_models.dataset_handler import EvalDatasetJsonlConfig
 from nat.data_models.dataset_handler import EvalDatasetStructureConfig
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
@@ -521,6 +522,19 @@ def test_json_dataset_keeps_values_as_written(tmp_path: Path):
     items = dataset_handler.get_eval_input_from_dataset("").eval_input_items
 
     assert [(item.id, item.expected_output_obj) for item in items] == [("001", "90210"), ("002", "0617")]
+    assert [item.full_dataset_entry for item in items] == records
+
+
+@pytest.mark.parametrize("separator, trailer", [("\n", "\n\n"), ("\n\n", "\n"), ("\n  \t\n", "\n")],
+                         ids=["trailing_blank_line", "blank_line_between_records", "whitespace_only_line"])
+def test_jsonl_dataset_skips_blank_lines(tmp_path: Path, separator: str, trailer: str):
+    records = [{"id": "1", "question": "q1", "answer": "a1"}, {"id": "2", "question": "q2", "answer": "a2"}]
+    dataset_path = tmp_path / "dataset.jsonl"
+    dataset_path.write_text(separator.join(json.dumps(record) for record in records) + trailer)
+    dataset_handler = DatasetHandler(EvalDatasetJsonlConfig(file_path=dataset_path), reps=1, concurrency=1)
+
+    items = dataset_handler.get_eval_input_from_dataset("").eval_input_items
+
     assert [item.full_dataset_entry for item in items] == records
 
 
