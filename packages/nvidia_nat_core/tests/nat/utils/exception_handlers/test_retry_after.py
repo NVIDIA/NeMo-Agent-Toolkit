@@ -173,3 +173,53 @@ def test_retry_mixin_has_a_max_wait_with_a_60_second_default():
     assert RetryMixin().retry_max_wait == 60.0
     with pytest.raises(ValueError):
         RetryMixin(retry_max_wait=-1)
+
+
+@pytest.mark.parametrize("headers, expected", [({
+    "Retry-After": "0"
+}, 0.0), ({
+    "retry-after-ms": "0"
+}, 0.0)],
+                         ids=["zero_seconds", "zero_ms"])
+def test_a_zero_retry_after_means_no_wait(headers, expected):
+    assert _retry_after_seconds(RateLimited(headers)) == expected
+
+
+def test_odd_response_objects_have_no_retry_after():
+    from unittest.mock import MagicMock
+
+    error = RateLimited()
+    error.response = MagicMock()
+    assert _retry_after_seconds(error) is None
+
+
+async def test_a_date_without_a_timezone_is_still_honored(sleeps):
+    # RFC 2822 "-0000" parses to a naive datetime
+    client = patch_with_retry(Client(RateLimited({"Retry-After": "Wed, 21 Oct 2099 07:28:00 -0000"})),
+                              retries=3,
+                              retry_codes=[429],
+                              max_wait=7)
+    assert await client.ainvoke() == "ok"
+    assert sleeps == [7]
+
+
+async def test_a_malformed_response_falls_back_to_backoff(sleeps):
+    """Reading the header must never cost the retry itself."""
+    error = RateLimited()
+    error.response = {"ResponseMetadata": "not-a-dict"}
+    client = patch_with_retry(Client(error), retries=3, retry_codes=[429])
+    assert await client.ainvoke() == "ok"
+    assert sleeps == [0.25]
+
+
+async def test_max_wait_below_the_default_caps_the_wait(sleeps):
+    client = patch_with_retry(Client(RateLimited({"Retry-After": "30"})), retries=3, retry_codes=[429], max_wait=5)
+    assert await client.ainvoke() == "ok"
+    assert sleeps == [5]
+
+
+def test_retry_max_wait_rejects_infinity():
+    from nat.data_models.retry_mixin import RetryMixin
+
+    with pytest.raises(ValueError):
+        RetryMixin(retry_max_wait=float("inf"))
