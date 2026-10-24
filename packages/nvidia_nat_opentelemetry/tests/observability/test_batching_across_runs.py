@@ -251,3 +251,40 @@ async def test_a_run_flushes_processors_in_pipeline_order():
     await exporter.create_isolated_instance(ContextState())._cleanup()
 
     assert events[:4] == ["upstream start", "upstream end", "downstream start", "downstream end"]
+
+
+async def test_spans_still_on_their_way_when_the_builder_exits_are_exported(monkeypatch):
+    """The builder's exit drains the batcher its per-run copies shared, even though the original never started."""
+    from nat.observability.exporter import processing_exporter
+
+    monkeypatch.setattr(processing_exporter, "_RUN_END_WAIT_SECONDS", 0.05)
+    config = Config.model_validate({
+        "general": {
+            "telemetry": {
+                "tracing": {
+                    "recording": {
+                        "_type": "batching_test_otel", "slow_first_processor": True, "slow_processor_delay": 0.3
+                    }
+                }
+            }
+        },
+        "functions": {
+            "tool": {
+                "_type": "batching_test_tool"
+            }
+        },
+        "workflow": {
+            "_type": "batching_test_workflow"
+        },
+    })
+    async with WorkflowBuilder.from_config(config=config) as builder:
+        session_manager = await SessionManager.create(config=config, shared_builder=builder, max_concurrency=1)
+        try:
+            async with session_manager.session() as session:
+                async with session.run("hi") as runner:
+                    assert await runner.result(to_type=str) == "hi"
+        finally:
+            await session_manager.shutdown()
+    await asyncio.sleep(0.6)  # the late spans reach the batcher after the builder has closed
+
+    assert sum(EXPORT_CALLS) == SPANS_PER_RUN
