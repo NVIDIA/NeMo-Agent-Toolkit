@@ -259,6 +259,9 @@ async def a365_telemetry_exporter(config: A365TelemetryExporter, builder: Builde
         config.cluster_category,
     )
 
+    if "batch_size" in config.model_fields_set and config.batch_size != 1:
+        logger.warning("A365 telemetry exports spans one at a time; batch_size=%d is ignored", config.batch_size)
+
     exporter = A365OtelExporter(
         agent_id=config.agent_id,
         tenant_id=config.tenant_id,

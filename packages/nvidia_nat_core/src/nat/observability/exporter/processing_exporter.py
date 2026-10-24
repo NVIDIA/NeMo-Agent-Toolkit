@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import inspect
 import logging
 from abc import abstractmethod
 from collections.abc import Coroutine
@@ -34,6 +35,9 @@ PipelineInputT = TypeVar("PipelineInputT")
 PipelineOutputT = TypeVar("PipelineOutputT")
 
 logger = logging.getLogger(__name__)
+
+# How long a finished run waits for its export tasks before flushing the shared processors
+_RUN_END_WAIT_SECONDS = 5.0
 
 
 class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter, TypeIntrospectionMixin):
@@ -542,16 +546,23 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         Each processor is responsible for its own cleanup, including routing
         any final batches through the remaining pipeline via their done callbacks.
         """
-        # Shutdown all processors that support it. A per-run (isolated) copy shares its processors with the
-        # original exporter, so it only flushes them: shutting a shared batcher down would make every later run
-        # export one item per call. It first waits for the run's export tasks, so spans still on their way to
-        # the batcher are in that flush instead of being left in the shared queue.
-        if self.is_isolated_instance:
-            await self.wait_for_tasks()
+        # A per-run (isolated) copy shares its processors with the original exporter, so it never shuts them
+        # down (a shut-down batcher would export every later run one item per call); it only flushes the ones
+        # that can. It first waits for the run's export tasks, so spans still on their way to the batcher are in
+        # that flush. asyncio.wait doesn't cancel the ones still running at the timeout: their spans reach the
+        # batcher later and leave with a later batch.
+        if self.is_isolated_instance and self._tasks:
+            _, still_running = await asyncio.wait(set(self._tasks), timeout=_RUN_END_WAIT_SECONDS)
+            if still_running:
+                logger.debug("%s: %d export tasks still running at run end", self.name, len(still_running))
         shutdown_tasks = []
         for processor in getattr(self, '_processors', []):
-            flush_method = getattr(processor, 'flush', None) if self.is_isolated_instance else None
-            shutdown_method = flush_method or getattr(processor, 'shutdown', None)
+            if self.is_isolated_instance:
+                shutdown_method = getattr(processor, 'flush', None)
+                if not inspect.iscoroutinefunction(shutdown_method):
+                    shutdown_method = None
+            else:
+                shutdown_method = getattr(processor, 'shutdown', None)
             if shutdown_method:
                 logger.debug("Shutting down processor: %s", processor.__class__.__name__)
                 shutdown_tasks.append(shutdown_method())
