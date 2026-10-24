@@ -30,6 +30,7 @@ from nat.data_models.span import Span
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.processor.batching_processor import BatchingProcessor
 from nat.observability.processor.processor import Processor
+from nat.plugins.opentelemetry.otel_span import OtelSpan
 from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 from nat.runtime.session import SessionManager
 
@@ -64,9 +65,26 @@ class ShutdownOnlyProcessor(Processor[Span, Span]):
         self.shut_down = True
 
 
+class FlushRecorder(Processor[Span, Span]):
+    """A buffering processor that records when its flush starts and ends."""
+
+    def __init__(self, name: str, events: list[str]):
+        super().__init__()
+        self._name = name
+        self._events = events
+
+    async def process(self, item: Span) -> Span:
+        return item
+
+    async def flush(self) -> None:
+        self._events.append(f"{self._name} start")
+        await asyncio.sleep(0.01)
+        self._events.append(f"{self._name} end")
+
+
 class RecordingOtelExporter(OtelSpanExporter):
 
-    async def export_otel_spans(self, spans):
+    async def export_otel_spans(self, spans: list[OtelSpan]):
         EXPORT_CALLS.append(len(spans))
 
 
@@ -221,3 +239,15 @@ async def test_a_run_never_shuts_down_a_shared_processor():
 
     await exporter._cleanup()
     assert processor.shut_down
+
+
+async def test_a_run_flushes_processors_in_pipeline_order():
+    """An upstream flush can forward items to a downstream buffer, so the downstream one flushes after it."""
+    events: list[str] = []
+    exporter = RecordingOtelExporter(batch_size=100, flush_interval=3600.0)
+    exporter.add_processor(FlushRecorder("downstream", events), position=0)
+    exporter.add_processor(FlushRecorder("upstream", events), position=0)
+
+    await exporter.create_isolated_instance(ContextState())._cleanup()
+
+    assert events[:4] == ["upstream start", "upstream end", "downstream start", "downstream end"]

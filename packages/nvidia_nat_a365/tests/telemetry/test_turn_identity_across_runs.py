@@ -83,12 +83,14 @@ def register_components_fixture():
 
 
 async def test_concurrent_turns_keep_their_own_identity():
-    exported: list[tuple[str, str]] = []  # (agent id on the span, turn that produced it)
+    exported: list[tuple[str, str, str]] = []  # (agent id and tenant id on the span, turn that produced it)
 
     def export(readable_spans):
         for span in readable_spans:
             turn = next(value for value in span.attributes.values() if isinstance(value, str) and "turn-" in value)
-            exported.append((span.attributes[a365_exporter.GEN_AI_AGENT_ID_KEY], turn.split("turn-")[1][0]))
+            exported.append((span.attributes[a365_exporter.GEN_AI_AGENT_ID_KEY],
+                             span.attributes[a365_exporter.TENANT_ID_KEY],
+                             turn.split("turn-")[1][0]))
         return SpanExportResult.SUCCESS
 
     config = Config.model_validate({
@@ -129,4 +131,5 @@ async def test_concurrent_turns_keep_their_own_identity():
                 await session_manager.shutdown()
 
     assert len(exported) == ROUNDS * 2 * 5  # workflow, its function and three tool calls per turn
-    assert [(agent, turn) for agent, turn in exported if agent != f"agent-{turn}"] == []
+    assert [(agent, tenant, turn) for agent, tenant, turn in exported
+            if agent != f"agent-{turn}" or tenant != f"tenant-{turn}"] == []
