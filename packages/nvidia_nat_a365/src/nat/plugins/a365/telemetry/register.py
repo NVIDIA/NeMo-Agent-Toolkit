@@ -199,12 +199,10 @@ class A365TelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name=
       Hosting multiple A365 agents with distinct app registrations in the same
       process is not currently supported — only the agent matching the auth
       provider's ``client_id`` will pass A365's token-validation check.
-    - **Cross-turn batching**: identity is read at export time from a contextvar.
-      ``BatchingProcessor`` schedules a flush task on first enqueue; that task
-      inherits a copy of the contextvar at creation time. Spans queued by later
-      turns into the same batch are exported under the first turn's identity.
-      For single-bot deployments this is invisible; for multi-bot deployments
-      it can intermittently misattribute telemetry.
+    - **No batching**: identity is read at export time from a contextvar, so a
+      batch holding spans of several turns would be exported under one turn's
+      identity. Spans are therefore exported one at a time, and ``batch_size``
+      is ignored until the identity is stamped on each span when it is queued.
     """
 
     agent_id: str | None = Field(
