@@ -106,9 +106,10 @@ class LayeredConfig:
             self.overrides[path] = value
             self._effective_config = None
 
-            log_msg = f"Successfully set override for {path} with value: {value}"
+            # The value is deliberately left out: it can be a secret, or an expanded environment variable.
+            log_msg = f"Successfully set override for {path}"
             if not isinstance(original_value, _Placeholder):
-                log_msg += f" with type {type(value)})"
+                log_msg += f" with type {type(value)}"
 
             logger.info(log_msg)
 

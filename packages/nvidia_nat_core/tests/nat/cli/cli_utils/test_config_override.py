@@ -150,3 +150,16 @@ def test_load_and_override_config_does_not_log_expanded_secrets(tmp_path, monkey
     assert effective_config["llms"]["nim_llm"]["temperature"] == 0.7
     assert "llms.nim_llm.temperature" in caplog.text
     assert secret not in caplog.text
+
+
+def test_set_override_does_not_log_the_override_value(caplog):
+    """The path is logged for traceability, but a value passed on the command line can be a secret."""
+    secret = "nvapi-cli-secret-value"
+    layered_config = config_override.LayeredConfig({"llms": {"nim_llm": {"api_key": "placeholder"}}})
+
+    with caplog.at_level("INFO", logger=config_override.logger.name):
+        layered_config.set_override("llms.nim_llm.api_key", secret)
+
+    assert layered_config.get_effective_config()["llms"]["nim_llm"]["api_key"] == secret
+    assert "llms.nim_llm.api_key" in caplog.text
+    assert secret not in caplog.text
