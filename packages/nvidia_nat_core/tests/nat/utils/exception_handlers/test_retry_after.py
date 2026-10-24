@@ -47,19 +47,31 @@ class Throttled(Exception):
         self.response = {"Error": {"Code": "ThrottlingException"}, "ResponseMetadata": {"HTTPHeaders": headers}}
 
 
-@pytest.mark.parametrize(
-    "exc, expected",
-    [
-        (RateLimited({"Retry-After": "3"}), 3.0),
-        (RateLimited({"retry-after": "1.5"}), 1.5),
-        (RateLimited({"retry-after-ms": "1500"}), 1.5),
-        (Throttled({"retry-after": "2"}), 2.0),
-        (RateLimited({"Retry-After": "soon"}), None),
-        (RateLimited({"Retry-After": "-5"}), None),
-        (RateLimited({}), None),
-        (Exception("no response at all"), None),
-    ],
-    ids=["seconds", "lowercase_fractional", "milliseconds", "botocore", "garbage", "negative", "missing", "plain"])
+@pytest.mark.parametrize("exc, expected",
+                         [
+                             (RateLimited({"Retry-After": "3"}), 3.0),
+                             (RateLimited({"retry-after": "1.5"}), 1.5),
+                             (RateLimited({"retry-after-ms": "1500"}), 1.5),
+                             (Throttled({"retry-after": "2"}), 2.0),
+                             (RateLimited({"Retry-After": "soon"}), None),
+                             (RateLimited({"Retry-After": "-5"}), None),
+                             (RateLimited({
+                                 "retry-after-ms": "-1", "Retry-After": "30"
+                             }), 30.0),
+                             (RateLimited({}), None),
+                             (Exception("no response at all"), None),
+                         ],
+                         ids=[
+                             "seconds",
+                             "lowercase_fractional",
+                             "milliseconds",
+                             "botocore",
+                             "garbage",
+                             "negative",
+                             "negative_ms_falls_back",
+                             "missing",
+                             "plain"
+                         ])
 def test_retry_after_seconds(exc, expected):
     assert _retry_after_seconds(exc) == expected
 
