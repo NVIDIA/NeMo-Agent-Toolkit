@@ -260,9 +260,11 @@ def _retry_after_seconds(exc: BaseException) -> float | None:
     if value is not None:
         try:
             wait_ms = float(value)
-            return wait_ms / 1000 if wait_ms >= 0 else None
+            if wait_ms >= 0:
+                return wait_ms / 1000
         except ValueError:
             pass
+        # an unusable retry-after-ms falls back to Retry-After
     value = headers.get("retry-after")
     if value is None:
         return None
