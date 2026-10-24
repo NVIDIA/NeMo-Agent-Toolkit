@@ -58,6 +58,10 @@ class Throttled(Exception):
                              (RateLimited({
                                  "retry-after-ms": "-1", "Retry-After": "30"
                              }), 30.0),
+                             (RateLimited({"Retry-After": "inf"}), None),
+                             (RateLimited({
+                                 "retry-after-ms": "Infinity", "Retry-After": "30"
+                             }), 30.0),
                              (RateLimited({}), None),
                              (Exception("no response at all"), None),
                          ],
@@ -69,6 +73,8 @@ class Throttled(Exception):
                              "garbage",
                              "negative",
                              "negative_ms_falls_back",
+                             "infinite",
+                             "infinite_ms_falls_back",
                              "missing",
                              "plain"
                          ])
