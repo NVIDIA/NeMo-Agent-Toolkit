@@ -300,8 +300,12 @@ async def test_session_manager_creation_for_workflow_vs_function():
         assert function_call.kwargs['entry_function'] == "echo_function"
 
 
-async def test_tool_names_accepts_function_group_name():
-    """Test that a function group name in tool_names publishes every function of that group."""
+@pytest.mark.parametrize(("tool_names", "expected"),
+                         [(["calculator"], {"calculator__add", "calculator__add__internal", "calculator__subtract"}),
+                          (["calculator__add"], {"calculator__add"})],
+                         ids=["group", "exact_function"])
+async def test_tool_names_accepts_function_group_name(tool_names: list[str], expected: set[str]):
+    """Test that a group name in tool_names publishes the whole group and an exact function name only that function."""
     from unittest.mock import AsyncMock
     from unittest.mock import MagicMock
     from unittest.mock import patch
@@ -310,13 +314,14 @@ async def test_tool_names_accepts_function_group_name():
     from nat.builder.workflow_builder import WorkflowBuilder
     from nat.plugins.mcp.server.front_end_plugin_worker import MCPFrontEndPluginWorker
 
-    config = Config(general=GeneralConfig(front_end=MCPFrontEndConfig(tool_names=["calculator"])),
+    config = Config(general=GeneralConfig(front_end=MCPFrontEndConfig(tool_names=tool_names)),
                     workflow=EchoFunctionConfig())
     worker = MCPFrontEndPluginWorker(config)
 
     sep = FunctionGroup.SEPARATOR
     all_functions = {
         f"calculator{sep}add": MagicMock(),
+        f"calculator{sep}add{sep}internal": MagicMock(),
         f"calculator{sep}subtract": MagicMock(),
         f"calculator_extra{sep}add": MagicMock(),
         "current_datetime": MagicMock(),
@@ -329,4 +334,4 @@ async def test_tool_names_accepts_function_group_name():
                 await worker._default_add_routes(MagicMock(), MagicMock(spec=WorkflowBuilder))
 
     published = {call.kwargs['entry_function'] for call in mock_session_create.call_args_list}
-    assert published == {f"calculator{sep}add", f"calculator{sep}subtract"}
+    assert published == expected

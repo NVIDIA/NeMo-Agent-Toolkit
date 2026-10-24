@@ -304,13 +304,20 @@ def test_fastmcp_health_endpoint():
         assert data["server_name"] == "Test Server"
 
 
-async def test_fastmcp_tool_names_accepts_function_group_name(monkeypatch: pytest.MonkeyPatch):
-    config = Config(general=GeneralConfig(front_end=FastMCPFrontEndConfig(tool_names=["calculator"])))
+@pytest.mark.parametrize(("tool_names", "expected"),
+                         [(["calculator"], {"calculator__add", "calculator__add__internal", "calculator__subtract"}),
+                          (["calculator__add"], {"calculator__add"})],
+                         ids=["group", "exact_function"])
+async def test_fastmcp_tool_names_accepts_function_group_name(monkeypatch: pytest.MonkeyPatch,
+                                                              tool_names: list[str],
+                                                              expected: set[str]):
+    config = Config(general=GeneralConfig(front_end=FastMCPFrontEndConfig(tool_names=tool_names)))
     worker = FastMCPFrontEndPluginWorker(config)
 
     sep = FunctionGroup.SEPARATOR
     all_functions = {
         f"calculator{sep}add": _RegularFunction(),
+        f"calculator{sep}add{sep}internal": _RegularFunction(),
         f"calculator{sep}subtract": _RegularFunction(),
         f"calculator_extra{sep}add": _RegularFunction(),
         "current_datetime": _RegularFunction(),
@@ -323,4 +330,4 @@ async def test_fastmcp_tool_names_accepts_function_group_name(monkeypatch: pytes
     await worker._default_add_routes(FastMCP("Test Server"), SimpleNamespace(build=AsyncMock()))
 
     published = {call.kwargs["entry_function"] for call in session_create.call_args_list}
-    assert published == {f"calculator{sep}add", f"calculator{sep}subtract"}
+    assert published == expected

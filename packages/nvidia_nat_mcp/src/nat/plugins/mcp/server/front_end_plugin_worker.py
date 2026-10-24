@@ -154,7 +154,9 @@ class MCPFrontEndPluginWorkerBase(ABC):
         if self.front_end_config.tool_names:
             logger.info("Filtering functions based on tool_names: %s", self.front_end_config.tool_names)
             filtered_functions: dict[str, Function] = {}
-            group_prefixes = tuple(f"{name}{FunctionGroup.SEPARATOR}" for name in self.front_end_config.tool_names)
+            # An exact function name is not also a group prefix, otherwise `group__fn` would pull in `group__fn__x`
+            group_prefixes = tuple(f"{name}{FunctionGroup.SEPARATOR}" for name in self.front_end_config.tool_names
+                                   if name not in functions)
             for function_name, function in functions.items():
                 if function_name in self.front_end_config.tool_names:
                     # Treat current tool_names as function names, so check if the function name is in the list
