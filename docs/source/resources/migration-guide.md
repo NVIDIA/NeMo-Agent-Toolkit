@@ -52,6 +52,27 @@ Use NeMo Helix to evaluate agent behavior, optimize prompts and configurations, 
 
 ### v1.9.0
 
+#### Ragas Removal and Dependency Updates
+
+The `nvidia-nat-ragas` package and `nvidia-nat[ragas]` extra have been removed. Replace `_type: ragas` with
+`tunable_rag_evaluator`, replace `metric` with an explicit `judge_llm_prompt`, and install
+`nvidia-nat[eval,langchain]`. Enable `include_context` for groundedness and context relevance.
+The ATIF lane remains available through `enable_atif_evaluator`. Scores use different prompts and
+are not directly comparable with historical Ragas scores. Establish new evaluation and optimizer thresholds.
+See [Migrating from Ragas](../improve-workflows/evaluate.md#migrating-from-ragas).
+
+The dependency update also moves Mem0 to 2.x, Google ADK to 2.x, Datasets to 5.x, Cryptography to 50.x,
+and Starlette to 1.x. CrewAI and LlamaIndex use their latest available releases at the time of the update.
+
+CrewAI 1.15.28 requires MCP 1.28.x. The toolkit uses that declared range without a uv override.
+
+Mem0 2.x resolves organization and project membership from the API key. Explicit `org_id` and
+`project_id` settings must match the key's membership. Memory searches now use nested entity filters;
+the toolkit adapter preserves the required user scope when combining additional filters.
+The adapter manages user-scoped memories. Mem0 stores agent memories in a separate entity scope,
+so `agent_id` search filters now raise an explicit error. To select a user's memories by agent,
+store the agent identifier in memory metadata and search with a metadata filter.
+
 #### Redis Package Migration
 
 Redis memory and object store support moved from the in-repository `nvidia-nat-redis` implementation to the Redis-maintained `nemo-agent-toolkit-redis` package.

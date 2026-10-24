@@ -64,7 +64,7 @@ dependencies = [
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 full = [
   "boto3~=1.35",
-  "datasets~=4.4",
+  "datasets~=5.1",
   # Enables the `nat eval` CLI workflow runtime. Keep in `full` so base eval stays ATIF-only.
   "nvidia-nat-core == {version}",
   "openpyxl~=3.1",
@@ -73,7 +73,7 @@ full = [
 ]
 test = [
   "boto3~=1.35",
-  "datasets~=4.4",
+  "datasets~=5.1",
   "nvidia-nat-core[async_endpoints] == {version}",
   "nvidia-nat-test == {version}",
   "openpyxl~=3.1",
