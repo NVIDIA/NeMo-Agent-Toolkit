@@ -29,6 +29,7 @@ from nat.data_models.function import FunctionBaseConfig
 from nat.runtime.session import SessionManager
 
 WORKFLOW_LOGGER = "nat.test_logging_config_level"
+USER_PACKAGE_LOGGER = "my_workflow_package"  # a workflow package outside `nat`
 
 
 class LogsAtEveryLevelConfig(FunctionBaseConfig, name="logging_config_level_test_workflow"):
@@ -44,6 +45,7 @@ def register_workflow_fixture():
         async def _inner(text: str) -> str:
             logging.getLogger(WORKFLOW_LOGGER).debug("debug-record")
             logging.getLogger(WORKFLOW_LOGGER).info("info-record")
+            logging.getLogger(USER_PACKAGE_LOGGER).debug("user-package-debug-record")
             return text
 
         yield FunctionInfo.from_fn(_inner, description="logs at DEBUG and INFO")
@@ -68,8 +70,8 @@ def cli_console_fixture():
         root_logger.handlers = saved[2]
 
 
-async def _run(log_file: Path, *, with_console: bool):
-    logging_config = {"file": {"_type": "file", "path": str(log_file), "level": "DEBUG"}}
+async def _run(log_file: Path, *, with_console: bool, file_level: str = "DEBUG"):
+    logging_config = {"file": {"_type": "file", "path": str(log_file), "level": file_level}}
     if with_console:
         logging_config["console"] = {"_type": "console", "level": "WARN"}
     config = Config.model_validate({
@@ -100,15 +102,24 @@ async def test_a_debug_file_handler_gets_debug_records(tmp_path: Path, cli_conso
     content = log_file.read_text(encoding="utf-8")
     assert "debug-record" in content
     assert "info-record" in content
+    assert "user-package-debug-record" in content
 
 
 async def test_the_cli_console_keeps_its_level(tmp_path: Path, cli_console: io.StringIO):
-    """A DEBUG file doesn't turn the console the CLI set up at INFO into a DEBUG console."""
-    await _run(tmp_path / "workflow.log", with_console=False)
+    """A DEBUG file doesn't turn the console the CLI set up at INFO into a DEBUG console, or lower other handlers."""
+    warning_output = io.StringIO()
+    warning_handler = logging.StreamHandler(warning_output)
+    warning_handler.setLevel(logging.WARNING)
+    logging.getLogger().addHandler(warning_handler)
+    try:
+        await _run(tmp_path / "workflow.log", with_console=False)
+    finally:
+        logging.getLogger().removeHandler(warning_handler)
 
     console_output = cli_console.getvalue()
     assert "info-record" in console_output
     assert "debug-record" not in console_output
+    assert warning_output.getvalue() == ""
 
 
 @pytest.mark.parametrize("with_console", [True, False], ids=["file_and_console", "file_only"])
@@ -123,3 +134,22 @@ async def test_logger_levels_are_restored_when_the_builder_exits(tmp_path: Path,
     assert logging.getLogger("nat").level == logging.INFO
     assert set(root_logger.handlers) == set(handlers_before)
     assert all(handler.level == logging.NOTSET for handler in handlers_before)
+
+
+async def test_a_handler_above_the_cli_level_changes_no_levels(tmp_path: Path, cli_console: io.StringIO):
+    """With --log-level DEBUG and a WARNING file, the root logger stays at DEBUG and other handlers keep theirs."""
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    logging.getLogger("nat").setLevel(logging.DEBUG)
+    warning_handler = logging.StreamHandler(io.StringIO())
+    warning_handler.setLevel(logging.WARNING)
+    root_logger.addHandler(warning_handler)
+    try:
+        await _run(tmp_path / "workflow.log", with_console=False, file_level="WARNING")
+        # a logger without its own level follows the root logger, which must not have been raised to WARNING
+        assert "user-package-debug-record" in cli_console.getvalue()
+    finally:
+        root_logger.removeHandler(warning_handler)
+
+    assert root_logger.level == logging.DEBUG
+    assert warning_handler.level == logging.WARNING
