@@ -35,6 +35,8 @@ from nat.builder.component_utils import build_dependency_sequence
 from nat.builder.context import ContextState
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.framework_instrumentation import chain_wrapped_build_fn
+from nat.builder.framework_instrumentation import detect_llm_frameworks_in_build_fn
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
 from nat.builder.function import LambdaFunction
@@ -89,18 +91,6 @@ from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.utils.type_utils import override
-
-try:
-    from nat.plugins.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
-    from nat.plugins.profiler.utils import detect_llm_frameworks_in_build_fn
-except ImportError:
-
-    def detect_llm_frameworks_in_build_fn(registration) -> list[LLMFrameworkEnum]:
-        return []
-
-    def chain_wrapped_build_fn(original_build_fn, workflow_llms, function_frameworks):  # noqa: ARG001
-        return original_build_fn
-
 
 logger = logging.getLogger(__name__)
 
