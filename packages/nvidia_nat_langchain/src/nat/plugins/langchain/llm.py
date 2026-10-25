@@ -158,12 +158,17 @@ async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, _builder: Bui
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    client = ChatBedrockConverse(**llm_config.model_dump(
-        exclude={"type", "context_size", "thinking", "api_type"},
+    config_dict = llm_config.model_dump(
+        exclude={"type", "context_size", "thinking", "api_type", "region_name"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
-    ))
+    )
+    # The "None" string default means no region, so boto3 falls back to the AWS configuration.
+    if llm_config.region_name not in (None, "None"):
+        config_dict["region_name"] = llm_config.region_name
+
+    client = ChatBedrockConverse(**config_dict)
 
     yield _patch_llm_based_on_config(client, llm_config)
 
