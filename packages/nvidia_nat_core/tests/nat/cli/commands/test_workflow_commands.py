@@ -154,6 +154,24 @@ def test_create_workflow_with_invalid_name(tmp_path):
     assert "Workflow name cannot be empty" in result.stderr
 
 
+@pytest.mark.parametrize("bad_name, reason",
+                         [
+                             ("my agent", "not a valid Python package name"),
+                             ("3d-agent", "not a valid Python package name"),
+                             ("class", "not a valid Python package name"),
+                             ("my.agent", "not a valid Python package name"),
+                             ("a/b", "path separators"),
+                             ("..\\x", "path separators"),
+                         ])
+def test_create_workflow_rejects_names_that_cannot_form_a_package(tmp_path, bad_name: str, reason: str):
+    """Names that cannot produce an importable package must fail fast with a clear message."""
+    result = CliRunner().invoke(create_command, ["--no-install", "--workflow-dir", str(tmp_path), bad_name])
+
+    assert result.exit_code == 2
+    assert reason in result.output
+    assert not (tmp_path / bad_name).exists()
+
+
 def test_create_workflow_that_already_exists_fails(tmp_path):
     (tmp_path / "test_workflow").mkdir()
 
