@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import keyword
 import logging
 import os.path
 import shutil
@@ -113,6 +114,26 @@ def get_repo_root():
 
 def _get_module_name(workflow_name: str):
     return workflow_name.replace("-", "_")
+
+
+def _validate_workflow_name(workflow_name: str) -> None:
+    """
+    Check that the workflow name maps to an importable Python package name.
+
+    Hyphens are allowed because they become underscores in the package name. Anything else that is not valid in a
+    Python identifier, including spaces, dots and path separators, is rejected.
+
+    Raises:
+        click.BadParameter: If the workflow name cannot be used as a Python package name.
+    """
+    module_name = _get_module_name(workflow_name)
+    if not module_name.isidentifier():
+        raise click.BadParameter(  # noqa: TRY003
+            f"Workflow name '{workflow_name}' is not a valid Python package name. Use only letters, digits, "
+            "underscores and hyphens, and do not start with a digit.")
+    if keyword.iskeyword(module_name):
+        raise click.BadParameter(  # noqa: TRY003
+            f"Workflow name '{workflow_name}' is a reserved Python keyword. Choose a different name.")
 
 
 def _describe_error(error: Exception) -> str:
@@ -226,6 +247,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
     # Fail fast with Click's standard exit code (2) for bad params.
     if not workflow_name or not workflow_name.strip():
         raise click.BadParameter("Workflow name cannot be empty.")  # noqa: TRY003
+    _validate_workflow_name(workflow_name)
     new_workflow_dir: Path | None = None
     created = False
     try:
