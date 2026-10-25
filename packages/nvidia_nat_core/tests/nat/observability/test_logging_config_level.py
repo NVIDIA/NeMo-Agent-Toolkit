@@ -24,8 +24,10 @@ from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
+from nat.cli.register_workflow import register_telemetry_exporter
 from nat.data_models.config import Config
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.runtime.session import SessionManager
 
 WORKFLOW_LOGGER = "nat.test_logging_config_level"
@@ -36,19 +38,28 @@ class LogsAtEveryLevelConfig(FunctionBaseConfig, name="logging_config_level_test
     pass
 
 
+class FailingExporterConfig(TelemetryExporterBaseConfig, name="logging_config_level_test_failing_exporter"):
+    pass
+
+
 @pytest.fixture(name="register_workflow", scope="module", autouse=True)
 def register_workflow_fixture():
 
     @register_function(config_type=LogsAtEveryLevelConfig)
-    async def _workflow(config, builder: Builder):
+    async def _workflow(config: LogsAtEveryLevelConfig, builder: Builder):
 
         async def _inner(text: str) -> str:
-            logging.getLogger(WORKFLOW_LOGGER).debug("debug-record")
+            logging.getLogger(WORKFLOW_LOGGER).debug("workflow-debug-record")
             logging.getLogger(WORKFLOW_LOGGER).info("info-record")
             logging.getLogger(USER_PACKAGE_LOGGER).debug("user-package-debug-record")
             return text
 
         yield FunctionInfo.from_fn(_inner, description="logs at DEBUG and INFO")
+
+    @register_telemetry_exporter(config_type=FailingExporterConfig)
+    async def _failing_exporter(config: FailingExporterConfig, builder: Builder):
+        raise RuntimeError("exporter backend unreachable")
+        yield
 
 
 @pytest.fixture(name="cli_console")
@@ -100,7 +111,7 @@ async def test_a_debug_file_handler_gets_debug_records(tmp_path: Path, cli_conso
     await _run(log_file, with_console=with_console)
 
     content = log_file.read_text(encoding="utf-8")
-    assert "debug-record" in content
+    assert "workflow-debug-record" in content
     assert "info-record" in content
     assert "user-package-debug-record" in content
 
@@ -153,3 +164,37 @@ async def test_a_handler_above_the_cli_level_changes_no_levels(tmp_path: Path, c
 
     assert root_logger.level == logging.DEBUG
     assert warning_handler.level == logging.WARNING
+
+
+async def test_levels_and_handlers_are_restored_when_the_builder_fails_to_start(tmp_path: Path,
+                                                                                cli_console: io.StringIO):
+    """A tracing exporter that fails to build after the logging setup doesn't leave the logging changes behind."""
+    root_logger = logging.getLogger()
+    handlers_before = root_logger.handlers[:]
+    config = Config.model_validate({
+        "general": {
+            "telemetry": {
+                "logging": {
+                    "file": {
+                        "_type": "file", "path": str(tmp_path / "workflow.log"), "level": "DEBUG"
+                    }
+                },
+                "tracing": {
+                    "broken": {
+                        "_type": "logging_config_level_test_failing_exporter"
+                    }
+                },
+            }
+        },
+        "workflow": {
+            "_type": "logging_config_level_test_workflow"
+        },
+    })
+    with pytest.raises(RuntimeError, match="exporter backend unreachable"):
+        async with WorkflowBuilder.from_config(config=config):
+            pass
+
+    assert root_logger.level == logging.INFO
+    assert logging.getLogger("nat").level == logging.INFO
+    assert set(root_logger.handlers) == set(handlers_before)
+    assert all(handler.level == logging.NOTSET for handler in handlers_before)
