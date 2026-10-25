@@ -356,6 +356,7 @@ async def register_trajectory_evaluator(config: TrajectoryEvaluatorConfig, build
         llm = patch_with_retry(
             llm,
             retries=config.num_retries,
+            max_wait=config.retry_max_wait,
             retry_codes=config.retry_on_status_codes,
             retry_on_messages=config.retry_on_errors,
         )

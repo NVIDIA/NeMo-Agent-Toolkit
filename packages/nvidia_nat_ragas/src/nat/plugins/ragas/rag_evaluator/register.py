@@ -145,6 +145,7 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
         langchain_llm = patch_with_retry(
             langchain_llm,
             retries=config.num_retries,
+            max_wait=config.retry_max_wait,
             retry_codes=config.retry_on_status_codes,
             retry_on_messages=config.retry_on_errors,
         )
