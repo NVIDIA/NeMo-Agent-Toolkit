@@ -58,3 +58,19 @@ def test_framework_wrapper_re_exports_the_core_hook():
     assert framework_wrapper.chain_wrapped_build_fn is framework_instrumentation.chain_wrapped_build_fn
     assert framework_wrapper.set_framework_profiler_handler is framework_instrumentation.set_framework_profiler_handler
     assert utils.detect_llm_frameworks_in_build_fn is framework_instrumentation.detect_llm_frameworks_in_build_fn
+
+
+async def test_missing_agno_handler_warning_names_agno(monkeypatch, caplog):
+    monkeypatch.setitem(sys.modules, "nat.plugins.agno.callback_handler", None)  # import fails
+    monkeypatch.setitem(framework_wrapper._library_instrumented, "agno", False)
+
+    @asynccontextmanager
+    async def build_fn(config, builder) -> AsyncIterator[str]:
+        yield "workflow"
+
+    wrapped = framework_wrapper.set_framework_profiler_handler(None, [LLMFrameworkEnum.AGNO])(build_fn)
+    async with wrapped(None, None):
+        pass
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any(message.startswith("Agno profiler not available") for message in messages), messages
