@@ -739,6 +739,14 @@ async def test_output_parser_keeps_observation_word_in_input(mock_react_output_p
     assert test_output.tool_input == tool_input
 
 
+async def test_output_parser_keeps_input_line_starting_with_observation(mock_react_output_parser):
+    tool_input = "Summarize these topics:\nObservation bias in clinical trials\nSelection bias"
+    mock_input = f"Thought: I need to search\nAction: search\nAction Input: {tool_input}\nObservation:"
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool_input == tool_input
+
+
 async def test_output_parser_stops_at_inline_observation_marker(mock_react_output_parser):
     mock_input = "Thought: I need to search\nAction: search\nAction Input: search query Observation: Waiting..."
     test_output = await mock_react_output_parser.aparse(mock_input)
