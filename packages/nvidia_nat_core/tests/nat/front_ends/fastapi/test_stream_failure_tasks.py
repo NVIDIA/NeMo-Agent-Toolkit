@@ -85,3 +85,24 @@ async def test_a_failed_stream_leaves_no_unretrieved_task_exception(tmp_path, mo
         loop.set_exception_handler(previous_handler)
 
     assert [context.get("message") for context in reported] == []
+
+
+async def test_an_item_put_after_the_queue_closed_is_dropped():
+    from nat.front_ends.fastapi.intermediate_steps_subscriber import _put_unless_closed
+    from nat.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
+
+    queue: AsyncIOProducerConsumerQueue[str] = AsyncIOProducerConsumerQueue()
+    await queue.close()
+    await _put_unless_closed(queue, "late step")  # no QueueClosed
+
+
+async def test_other_put_errors_still_surface():
+    from nat.front_ends.fastapi.intermediate_steps_subscriber import _put_unless_closed
+
+    class BrokenQueue:
+
+        async def put(self, item):
+            raise RuntimeError("queue broke")
+
+    with pytest.raises(RuntimeError, match="queue broke"):
+        await _put_unless_closed(BrokenQueue(), "step")
