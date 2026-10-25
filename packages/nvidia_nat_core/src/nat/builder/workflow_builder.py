@@ -191,11 +191,15 @@ class ConfiguredTrajectoryBuilder:
 
 async def _find_function_group_function(name: str, function_groups: list[ConfiguredFunctionGroup]) -> Function | None:
     """A function one of the groups makes available as a tool (`group__fn`), even if it isn't globally registered."""
+    matches = []
     for function_group in function_groups:
         accessible_functions = await function_group.instance.get_accessible_functions()
         if name in accessible_functions:
-            return accessible_functions[name]
-    return None
+            matches.append(accessible_functions[name])
+    if len(matches) > 1:
+        # e.g. group `a` with function `b__c` and group `a__b` with function `c`
+        raise ValueError(f"Function `{name}` is ambiguous: more than one function group makes it available")
+    return matches[0] if matches else None
 
 
 def _log_build_failure(component_name: str,
@@ -717,8 +721,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             return await self.get_function(name)
         except ValueError:
-            group_function = await _find_function_group_function(
-                self._check_backwards_compatibility_function_name(name), list(self._function_groups.values()))
+            group_function = await _find_function_group_function(name, list(self._function_groups.values()))
             if group_function is None:
                 raise
             return group_function

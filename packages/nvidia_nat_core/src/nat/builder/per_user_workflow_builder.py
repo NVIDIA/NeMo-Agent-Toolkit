@@ -703,7 +703,7 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                 entry_fn_obj = await self.get_function(entry_function)
             except ValueError:
                 entry_fn_obj = await _find_function_group_function(
-                    self._check_backwards_compatibility_function_name(entry_function),
+                    entry_function,
                     [*self._per_user_function_groups.values(), *self._shared_builder._function_groups.values()])
                 if entry_fn_obj is None:
                     raise
