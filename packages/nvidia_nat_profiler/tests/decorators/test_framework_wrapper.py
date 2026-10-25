@@ -46,3 +46,15 @@ async def test_crewai_profiler_loads_handler_from_real_module(monkeypatch):
 
     assert instrument_calls == [True]
     assert framework_wrapper._library_instrumented["crewai"] is True
+
+
+def test_framework_wrapper_re_exports_the_core_hook():
+    """The profiler module re-exports the hook that lives in core, so both paths share one set of state."""
+    from nat.builder import framework_instrumentation
+    from nat.plugins.profiler import utils
+
+    assert framework_wrapper._library_instrumented is framework_instrumentation._library_instrumented
+    assert framework_wrapper.callback_handler_var is framework_instrumentation.callback_handler_var
+    assert framework_wrapper.chain_wrapped_build_fn is framework_instrumentation.chain_wrapped_build_fn
+    assert framework_wrapper.set_framework_profiler_handler is framework_instrumentation.set_framework_profiler_handler
+    assert utils.detect_llm_frameworks_in_build_fn is framework_instrumentation.detect_llm_frameworks_in_build_fn

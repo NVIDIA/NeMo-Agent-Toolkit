@@ -19,12 +19,16 @@ import subprocess
 import sys
 import textwrap
 
+import pytest
+
 # Runs in a fresh interpreter: the builder decides how to hook frameworks when it's imported, so the profiler has to
 # be unavailable before anything from NAT is imported.
 _SCRIPT = textwrap.dedent('''
     import sys
     if sys.argv[1] == "without_profiler":
         sys.modules["nat.plugins.profiler"] = None  # as if nvidia-nat-profiler weren't installed
+    EXTRA_HANDLER = sys.argv[2] == "extra_handler"
+    MODEL_HANDLER = sys.argv[2] == "model_handler"
 
     import asyncio
     import json
@@ -52,7 +56,12 @@ _SCRIPT = textwrap.dedent('''
 
     @register_llm_client(config_type=FakeChatConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     async def _client(config, builder: Builder):
-        yield FakeListChatModel(responses=["Paris."])
+        if MODEL_HANDLER:
+            # a handler attached to the model itself, next to the one the workflow attaches
+            from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
+            yield FakeListChatModel(responses=["Paris."], callbacks=[LangchainProfilerHandler()])
+        else:
+            yield FakeListChatModel(responses=["Paris."])
 
     class AskConfig(FunctionBaseConfig, name="instrumentation_test_ask"):
         llm_name: str = "chat"
@@ -62,6 +71,10 @@ _SCRIPT = textwrap.dedent('''
         llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
         async def _inner(question: str) -> str:
+            if EXTRA_HANDLER:
+                # as sequential_executor and the guardrails handler do: an explicit handler next to the workflow's
+                from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
+                return (await llm.ainvoke(question, config={"callbacks": [LangchainProfilerHandler()]})).content
             return (await llm.ainvoke(question)).content
 
         yield FunctionInfo.from_fn(_inner, description="asks the LLM")
@@ -83,8 +96,8 @@ _SCRIPT = textwrap.dedent('''
 ''')
 
 
-def _run(mode: str) -> dict:
-    completed = subprocess.run([sys.executable, "-c", _SCRIPT, mode],
+def _run(mode: str, handlers: str = "workflow_handler") -> dict:
+    completed = subprocess.run([sys.executable, "-c", _SCRIPT, mode, handlers],
                                capture_output=True,
                                text=True,
                                timeout=120,
@@ -96,16 +109,22 @@ def _run(mode: str) -> dict:
 def test_llm_calls_are_reported_without_the_profiler():
     result = _run("without_profiler")
     assert result["answer"] == "Paris."
-    assert "LLM_START" in result["steps"]
-    assert "LLM_END" in result["steps"]
+    assert result["steps"].count("LLM_START") == 1
+    assert result["steps"].count("LLM_END") == 1
 
 
-def test_llm_calls_are_reported_with_the_profiler_installed():
-    """The same run where the profiler can be imported, if it's installed (it's the case in a full dev install)."""
+@pytest.mark.parametrize("handlers", ["extra_handler", "model_handler"], ids=["call_callbacks", "model_callbacks"])
+def test_an_explicit_handler_does_not_duplicate_llm_steps_without_the_profiler(handlers):
+    """The LangChain handler defers to the one the workflow attached, so each call is reported once."""
+    result = _run("without_profiler", handlers)
+    assert result["answer"] == "Paris."
+    assert result["steps"].count("LLM_START") == 1
+    assert result["steps"].count("LLM_END") == 1
+
+
+def test_llm_calls_are_reported_once_with_the_profiler_installed():
+    pytest.importorskip("nat.plugins.profiler")
     result = _run("as_installed")
     assert result["answer"] == "Paris."
-    try:
-        import nat.plugins.profiler  # noqa: F401
-    except ImportError:
-        return
-    assert "LLM_START" in result["steps"]
+    assert result["steps"].count("LLM_START") == 1
+    assert result["steps"].count("LLM_END") == 1
