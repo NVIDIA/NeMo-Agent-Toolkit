@@ -17,6 +17,7 @@ import asyncio
 import dataclasses
 import inspect
 import logging
+import sys
 import typing
 import warnings
 from abc import ABC
@@ -367,6 +368,15 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     async def __aenter__(self):
 
         self._exit_stack = AsyncExitStack()
+        try:
+            await self._setup_telemetry()
+        except BaseException:
+            # __aexit__ isn't called when __aenter__ fails, so undo the logging changes and close what was entered
+            await self.__aexit__(*sys.exc_info())
+            raise
+        return self
+
+    async def _setup_telemetry(self) -> None:
 
         # Get the telemetry info from the config
         telemetry_config = self.general_config.telemetry
@@ -427,8 +437,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Add the telemetry exporters
         for key, telemetry_exporter_config in telemetry_config.tracing.items():
             await self.add_telemetry_exporter(key, telemetry_exporter_config)
-
-        return self
 
     async def __aexit__(self, *exc_details):
 
