@@ -64,7 +64,7 @@ uv pip install "nvidia-nat[profiler]"
 The NeMo Agent Toolkit Profiler can be broken into the following components:
 
 ### Profiler Decorators and Callbacks
-- `packages/nvidia_nat_core/src/nat/builder/framework_instrumentation.py` attaches each LLM framework's callback handler to the workflow, so its LLM and tool calls are reported as intermediate steps. It is part of core, so tracing works without the profiler installed. `packages/nvidia_nat_profiler/src/nat/plugins/profiler/decorators` defines the profiler's other decorators.
+- `packages/nvidia_nat_core/src/nat/builder/framework_instrumentation.py` attaches the callback handler of each LLM framework to the workflow, so the LLM and tool calls of the framework are reported as intermediate steps. It is part of core, so tracing works without the profiler installed. `packages/nvidia_nat_profiler/src/nat/plugins/profiler/decorators` defines the other profiler decorators.
 - `packages/nvidia_nat_profiler/src/nat/plugins/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent Toolkit usage stats queue. We currently support callback handlers for LangChain/LangGraph,
 LlamaIndex, CrewAI, Google ADK, and Semantic Kernel.
 

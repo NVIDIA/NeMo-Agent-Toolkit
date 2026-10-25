@@ -152,7 +152,7 @@ def set_framework_profiler_handler(
                     logger.info("Agno callback handler registered")
                 except ImportError as e:
                     logger.warning(
-                        "ADK profiler not available. " +
+                        "Agno profiler not available. " +
                         "Install NAT with Agno extras: pip install \"nvidia-nat[agno]\". Error: %s",
                         e)
 
