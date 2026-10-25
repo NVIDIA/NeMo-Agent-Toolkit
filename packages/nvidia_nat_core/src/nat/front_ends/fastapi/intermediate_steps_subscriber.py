@@ -15,6 +15,7 @@
 
 import asyncio
 import logging
+import typing
 from typing import TYPE_CHECKING
 
 from nat.builder.context import Context
@@ -22,6 +23,7 @@ from nat.data_models.api_server import ResponseATIFStep
 from nat.data_models.api_server import ResponseATIFTrajectory
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.intermediate_step import IntermediateStep
+from nat.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
 from nat.utils.producer_consumer_queue import QueueClosed
 
 if TYPE_CHECKING:
@@ -30,7 +32,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def _put_unless_closed(_q, item) -> None:
+async def _put_unless_closed(_q: AsyncIOProducerConsumerQueue, item: typing.Any) -> None:
     """Queue an item from a fire-and-forget task; once the response stream has closed the queue, drop it."""
     try:
         await _q.put(item)

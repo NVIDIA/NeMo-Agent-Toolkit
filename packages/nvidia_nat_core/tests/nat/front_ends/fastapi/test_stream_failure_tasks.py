@@ -38,7 +38,7 @@ class StreamFailsConfig(FunctionBaseConfig, name="stream_failure_tasks_test_work
 def register_workflow_fixture():
 
     @register_function(config_type=StreamFailsConfig)
-    async def _workflow(config, builder: Builder):
+    async def _workflow(config: StreamFailsConfig, builder: Builder):
 
         async def _inner(message: ChatRequest) -> AsyncGenerator[ChatResponseChunk]:
             yield ChatResponseChunk.from_string("partial ", id_="chatcmpl-1", model="test-model")
