@@ -64,8 +64,11 @@ MESSAGES = [{"role": "user", "content": "hi"}]
                              ("/v1/workflow/atif", {
                                  "messages": MESSAGES
                              }),
+                             ("/v1/workflow/full", {
+                                 "messages": MESSAGES
+                             }),
                          ],
-                         ids=["chat_completions", "generate_stream", "generate_full", "workflow_atif"])
+                         ids=["chat_completions", "generate_stream", "generate_full", "workflow_atif", "workflow_full"])
 async def test_a_mid_stream_failure_arrives_as_an_error_event(tmp_path, monkeypatch, path, body):
     config_file = tmp_path / "config.yml"
     config_file.write_text("workflow:\n  _type: sse_error_test_fails_mid_stream\n")
