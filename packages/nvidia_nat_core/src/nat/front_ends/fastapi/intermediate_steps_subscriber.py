@@ -22,11 +22,20 @@ from nat.data_models.api_server import ResponseATIFStep
 from nat.data_models.api_server import ResponseATIFTrajectory
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.intermediate_step import IntermediateStep
+from nat.utils.producer_consumer_queue import QueueClosed
 
 if TYPE_CHECKING:
     from nat.utils.atif_converter import ATIFStreamConverter
 
 logger = logging.getLogger(__name__)
+
+
+async def _put_unless_closed(_q, item) -> None:
+    """Queue an item from a fire-and-forget task; once the response stream has closed the queue, drop it."""
+    try:
+        await _q.put(item)
+    except QueueClosed:
+        pass
 
 
 async def pull_intermediate(_q, adapter):
@@ -57,7 +66,8 @@ async def pull_intermediate(_q, adapter):
             observability_trace_id = context.observability_trace_id
             if observability_trace_id:
                 from nat.data_models.api_server import ResponseObservabilityTrace
-                loop.create_task(_q.put(ResponseObservabilityTrace(observability_trace_id=observability_trace_id)))
+                loop.create_task(
+                    _put_unless_closed(_q, ResponseObservabilityTrace(observability_trace_id=observability_trace_id)))
                 trace_id_emitted = True
 
         if adapter is None:
@@ -70,7 +80,7 @@ async def pull_intermediate(_q, adapter):
             adapted = adapter.process(item)
 
         if adapted is not None:
-            loop.create_task(_q.put(adapted))
+            loop.create_task(_put_unless_closed(_q, adapted))
 
     def on_error_cb(exc: Exception):
         """
@@ -126,7 +136,7 @@ async def pull_intermediate_atif(_q, converter: "ATIFStreamConverter"):
             metrics=atif_step.metrics.model_dump(exclude_none=True) if atif_step.metrics else None,
             extra=atif_step.extra,
         )
-        loop.create_task(_q.put(resp))
+        loop.create_task(_put_unless_closed(_q, resp))
 
     def on_next_cb(item: IntermediateStep):
         nonlocal trace_id_emitted
@@ -135,7 +145,8 @@ async def pull_intermediate_atif(_q, converter: "ATIFStreamConverter"):
             observability_trace_id = context.observability_trace_id
             if observability_trace_id:
                 from nat.data_models.api_server import ResponseObservabilityTrace
-                loop.create_task(_q.put(ResponseObservabilityTrace(observability_trace_id=observability_trace_id)))
+                loop.create_task(
+                    _put_unless_closed(_q, ResponseObservabilityTrace(observability_trace_id=observability_trace_id)))
                 trace_id_emitted = True
 
         atif_step = converter.push(item)
@@ -158,7 +169,7 @@ async def pull_intermediate_atif(_q, converter: "ATIFStreamConverter"):
             agent=trajectory.agent.model_dump(exclude_none=True),
             final_metrics=trajectory.final_metrics.model_dump(exclude_none=True) if trajectory.final_metrics else None,
         )
-        loop.create_task(_q.put(summary))
+        loop.create_task(_put_unless_closed(_q, summary))
         loop.create_task(set_intermediate_done())
 
     _ = context.intermediate_step_manager.subscribe(on_next=on_next_cb,
