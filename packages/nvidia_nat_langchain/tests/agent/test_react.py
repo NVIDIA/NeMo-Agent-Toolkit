@@ -721,6 +721,31 @@ async def test_output_parser_json_input_space_observation(mock_react_output_pars
     assert "Observation" not in test_output.tool_input
 
 
+@pytest.mark.parametrize(
+    "tool_input",
+    [
+        '{"query": "weather observation stations in Ohio"}',
+        "What is the Mauna Kea observation deck?",
+        "Observation bias in clinical trials",
+    ],
+    ids=["json_input", "text_input", "input_starts_with_the_word"],
+)
+@pytest.mark.parametrize("trailer", ["\nObservation:", " Observation:", ""], ids=["newline", "space", "none"])
+async def test_output_parser_keeps_observation_word_in_input(mock_react_output_parser, tool_input: str, trailer: str):
+    mock_input = f"Thought: I need to search\nAction: search\nAction Input: {tool_input}{trailer}"
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "search"
+    assert test_output.tool_input == tool_input
+
+
+async def test_output_parser_stops_at_inline_observation_marker(mock_react_output_parser):
+    mock_input = "Thought: I need to search\nAction: search\nAction Input: search query Observation: Waiting..."
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool_input == "search query"
+
+
 async def test_output_parser_missing_action_input(mock_react_output_parser):
     mock_action = 'SearchTool'
     mock_input = f'Thought: I need to call the search toolAction:{mock_action}'
