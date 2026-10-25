@@ -85,5 +85,7 @@ async def test_a_mid_stream_failure_arrives_as_an_error_event(tmp_path, monkeypa
     assert error["code"] == "workflow_error"
     assert error["message"] == "upstream LLM failed"
     assert error["details"] == "RuntimeError"
+    # the chunk sent before the failure still reaches the client
+    assert any(event.event != "error" and "partial " in event.data for event in events[:-1])
     # the error is the last thing in the stream
     assert events[-1] is errors[0]
