@@ -17,11 +17,12 @@ import logging
 
 import pandas as pd
 
+# moved to core; re-exported so existing imports keep working
+from nat.builder.framework_instrumentation import _FRAMEWORK_REGEX_MAP  # noqa: F401
 from nat.builder.framework_instrumentation import detect_llm_frameworks_in_build_fn  # noqa: F401
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.plugins.profiler.data_frame_row import DataFrameRow
 
-# A simple set of regex patterns to scan for direct references to LLMFrameworkEnum
 logger = logging.getLogger(__name__)
 
 

@@ -354,8 +354,3 @@ def detect_llm_frameworks_in_build_fn(
             main_fn.__name__)
 
     return list(discovered)
-
-
-# -------------------------------------------------------------------
-# Create a single standardized DataFrame for all usage stats
-# -------------------------------------------------------------------

@@ -64,7 +64,7 @@ uv pip install "nvidia-nat[profiler]"
 The NeMo Agent Toolkit Profiler can be broken into the following components:
 
 ### Profiler Decorators and Callbacks
-- `packages/nvidia_nat_profiler/src/nat/plugins/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
+- `packages/nvidia_nat_core/src/nat/builder/framework_instrumentation.py` attaches each LLM framework's callback handler to the workflow, so its LLM and tool calls are reported as intermediate steps. It is part of core, so tracing works without the profiler installed. `packages/nvidia_nat_profiler/src/nat/plugins/profiler/decorators` defines the profiler's other decorators.
 - `packages/nvidia_nat_profiler/src/nat/plugins/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent Toolkit usage stats queue. We currently support callback handlers for LangChain/LangGraph,
 LlamaIndex, CrewAI, Google ADK, and Semantic Kernel.
 
@@ -86,7 +86,7 @@ Native integrations with `nat eval` to allow for running of the profiler through
 
 ### Step 1: Enabling Instrumentation on a Workflow [Optional]
 **NOTE:** If you don't set it, NeMo Agent Toolkit will inspect your code to infer frameworks used. We recommend you set it explicitly.
-To enable profiling on a workflow, you need to wrap the workflow with the profiler decorators. The decorators can be applied to any workflow using the `framework_wrappers` argument of the `register_function` decorator.
+To enable profiling on a workflow, you need to wrap the workflow with the framework instrumentation decorators. The decorators can be applied to any workflow using the `framework_wrappers` argument of the `register_function` decorator.
 Simply specify which NeMo Agent Toolkit supported frameworks you will be using anywhere in your workflow (including tools) upon registration and the toolkit will automatically apply the appropriate profiling decorators at build time.
 For example:
 
