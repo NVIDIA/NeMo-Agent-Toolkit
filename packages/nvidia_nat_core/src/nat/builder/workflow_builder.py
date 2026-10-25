@@ -332,6 +332,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         self._logging_handlers: dict[str, logging.Handler] = {}
         self._removed_root_handlers: list[tuple[logging.Handler, int]] = []
+        self._changed_logger_levels: list[tuple[logging.Logger, int]] = []
         self._telemetry_exporters: dict[str, ConfiguredTelemetryExporter] = {}
 
         self._functions: dict[str, ConfiguredFunction] = {}
@@ -396,10 +397,23 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         # If we added logging handlers, manage existing handlers appropriately
         if self._logging_handlers:
-            min_handler_level = min((handler.level for handler in root_logger.handlers), default=logging.CRITICAL)
+            min_handler_level = min(handler.level for handler in self._logging_handlers.values())
 
-            # Ensure the root logger level allows messages through
-            root_logger.level = max(root_logger.level, min_handler_level)
+            # Let records down to the lowest configured level reach the configured handlers. The CLI sets the root
+            # and `nat` loggers to --log-level, so lower them, and keep the handlers that were already attached
+            # (the CLI's console) at the level they effectively had.
+            old_root_level = root_logger.level
+            if min_handler_level < old_root_level:
+                for handler in root_logger.handlers:
+                    if handler not in self._logging_handlers.values() and handler.level < old_root_level:
+                        self._removed_root_handlers.append((handler, handler.level))
+                        handler.setLevel(old_root_level)
+                self._changed_logger_levels.append((root_logger, old_root_level))
+                root_logger.setLevel(min_handler_level)
+            nat_logger = logging.getLogger("nat")
+            if nat_logger.getEffectiveLevel() > min_handler_level:
+                self._changed_logger_levels.append((nat_logger, nat_logger.level))
+                nat_logger.setLevel(min_handler_level)
 
             # If a console handler is configured, adjust or remove default CLI handlers
             # to avoid duplicate output while preserving workflow visibility
@@ -409,14 +423,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                     if type(handler) is logging.StreamHandler and handler not in self._logging_handlers.values():
                         self._removed_root_handlers.append((handler, handler.level))
                         root_logger.removeHandler(handler)
-            else:
-                # No console handler configured, but adjust existing handler levels
-                # to respect the minimum configured level for file/other handlers
-                for handler in root_logger.handlers[:]:
-                    if type(handler) is logging.StreamHandler:
-                        old_level = handler.level
-                        handler.setLevel(min_handler_level)
-                        self._removed_root_handlers.append((handler, old_level))
 
         # Add the telemetry exporters
         for key, telemetry_exporter_config in telemetry_config.tracing.items():
@@ -434,11 +440,13 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         for handler in self._logging_handlers.values():
             root_logger.removeHandler(handler)
 
-        # Restore original handlers and their levels
-        for handler, old_level in self._removed_root_handlers:
+        # Restore original handlers and their levels, last change first
+        for handler, old_level in reversed(self._removed_root_handlers):
             if handler not in root_logger.handlers:
                 root_logger.addHandler(handler)
             handler.setLevel(old_level)
+        for changed_logger, old_level in reversed(self._changed_logger_levels):
+            changed_logger.setLevel(old_level)
 
         await self._exit_stack.__aexit__(*exc_details)
 
