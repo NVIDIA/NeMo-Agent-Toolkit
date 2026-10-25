@@ -137,3 +137,41 @@ async def test_a_function_that_is_not_available_is_still_not_found(entry_functio
 async def test_a_per_user_workflow_can_use_a_group_function_as_the_entry_function(group_type):
     config = _config(group_type=group_type, workflow_type="entry_test_per_user_echo_workflow")
     assert await _run(config, "text__upper", user_id="user-1") == "ABC"
+
+
+class NestedToolsConfig(FunctionGroupBaseConfig, name="entry_test_nested_tools"):
+    function_name: str
+
+
+@pytest.fixture(name="register_nested_group", scope="module")
+def register_nested_group_fixture():
+
+    @register_function_group(config_type=NestedToolsConfig)
+    async def _nested_tools(config: NestedToolsConfig, builder: Builder):
+        group = FunctionGroup(config=config)
+
+        async def nested(text: str) -> str:
+            return text
+
+        group.add_function(config.function_name, nested, description="a function whose name may hold the separator")
+        yield group
+
+
+@pytest.mark.usefixtures("register_nested_group")
+async def test_two_groups_making_the_same_name_available_is_an_error():
+    """Group `a` with `b__c` and group `a__b` with `c` both offer `a__b__c`."""
+    config = Config.model_validate({
+        "function_groups": {
+            "a": {
+                "_type": "entry_test_nested_tools", "function_name": "b__c"
+            },
+            "a__b": {
+                "_type": "entry_test_nested_tools", "function_name": "c"
+            }
+        },
+        "workflow": {
+            "_type": "entry_test_echo_workflow"
+        },
+    })
+    with pytest.raises(ValueError, match="ambiguous"):
+        await _run(config, "a__b__c")
