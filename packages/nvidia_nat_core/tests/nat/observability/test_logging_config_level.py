@@ -198,3 +198,19 @@ async def test_levels_and_handlers_are_restored_when_the_builder_fails_to_start(
     assert logging.getLogger("nat").level == logging.INFO
     assert set(root_logger.handlers) == set(handlers_before)
     assert all(handler.level == logging.NOTSET for handler in handlers_before)
+
+
+async def test_a_handler_on_the_nat_logger_keeps_its_level(tmp_path: Path, cli_console: io.StringIO):
+    """Lowering the `nat` logger for a DEBUG file doesn't send DEBUG records to a handler attached to `nat`."""
+    nat_output = io.StringIO()
+    nat_handler = logging.StreamHandler(nat_output)
+    nat_logger = logging.getLogger("nat")
+    nat_logger.addHandler(nat_handler)
+    try:
+        await _run(tmp_path / "workflow.log", with_console=False)
+    finally:
+        nat_logger.removeHandler(nat_handler)
+
+    assert "info-record" in nat_output.getvalue()
+    assert "workflow-debug-record" not in nat_output.getvalue()
+    assert nat_handler.level == logging.NOTSET
