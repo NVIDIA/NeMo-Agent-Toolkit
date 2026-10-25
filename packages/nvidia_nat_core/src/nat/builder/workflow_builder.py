@@ -334,6 +334,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._logging_handlers: dict[str, logging.Handler] = {}
         self._removed_root_handlers: list[tuple[logging.Handler, int]] = []
         self._changed_logger_levels: list[tuple[logging.Logger, int]] = []
+        self._pinned_nat_handlers: list[tuple[logging.Handler, int]] = []
         self._telemetry_exporters: dict[str, ConfiguredTelemetryExporter] = {}
 
         self._functions: dict[str, ConfiguredFunction] = {}
@@ -422,6 +423,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 root_logger.setLevel(min_handler_level)
             nat_logger = logging.getLogger("nat")
             if nat_logger.getEffectiveLevel() > min_handler_level:
+                old_nat_level = nat_logger.getEffectiveLevel()
+                for handler in nat_logger.handlers:
+                    if handler not in self._logging_handlers.values() and handler.level < old_nat_level:
+                        self._pinned_nat_handlers.append((handler, handler.level))
+                        handler.setLevel(old_nat_level)
                 self._changed_logger_levels.append((nat_logger, nat_logger.level))
                 nat_logger.setLevel(min_handler_level)
 
@@ -449,6 +455,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             root_logger.removeHandler(handler)
 
         # Restore original handlers and their levels, last change first
+        for handler, old_level in reversed(self._pinned_nat_handlers):
+            handler.setLevel(old_level)
         for handler, old_level in reversed(self._removed_root_handlers):
             if handler not in root_logger.handlers:
                 root_logger.addHandler(handler)
