@@ -12,7 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Attach NAT's callback handler when a workflow uses LlamaIndex. Registered here so nvidia-nat-core needs no LlamaIndex import."""
+"""Attach NAT's callback handler when a workflow uses LlamaIndex.
+
+Registered from this package so nvidia-nat-core needs no LlamaIndex import.
+"""
 
 import logging
 

@@ -12,7 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Attach NAT's callback handler when a workflow uses Agno. Registered here so nvidia-nat-core needs no Agno import."""
+"""Attach NAT's callback handler when a workflow uses Agno.
+
+Registered from this package so nvidia-nat-core needs no Agno import.
+"""
 
 import logging
 

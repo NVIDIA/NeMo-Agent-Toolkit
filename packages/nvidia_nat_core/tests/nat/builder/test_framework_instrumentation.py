@@ -42,9 +42,7 @@ def test_core_hook_imports_no_framework():
 
 async def test_registered_instrumentation_runs_for_detected_framework(monkeypatch):
     calls = []
-    monkeypatch.setitem(framework_instrumentation._framework_instrumentation,
-                        LLMFrameworkEnum.STRANDS,
-                        calls.append)
+    monkeypatch.setitem(framework_instrumentation._framework_instrumentation, LLMFrameworkEnum.STRANDS, calls.append)
 
     @asynccontextmanager
     async def build_fn(config, builder) -> AsyncIterator[str]:
@@ -52,7 +50,7 @@ async def test_registered_instrumentation_runs_for_detected_framework(monkeypatc
 
     workflow_llms = {"llm": object()}
     wrapped = framework_instrumentation.set_framework_profiler_handler(workflow_llms,
-                                                                        [LLMFrameworkEnum.STRANDS])(build_fn)
+                                                                       [LLMFrameworkEnum.STRANDS])(build_fn)
     async with wrapped(None, None) as result:
         assert result == "workflow"
 

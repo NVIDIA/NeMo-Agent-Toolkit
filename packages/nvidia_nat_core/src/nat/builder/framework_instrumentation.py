@@ -65,8 +65,7 @@ _FRAMEWORK_DISPLAY_NAMES = {
 }
 
 
-def register_framework_instrumentation(framework: LLMFrameworkEnum,
-                                       instrument: Callable[[dict | None], None]) -> None:
+def register_framework_instrumentation(framework: LLMFrameworkEnum, instrument: Callable[[dict | None], None]) -> None:
     """
     Register how a framework package attaches NAT's callback handler to its framework.
 
