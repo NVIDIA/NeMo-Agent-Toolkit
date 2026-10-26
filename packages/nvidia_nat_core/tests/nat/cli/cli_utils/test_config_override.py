@@ -131,3 +131,35 @@ def test_non_numeric_override_of_integer_field_still_rejected():
 
     with pytest.raises(click.BadParameter, match="Type mismatch"):
         layered_config.set_override("llms.nim_llm.temperature", "hot")
+
+
+def test_load_and_override_config_does_not_log_expanded_secrets(tmp_path, monkeypatch, caplog):
+    """The log after applying overrides must not contain `${VAR}` values already expanded from the environment."""
+    secret = "nvapi-super-secret-value"
+    monkeypatch.setenv("TEST_OVERRIDE_API_KEY", secret)
+    monkeypatch.setattr(config_override, "validate_yaml", lambda *_args, **_kwargs: None)
+
+    config_file = tmp_path / "config.yml"
+    config_file.write_text("llms:\n  nim_llm:\n    api_key: ${TEST_OVERRIDE_API_KEY}\n    temperature: 0.0\n")
+
+    with caplog.at_level("INFO", logger=config_override.logger.name):
+        effective_config = config_override.load_and_override_config(config_file,
+                                                                    (("llms.nim_llm.temperature", "0.7"), ))
+
+    assert effective_config["llms"]["nim_llm"]["api_key"] == secret
+    assert effective_config["llms"]["nim_llm"]["temperature"] == 0.7
+    assert "llms.nim_llm.temperature" in caplog.text
+    assert secret not in caplog.text
+
+
+def test_set_override_does_not_log_the_override_value(caplog):
+    """The path is logged for traceability, but a value passed on the command line can be a secret."""
+    secret = "nvapi-cli-secret-value"
+    layered_config = config_override.LayeredConfig({"llms": {"nim_llm": {"api_key": "placeholder"}}})
+
+    with caplog.at_level("INFO", logger=config_override.logger.name):
+        layered_config.set_override("llms.nim_llm.api_key", secret)
+
+    assert layered_config.get_effective_config()["llms"]["nim_llm"]["api_key"] == secret
+    assert "llms.nim_llm.api_key" in caplog.text
+    assert secret not in caplog.text
