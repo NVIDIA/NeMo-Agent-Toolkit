@@ -50,6 +50,35 @@ _library_instrumented = {
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
 
+# Framework packages register how they attach NAT's callback handler, so core imports no framework.
+_framework_instrumentation: dict[LLMFrameworkEnum, Callable[[dict | None], None]] = {}
+
+_FRAMEWORK_DISPLAY_NAMES = {
+    LLMFrameworkEnum.LANGCHAIN: "LangChain",
+    LLMFrameworkEnum.LLAMA_INDEX: "LlamaIndex",
+    LLMFrameworkEnum.CREWAI: "CrewAI",
+    LLMFrameworkEnum.SEMANTIC_KERNEL: "SemanticKernel",
+    LLMFrameworkEnum.AGNO: "Agno",
+    LLMFrameworkEnum.ADK: "ADK",
+    LLMFrameworkEnum.STRANDS: "Strands",
+    LLMFrameworkEnum.AUTOGEN: "AutoGen",
+}
+
+
+def register_framework_instrumentation(framework: LLMFrameworkEnum,
+                                       instrument: Callable[[dict | None], None]) -> None:
+    """
+    Register how a framework package attaches NAT's callback handler to its framework.
+
+    Framework packages call this from their plugin `register` module. `instrument` runs at the start of
+    every workflow build that uses the framework and receives the workflow LLM configurations.
+
+    Args:
+        framework (LLMFrameworkEnum): The framework the instrumentation is for.
+        instrument (Callable[[dict | None], None]): Attaches the framework's callback handler.
+    """
+    _framework_instrumentation[framework] = instrument
+
 
 def set_framework_profiler_handler(
     workflow_llms: dict | None = None,
@@ -81,120 +110,17 @@ def set_framework_profiler_handler(
         @asynccontextmanager
         async def wrapper(workflow_config, builder):
 
-            if LLMFrameworkEnum.LANGCHAIN in frameworks:
-                try:
-                    # Always set a fresh handler in the current context so callbacks
-                    # route to the active run. Only register the hook once globally.
-                    from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
-
-                    handler = LangchainProfilerHandler()
-                    callback_handler_var.set(handler)
-
-                    if not _library_instrumented["langchain"]:
-                        from langchain_core.tracers.context import register_configure_hook
-                        register_configure_hook(callback_handler_var, inheritable=True)
-                        _library_instrumented["langchain"] = True
-                        logger.debug("LangChain/LangGraph callback hook registered")
-                except ImportError as e:
+            for framework in frameworks or []:
+                instrument = _framework_instrumentation.get(framework)
+                if instrument is None:
+                    name = _FRAMEWORK_DISPLAY_NAMES.get(framework, framework.value)
                     logger.warning(
-                        "LangChain profiler not available. " +
-                        "Install NAT with LangChain extras: pip install \"nvidia-nat[langchain]\". Error: %s",
-                        e)
-
-            if LLMFrameworkEnum.LLAMA_INDEX in frameworks:
-                try:
-                    from llama_index.core import Settings
-                    from llama_index.core.callbacks import CallbackManager
-
-                    from nat.plugins.llama_index.callback_handler import LlamaIndexProfilerHandler
-
-                    handler = LlamaIndexProfilerHandler()
-                    Settings.callback_manager = CallbackManager([handler])
-                    logger.debug("LlamaIndex callback handler registered")
-                except ImportError as e:
-                    logger.warning(
-                        "LlamaIndex profiler not available. " +
-                        "Install NAT with LlamaIndex extras: pip install \"nvidia-nat[llama_index]\". Error: %s",
-                        e)
-
-            if LLMFrameworkEnum.CREWAI in frameworks and not _library_instrumented["crewai"]:
-                try:
-                    from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
-                    handler = CrewAIProfilerHandler()
-                    handler.instrument()
-                    _library_instrumented["crewai"] = True
-                    logger.debug("CrewAI callback handler registered")
-                except ImportError as e:
-                    logger.warning(
-                        "CrewAI profiler not available. " +
-                        "Install NAT with CrewAI extras: pip install \"nvidia-nat[crewai]\". Error: %s",
-                        e)
-
-            if LLMFrameworkEnum.SEMANTIC_KERNEL in frameworks and not _library_instrumented["semantic_kernel"]:
-                try:
-                    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
-                    handler = SemanticKernelProfilerHandler(workflow_llms=workflow_llms)
-                    handler.instrument()
-                    _library_instrumented["semantic_kernel"] = True
-                    logger.debug("SemanticKernel callback handler registered")
-                except ImportError as e:
-                    logger.warning(
-                        "SemanticKernel profiler not available. Install NAT with SemanticKernel extras: " +
-                        "pip install \"nvidia-nat[semantic_kernel]\". Error: %s",
-                        e)
-
-            if LLMFrameworkEnum.AGNO in frameworks and not _library_instrumented["agno"]:
-                try:
-                    from nat.plugins.agno.callback_handler import AgnoProfilerHandler
-                    handler = AgnoProfilerHandler()
-                    handler.instrument()
-                    _library_instrumented["agno"] = True
-                    logger.info("Agno callback handler registered")
-                except ImportError as e:
-                    logger.warning(
-                        "Agno profiler not available. " +
-                        "Install NAT with Agno extras: pip install \"nvidia-nat[agno]\". Error: %s",
-                        e)
-
-            if LLMFrameworkEnum.ADK in frameworks and not _library_instrumented["adk"]:
-                try:
-                    from nat.plugins.adk.callback_handler import ADKProfilerHandler
-                    handler = ADKProfilerHandler()
-                    handler.instrument()
-                    _library_instrumented["adk"] = True
-                    logger.debug("ADK callback handler registered")
-                except ImportError as e:
-                    logger.warning(
-                        "ADK profiler not available. " +
-                        "Install NAT with ADK extras: pip install \"nvidia-nat[adk]\". Error: %s",
-                        e)
-
-            if LLMFrameworkEnum.STRANDS in frameworks and not _library_instrumented["strands"]:
-                try:
-                    from nat.plugins.strands.callback_handler import StrandsProfilerHandler
-                    handler = StrandsProfilerHandler()
-                    handler.instrument()
-                    _library_instrumented["strands"] = True
-                    logger.debug("Strands callback handler registered")
-                except ImportError as e:
-                    logger.warning(
-                        "Strands profiler not available. Install NAT with Strands extras: "
-                        "pip install \"nvidia-nat[strands]\". Error: %s",
-                        e,
-                    )
-
-            if LLMFrameworkEnum.AUTOGEN in frameworks and not _library_instrumented["autogen"]:
-                try:
-                    from nat.plugins.autogen.callback_handler import AutoGenProfilerHandler
-                    handler = AutoGenProfilerHandler()
-                    handler.instrument()
-                    _library_instrumented["autogen"] = True
-                    logger.debug("AutoGen callback handler registered")
-                except ImportError as e:
-                    logger.warning(
-                        "AutoGen profiler not available. " +
-                        "Install NAT with AutoGen extras: pip install 'nvidia-nat[autogen]'. Error: %s",
-                        e)
+                        "%s profiler not available. Install NAT with %s extras: pip install \"nvidia-nat[%s]\".",
+                        name,
+                        name,
+                        framework.value)
+                    continue
+                instrument(workflow_llms)
 
             # IMPORTANT: actually call the wrapped function as an async context manager
             async with func(workflow_config, builder) as result:

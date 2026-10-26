@@ -18,12 +18,16 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from types import ModuleType
 
+import pytest
+
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.plugins.profiler.decorators import framework_wrapper
 
 
 async def test_crewai_profiler_loads_handler_from_real_module(monkeypatch):
     """The CrewAI branch must load the profiler handler from crewai_callback_handler, not callback_handler."""
+    # The CrewAI package registers its own instrumentation; core no longer imports CrewAI.
+    pytest.importorskip("nat.plugins.crewai.instrumentation")
     instrument_calls = []
 
     class _StubHandler:
@@ -61,8 +65,10 @@ def test_framework_wrapper_re_exports_the_core_hook():
 
 
 async def test_missing_agno_handler_warning_names_agno(monkeypatch, caplog):
-    monkeypatch.setitem(sys.modules, "nat.plugins.agno.callback_handler", None)  # import fails
-    monkeypatch.setitem(framework_wrapper._library_instrumented, "agno", False)
+    from nat.builder import framework_instrumentation
+
+    # Agno is used but its package did not register instrumentation (not installed).
+    monkeypatch.delitem(framework_instrumentation._framework_instrumentation, LLMFrameworkEnum.AGNO, raising=False)
 
     @asynccontextmanager
     async def build_fn(config, builder) -> AsyncIterator[str]:
