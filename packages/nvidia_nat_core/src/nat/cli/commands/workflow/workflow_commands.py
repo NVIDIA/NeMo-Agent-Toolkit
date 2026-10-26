@@ -123,14 +123,21 @@ def _validate_workflow_name(workflow_name: str) -> None:
     Hyphens are allowed because they become underscores in the package name. Anything else that is not valid in a
     Python identifier, including spaces, dots and path separators, is rejected.
 
+    The package name is also used as the distribution name in the generated pyproject.toml, so it must be ASCII and
+    start and end with a letter or digit. A leading or trailing underscore or hyphen is rejected for that reason.
+
     Raises:
-        click.BadParameter: If the workflow name cannot be used as a Python package name.
+        click.BadParameter: If the workflow name cannot be used as a Python package or distribution name.
     """
     module_name = _get_module_name(workflow_name)
     if not module_name.isidentifier():
         raise click.BadParameter(  # noqa: TRY003
             f"Workflow name '{workflow_name}' is not a valid Python package name. Use only letters, digits, "
             "underscores and hyphens, and do not start with a digit.")
+    if not (module_name.isascii() and module_name[0].isalnum() and module_name[-1].isalnum()):
+        raise click.BadParameter(  # noqa: TRY003
+            f"Workflow name '{workflow_name}' is not a valid Python distribution name. Use only ASCII characters, "
+            "and start and end with a letter or digit.")
     if keyword.iskeyword(module_name):
         raise click.BadParameter(  # noqa: TRY003
             f"Workflow name '{workflow_name}' is a reserved Python keyword. Choose a different name.")
