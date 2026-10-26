@@ -45,7 +45,11 @@ _SCRIPT = textwrap.dedent('''
     from nat.data_models.config import Config
     from nat.data_models.function import FunctionBaseConfig
     from nat.data_models.llm import LLMBaseConfig
+    from nat.runtime.loader import PluginTypes, discover_and_register_plugins
     from nat.runtime.session import SessionManager
+
+    # Load plugins as `nat run` and load_config do; framework packages register their instrumentation here.
+    discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
 
     class FakeChatConfig(LLMBaseConfig, name="instrumentation_test_fake_chat"):
         pass
