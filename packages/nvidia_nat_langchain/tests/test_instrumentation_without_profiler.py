@@ -29,6 +29,7 @@ _SCRIPT = textwrap.dedent('''
         sys.modules["nat.plugins.profiler"] = None  # as if nvidia-nat-profiler weren't installed
     EXTRA_HANDLER = sys.argv[2] == "extra_handler"
     MODEL_HANDLER = sys.argv[2] == "model_handler"
+    DISCOVER = sys.argv[3] == "discover"
 
     import asyncio
     import json
@@ -48,8 +49,9 @@ _SCRIPT = textwrap.dedent('''
     from nat.runtime.loader import PluginTypes, discover_and_register_plugins
     from nat.runtime.session import SessionManager
 
-    # Load plugins as `nat run` and load_config do; framework packages register their instrumentation here.
-    discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
+    if DISCOVER:
+        # Load plugins as `nat run` and load_config do; framework packages register their instrumentation here.
+        discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
 
     class FakeChatConfig(LLMBaseConfig, name="instrumentation_test_fake_chat"):
         pass
@@ -100,8 +102,8 @@ _SCRIPT = textwrap.dedent('''
 ''')
 
 
-def _run(mode: str, handlers: str = "workflow_handler") -> dict:
-    completed = subprocess.run([sys.executable, "-c", _SCRIPT, mode, handlers],
+def _run(mode: str, handlers: str = "workflow_handler", plugins: str = "discover") -> dict:
+    completed = subprocess.run([sys.executable, "-c", _SCRIPT, mode, handlers, plugins],
                                capture_output=True,
                                text=True,
                                timeout=120,
@@ -129,6 +131,15 @@ def test_an_explicit_handler_does_not_duplicate_llm_steps_without_the_profiler(h
 def test_llm_calls_are_reported_once_with_the_profiler_installed():
     pytest.importorskip("nat.plugins.profiler")
     result = _run("as_installed")
+    assert result["answer"] == "Paris."
+    assert result["steps"].count("LLM_START") == 1
+    assert result["steps"].count("LLM_END") == 1
+
+
+@pytest.mark.parametrize("mode", ["without_profiler", "as_installed"])
+def test_llm_calls_are_reported_when_plugins_were_not_discovered(mode):
+    """A workflow built in code, without nat run or load_config, still gets the framework's instrumentation."""
+    result = _run(mode, plugins="no_discovery")
     assert result["answer"] == "Paris."
     assert result["steps"].count("LLM_START") == 1
     assert result["steps"].count("LLM_END") == 1
