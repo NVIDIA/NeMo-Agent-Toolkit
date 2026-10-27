@@ -658,3 +658,13 @@ def test_eval_input_item_copy_with_updates():
     # Verify the original item is unchanged
     assert test_item.output_obj == "The result is 3.333333333"
     assert test_item.expected_output_obj == "3.33"
+
+
+def test_get_eval_input_from_df_missing_question_key(dataset_handler):
+    """Test that get_eval_input_from_df raises a descriptive ValueError when question column is missing."""
+    df_missing_question = pd.DataFrame({
+        "id": ["1", "2"],
+        "answer": ["A1", "A2"],
+    })
+    with pytest.raises(ValueError, match="Question column 'question' not found in dataset"):
+        dataset_handler.get_eval_input_from_df(df_missing_question)
