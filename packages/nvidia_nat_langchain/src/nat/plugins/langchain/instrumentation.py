@@ -27,6 +27,7 @@ from nat.builder.framework_instrumentation import register_framework_instrumenta
 logger = logging.getLogger(__name__)
 
 
+@register_framework_instrumentation(LLMFrameworkEnum.LANGCHAIN)
 def _instrument_langchain(workflow_llms: dict | None) -> None:
     from langchain_core.tracers.context import register_configure_hook
 
@@ -39,6 +40,3 @@ def _instrument_langchain(workflow_llms: dict | None) -> None:
         register_configure_hook(callback_handler_var, inheritable=True)
         _library_instrumented["langchain"] = True
         logger.debug("LangChain/LangGraph callback hook registered")
-
-
-register_framework_instrumentation(LLMFrameworkEnum.LANGCHAIN, _instrument_langchain)

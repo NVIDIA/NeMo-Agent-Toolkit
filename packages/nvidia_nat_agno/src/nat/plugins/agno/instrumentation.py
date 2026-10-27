@@ -26,6 +26,7 @@ from nat.builder.framework_instrumentation import register_framework_instrumenta
 logger = logging.getLogger(__name__)
 
 
+@register_framework_instrumentation(LLMFrameworkEnum.AGNO)
 def _instrument_agno(workflow_llms: dict | None) -> None:
     if _library_instrumented["agno"]:
         return
@@ -33,6 +34,3 @@ def _instrument_agno(workflow_llms: dict | None) -> None:
     AgnoProfilerHandler().instrument()
     _library_instrumented["agno"] = True
     logger.debug("Agno callback handler registered")
-
-
-register_framework_instrumentation(LLMFrameworkEnum.AGNO, _instrument_agno)

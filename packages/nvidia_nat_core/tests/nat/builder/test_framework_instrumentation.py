@@ -40,6 +40,17 @@ def test_core_hook_imports_no_framework():
     assert imported == allowed, sorted(imported - allowed)
 
 
+def test_register_decorator_registers_and_returns_the_function(monkeypatch):
+    monkeypatch.setattr(framework_instrumentation, "_framework_instrumentation", {})
+
+    @framework_instrumentation.register_framework_instrumentation(LLMFrameworkEnum.ADK)
+    def instrument(workflow_llms):
+        pass
+
+    assert framework_instrumentation._framework_instrumentation == {LLMFrameworkEnum.ADK: instrument}
+    assert callable(instrument)
+
+
 async def test_registered_instrumentation_runs_for_detected_framework(monkeypatch):
     calls = []
     monkeypatch.setitem(framework_instrumentation._framework_instrumentation, LLMFrameworkEnum.STRANDS, calls.append)

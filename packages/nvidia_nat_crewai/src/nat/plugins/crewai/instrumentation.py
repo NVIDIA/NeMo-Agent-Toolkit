@@ -26,6 +26,7 @@ from nat.builder.framework_instrumentation import register_framework_instrumenta
 logger = logging.getLogger(__name__)
 
 
+@register_framework_instrumentation(LLMFrameworkEnum.CREWAI)
 def _instrument_crewai(workflow_llms: dict | None) -> None:
     if _library_instrumented["crewai"]:
         return
@@ -33,6 +34,3 @@ def _instrument_crewai(workflow_llms: dict | None) -> None:
     CrewAIProfilerHandler().instrument()
     _library_instrumented["crewai"] = True
     logger.debug("CrewAI callback handler registered")
-
-
-register_framework_instrumentation(LLMFrameworkEnum.CREWAI, _instrument_crewai)

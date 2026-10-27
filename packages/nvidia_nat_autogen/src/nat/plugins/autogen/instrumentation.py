@@ -26,6 +26,7 @@ from nat.builder.framework_instrumentation import register_framework_instrumenta
 logger = logging.getLogger(__name__)
 
 
+@register_framework_instrumentation(LLMFrameworkEnum.AUTOGEN)
 def _instrument_autogen(workflow_llms: dict | None) -> None:
     if _library_instrumented["autogen"]:
         return
@@ -33,6 +34,3 @@ def _instrument_autogen(workflow_llms: dict | None) -> None:
     AutoGenProfilerHandler().instrument()
     _library_instrumented["autogen"] = True
     logger.debug("AutoGen callback handler registered")
-
-
-register_framework_instrumentation(LLMFrameworkEnum.AUTOGEN, _instrument_autogen)

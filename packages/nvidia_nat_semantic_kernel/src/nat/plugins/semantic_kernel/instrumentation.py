@@ -26,6 +26,7 @@ from nat.builder.framework_instrumentation import register_framework_instrumenta
 logger = logging.getLogger(__name__)
 
 
+@register_framework_instrumentation(LLMFrameworkEnum.SEMANTIC_KERNEL)
 def _instrument_semantic_kernel(workflow_llms: dict | None) -> None:
     if _library_instrumented["semantic_kernel"]:
         return
@@ -33,6 +34,3 @@ def _instrument_semantic_kernel(workflow_llms: dict | None) -> None:
     SemanticKernelProfilerHandler(workflow_llms=workflow_llms).instrument()
     _library_instrumented["semantic_kernel"] = True
     logger.debug("SemanticKernel callback handler registered")
-
-
-register_framework_instrumentation(LLMFrameworkEnum.SEMANTIC_KERNEL, _instrument_semantic_kernel)

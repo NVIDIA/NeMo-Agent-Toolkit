@@ -26,6 +26,7 @@ from nat.builder.framework_instrumentation import register_framework_instrumenta
 logger = logging.getLogger(__name__)
 
 
+@register_framework_instrumentation(LLMFrameworkEnum.STRANDS)
 def _instrument_strands(workflow_llms: dict | None) -> None:
     if _library_instrumented["strands"]:
         return
@@ -33,6 +34,3 @@ def _instrument_strands(workflow_llms: dict | None) -> None:
     StrandsProfilerHandler().instrument()
     _library_instrumented["strands"] = True
     logger.debug("Strands callback handler registered")
-
-
-register_framework_instrumentation(LLMFrameworkEnum.STRANDS, _instrument_strands)

@@ -26,6 +26,7 @@ from nat.builder.framework_instrumentation import register_framework_instrumenta
 logger = logging.getLogger(__name__)
 
 
+@register_framework_instrumentation(LLMFrameworkEnum.ADK)
 def _instrument_adk(workflow_llms: dict | None) -> None:
     if _library_instrumented["adk"]:
         return
@@ -33,6 +34,3 @@ def _instrument_adk(workflow_llms: dict | None) -> None:
     ADKProfilerHandler().instrument()
     _library_instrumented["adk"] = True
     logger.debug("ADK callback handler registered")
-
-
-register_framework_instrumentation(LLMFrameworkEnum.ADK, _instrument_adk)

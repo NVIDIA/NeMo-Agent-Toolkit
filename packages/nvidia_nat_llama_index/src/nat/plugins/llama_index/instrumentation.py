@@ -25,6 +25,7 @@ from nat.builder.framework_instrumentation import register_framework_instrumenta
 logger = logging.getLogger(__name__)
 
 
+@register_framework_instrumentation(LLMFrameworkEnum.LLAMA_INDEX)
 def _instrument_llama_index(workflow_llms: dict | None) -> None:
     from llama_index.core import Settings
     from llama_index.core.callbacks import CallbackManager
@@ -33,6 +34,3 @@ def _instrument_llama_index(workflow_llms: dict | None) -> None:
 
     Settings.callback_manager = CallbackManager([LlamaIndexProfilerHandler()])
     logger.debug("LlamaIndex callback handler registered")
-
-
-register_framework_instrumentation(LLMFrameworkEnum.LLAMA_INDEX, _instrument_llama_index)

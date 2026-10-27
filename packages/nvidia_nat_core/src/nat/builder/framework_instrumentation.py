@@ -65,18 +65,27 @@ _FRAMEWORK_DISPLAY_NAMES = {
 }
 
 
-def register_framework_instrumentation(framework: LLMFrameworkEnum, instrument: Callable[[dict | None], None]) -> None:
+def register_framework_instrumentation(
+        framework: LLMFrameworkEnum) -> Callable[[Callable[[dict | None], None]], Callable[[dict | None], None]]:
     """
-    Register how a framework package attaches NAT's callback handler to its framework.
+    Decorator that registers how a framework package attaches NAT's callback handler to its framework.
 
-    Framework packages call this from their plugin `register` module. `instrument` runs at the start of
+    Framework packages decorate a function in their plugin modules. The function runs at the start of
     every workflow build that uses the framework and receives the workflow LLM configurations.
 
     Args:
         framework (LLMFrameworkEnum): The framework the instrumentation is for.
-        instrument (Callable[[dict | None], None]): Attaches the framework's callback handler.
+
+    Returns:
+        Callable[[Callable[[dict | None], None]], Callable[[dict | None], None]]:
+        A decorator that registers the function and returns it unchanged.
     """
-    _framework_instrumentation[framework] = instrument
+
+    def decorator(instrument: Callable[[dict | None], None]) -> Callable[[dict | None], None]:
+        _framework_instrumentation[framework] = instrument
+        return instrument
+
+    return decorator
 
 
 def set_framework_profiler_handler(
