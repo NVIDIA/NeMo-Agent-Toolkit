@@ -173,7 +173,10 @@ class TestAddItemsAPICalls:
 
         await editor_with_spy.add_items([item])
 
-        api_spy.assert_called_with('project.memory', user_id="user123", session_id="session1", agent_id="agent1")
+        api_spy.assert_called_with('project.memory',
+                                   metadata={
+                                       "user_id": "user123", "agent_id": "agent1", "session_id": "session1"
+                                   })
 
         # Verify add was called twice (once per message)
         add_calls = api_spy.get_calls('add')
@@ -325,7 +328,10 @@ class TestSearchAPICalls:
                                      agent_id="agent1")
 
         # Verify project.memory was called
-        api_spy.assert_called_with('project.memory', user_id="user123", session_id="session1", agent_id="agent1")
+        api_spy.assert_called_with('project.memory',
+                                   metadata={
+                                       "user_id": "user123", "agent_id": "agent1", "session_id": "session1"
+                                   })
 
         # Verify search was called with correct parameters
         api_spy.assert_called_with('search', query="What do I like?", limit=10)
