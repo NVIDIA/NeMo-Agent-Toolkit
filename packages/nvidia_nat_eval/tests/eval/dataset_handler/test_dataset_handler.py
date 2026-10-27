@@ -668,3 +668,60 @@ def test_get_eval_input_from_df_missing_question_key(dataset_handler):
     })
     with pytest.raises(ValueError, match="Question column 'question' not found in dataset"):
         dataset_handler.get_eval_input_from_df(df_missing_question)
+
+
+def test_get_eval_input_from_df_numeric_and_non_string_questions(dataset_handler):
+    """Test that get_eval_input_from_df supports integer and numeric questions without error."""
+    df = pd.DataFrame({
+        "id": ["1", "2", "3"],
+        "question": [101, 3.14, "Valid question"],
+        "answer": ["Ans1", "Ans2", "Ans3"],
+    })
+    eval_input = dataset_handler.get_eval_input_from_df(df)
+    assert len(eval_input.eval_input_items) == 3
+    assert eval_input.eval_input_items[0].input_obj == 101
+    assert eval_input.eval_input_items[1].input_obj == 3.14
+    assert eval_input.eval_input_items[2].input_obj == "Valid question"
+
+
+def test_get_eval_input_from_df_filters_whitespace_and_null_questions(dataset_handler):
+    """Test that get_eval_input_from_df filters out rows with null, empty, or whitespace questions."""
+    df = pd.DataFrame({
+        "id": ["1", "2", "3", "4", "5"],
+        "question": ["Valid question", None, "", "   ", "Another valid question"],
+        "answer": ["A1", "A2", "A3", "A4", "A5"],
+    })
+    eval_input = dataset_handler.get_eval_input_from_df(df)
+    assert len(eval_input.eval_input_items) == 2
+    assert [item.id for item in eval_input.eval_input_items] == ["1", "5"]
+
+
+def test_get_eval_input_from_df_all_rows_filtered(dataset_handler):
+    """Test that get_eval_input_from_df returns empty EvalInput when all rows have invalid questions."""
+    df = pd.DataFrame({
+        "id": ["1", "2"],
+        "question": ["", "  \t  "],
+        "answer": ["A1", "A2"],
+    })
+    eval_input = dataset_handler.get_eval_input_from_df(df)
+    assert len(eval_input.eval_input_items) == 0
+
+
+def test_get_eval_input_from_df_custom_question_key():
+    """Test that get_eval_input_from_df respects custom question_key configuration."""
+    custom_structure = EvalDatasetStructureConfig(question_key="custom_query", answer_key="custom_ans")
+    config = EvalDatasetJsonConfig(structure=custom_structure)
+    handler = DatasetHandler(config, reps=1, concurrency=1)
+
+    df_valid = pd.DataFrame({
+        "id": ["1"],
+        "custom_query": ["What is deep learning?"],
+        "custom_ans": ["DL"],
+    })
+    eval_input = handler.get_eval_input_from_df(df_valid)
+    assert len(eval_input.eval_input_items) == 1
+    assert eval_input.eval_input_items[0].input_obj == "What is deep learning?"
+
+    df_missing_custom = pd.DataFrame({"id": ["1"], "question": ["wrong key"]})
+    with pytest.raises(ValueError, match="Question column 'custom_query' not found in dataset"):
+        handler.get_eval_input_from_df(df_missing_custom)
