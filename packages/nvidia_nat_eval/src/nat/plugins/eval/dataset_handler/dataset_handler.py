@@ -110,6 +110,10 @@ class DatasetHandler:
         structured = self.is_structured_input()
         if structured:
             # For structured input, question is mandatory. Ignore rows with missing or empty questions
+            if self.question_key not in input_df.columns:
+                available_cols = list(input_df.columns)
+                raise ValueError(f"Question column '{self.question_key}' not found in dataset. "
+                                 f"Available columns: {available_cols}")
             input_df = input_df[input_df[self.question_key].notnull() & input_df[self.question_key].str.strip().ne("")]
         eval_input_items = [create_eval_item(row, structured) for _, row in input_df.iterrows()]
 
