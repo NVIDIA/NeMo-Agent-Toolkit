@@ -20,6 +20,7 @@ This lives in core so tracing works without the optional profiler package.
 from __future__ import annotations
 
 import functools
+import importlib.metadata
 import inspect
 import logging
 import re
@@ -88,6 +89,24 @@ def register_framework_instrumentation(
     return decorator
 
 
+def _load_framework_instrumentation(framework: LLMFrameworkEnum) -> Callable[[dict | None], None] | None:
+    """
+    Load the framework package's plugin so it registers its instrumentation.
+
+    `nat run` and `load_config` load every plugin up front. A workflow built in code may not have, so the
+    framework's `nat.components` entry point (for example `nat_langchain`) is loaded on first use.
+    """
+    for entry_point in importlib.metadata.entry_points(group="nat.components", name=f"nat_{framework.value}"):
+        try:
+            entry_point.load()
+        except ImportError:
+            logger.debug("Could not load plugin %s for %s instrumentation",
+                         entry_point.value,
+                         framework.value,
+                         exc_info=True)
+    return _framework_instrumentation.get(framework)
+
+
 def set_framework_profiler_handler(
     workflow_llms: dict | None = None,
     frameworks: list[LLMFrameworkEnum] | None = None,
@@ -119,7 +138,7 @@ def set_framework_profiler_handler(
         async def wrapper(workflow_config, builder):
 
             for framework in frameworks or []:
-                instrument = _framework_instrumentation.get(framework)
+                instrument = _framework_instrumentation.get(framework) or _load_framework_instrumentation(framework)
                 if instrument is None:
                     name = _FRAMEWORK_DISPLAY_NAMES.get(framework, framework.value)
                     logger.warning(

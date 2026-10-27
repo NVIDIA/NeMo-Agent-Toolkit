@@ -51,6 +51,36 @@ def test_register_decorator_registers_and_returns_the_function(monkeypatch):
     assert callable(instrument)
 
 
+async def test_unregistered_framework_loads_its_plugin_entry_point(monkeypatch):
+    """A workflow built without plugin discovery still gets the framework's instrumentation."""
+    monkeypatch.setattr(framework_instrumentation, "_framework_instrumentation", {})
+    calls = []
+    requested = []
+
+    class _EntryPoint:
+        value = "nat.plugins.strands.register"
+
+        def load(self):
+            framework_instrumentation.register_framework_instrumentation(LLMFrameworkEnum.STRANDS)(calls.append)
+
+    def entry_points(**selection):
+        requested.append(selection)
+        return [_EntryPoint()]
+
+    monkeypatch.setattr(framework_instrumentation.importlib.metadata, "entry_points", entry_points)
+
+    @asynccontextmanager
+    async def build_fn(config, builder) -> AsyncIterator[str]:
+        yield "workflow"
+
+    wrapped = framework_instrumentation.set_framework_profiler_handler(None, [LLMFrameworkEnum.STRANDS])(build_fn)
+    async with wrapped(None, None):
+        pass
+
+    assert requested == [{"group": "nat.components", "name": "nat_strands"}]
+    assert calls == [None]
+
+
 async def test_registered_instrumentation_runs_for_detected_framework(monkeypatch):
     calls = []
     monkeypatch.setitem(framework_instrumentation._framework_instrumentation, LLMFrameworkEnum.STRANDS, calls.append)

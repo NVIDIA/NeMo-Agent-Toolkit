@@ -67,8 +67,9 @@ def test_framework_wrapper_re_exports_the_core_hook():
 async def test_missing_agno_handler_warning_names_agno(monkeypatch, caplog):
     from nat.builder import framework_instrumentation
 
-    # Agno is used but its package did not register instrumentation (not installed).
+    # Agno is used but its package is not installed: nothing registered and no plugin entry point to load.
     monkeypatch.delitem(framework_instrumentation._framework_instrumentation, LLMFrameworkEnum.AGNO, raising=False)
+    monkeypatch.setattr(framework_instrumentation.importlib.metadata, "entry_points", lambda **_: [])
 
     @asynccontextmanager
     async def build_fn(config, builder) -> AsyncIterator[str]:
