@@ -14,6 +14,7 @@
 # limitations under the License.
 """Automatic retries wait for the time a rate-limited provider asks for in `Retry-After`."""
 
+import sys
 from collections.abc import AsyncGenerator
 from collections.abc import Generator
 from datetime import UTC
@@ -25,6 +26,7 @@ from unittest.mock import patch
 
 import pytest
 
+from nat.utils.exception_handlers import automatic_retries
 from nat.utils.exception_handlers.automatic_retries import _retry_after_seconds
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
@@ -135,12 +137,27 @@ async def _call(client: Client, method: str):
 
 @pytest.fixture(name="sleeps")
 def sleeps_fixture():
+    """Record the waits requested by the retry wrapper.
+
+    `asyncio.sleep` and `time.sleep` are patched globally, so anything else that sleeps while a test runs (a thread
+    or task left behind by an earlier test, library internals) would also be recorded and make the assertions
+    order-dependent. Only calls made from `automatic_retries` are kept; everything else just returns immediately.
+    """
     waits: list[float] = []
 
-    async def fake_async_sleep(seconds):
-        waits.append(seconds)
+    def _called_from_retry_module() -> bool:
+        # frame 0 is this helper, 1 is the fake sleep, 2 is whoever called sleep
+        return sys._getframe(2).f_globals.get("__name__") == automatic_retries.__name__
 
-    with patch("asyncio.sleep", fake_async_sleep), patch("time.sleep", waits.append):
+    async def fake_async_sleep(seconds):
+        if _called_from_retry_module():
+            waits.append(seconds)
+
+    def fake_sleep(seconds):
+        if _called_from_retry_module():
+            waits.append(seconds)
+
+    with patch("asyncio.sleep", fake_async_sleep), patch("time.sleep", fake_sleep):
         yield waits
 
 
