@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import Mock
 from unittest.mock import patch
 
+import aiofiles
 import pytest
 
 from nat.builder.context import ContextState
@@ -196,7 +197,7 @@ class TestFileExporterFunctionality:
             assert lines[0].strip() == '{"line": 1}'
             assert lines[1].strip() == '{"line": 2}'
 
-    async def test_overwrite_mode_clears_file_once_across_runs(self, mock_context_state, temp_file):
+    async def test_overwrite_mode_clears_file_once_across_runs(self, mock_context_state: Mock, temp_file: str):
         """Each workflow run exports through an isolated copy, so overwrite mode must clear the file only once."""
         with open(temp_file, "w", encoding="utf-8") as f:
             f.write('{"stale": true}\n')
@@ -212,6 +213,36 @@ class TestFileExporterFunctionality:
 
         with open(temp_file, encoding="utf-8") as f:
             assert f.read() == '{"run": 0}\n{"run": 1}\n{"run": 2}\n'
+
+    async def test_overwrite_mode_clears_file_after_failed_first_write(self,
+                                                                       mock_context_state: Mock,
+                                                                       temp_file: str,
+                                                                       monkeypatch: pytest.MonkeyPatch):
+        """A first write that fails to open the file must not switch later writes to append."""
+        with open(temp_file, "w", encoding="utf-8") as f:
+            f.write('{"stale": true}\n')
+
+        real_open = aiofiles.open
+        calls = 0
+
+        def failing_first_open(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise OSError("disk full")
+            return real_open(*args, **kwargs)
+
+        monkeypatch.setattr(aiofiles, "open", failing_first_open)
+        exporter = FileExporter(context_state=mock_context_state,
+                                output_path=temp_file,
+                                project="test_project",
+                                mode=FileMode.OVERWRITE)
+
+        await exporter.export_processed('{"run": 0}')
+        await exporter.export_processed('{"run": 1}')
+
+        with open(temp_file, encoding="utf-8") as f:
+            assert f.read() == '{"run": 1}\n'
 
     @patch('aiofiles.open')
     async def test_export_processed_file_error_handling(self, mock_aiofiles_open, mock_context_state,

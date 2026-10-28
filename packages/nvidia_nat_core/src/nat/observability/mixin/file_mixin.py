@@ -233,7 +233,6 @@ class FileExportMixin(ResourceConflictMixin):
                 # Determine file mode
                 if not self._first_write_done.is_set() and self._mode == FileMode.OVERWRITE:
                     file_mode = "w"
-                    self._first_write_done.set()
                 else:
                     file_mode = "a"
 
@@ -247,6 +246,9 @@ class FileExportMixin(ResourceConflictMixin):
                         # Handle single string
                         await f.write(item)
                         await f.write("\n")
+
+                if file_mode == "w":
+                    self._first_write_done.set()
 
         except Exception as e:
             logger.exception("Error exporting event: %s", e)
