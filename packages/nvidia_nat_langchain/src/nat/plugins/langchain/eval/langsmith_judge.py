@@ -231,6 +231,7 @@ async def register_langsmith_judge(config: LangSmithJudgeConfig, builder: EvalBu
         judge_llm = patch_with_retry(
             judge_llm,
             retries=config.num_retries,
+            max_wait=config.retry_max_wait,
             retry_codes=config.retry_on_status_codes,
             retry_on_messages=config.retry_on_errors,
         )

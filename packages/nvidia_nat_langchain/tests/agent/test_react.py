@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import typing
 
 import pytest
 from langchain_core.agents import AgentAction
@@ -536,6 +537,25 @@ async def test_graph_parsing_error(mock_react_graph_no_raise):
     assert 'fix the input on retry' in response.content
 
 
+async def test_graph_parsing_error_after_tool_call_does_not_rerun_tool(mock_config_react_agent):
+    """A parsing failure after a tool call returns the error message instead of re-running that tool call."""
+    from langchain_core.language_models.fake_chat_models import FakeListChatModel
+
+    counter, calls = _counting_tool()
+    llm = FakeListChatModel(responses=[_REACT_TOOL_CALL] + ["Thought: I am not sure what to do next"] * 5)
+    agent = ReActAgentGraph(llm=llm,
+                            prompt=create_react_agent_prompt(mock_config_react_agent),
+                            tools=[counter],
+                            raise_on_parsing_failure=False,
+                            max_tool_calls=3)
+    graph = await agent.build_graph()
+
+    response = ReActGraphState(**await graph.ainvoke(ReActGraphState(messages=[HumanMessage('hi')])))
+
+    assert len(calls) == 1
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in response.messages[-1].content
+
+
 async def test_graph(mock_react_graph):
     response = await mock_react_graph.ainvoke(ReActGraphState(messages=[HumanMessage('Final Answer: lorem ipsum')]))
     response = ReActGraphState(**response)
@@ -699,6 +719,39 @@ async def test_output_parser_json_input_space_observation(mock_react_output_pars
     assert test_output.tool == mock_action
     assert test_output.tool_input == mock_input
     assert "Observation" not in test_output.tool_input
+
+
+@pytest.mark.parametrize(
+    "tool_input",
+    [
+        '{"query": "weather observation stations in Ohio"}',
+        "What is the Mauna Kea observation deck?",
+        "Observation bias in clinical trials",
+    ],
+    ids=["json_input", "text_input", "input_starts_with_the_word"],
+)
+@pytest.mark.parametrize("trailer", ["\nObservation:", " Observation:", ""], ids=["newline", "space", "none"])
+async def test_output_parser_keeps_observation_word_in_input(mock_react_output_parser, tool_input: str, trailer: str):
+    mock_input = f"Thought: I need to search\nAction: search\nAction Input: {tool_input}{trailer}"
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool == "search"
+    assert test_output.tool_input == tool_input
+
+
+async def test_output_parser_keeps_input_line_starting_with_observation(mock_react_output_parser):
+    tool_input = "Summarize these topics:\nObservation bias in clinical trials\nSelection bias"
+    mock_input = f"Thought: I need to search\nAction: search\nAction Input: {tool_input}\nObservation:"
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool_input == tool_input
+
+
+async def test_output_parser_stops_at_inline_observation_marker(mock_react_output_parser):
+    mock_input = "Thought: I need to search\nAction: search\nAction Input: search query Observation: Waiting..."
+    test_output = await mock_react_output_parser.aparse(mock_input)
+    assert isinstance(test_output, AgentAction)
+    assert test_output.tool_input == "search query"
 
 
 async def test_output_parser_missing_action_input(mock_react_output_parser):
@@ -1819,8 +1872,10 @@ async def test_stream_fn_yields_content_after_final_answer_marker(stream_fn_fact
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="Thought: I know the answer\nFinal Answer: "), {"langgraph_node": "agent"})
-        yield (AIMessageChunk(content="The result is 42"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="Thought: I know the answer\nFinal Answer: "), {
+            "langgraph_node": "agent"
+        }))
+        yield ("messages", (AIMessageChunk(content="The result is 42"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1838,8 +1893,8 @@ async def test_stream_fn_handles_split_final_answer(stream_fn_factory):
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="Final An"), {"langgraph_node": "agent"})
-        yield (AIMessageChunk(content="swer: The result is 42"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="Final An"), {"langgraph_node": "agent"}))
+        yield ("messages", (AIMessageChunk(content="swer: The result is 42"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1857,7 +1912,7 @@ async def test_stream_fn_yields_after_marker_in_same_chunk(stream_fn_factory):
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="Final Answer: Direct response"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="Final Answer: Direct response"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1875,8 +1930,8 @@ async def test_stream_fn_tokens_after_found_final_answer(stream_fn_factory):
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="Final Answer: Part one"), {"langgraph_node": "agent"})
-        yield (AIMessageChunk(content=" and part two"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="Final Answer: Part one"), {"langgraph_node": "agent"}))
+        yield ("messages", (AIMessageChunk(content=" and part two"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1895,7 +1950,9 @@ async def test_stream_fn_fallback_when_no_final_answer_marker(stream_fn_factory)
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="This is a direct answer without ReAct format"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="This is a direct answer without ReAct format"), {
+            "langgraph_node": "agent"
+        }))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1913,8 +1970,8 @@ async def test_stream_fn_filters_non_agent_node_messages(stream_fn_factory):
     from nat.data_models.api_server import ChatRequest
 
     async def mock_astream(state, config=None, stream_mode=None):
-        yield (AIMessageChunk(content="should be ignored"), {"langgraph_node": "tool"})
-        yield (AIMessageChunk(content="Final Answer: visible"), {"langgraph_node": "agent"})
+        yield ("messages", (AIMessageChunk(content="should be ignored"), {"langgraph_node": "tool"}))
+        yield ("messages", (AIMessageChunk(content="Final Answer: visible"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1934,8 +1991,8 @@ async def test_stream_fn_filters_tool_call_chunks(stream_fn_factory):
 
     async def mock_astream(state, config=None, stream_mode=None):
         tool_chunk = AIMessageChunk(content="", tool_call_chunks=[{"name": "Tool A", "args": "", "id": "1"}])
-        yield (tool_chunk, {"langgraph_node": "agent"})
-        yield (AIMessageChunk(content="Final Answer: clean answer"), {"langgraph_node": "agent"})
+        yield ("messages", (tool_chunk, {"langgraph_node": "agent"}))
+        yield ("messages", (AIMessageChunk(content="Final Answer: clean answer"), {"langgraph_node": "agent"}))
 
     stream_fn = await stream_fn_factory(mock_astream)
 
@@ -1982,6 +2039,168 @@ async def test_stream_fn_propagates_generic_exception(stream_fn_factory):
             pass
 
 
+class _StatusError(RuntimeError):
+    """A provider error carrying an HTTP status code, like openai.NotFoundError."""
+
+    def __init__(self, message: str, status_code: int):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+@pytest.mark.parametrize("error", ["404 page not found", "[###] Unknown Error\nage not found"])
+async def test_stream_fn_names_model_rejected_by_backend(stream_fn_factory, error):
+    """A backend 404 for a per-request model override names the model (#2378)."""
+    from unittest.mock import patch
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        raise _StatusError(error, 404)
+        yield  # make it an async generator
+
+    # treat the mock LLM as one that supports per-request model overrides, as NIM does
+    with patch("langchain_core.runnables.configurable.RunnableConfigurableFields", object):
+        stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("hi", model="placeholder")
+    with pytest.raises(ValueError, match="rejected the requested model 'placeholder'") as exc_info:
+        async for _ in stream_fn(request):
+            pass
+    assert isinstance(exc_info.value.__cause__, _StatusError)
+
+    # without a per-request override the original error is unchanged
+    with pytest.raises(_StatusError, match="not found"):
+        async for _ in stream_fn(ChatRequest.from_string("hi")):
+            pass
+
+
+async def test_response_fn_names_model_rejected_by_backend(mock_llm, mock_tool):
+    """The non-streaming path also names the rejected model and chains the provider's 404 (#2378)."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import MagicMock
+    from unittest.mock import patch
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+    from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+
+    provider_error = _StatusError("404 page not found", 404)
+    mock_graph = MagicMock()
+    mock_graph.ainvoke = AsyncMock(side_effect=provider_error)
+    mock_builder = AsyncMock()
+    mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+    mock_builder.get_tools = AsyncMock(return_value=[mock_tool('Tool A')])
+    config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+
+    # treat the mock LLM as one that supports per-request model overrides, as NIM does
+    with patch("langchain_core.runnables.configurable.RunnableConfigurableFields", object), \
+            patch.object(ReActAgentGraph, 'build_graph', new=AsyncMock(return_value=mock_graph)):
+        async with react_agent_workflow(config, mock_builder) as function_info:
+            request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}], model="placeholder")
+            with pytest.raises(ValueError, match="rejected the requested model 'placeholder'") as exc_info:
+                await function_info.single_fn(request)
+
+    assert exc_info.value.__cause__ is provider_error
+
+
+def test_rejected_model_error_ignores_unrelated_failures():
+    from nat.plugins.langchain.agent.react_agent.register import _build_lc_config
+    from nat.plugins.langchain.agent.react_agent.register import _rejected_model_error
+
+    override = _build_lc_config(5, "placeholder")
+    assert _rejected_model_error(RuntimeError("connection reset"), override) is None
+    # "not found" text without a 404 status (e.g. a tool error) is not a model rejection
+    assert _rejected_model_error(RuntimeError("file not found"), override) is None
+    assert _rejected_model_error(_StatusError("bad request", 400), override) is None
+    assert _rejected_model_error(_StatusError("404 page not found", 404), _build_lc_config(5, None)) is None
+    assert "'placeholder'" in str(_rejected_model_error(_StatusError("404 page not found", 404), override))
+
+
+def _react_workflow(per_user: bool):
+    from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+    from nat.plugins.langchain.agent.react_agent.register_per_user_agent import PerUserReActAgentWorkflowConfig
+    from nat.plugins.langchain.agent.react_agent.register_per_user_agent import per_user_react_agent_workflow
+
+    if per_user:
+        return PerUserReActAgentWorkflowConfig, per_user_react_agent_workflow
+    return ReActAgentWorkflowConfig, react_agent_workflow
+
+
+@pytest.mark.parametrize("per_user", [False, True], ids=["react_agent", "per_user_react_agent"])
+async def test_react_workflow_returns_parse_error_when_raise_on_parsing_failure_is_off(per_user):
+    """`raise_on_parsing_failure: false` returns the parsing error as the answer instead of raising."""
+    from unittest.mock import AsyncMock
+
+    from langchain_core.language_models.fake_chat_models import FakeListChatModel
+    from langchain_core.tools import tool
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+
+    @tool
+    def counter(q: str) -> str:
+        """Counts its calls."""
+        return "unused"
+
+    config_type, workflow = _react_workflow(per_user)
+    builder = AsyncMock()
+    # a Thought with no Action can't be parsed, so every attempt fails
+    builder.get_llm = AsyncMock(return_value=FakeListChatModel(responses=["Thought: still thinking"] * 5))
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = config_type(tool_names=["counter"], llm_name="llm", raise_on_parsing_failure=False)
+    async with workflow(config, builder) as function_info:
+        result = await function_info.single_fn(ChatRequestOrMessage(input_message="hi"))
+    assert "Thought: still thinking" in result
+
+
+@pytest.mark.parametrize("per_user", [False, True], ids=["react_agent", "per_user_react_agent"])
+async def test_react_workflow_runs_native_tool_calls_when_use_native_tool_calling_is_on(per_user):
+    """`use_native_tool_calling: true` runs the structured tool_calls the model returns."""
+    from unittest.mock import AsyncMock
+
+    from langchain_core.tools import tool
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+
+    calls = []
+
+    @tool
+    def counter(q: str) -> str:
+        """Counts its calls."""
+        calls.append(q)
+        return f"call {len(calls)}"
+
+    class NativeToolCallLLM(BaseChatModel):
+        turns: int = 0
+
+        @property
+        def _llm_type(self) -> str:
+            return "native-tool-call"
+
+        def bind_tools(self, tools: typing.Any, **kwargs: typing.Any) -> "NativeToolCallLLM":
+            return self
+
+        def _generate(self,
+                      messages: typing.Any,
+                      stop: typing.Any = None,
+                      run_manager: typing.Any = None,
+                      **kwargs: typing.Any) -> ChatResult:
+            self.turns += 1
+            if self.turns == 1:
+                message = AIMessage(content="", tool_calls=[{"name": "counter", "args": {"q": "x"}, "id": "call-1"}])
+            else:
+                message = AIMessage(content="Thought: done\nFinal Answer: all done")
+            return ChatResult(generations=[ChatGeneration(message=message)])
+
+    config_type, workflow = _react_workflow(per_user)
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=NativeToolCallLLM())
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = config_type(tool_names=["counter"], llm_name="llm", use_native_tool_calling=True)
+    async with workflow(config, builder) as function_info:
+        result = await function_info.single_fn(ChatRequestOrMessage(input_message="hi"))
+    assert calls == ["x"]
+    assert result == "all done"
+
+
 def test_build_lc_config_ignores_unknown_model_sentinel():
     """Ignore the `unknown-model` sentinel in per-request model configuration.
 
@@ -2003,3 +2222,223 @@ def test_build_lc_config_ignores_unknown_model_sentinel():
     # a genuine per-request model is still forwarded as an override
     lc_config = _build_lc_config(5, "nvidia/nemotron-3.5-lightning-30b-a3b")
     assert lc_config["configurable"] == {"model_name": "nvidia/nemotron-3.5-lightning-30b-a3b"}
+
+
+def _counting_tool():
+    from langchain_core.tools import tool
+
+    calls = []
+
+    @tool
+    def counter(q: str) -> str:
+        """Counts its calls."""
+        calls.append(q)
+        return f"call {len(calls)}"
+
+    return counter, calls
+
+
+async def _run_react_agent(responses: list[str],
+                           max_tool_calls: int,
+                           per_user: bool = False,
+                           stream: bool = False,
+                           raise_on_parsing_failure: bool = True):
+    from unittest.mock import AsyncMock
+
+    from langchain_core.language_models.fake_chat_models import FakeListChatModel
+    from langgraph.errors import GraphRecursionError
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+    from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+    from nat.plugins.langchain.agent.react_agent.register_per_user_agent import PerUserReActAgentWorkflowConfig
+    from nat.plugins.langchain.agent.react_agent.register_per_user_agent import per_user_react_agent_workflow
+
+    counter, calls = _counting_tool()
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=FakeListChatModel(responses=responses))
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config_type, workflow = ((PerUserReActAgentWorkflowConfig, per_user_react_agent_workflow) if per_user else
+                             (ReActAgentWorkflowConfig, react_agent_workflow))
+    config = config_type(tool_names=["counter"],
+                         llm_name="llm",
+                         max_tool_calls=max_tool_calls,
+                         raise_on_parsing_failure=raise_on_parsing_failure)
+    request = ChatRequestOrMessage(input_message="hi")
+    async with workflow(config, builder) as function_info:
+        if stream:
+            result = "".join([chunk.choices[0].delta.content async for chunk in function_info.stream_fn(request)])
+        else:
+            try:
+                result = await function_info.single_fn(request)
+            except GraphRecursionError as e:  # the graph raises once the limit is hit
+                result = e
+    return result, calls
+
+
+_REACT_TOOL_CALL = 'Thought: call the tool\nAction: counter\nAction Input: {"q": "x"}'
+
+
+@pytest.mark.parametrize("max_tool_calls", [1, 2, 5])
+async def test_react_agent_never_exceeds_max_tool_calls(max_tool_calls):
+    """`max_tool_calls` is the maximum number of tool calls the agent may take before answering."""
+    from langgraph.errors import GraphRecursionError
+
+    result, calls = await _run_react_agent([_REACT_TOOL_CALL] * 20, max_tool_calls)
+    assert len(calls) == max_tool_calls
+    assert isinstance(result, GraphRecursionError)
+
+
+@pytest.mark.parametrize("max_tool_calls", [1, 2, 5])
+async def test_react_agent_stream_never_exceeds_max_tool_calls(max_tool_calls):
+    result, calls = await _run_react_agent([_REACT_TOOL_CALL] * 20, max_tool_calls, stream=True)
+    assert len(calls) == max_tool_calls
+    assert "could not produce a final answer" in result
+
+
+@pytest.mark.parametrize("max_tool_calls", [1, 2, 5])
+async def test_per_user_react_agent_never_exceeds_max_tool_calls(max_tool_calls):
+    from langgraph.errors import GraphRecursionError
+
+    result, calls = await _run_react_agent([_REACT_TOOL_CALL] * 20, max_tool_calls, per_user=True)
+    assert len(calls) == max_tool_calls
+    assert isinstance(result, GraphRecursionError)
+
+
+@pytest.mark.parametrize("max_tool_calls", [1, 2, 5])
+async def test_react_agent_can_use_all_max_tool_calls_then_answer(max_tool_calls):
+    responses = [_REACT_TOOL_CALL] * max_tool_calls + ["Thought: done\nFinal Answer: all done"]
+    result, calls = await _run_react_agent(responses, max_tool_calls)
+    assert len(calls) == max_tool_calls
+    assert result == "all done"
+
+
+_UNPARSEABLE = "Thought: I am not sure what to do next"
+
+
+@pytest.mark.parametrize(
+    "responses",
+    [
+        pytest.param(["The answer is 42."], id="direct-answer"),
+        pytest.param(["<think>check the facts</think>The answer is 42."], id="think-wrapped-direct-answer"),
+        pytest.param([_REACT_TOOL_CALL, "The answer is 42."], id="tool-call-then-direct-answer"),
+        pytest.param([_UNPARSEABLE] * 5, id="parsing-error"),
+        pytest.param([_REACT_TOOL_CALL] + [_UNPARSEABLE] * 5, id="tool-call-then-parsing-error"),
+    ])
+async def test_react_agent_stream_returns_the_answer_single_fn_returns(responses):
+    """Without a "Final Answer:" marker, stream_fn yields the answer single_fn returns, not every turn's text."""
+    single, single_calls = await _run_react_agent(responses, 3, raise_on_parsing_failure=False)
+    streamed, stream_calls = await _run_react_agent(responses, 3, stream=True, raise_on_parsing_failure=False)
+
+    assert streamed == single
+    assert len(stream_calls) == len(single_calls)
+    assert "<think>" not in streamed
+
+
+class _UsageReportingLLM(BaseChatModel):
+    """Scripted model whose replies carry `usage_metadata`, as LangChain chat models report it."""
+
+    replies: list[tuple[str, int, int]]
+    turns: int = 0
+
+    @property
+    def _llm_type(self) -> str:
+        return "usage-reporting"
+
+    def _generate(self,
+                  messages: typing.Any,
+                  stop: typing.Any = None,
+                  run_manager: typing.Any = None,
+                  **kwargs: typing.Any) -> ChatResult:
+        text, input_tokens, output_tokens = self.replies[self.turns]
+        self.turns += 1
+        message = AIMessage(content=text,
+                            usage_metadata={
+                                "input_tokens": input_tokens,
+                                "output_tokens": output_tokens,
+                                "total_tokens": input_tokens + output_tokens,
+                            })
+        return ChatResult(generations=[ChatGeneration(message=message)])
+
+
+@pytest.mark.parametrize("per_user", [False, True], ids=["react_agent", "per_user_react_agent"])
+async def test_react_workflow_reports_the_token_usage_the_model_reported(per_user):
+    """`usage` on the response is the sum of what the model reported over the run, not a word count."""
+    from unittest.mock import AsyncMock
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+
+    counter, calls = _counting_tool()
+    llm = _UsageReportingLLM(replies=[(_REACT_TOOL_CALL, 100, 20), ("Thought: done\nFinal Answer: all done", 150, 30)])
+    config_type, workflow = _react_workflow(per_user)
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=llm)
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = config_type(tool_names=["counter"], llm_name="llm")
+    request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}])
+    async with workflow(config, builder) as function_info:
+        response = await function_info.single_fn(request)
+    assert calls == ["x"]
+    assert (response.usage.prompt_tokens, response.usage.completion_tokens,
+            response.usage.total_tokens) == (250, 50, 300)
+
+
+async def test_react_workflow_falls_back_to_word_counts_when_the_model_reports_no_usage():
+    from unittest.mock import AsyncMock
+
+    from langchain_core.language_models.fake_chat_models import FakeListChatModel
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+    from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+
+    counter, _ = _counting_tool()
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=FakeListChatModel(responses=["Thought: done\nFinal Answer: two words"]))
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = ReActAgentWorkflowConfig(tool_names=["counter"], llm_name="llm")
+    request = ChatRequestOrMessage(messages=[{"role": "user", "content": "say hi"}])
+    async with react_agent_workflow(config, builder) as function_info:
+        response = await function_info.single_fn(request)
+    assert (response.usage.prompt_tokens, response.usage.completion_tokens, response.usage.total_tokens) == (2, 2, 4)
+
+
+def test_build_lc_config_adds_one_token_usage_collector():
+    from nat.plugins.langchain.agent.react_agent.register import _build_lc_config
+    from nat.plugins.langchain.agent.react_agent.register import _token_usage_collector
+    from nat.plugins.langchain.agent.token_usage import TokenUsageCollector
+
+    lc_config = _build_lc_config(5, None)
+    collectors = [cb for cb in lc_config["callbacks"] if isinstance(cb, TokenUsageCollector)]
+    assert len(collectors) == 1
+    assert _token_usage_collector(lc_config) is collectors[0]
+    assert _build_lc_config(5, None)["callbacks"][0] is not collectors[0]  # a new one per request
+
+
+@pytest.mark.parametrize("per_user", [False, True], ids=["react_agent", "per_user_react_agent"])
+async def test_react_workflow_keeps_the_callbacks_of_a_parent_run(per_user):
+    """Run inside a parent runnable: the parent's callbacks still see the model calls, and usage is still summed."""
+    from unittest.mock import AsyncMock
+
+    from langchain_core.callbacks import AsyncCallbackHandler
+    from langchain_core.runnables import RunnableLambda
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+
+    class CountLLMEnds(AsyncCallbackHandler):
+        calls: int = 0
+
+        async def on_llm_end(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+            type(self).calls += 1
+
+    counter, _ = _counting_tool()
+    llm = _UsageReportingLLM(replies=[(_REACT_TOOL_CALL, 100, 20), ("Thought: done\nFinal Answer: all done", 150, 30)])
+    config_type, workflow = _react_workflow(per_user)
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=llm)
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = config_type(tool_names=["counter"], llm_name="llm")
+    request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}])
+    async with workflow(config, builder) as function_info:
+        response = await RunnableLambda(function_info.single_fn).ainvoke(request,
+                                                                         config={"callbacks": [CountLLMEnds()]})
+    assert CountLLMEnds.calls == 2
+    assert response.usage.total_tokens == 300

@@ -17,12 +17,13 @@ import base64
 import logging
 import os
 import shutil
-import subprocess
+import tempfile
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
 
+from nat.registry_handlers.process_utils import run_command
 from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from nat.registry_handlers.schemas.headers import RequestHeaders
 from nat.registry_handlers.schemas.package import PackageNameVersionList
@@ -107,9 +108,18 @@ class RestRegistryHandler(AbstractRegistryHandler):
                 completion status message.
         """
 
-        tmp_dir = "./.tmp/nat-pull"
+        # A unique directory per pull. A shared one is not safe now that the
+        # install is awaited rather than run synchronously: two concurrent pulls
+        # would write into the same directory, and whichever finished first would
+        # rmtree it out from under the other installer.
+        #
+        # Created inside the try so a staging failure (no writable temp dir) comes
+        # back as a normal ERROR PullResponse like every other pull failure, rather
+        # than raising out of an async generator.
+        tmp_dir = None
 
         try:
+            tmp_dir = tempfile.mkdtemp(prefix="nat-pull-")
             async with httpx.AsyncClient(headers=self._headers, timeout=self._timeout) as client:
                 packages_json = packages.model_dump_json()
                 response = await client.post(f"{self._endpoint}/{self._pull_route}", content=packages_json)
@@ -121,9 +131,6 @@ class RestRegistryHandler(AbstractRegistryHandler):
             if (validated_pull_response.status.status == StatusEnum.ERROR):
                 logger.error(validated_pull_response.status.message)
                 raise ValueError(f"Server error: {validated_pull_response.status.message}")
-
-            if (not os.path.exists(tmp_dir)):
-                os.mkdir(tmp_dir)
 
             whl_paths = []
 
@@ -138,19 +145,13 @@ class RestRegistryHandler(AbstractRegistryHandler):
 
             cmd = ["uv", "pip", "install"]
             cmd.extend(whl_paths)
-            result = subprocess.run(cmd, check=True)
-            result.check_returncode()
-
-            if (os.path.exists(tmp_dir)):
-                shutil.rmtree(tmp_dir)
+            await run_command(*cmd, capture=False)
 
             yield validated_pull_response
 
         except Exception as e:
             msg = f"Error occured when installing packages: {e}"
             logger.error(msg)
-            if (os.path.exists(tmp_dir)):
-                shutil.rmtree(tmp_dir)
 
             validated_pull_response = PullResponse(status={
                 "status": StatusEnum.ERROR, "message": msg, "action": ActionEnum.PULL
@@ -160,6 +161,8 @@ class RestRegistryHandler(AbstractRegistryHandler):
             yield validated_pull_response
 
         finally:
+            if tmp_dir is not None:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
             logger.info("Execution complete.")
 
     @asynccontextmanager

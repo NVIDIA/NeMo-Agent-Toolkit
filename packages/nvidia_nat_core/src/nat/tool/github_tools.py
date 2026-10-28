@@ -106,20 +106,25 @@ class GithubGetIssueModel(BaseModel):
     mentioned: str | None = Field(default=None, description="Name of person mentioned in issue")
     labels: list[str] | None = Field(default=None, description="A list of labels that are assigned to the issue")
     since: str | None = Field(default=None,
-                              description="Only show results that were last updated after the given time.")
+                              description=("Only show results that were last updated after the given time, "
+                                           "as an ISO 8601 timestamp in the form YYYY-MM-DDTHH:MM:SSZ."))
 
-    @classmethod
     @field_validator('since', mode='before')
+    @classmethod
     def validate_since(cls, v):
-        if v is None:
+        if not isinstance(v, str):
+            # None passes, and other types get the field's own string type error.
             return v
         try:
             # Parse the string to a datetime object
             parsed_date = datetime.strptime(v, "%Y-%m-%dT%H:%M:%SZ")
-            # Return the formatted string
-            return parsed_date.isoformat() + 'Z'
         except ValueError as e:
             raise ValueError("since must be in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ") from e
+        # strptime also accepts missing leading zeros, such as 2026-1-1T0:0:0Z, so require the exact form
+        if parsed_date.strftime("%Y-%m-%dT%H:%M:%SZ") != v:
+            raise ValueError("since must be in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ")
+        # Return the formatted string
+        return parsed_date.isoformat() + 'Z'
 
 
 class GithubGetIssueModelList(BaseModel):
@@ -256,6 +261,10 @@ async def github_tool(config: GithubGroupConfig, _builder: Builder):
             results = []
             for issue in issues_list.filter_parameters:
                 params = issue.model_dump(exclude_unset=True, exclude_none=True)
+                # GitHub reads `labels` as one comma-separated value. Passing the list would repeat the query
+                # parameter, and GitHub would then filter by the last label only.
+                if "labels" in params:
+                    params["labels"] = ",".join(params["labels"])
                 response = await client.get(url, params=params)
                 response.raise_for_status()
                 results.append(response.json())
@@ -484,8 +493,9 @@ async def github_files_tool(config: GithubFilesGroupConfig, _builder: Builder):
 
             file_metadata = FileMetadata(**match.groupdict())
 
-            # The following URL is the raw URL of the file. refs/heads/ always points to the top commit of the branch
-            raw_url = f"https://raw.githubusercontent.com/{file_metadata.repo_path}/refs/heads/{file_metadata.file_path}"
+            # The following URL is the raw URL of the file. Without a refs/heads/ prefix, raw.githubusercontent.com
+            # accepts any ref from the link, so branch, tag and commit links all work.
+            raw_url = f"https://raw.githubusercontent.com/{file_metadata.repo_path}/{file_metadata.file_path}"
             try:
                 response = await client.get(raw_url)
                 response.raise_for_status()

@@ -16,6 +16,7 @@
 import asyncio
 import json
 import logging
+from collections.abc import Callable
 
 import aiohttp
 from pydantic import ValidationError
@@ -38,8 +39,13 @@ INTERMEDIATE_DATA_PREFIX = "intermediate_data: "
 
 class EvaluationRemoteWorkflowHandler:
 
-    def __init__(self, config: EvaluationRunConfig, max_concurrency: int):
+    def __init__(self,
+                 config: EvaluationRunConfig,
+                 max_concurrency: int,
+                 on_item_complete: Callable[[EvalInputItem], None] | None = None):
         self.config = config
+        # called with each item as soon as its request finishes
+        self.on_item_complete = on_item_complete
         # Run metadata
         self.semaphore = asyncio.Semaphore(max_concurrency)
 
@@ -128,6 +134,8 @@ class EvaluationRemoteWorkflowHandler:
         async with self.semaphore:
             await self.run_workflow_remote_single(session=session, item=item)
             progress_bar.update(1)
+            if self.on_item_complete is not None:
+                self.on_item_complete(item)
 
     async def run_workflow_remote(self, eval_input: EvalInput) -> EvalInput:
         """

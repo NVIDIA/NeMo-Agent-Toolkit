@@ -346,6 +346,23 @@ class TestBedrockLangChain:
                 pass
         mock_chat.assert_not_called()
 
+    @pytest.mark.parametrize("round_trip", [False, True], ids=["as_loaded", "after_round_trip"])
+    @patch("langchain_aws.ChatBedrockConverse")
+    async def test_default_region_not_forwarded(self, mock_chat, bedrock_cfg, mock_builder, round_trip):
+        """The "None" default must not reach boto3, even after the round trip that `nat serve` does."""
+        if round_trip:
+            bedrock_cfg = AWSBedrockModelConfig.model_validate(
+                bedrock_cfg.model_dump(mode="json", by_alias=True, round_trip=True))
+            assert "region_name" in bedrock_cfg.model_fields_set
+        async with aws_bedrock_langchain(bedrock_cfg, mock_builder):
+            assert "region_name" not in mock_chat.call_args.kwargs
+
+    @patch("langchain_aws.ChatBedrockConverse")
+    async def test_region_forwarded(self, mock_chat, mock_builder):
+        cfg = AWSBedrockModelConfig(model_name="ai21.j2-ultra", region_name="us-west-2")
+        async with aws_bedrock_langchain(cfg, mock_builder):
+            assert mock_chat.call_args.kwargs["region_name"] == "us-west-2"
+
 
 # ---------------------------------------------------------------------------
 # Dynamo → LangChain wrapper tests
@@ -598,3 +615,37 @@ def test_decorator_registration(mock_global_registry):
     assert registry._llm_client_map[(OCIModelConfig, LLMFrameworkEnum.LANGCHAIN)] is oci_langchain
     assert registry._llm_client_map[(AWSBedrockModelConfig, LLMFrameworkEnum.LANGCHAIN)] is aws_bedrock_langchain
     assert registry._llm_client_map[(DynamoModelConfig, LLMFrameworkEnum.LANGCHAIN)] is dynamo_langchain
+
+
+@pytest.mark.parametrize("thinking", [None, True], ids=["thinking_unset", "thinking_on"])
+async def test_nim_langchain_retries_a_rate_limit_with_thinking(thinking):
+    """Turning thinking on must not turn automatic retries off."""
+    from langchain_core.messages import AIMessage
+    from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import ChatResult
+    from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
+    from nat.builder.workflow_builder import WorkflowBuilder
+
+    class RateLimited(Exception):
+        status_code = 429
+
+    calls: list[list[str]] = []
+
+    async def fake_agenerate(self, messages, *args, **kwargs):
+        calls.append([m.content for m in messages])
+        if len(calls) == 1:
+            raise RateLimited("429 Too Many Requests")
+        return ChatResult(generations=[ChatGeneration(message=AIMessage(content="ok"))])
+
+    config = NIMModelConfig(model_name="nvidia/nvidia-nemotron-nano-9b-v2", api_key="test", thinking=thinking)
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("llm", config)
+        llm = await builder.get_llm("llm", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        with patch.object(ChatNVIDIA, "_agenerate", fake_agenerate), patch("asyncio.sleep"):
+            result = await llm.ainvoke("hi")
+
+    assert result.content == "ok"
+    assert len(calls) == 2
+    if thinking:
+        assert all(attempt[0] == "/think" for attempt in calls)

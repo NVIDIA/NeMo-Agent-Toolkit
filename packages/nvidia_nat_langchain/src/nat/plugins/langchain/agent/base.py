@@ -36,6 +36,8 @@ from langchain_core.tools import BaseTool
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import DEFAULT_RUNTIME
 
+from nat.data_models.api_server import ChatResponse
+
 logger = logging.getLogger(__name__)
 
 
@@ -240,6 +242,10 @@ class BaseAgent(ABC):
         for attempt in range(1, max_retries + 1):
             try:
                 response = await tool.ainvoke(tool_input, config=self._runnable_config)
+
+                # An agent used as a tool returns a ChatResponse for a chat request; pass on its text
+                if isinstance(response, ChatResponse):
+                    response = response.choices[0].message.content if response.choices else ""
 
                 # Handle empty responses
                 if response is None or (isinstance(response, str) and response == ""):

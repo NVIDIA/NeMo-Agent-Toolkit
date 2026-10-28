@@ -29,6 +29,8 @@ from nat.data_models.span import Span
 from nat.data_models.span import SpanAttributes
 from nat.data_models.span import SpanContext
 from nat.data_models.span import SpanKind
+from nat.data_models.span import SpanStatus
+from nat.data_models.span import SpanStatusCode
 from nat.data_models.span import event_type_to_span_kind
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter.processing_exporter import ProcessingExporter
@@ -296,6 +298,11 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         self._span_stack.pop(event.UUID, None)  # type: ignore
 
+        # A step that failed carries an `error` entry ({"type": ...}) in its END metadata
+        error = self._end_event_error(event)
+        if error is not None:
+            sub_span.status = SpanStatus(code=SpanStatusCode.ERROR, message=str(error.get("type", "Error")))
+
         # Optionally add more attributes from usage_info or data
         usage_info = event.payload.usage_info
         if usage_info:
@@ -346,6 +353,19 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         # Export the span with processing pipeline
         self._create_export_task(self._export_with_processing(sub_span))  # type: ignore
+
+    @staticmethod
+    def _end_event_error(event: IntermediateStep) -> dict | None:
+        """The `error` entry of an END event's metadata, if the step failed."""
+        metadata = event.payload.metadata
+        error = metadata.get("error") if isinstance(metadata, dict) else getattr(metadata, "error", None)
+        if isinstance(error, dict):
+            return error
+        if isinstance(error, str):
+            # e.g. the AutoGen handler's error=str(exception), which is "" for an exception without a message;
+            # keep the text out of the status
+            return {"type": "Error"}
+        return None
 
     def _to_json_string(self, data: typing.Any) -> str:
         """Transform payload into a JSON string for span attributes.

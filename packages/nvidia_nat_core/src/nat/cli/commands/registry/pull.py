@@ -48,7 +48,7 @@ async def pull_artifact(registry_handler_config: RegistryHandlerBaseConfig, pack
 
                 assert len(package) > 0, f"Supplied invalid package '{package}'."
 
-                if package[:-4] == ".whl":
+                if package.endswith(".whl"):
                     package_data["whl_path"] = package
                     package_list.append(PullPackageWhl(**package_data))
                 else:
@@ -58,7 +58,7 @@ async def pull_artifact(registry_handler_config: RegistryHandlerBaseConfig, pack
 
                     package_data["name"] = package_split[0]
 
-                    if (package_split == 2):
+                    if (len(package_split) == 2):
                         package_data["version"] = package_split[1]
 
                     package_list.append(PackageNameVersion(**package_data))

@@ -20,6 +20,7 @@ from openinference.semconv.trace import OpenInferenceSpanKindValues
 from openinference.semconv.trace import SpanAttributes
 
 from nat.data_models.span import Span
+from nat.data_models.span import SpanAttributes as NatSpanAttributes
 from nat.data_models.span import SpanStatusCode
 from nat.plugins.opentelemetry.otel_span import OtelSpan
 from opentelemetry.trace import SpanContext
@@ -190,7 +191,7 @@ def convert_span_to_otel(nat_span: Span) -> OtelSpan:
     otel_span._status_description = None
 
     # Set span kind efficiently (direct attribute modification)
-    event_type = nat_span.attributes.get("nat.event_type", "UNKNOWN")
+    event_type = nat_span.attributes.get(NatSpanAttributes.NAT_EVENT_TYPE.value, "UNKNOWN")
     span_kind = SPAN_EVENT_TYPE_TO_SPAN_KIND_MAP.get(event_type, OpenInferenceSpanKindValues.UNKNOWN)
     otel_span._attributes[SpanAttributes.OPENINFERENCE_SPAN_KIND] = span_kind.value
 

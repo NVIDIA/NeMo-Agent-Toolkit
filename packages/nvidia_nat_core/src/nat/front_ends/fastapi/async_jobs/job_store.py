@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import json
 import logging
 import os
@@ -512,16 +513,64 @@ class JobStore(DaskClientMixin):
 
         return updated_at + timedelta(seconds=job.expiry_seconds)
 
+    @staticmethod
+    def _remove_output_path(output_path: str):
+        """
+        Remove a job's output file or directory. This performs blocking file-system I/O and should be run off the
+        event loop.
+        """
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+        elif os.path.isdir(output_path):
+            shutil.rmtree(output_path)
+
+    def _expire_dask_job(self, job_id: str) -> bool:
+        """
+        Cancel the Dask future stored for a job and delete its Dask variable. This uses the synchronous Dask client,
+        which blocks for up to five seconds when the variable no longer exists (for example after a scheduler
+        restart), so it should be run off the event loop.
+
+        Returns
+        -------
+        bool
+            `True` if the job can be marked as expired, `False` if expiring it failed.
+        """
+        from dask.distributed import Future
+        from dask.distributed import Variable
+
+        var = None
+        try:
+            var = Variable(name=job_id, client=self.dask_client)
+            try:
+                future = var.get(timeout=5)
+                if isinstance(future, Future):
+                    self.dask_client.cancel([future], force=True)
+
+            except TimeoutError:
+                pass
+
+            return True
+        except Exception:
+            logger.exception("Failed to expire %s", job_id)
+            return False
+
+        finally:
+            if var is not None:
+                try:
+                    var.delete()
+                except Exception:
+                    logger.exception("Failed to delete variable %s", job_id)
+
     async def cleanup_expired_jobs(self) -> int:
         """
         Cleanup expired jobs, keeping the most recent one.
 
         Updated_at is used instead of created_at to determine the most recent job. This is because jobs may not be
         processed in the order they are created.
-        """
-        from dask.distributed import Future
-        from dask.distributed import Variable
 
+        Blocking work (removing output files and the synchronous Dask variable calls) runs in a worker thread so the
+        event loop stays responsive while expired jobs are processed.
+        """
         logger.info("Starting cleanup of expired jobs")
         now = datetime.now(UTC)
 
@@ -543,38 +592,14 @@ class JobStore(DaskClientMixin):
                     # cleanup output dir if present
                     if job.output_path:
                         logger.info("Cleaning up output directory for job %s at %s", job.job_id, job.output_path)
-                        # If it is a file remove it
-                        if os.path.isfile(job.output_path):
-                            os.remove(job.output_path)
-                        # If it is a directory remove it
-                        elif os.path.isdir(job.output_path):
-                            shutil.rmtree(job.output_path)
+                        await asyncio.to_thread(self._remove_output_path, job.output_path)
 
             num_expired = len(expired_ids)
             if num_expired > 0:
                 successfully_expired = []
                 for job_id in expired_ids:
-                    var = None
-                    try:
-                        var = Variable(name=job_id, client=self.dask_client)
-                        try:
-                            future = var.get(timeout=5)
-                            if isinstance(future, Future):
-                                self.dask_client.cancel([future], force=True)
-
-                        except TimeoutError:
-                            pass
-
+                    if await asyncio.to_thread(self._expire_dask_job, job_id):
                         successfully_expired.append(job_id)
-                    except Exception:
-                        logger.exception("Failed to expire %s", job_id)
-
-                    finally:
-                        if var is not None:
-                            try:
-                                var.delete()
-                            except Exception:
-                                logger.exception("Failed to delete variable %s", job_id)
 
                 await session.execute(
                     update(JobInfo).where(JobInfo.job_id.in_(successfully_expired)).values(is_expired=True))

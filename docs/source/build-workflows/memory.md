@@ -43,6 +43,7 @@ The NeMo Agent Toolkit includes four memory module providers, all of which are a
 ## Third-Party Memory Plugins
 Additional memory backends are available as community plugins:
 * [Synap](https://maximem.ai) — managed memory layer with user and customer scoping, provided by the [`maximem-synap-nemo-agent-toolkit`](https://pypi.org/project/maximem-synap-nemo-agent-toolkit/) plugin. See `examples/memory/synap/` for usage. ([Open source integration package](https://github.com/maximem-ai/maximem_synap_sdk/tree/main/packages/integrations))
+* [Memanto](https://github.com/moorcheh-ai/memanto) — open-source long-term memory with one Memanto agent per user and typed memories extracted from conversations, provided by the [`nemo-agent-toolkit-memanto`](https://pypi.org/project/nemo-agent-toolkit-memanto/) plugin. See `examples/memory/memanto/` for usage. ([Plugin source](https://github.com/moorcheh-ai/NeMo-Agent-Toolkit-memanto))
 
 ## Authenticating Memory Tool Users
 

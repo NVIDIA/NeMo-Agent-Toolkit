@@ -2,6 +2,7 @@
 # "cuDF" or "cuML", we want to ensure that they are capitalized the same way they're written by the product owners.
 # Regular expressions are parsed according to the Go syntax: https://golang.org/pkg/regexp/syntax/
 
+AffixIO
 [Aa]gentic
 [Aa]gno
 # Allow AIQ for AIQ Blueprint
@@ -118,6 +119,7 @@ LLM(s?)
 Loghub
 [Ll]ogprob(s?)
 Mem0
+Memanto
 [Mm]iddleware
 Milvus
 # Minimax the algorithm, not the MiniMax model
@@ -126,6 +128,7 @@ Minimax
 [Mm]ixin(s?)
 MLflow
 MLOps
+Moorcheh
 Morpheus
 [Mm]ultimodal
 [Nn]amespac(e|ed|es|ing)

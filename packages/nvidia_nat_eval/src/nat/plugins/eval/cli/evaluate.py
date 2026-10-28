@@ -84,6 +84,12 @@ def _get_missing_eval_callback_install_hint(exporter_config) -> str | None:
     help="Skip the dataset entries that have a generated answer.",
 )
 @click.option(
+    "--resume",
+    is_flag=True,
+    default=False,
+    help="Continue an interrupted run: keep the output directory and run only the items that did not finish.",
+)
+@click.option(
     "--endpoint",
     type=str,
     default=None,
@@ -254,6 +260,7 @@ def process_nat_eval(
     result_json_path: str,
     skip_workflow: bool,
     skip_completed_entries: bool,
+    resume: bool,
     endpoint: str,
     endpoint_timeout: int,
     reps: int,
@@ -269,6 +276,10 @@ def process_nat_eval(
         raise click.UsageError("The options '--skip_workflow' and '--endpoint' are mutually exclusive. "
                                "Please use only one of them.")
 
+    if resume and skip_workflow:
+        raise click.UsageError("The options '--resume' and '--skip_workflow' are mutually exclusive. "
+                               "'--resume' continues an interrupted workflow run.")
+
     # You cannot run multiple repetitions if you are skipping the workflow or skipping completed entries
     if reps > 1 and (skip_workflow or skip_completed_entries):
         raise click.UsageError("The options '--reps' and '--skip_workflow' or '--skip_completed_entries' are mutually "
@@ -283,6 +294,8 @@ def process_nat_eval(
         "result_json_path": result_json_path,
         "skip_workflow": skip_workflow,
         "skip_completed_entries": skip_completed_entries,
+        "resume": resume,
+        "write_checkpoint": True,
         "endpoint": endpoint,
         "endpoint_timeout": endpoint_timeout,
         "reps": reps,
