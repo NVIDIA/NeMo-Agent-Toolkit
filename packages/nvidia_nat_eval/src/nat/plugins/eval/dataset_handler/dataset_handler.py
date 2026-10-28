@@ -115,8 +115,8 @@ class DatasetHandler:
                 raise ValueError(f"Question column '{self.question_key}' not found in dataset. "
                                  f"Available columns: {available_cols}")
             not_null = input_df[self.question_key].notnull()
-            non_empty = input_df[self.question_key].dropna().astype(str).str.strip().ne("")
-            input_df = input_df[not_null & non_empty.reindex(input_df.index, fill_value=False)]
+            non_empty = input_df[self.question_key].astype(str).str.strip().ne("")
+            input_df = input_df[not_null & non_empty]
         eval_input_items = [create_eval_item(row, structured) for _, row in input_df.iterrows()]
 
         return EvalInput(eval_input_items=eval_input_items)

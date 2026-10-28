@@ -725,3 +725,18 @@ def test_get_eval_input_from_df_custom_question_key():
     df_missing_custom = pd.DataFrame({"id": ["1"], "question": ["wrong key"]})
     with pytest.raises(ValueError, match="Question column 'custom_query' not found in dataset"):
         handler.get_eval_input_from_df(df_missing_custom)
+
+
+def test_get_eval_input_from_df_duplicate_index_labels(dataset_handler):
+    """Test that get_eval_input_from_df handles DataFrames with duplicate index labels without error."""
+    df = pd.DataFrame(
+        {
+            "id": ["1", "2", "3"],
+            "question": ["Valid 1", "Valid 2", None],
+            "answer": ["A1", "A2", "A3"],
+        },
+        index=[0, 0, 0],
+    )
+    eval_input = dataset_handler.get_eval_input_from_df(df)
+    assert len(eval_input.eval_input_items) == 2
+    assert [item.id for item in eval_input.eval_input_items] == ["1", "2"]
