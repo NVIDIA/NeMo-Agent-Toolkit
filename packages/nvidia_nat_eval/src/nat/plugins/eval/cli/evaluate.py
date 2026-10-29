@@ -32,6 +32,7 @@ def _raise_full_eval_dependency_error(error: Exception):
 try:
     from nat.data_models.evaluate_runtime import EvaluationRunConfig
     from nat.data_models.evaluate_runtime import EvaluationRunOutput
+    from nat.plugins.eval.data_models.evaluator_io import count_evaluator_errors
     from nat.plugins.eval.runtime.evaluate import EvaluationRun
 except ImportError as import_error:  # pragma: no cover - guarded runtime path
     _raise_full_eval_dependency_error(import_error)
@@ -172,6 +173,10 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
         else:
             row.append(str(eval_output.average_score))
 
+        # Errors as "failed/total" so a judge outage is visible next to the average it lowered
+        num_items = len(getattr(eval_output, "eval_output_items", None) or [])
+        row.append(f"{count_evaluator_errors(eval_output)}/{num_items}")
+
         # Add output file if available
         output_file = None
         for file_path in eval_run_output.evaluator_output_files:
@@ -183,7 +188,7 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
         table.append(row)
 
     # Build headers
-    headers = ["Evaluator", "Avg Score", "Output File"]
+    headers = ["Evaluator", "Avg Score", "Errors", "Output File"]
 
     click.echo(tabulate(table, headers=headers, tablefmt="github"))
     click.echo("")

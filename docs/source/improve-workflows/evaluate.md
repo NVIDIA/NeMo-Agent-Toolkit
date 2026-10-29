@@ -289,13 +289,15 @@ Workflow Runtime (p95): 7.77s
 LLM Latency (p95): 1.64s
 
 Per evaluator results:
-| Evaluator           |   Avg Score | Output File                     |
-|---------------------|-------------|---------------------------------|
-| relevance           |        1    | relevance_output.json           |
-| groundedness        |        1    | groundedness_output.json        |
-| accuracy            |        0.55 | accuracy_output.json            |
-| trajectory_accuracy |        0.9  | trajectory_accuracy_output.json |
+| Evaluator           |   Avg Score | Errors   | Output File                     |
+|---------------------|-------------|----------|---------------------------------|
+| relevance           |        1    | 0/10     | relevance_output.json           |
+| groundedness        |        1    | 0/10     | groundedness_output.json        |
+| accuracy            |        0.55 | 2/10     | accuracy_output.json            |
+| trajectory_accuracy |        0.9  | 0/10     | trajectory_accuracy_output.json |
 ```
+
+The `Errors` column counts the items the evaluator failed on (for example, a judge LLM timeout) out of the items it evaluated. A failed item is scored `0.0` and carries an `error` field in the evaluator output file, so a non-zero count means the average score is lower than the workflow's answers alone would warrant. The same counts are available in code as `EvalOutput.num_errors` and `EvalOutput.num_items`.
 
 ## Workflow Output
 The `nat eval` command runs the workflow on all the entries in the `dataset`. The output of these runs is stored in `workflow_output.json` under the `output_dir` specified in the configuration file.
