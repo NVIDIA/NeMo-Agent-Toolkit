@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -65,7 +65,7 @@ test = [
 ]
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 

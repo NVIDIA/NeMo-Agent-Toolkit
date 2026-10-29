@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ghcr.io/astral-sh/uv:0.11.33-python3.13-trixie
+FROM ghcr.io/astral-sh/uv:0.13.4-python3.13-trixie
 
 RUN VERSION=2.99.0 curl -fL https://install-cli.jfrog.io | sh
 RUN uv pip install --system pkginfo==1.12.1.2 requests==2.34.2

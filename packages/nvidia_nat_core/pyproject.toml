@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -62,7 +62,7 @@ dependencies = [
   "click~=8.1",
   "colorama>=0.4.6,<1.0.0",
   "expandvars~=1.0",
-  "fastapi~=0.119",
+  "fastapi>=0.135.4,<1.0.0",
   "httpx~=0.27",
   "httpx2>=2.10.0,<3.0.0",
   "jinja2~=3.1",
@@ -93,6 +93,14 @@ dependencies = [
   "cryptography>=50.0,<51",
   "pygments>=2.21.0,<3.0.0",
   "urllib3>=2.8.0,<3.0.0",
+  # Security minimum for anyio, pulled in by fastapi, httpx, httpx2 (GHSA-5p39-cfhj-2xmp).
+  "anyio>=4.14.2",
+  # Security minimum for certifi, pulled in by httpx (GHSA-6q48-6c7w-9gw2).
+  "certifi>=2026.10.19",
+  # Security minimum for idna, pulled in by fastapi, httpx, httpx2 (GHSA-65pc-fj4g-8rjx).
+  "idna>=3.15",
+  # Security minimum for setuptools, pulled in by pymilvus (GHSA-h35f-9h28-mq5c).
+  "setuptools>=84.1.0",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
@@ -103,12 +111,19 @@ async_endpoints = [
   "dask~=2026.1",
   "distributed~=2026.1",
   "sqlalchemy[asyncio]~=2.0",
+  # Security minimum for fsspec, pulled in by dask, distributed (GHSA-27vj-qcqg-25rc).
+  "fsspec>=2026.6.0",
+  # Security minimum for msgpack, pulled in by distributed (PYSEC-2026-3625).
+  "msgpack>=1.2.3",
+  # Security minimum for tornado, pulled in by distributed (PYSEC-2026-3928).
+  "tornado>=6.6",
 ]
 gunicorn = [
   "gunicorn~=23.0",
 ]
 test = [
-  "aioboto3>=11.0.0",
+  # Match the S3 client SDK without aioboto3's older botocore pin.
+  "aiobotocore>=3.10.0,<4.0.0",
   "nvidia-nat-eval[full] == {version}",
   "nvidia-nat-test == {version}",
 ]
@@ -153,6 +168,6 @@ nat = "nat.cli.main:run_cli"
 include-package-data = true
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }

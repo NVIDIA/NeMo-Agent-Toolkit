@@ -15,7 +15,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 [tool.setuptools_scm]
 root = "../../.."
@@ -36,6 +36,8 @@ classifiers = ["Programming Language :: Python"]
 dependencies = [
   "nvidia-nat[adk,test] == {version}",
   "matplotlib~=3.9",
+  # Pillow <13 has image-decoder memory-safety vulnerabilities.
+  "pillow>=13.0.0,<14.0.0",
   "zstandard",
 ]
 

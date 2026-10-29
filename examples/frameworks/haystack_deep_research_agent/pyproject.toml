@@ -15,7 +15,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 [tool.setuptools_scm]
 git_describe_command = "git describe --long --first-parent"
@@ -38,9 +38,11 @@ dependencies = [
   "haystack-ai>=2.18.1,<3.0.0",
   "nvidia-haystack~=0.3.0",
   "opensearch-haystack~=4.2",
-  "pypdf~=6.19",
+  "pypdf>=6.21.2,<7.0.0",
   "trafilatura~=2.0",
-  "urllib3>=2.7.0,<3.0.0",
+  "urllib3>=2.8.0,<3.0.0",
+  # Security minimum for lxml-html-clean, pulled in by trafilatura (PYSEC-2026-2614).
+  "lxml-html-clean>=0.4.5",
 ]
 
 [tool.uv.sources]

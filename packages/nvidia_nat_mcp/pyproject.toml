@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -58,6 +58,8 @@ dependencies = [
   "nvidia-nat-core == {version}",
   "aiorwlock~=1.5",
   "mcp~=1.30.0",
+  # Security minimum for pydantic-settings, pulled in by mcp (GHSA-4xgf-cpjx-pc3j).
+  "pydantic-settings>=2.14.2",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
@@ -67,7 +69,7 @@ test = [
 ]
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 

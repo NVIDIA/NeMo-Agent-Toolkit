@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -62,10 +62,14 @@ dependencies = [
   "langchain>=1.3.9,<2.0.0",
   "langchain-classic>=1.0.7,<2.0.0",
   "langchain-core>=1.4.0,<2.0.0",
-  "langgraph>=1.0.5,<2.0.0",
-  "langsmith~=0.8",
+  "langgraph>=1.2.14,<2.0.0",
+  "langsmith>=0.8.18,<1.0.0",
   # Transitive dependencies
   "pyopenssl>=26.0.0,<27.0.0",
+  # Security minimum for langgraph-checkpoint, pulled in by langchain, langgraph (PYSEC-2026-2573).
+  "langgraph-checkpoint>=4.1.1",
+  # Security minimum for langgraph-sdk, pulled in by langchain, langgraph (GHSA-fvww-7h3r-vfhp).
+  "langgraph-sdk>=0.4.6",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
@@ -74,14 +78,54 @@ aws = ["langchain-aws>=1.1.0,<2.0.0"]
 community = [
   "langchain-community~=0.3,<0.4.2", # langchain_community.chat_models.vertexai removed in 0.4.2
   "wikipedia~=1.4",
+  # Security minimum for aiohttp, pulled in by langchain-community (GHSA-494j-54xm-rwp3).
+  "aiohttp>=3.14.4",
+  # Security minimum for multidict, pulled in by langchain-community (GHSA-54p9-h82j-f925).
+  "multidict>=6.9.1",
+  # Security minimum for pydantic-settings, pulled in by langchain-community (GHSA-4xgf-cpjx-pc3j).
+  "pydantic-settings>=2.14.2",
+  # Security minimum for soupsieve, pulled in by wikipedia (GHSA-j934-xhv5-fg8f).
+  "soupsieve>=2.9.0",
 ]
 exa = ["langchain-exa>=1.1.0,<2.0.0"]
-huggingface = ["langchain-huggingface>=1.2.2,<2.0.0"]
+huggingface = [
+  "langchain-huggingface>=1.2.2,<2.0.0",
+  # Security minimum for filelock, pulled in by langchain-huggingface (GHSA-rfpc-qcw5-3pc4).
+  "filelock>=4.2.1",
+  # Security minimum for fsspec, pulled in by langchain-huggingface (GHSA-27vj-qcqg-25rc).
+  "fsspec>=2026.6.0",
+]
 judge = ["openevals>=0.1.3,<1.0.0"]
-litellm = ["langchain-litellm>=0.6.5,<1.0.0"]
+litellm = [
+  "langchain-litellm>=0.6.5,<1.0.0",
+  # Security minimum for aiohttp, pulled in by langchain-litellm (GHSA-494j-54xm-rwp3).
+  "aiohttp>=3.14.4",
+  # Security minimum for filelock, pulled in by langchain-litellm (GHSA-rfpc-qcw5-3pc4).
+  "filelock>=4.2.1",
+  # Security minimum for fsspec, pulled in by langchain-litellm (GHSA-27vj-qcqg-25rc).
+  "fsspec>=2026.6.0",
+  # Security minimum for litellm, pulled in by langchain-litellm (GHSA-7hp6-4w63-5g45).
+  "litellm>=1.100.4",
+  # Security minimum for multidict, pulled in by langchain-litellm (GHSA-54p9-h82j-f925).
+  "multidict>=6.9.1",
+  # Security minimum for pydantic-settings, pulled in by langchain-litellm (GHSA-4xgf-cpjx-pc3j).
+  "pydantic-settings>=2.14.2",
+]
 milvus = ["langchain-milvus>=0.3.3,<1.0.0"]
-nvidia = ["langchain-nvidia-ai-endpoints>=1.4.2,<2.0.0"]
-oci = ["langchain-oci>=0.2.4,<1.0.0"]
+nvidia = [
+  "langchain-nvidia-ai-endpoints>=1.4.2,<2.0.0",
+  # Security minimum for aiohttp, pulled in by langchain-nvidia-ai-endpoints (GHSA-494j-54xm-rwp3).
+  "aiohttp>=3.14.4",
+  # Security minimum for multidict, pulled in by langchain-nvidia-ai-endpoints (GHSA-54p9-h82j-f925).
+  "multidict>=6.9.1",
+]
+oci = [
+  "langchain-oci>=0.2.4,<1.0.0",
+  # Security minimum for aiohttp, pulled in by langchain-oci (GHSA-494j-54xm-rwp3).
+  "aiohttp>=3.14.4",
+  # Security minimum for multidict, pulled in by langchain-oci (GHSA-54p9-h82j-f925).
+  "multidict>=6.9.1",
+]
 openai = ["langchain-openai>=1.1.14,<2.0.0"]
 
 all = [
@@ -96,7 +140,7 @@ test = [
 ]
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 
