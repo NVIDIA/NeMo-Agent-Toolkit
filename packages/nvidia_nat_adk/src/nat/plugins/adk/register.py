@@ -16,5 +16,6 @@
 # pylint: disable=unused-import
 # flake8: noqa
 
+from . import instrumentation
 from . import llm
 from . import tool_wrapper
