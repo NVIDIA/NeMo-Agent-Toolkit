@@ -14,8 +14,11 @@
 # limitations under the License.
 
 from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
+from memmachine_client import MemMachineClient
+from memmachine_client.project import Project
 from pydantic import BaseModel
 
 from nat.memory.models import MemoryItem
@@ -127,7 +130,9 @@ async def test_add_items_with_conversation(memmachine_editor_with_client: MemMac
     mock_client.get_or_create_project.assert_called_once()
 
     # Verify memory instance was created
-    mock_project.memory.assert_called_once_with(user_id="user123", agent_id="agent789", session_id="session456")
+    mock_project.memory.assert_called_once_with(metadata={
+        "user_id": "user123", "agent_id": "agent789", "session_id": "session456"
+    })
 
     # Verify add was called for each message in conversation
     # The await above should have completed all async tasks
@@ -450,3 +455,86 @@ async def test_search_with_custom_project_and_org(memmachine_editor_with_client:
     mock_client.get_or_create_project.assert_called_once_with(org_id="custom_org",
                                                               project_id="custom_project",
                                                               description="Project for user123")
+
+
+@pytest.fixture(name="sdk_requests")
+def sdk_requests_fixture():
+    """Patch only the HTTP layer of the real MemMachine SDK and record the request bodies it sends."""
+    sent = []
+
+    def fake_request(self, method, url, **kwargs):
+        sent.append((url, kwargs["json"]))
+        response = Mock(status_code=200)
+        if url.endswith("/api/v2/memories/search"):
+            response.json.return_value = {
+                "status": 0,
+                "content": {
+                    "episodic_memory": {
+                        "long_term_memory": {
+                            "episodes": []
+                        },
+                        "short_term_memory": {
+                            "episodes": [], "episode_summary": []
+                        }
+                    },
+                    "semantic_memory": []
+                }
+            }
+        else:
+            response.json.return_value = {"results": [{"uid": "uid-1"}]}
+        return response
+
+    with patch.object(MemMachineClient, "request", fake_request):
+        yield sent
+
+
+async def test_real_sdk_memory_is_scoped_to_user(sdk_requests: list):
+    """Test that the user, agent and session ids reach the add payload and the search filter of the real SDK."""
+    project = Project(client=MemMachineClient(base_url="http://localhost:8095"), org_id="org", project_id="proj")
+    editor = MemMachineEditor(memmachine_instance=project)
+
+    await editor.add_items([
+        MemoryItem(user_id="alice",
+                   memory="I prefer window seats",
+                   metadata={
+                       "session_id": "session1", "agent_id": "agent1"
+                   })
+    ])
+    await editor.search(query="seat preference", user_id="bob", session_id="session1", agent_id="agent1")
+
+    (add_url, add_body), (search_url, search_body) = sdk_requests
+    assert add_url.endswith("/api/v2/memories")
+    assert add_body["messages"][0]["metadata"] == {"user_id": "alice", "agent_id": "agent1", "session_id": "session1"}
+    assert search_url.endswith("/api/v2/memories/search")
+    assert search_body["filter"] == ("metadata.user_id='bob' AND metadata.agent_id='agent1' "
+                                     "AND metadata.session_id='session1'")
+
+
+async def test_real_sdk_memory_skips_none_ids(sdk_requests: list):
+    """Test that ids passed as None are left out of the SDK metadata, which only accepts string values."""
+    project = Project(client=MemMachineClient(base_url="http://localhost:8095"), org_id="org", project_id="proj")
+    editor = MemMachineEditor(memmachine_instance=project)
+
+    await editor.add_items(
+        [MemoryItem(user_id="bob", memory="I prefer aisle seats", metadata={
+            "session_id": None, "agent_id": None
+        })])
+    await editor.search(query="seat preference", user_id="bob", session_id=None, agent_id=None)
+
+    (_, add_body), (_, search_body) = sdk_requests
+    assert add_body["messages"][0]["metadata"] == {"user_id": "bob"}
+    assert search_body["filter"] == "metadata.user_id='bob'"
+
+
+async def test_real_sdk_memory_ignores_ids_in_item_metadata(sdk_requests: list):
+    """Test that a user_id in the item metadata does not override the item's user and other ids are sent as strings."""
+    project = Project(client=MemMachineClient(base_url="http://localhost:8095"), org_id="org", project_id="proj")
+    editor = MemMachineEditor(memmachine_instance=project)
+
+    await editor.add_items(
+        [MemoryItem(user_id="alice", memory="I prefer window seats", metadata={
+            "user_id": "bob", "session_id": 7
+        })])
+
+    (_, add_body), = sdk_requests
+    assert add_body["messages"][0]["metadata"] == {"user_id": "alice", "agent_id": "default_agent", "session_id": "7"}
