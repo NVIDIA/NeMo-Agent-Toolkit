@@ -54,6 +54,7 @@ async def mem0_memory_client(config: Mem0MemoryClientConfig, builder: Builder):
         if isinstance(config, RetryMixin) and config.do_auto_retry:
             memory_editor = patch_with_retry(memory_editor,
                                              retries=config.num_retries,
+                                             max_wait=config.retry_max_wait,
                                              retry_codes=config.retry_on_status_codes,
                                              retry_on_messages=config.retry_on_errors)
 

@@ -196,3 +196,72 @@ async def test_adk_client_sends_no_thinking_prompt_when_thinking_is_unset():
     sent, _, error = await _generate(NIMModelConfig(model_name=NEMOTRON, api_key="test"))
     assert error is None
     assert not [m for m in sent[0] if m["role"] == "system"]
+
+
+async def test_adk_client_waits_for_the_retry_after_litellm_reports():
+    """A LiteLLM 429 carries the provider's response; the retry waits the Retry-After it asks for."""
+    import httpx
+    import litellm
+
+    import nat.plugins.adk.llm  # noqa: F401  registers the ADK clients
+
+    sent: list[list[dict]] = []
+    waits: list[float] = []
+
+    async def fake_acompletion(model, messages, tools=None, **kwargs):
+        sent.append(messages)
+        if len(sent) == 1:
+            response = httpx.Response(429,
+                                      headers={"Retry-After": "3"},
+                                      request=httpx.Request("POST", "https://example.invalid/v1/chat/completions"))
+            raise litellm.RateLimitError(message="slow down", llm_provider="openai", model=model, response=response)
+        return litellm.ModelResponse(choices=[{"message": {"role": "assistant", "content": "hello"}}])
+
+    async def fake_sleep(seconds):
+        waits.append(seconds)
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("llm", OpenAIModelConfig(model_name="gpt-4o-mini", api_key="test", retry_on_errors=[]))
+        llm = await builder.get_llm("llm", wrapper_type=LLMFrameworkEnum.ADK)
+        with _fake_litellm_acompletion(fake_acompletion), patch("asyncio.sleep", fake_sleep):
+            text = None
+            async for response in llm.generate_content_async(_request(llm)):
+                text = response.content.parts[0].text
+
+    assert text == "hello"
+    assert len(sent) == 2
+    assert 3.0 in waits
+
+
+async def test_adk_client_caps_the_retry_after_wait_with_retry_max_wait():
+    import httpx
+    import litellm
+
+    import nat.plugins.adk.llm  # noqa: F401  registers the ADK clients
+
+    calls = 0
+    waits: list[float] = []
+
+    async def fake_acompletion(model, messages, tools=None, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            response = httpx.Response(429,
+                                      headers={"Retry-After": "30"},
+                                      request=httpx.Request("POST", "https://example.invalid/v1/chat/completions"))
+            raise litellm.RateLimitError(message="slow down", llm_provider="openai", model=model, response=response)
+        return litellm.ModelResponse(choices=[{"message": {"role": "assistant", "content": "hello"}}])
+
+    async def fake_sleep(seconds):
+        waits.append(seconds)
+
+    config = OpenAIModelConfig(model_name="gpt-4o-mini", api_key="test", retry_on_errors=[], retry_max_wait=1)
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("llm", config)
+        llm = await builder.get_llm("llm", wrapper_type=LLMFrameworkEnum.ADK)
+        with _fake_litellm_acompletion(fake_acompletion), patch("asyncio.sleep", fake_sleep):
+            async for _ in llm.generate_content_async(_request(llm)):
+                pass
+
+    assert calls == 2
+    assert 1 in waits and 30 not in waits

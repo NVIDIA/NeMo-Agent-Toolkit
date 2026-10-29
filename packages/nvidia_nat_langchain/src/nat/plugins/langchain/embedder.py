@@ -48,6 +48,7 @@ async def azure_openai_langchain(embedder_config: AzureOpenAIEmbedderModelConfig
         if isinstance(embedder_config, RetryMixin) and embedder_config.do_auto_retry:
             client = patch_with_retry(client,
                                       retries=embedder_config.num_retries,
+                                      max_wait=embedder_config.retry_max_wait,
                                       retry_codes=embedder_config.retry_on_status_codes,
                                       retry_on_messages=embedder_config.retry_on_errors)
 
@@ -66,6 +67,7 @@ async def nim_langchain(embedder_config: NIMEmbedderModelConfig, builder: Builde
     if isinstance(embedder_config, RetryMixin) and embedder_config.do_auto_retry:
         client = patch_with_retry(client,
                                   retries=embedder_config.num_retries,
+                                  max_wait=embedder_config.retry_max_wait,
                                   retry_codes=embedder_config.retry_on_status_codes,
                                   retry_on_messages=embedder_config.retry_on_errors)
 
@@ -90,6 +92,7 @@ async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: 
         if isinstance(embedder_config, RetryMixin) and embedder_config.do_auto_retry:
             client = patch_with_retry(client,
                                       retries=embedder_config.num_retries,
+                                      max_wait=embedder_config.retry_max_wait,
                                       retry_codes=embedder_config.retry_on_status_codes,
                                       retry_on_messages=embedder_config.retry_on_errors)
 
@@ -131,6 +134,7 @@ async def huggingface_langchain(embedder_config: HuggingFaceEmbedderConfig, _bui
     if isinstance(embedder_config, RetryMixin) and embedder_config.do_auto_retry:
         client = patch_with_retry(client,
                                   retries=embedder_config.num_retries,
+                                  max_wait=embedder_config.retry_max_wait,
                                   retry_codes=embedder_config.retry_on_status_codes,
                                   retry_on_messages=embedder_config.retry_on_errors)
 

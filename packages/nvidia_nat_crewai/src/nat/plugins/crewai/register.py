@@ -17,6 +17,7 @@
 # isort:skip_file
 
 # Import any providers which need to be automatically registered here
+from . import instrumentation
 
 from . import llm
 from . import tool_wrapper
