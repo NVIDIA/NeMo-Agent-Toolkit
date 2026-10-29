@@ -131,7 +131,7 @@ async def test_eval(tmp_path: Path, root_repo_dir: Path):
     assert eval_runner.eval_config is not None, "The eval config is not present"
 
     type_name_map = {}
-    for eval_type in ["ragas", "trajectory"]:
+    for eval_type in ["tunable_rag_evaluator", "trajectory"]:
         expected = []
         for name, config in eval_runner.eval_config.evaluators.items():
             if config.type == eval_type:
@@ -147,7 +147,7 @@ async def test_eval(tmp_path: Path, root_repo_dir: Path):
 
     for output_file in output.evaluator_output_files:
         base_name = output_file.name
-        if base_name in type_name_map["ragas"]:
+        if base_name in type_name_map["tunable_rag_evaluator"]:
             # Relevance and Groundedness should evaluate better than Accuracy
             min_score = 0.5 if "accuracy" in str(output_file) else 0.75
             validate_rag_accuracy(output_file, min_score)

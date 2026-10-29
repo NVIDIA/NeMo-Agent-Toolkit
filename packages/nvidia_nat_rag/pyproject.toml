@@ -56,7 +56,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
-  "langchain-openai>=1.1.6,<2.0.0", # hidden dependency of `nvidia-rag`
+  "langchain-openai>=1.1.14,<2.0.0", # hidden dependency of `nvidia-rag`
   "nvidia-rag>=2.6.0",
   "opentelemetry-api~=1.2", # hidden dependency of `nvidia-rag`
   "opentelemetry-exporter-otlp~=1.3", # hidden dependency of `nvidia-rag`

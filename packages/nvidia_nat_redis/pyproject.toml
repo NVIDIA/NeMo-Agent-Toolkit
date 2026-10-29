@@ -52,6 +52,10 @@ dependencies = [
 documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
 source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
+[dependency-groups]
+# Resolve the local core source when maintaining this compatibility package.
+dev = ["nvidia-nat-core>=1.8.0"]
+
 [tool.uv]
 build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8"]
 managed = true

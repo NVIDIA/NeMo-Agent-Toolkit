@@ -249,7 +249,6 @@ In addition, we would like to thank the following open source projects that made
 - [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/modelcontextprotocol)
 - [OpenTelemetry](https://github.com/open-telemetry/opentelemetry-python)
 - [Phoenix](https://github.com/arize-ai/phoenix)
-- [Ragas](https://github.com/explodinggradients/ragas)
 - [Redis](https://github.com/redis/redis-py)
 - [Semantic Kernel](https://github.com/microsoft/semantic-kernel)
 - [Strands](https://github.com/strands-agents/sdk-python)
