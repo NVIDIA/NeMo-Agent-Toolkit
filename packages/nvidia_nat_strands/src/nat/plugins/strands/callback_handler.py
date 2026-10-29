@@ -606,10 +606,15 @@ class StrandsProfilerHandler(BaseProfilerCallback):
             return None
 
         try:
-            return {
+            result = {
                 "prompt_tokens": int(usage.get("inputTokens") or 0),
                 "completion_tokens": int(usage.get("outputTokens") or 0),
                 "total_tokens": int(usage.get("totalTokens") or 0),
             }
+            # Bedrock prompt caching reports cache reads under cacheReadInputTokens
+            cache_read = usage.get("cacheReadInputTokens")
+            if cache_read is not None:
+                result["cached_tokens"] = int(cache_read)
+            return result
         except (ValueError, TypeError):
             return None

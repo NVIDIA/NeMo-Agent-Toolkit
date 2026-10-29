@@ -74,7 +74,6 @@ opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
 phoenix = ["nvidia-nat-phoenix == {version}"]
 profiler = ["nvidia-nat-profiler == {version}"]
 rag = ["nvidia-nat-rag == {version}"]
-ragas = ["nvidia-nat-ragas == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
 redis = ["nvidia-nat-redis == {version}"]
 s3 = ["nvidia-nat-s3 == {version}"]
@@ -102,7 +101,6 @@ most = [
   "nvidia-nat-config-optimizer == {version}",
   "nvidia-nat-core[async_endpoints,gunicorn] == {version}",
   "nvidia-nat-security[defense,guardrails] == {version}",
-  "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
   "nvidia-nat-eval[full] == {version}",
   "nvidia-nat-fastmcp == {version}",
@@ -116,7 +114,6 @@ most = [
   "nvidia-nat-opentelemetry == {version}",
   "nvidia-nat-phoenix == {version}",
   "nvidia-nat-profiler == {version}",
-  "nvidia-nat-ragas == {version}",
   "nvidia-nat-redis == {version}",
   "nvidia-nat-s3 == {version}",
   "nvidia-nat-security == {version}",
@@ -192,10 +189,10 @@ dev = [
   "pre-commit>=4.0,<5.0",
   "python-docx~=1.1",
   "ruff==0.15.0", # align with .pre-commit-config.yaml
-  "setuptools >= 64",
+  "setuptools>=84.1.0",
   "setuptools_scm>=8",
   "twine~=6.0",
-  "uv==0.9.28", # align with .pre-commit-config.yaml
+  "uv>=0.13.4,<0.14", # compatible with crewai-cli
   "vale~=3.12",
   "yapf==0.43.0", # align with .pre-commit-config.yaml
   # documentation related dependencies
@@ -209,7 +206,8 @@ dev = [
   "sphinx-mermaid",
   "sphinx-reredirects~=1.1",
   # transitive dependencies
-  "werkzeug>=3.1.5",
+  "virtualenv>=21.14.9",
+  "werkzeug>=3.1.9",
 ]
 
 [tool.setuptools]
@@ -218,6 +216,9 @@ packages = []
 
 [tool.uv]
 conflicts = [
+    # CrewAI and Google ADK require incompatible OpenTelemetry versions; most includes ADK.
+    [{ extra = "crewai" }, { extra = "adk" }],
+    [{ extra = "crewai" }, { extra = "most" }],
     # (adk|crewai)<>openpipe-art have incompatible litellm versions
     [{ extra = "adk" }, { extra = "openpipe-art" }],
     [{ extra = "crewai" }, { extra = "openpipe-art" }],
@@ -254,7 +255,6 @@ nvidia-nat-opentelemetry = { path = "packages/nvidia_nat_opentelemetry", editabl
 nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
 nvidia-nat-profiler = { path = "packages/nvidia_nat_profiler", editable = true }
 nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
-nvidia-nat-ragas = { path = "packages/nvidia_nat_ragas", editable = true }
 nvidia-nat-mysql = { path = "packages/nvidia_nat_mysql", editable = true }
 nvidia-nat-redis = { path = "packages/nvidia_nat_redis", editable = true }
 nvidia-nat-s3 = { path = "packages/nvidia_nat_s3", editable = true }

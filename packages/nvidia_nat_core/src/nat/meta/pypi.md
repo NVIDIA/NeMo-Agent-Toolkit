@@ -53,6 +53,5 @@ We would like to thank the following open source projects that made NeMo Agent T
 - [LangChain](https://github.com/langchain-ai/langchain)
 - [Llama-Index](https://github.com/run-llama/llama_index)
 - [Mem0ai](https://github.com/mem0ai/mem0)
-- [Ragas](https://github.com/explodinggradients/ragas)
 - [Semantic Kernel](https://github.com/microsoft/semantic-kernel)
 - [uv](https://github.com/astral-sh/uv)

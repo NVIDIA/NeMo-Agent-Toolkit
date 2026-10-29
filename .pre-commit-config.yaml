@@ -72,4 +72,5 @@ repos:
         additional_dependencies: ["pyyaml"]
 
 default_language_version:
-  python: python3.11
+  # Use the Python provided by the development environment or CI container.
+  python: python3
