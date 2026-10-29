@@ -64,7 +64,10 @@ See [Migrating from Ragas](../improve-workflows/evaluate.md#migrating-from-ragas
 The dependency update also moves Mem0 to 2.x, Google ADK to 2.x, Datasets to 5.x, Cryptography to 50.x,
 and Starlette to 1.x. CrewAI and LlamaIndex use their latest available releases at the time of the update.
 
-CrewAI 1.15.28 requires MCP 1.28.x. The toolkit uses that declared range without a uv override.
+CrewAI 1.15.33 supports MCP 1.30.x. The toolkit uses MCP 1.30.0 within CrewAI's declared range without a uv override.
+
+The `most` extra retains Google ADK and no longer includes CrewAI because their OpenTelemetry requirements conflict.
+Install `nvidia-nat[crewai]` in a separate environment from `nvidia-nat[adk]` or `nvidia-nat[most]`.
 
 Mem0 2.x resolves organization and project membership from the API key. Explicit `org_id` and
 `project_id` settings must match the key's membership. Memory searches now use nested entity filters;
