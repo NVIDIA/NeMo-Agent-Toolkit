@@ -14,6 +14,8 @@
 # limitations under the License.
 """Automatic retries wait for the time a rate-limited provider asks for in `Retry-After`."""
 
+import sys
+import threading
 from collections.abc import AsyncGenerator
 from collections.abc import Generator
 from datetime import UTC
@@ -25,6 +27,7 @@ from unittest.mock import patch
 
 import pytest
 
+from nat.utils.exception_handlers import automatic_retries
 from nat.utils.exception_handlers.automatic_retries import _retry_after_seconds
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
@@ -135,12 +138,33 @@ async def _call(client: Client, method: str):
 
 @pytest.fixture(name="sleeps")
 def sleeps_fixture():
+    """Record the waits requested by the retry wrapper.
+
+    `asyncio.sleep` and `time.sleep` are patched globally, so anything else that sleeps while a test runs (a thread
+    or task left behind by an earlier test, library internals, another retry-wrapped call on a background thread)
+    would also be recorded and make the assertions order-dependent. Only calls made from `automatic_retries` on the
+    test's own thread are kept; everything else just returns immediately.
+    """
     waits: list[float] = []
+    test_thread = threading.get_ident()
+
+    def _is_the_test_retrying() -> bool:
+        """True when the caller of the fake sleep is `automatic_retries` running on the test's own thread."""
+        # frame 0 is this helper, 1 is the fake sleep, 2 is whoever called sleep
+        caller_module = sys._getframe(2).f_globals.get("__name__")
+        return caller_module == automatic_retries.__name__ and threading.get_ident() == test_thread
 
     async def fake_async_sleep(seconds):
-        waits.append(seconds)
+        """Stand-in for `asyncio.sleep` that records the wait instead of sleeping."""
+        if _is_the_test_retrying():
+            waits.append(seconds)
 
-    with patch("asyncio.sleep", fake_async_sleep), patch("time.sleep", waits.append):
+    def fake_sleep(seconds):
+        """Stand-in for `time.sleep` that records the wait instead of sleeping."""
+        if _is_the_test_retrying():
+            waits.append(seconds)
+
+    with patch("asyncio.sleep", fake_async_sleep), patch("time.sleep", fake_sleep):
         yield waits
 
 
