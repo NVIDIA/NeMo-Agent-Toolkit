@@ -15,7 +15,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -52,6 +52,10 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "a2a-sdk[http-server]>=0.3.20,<1.0.0",
+  # Security minimum for pyasn1, pulled in by a2a-sdk (PYSEC-2026-2263).
+  "pyasn1>=0.6.4",
+  # Security minimum for requests, pulled in by a2a-sdk (GHSA-gc5v-m9x4-r6x2).
+  "requests>=2.33.0",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
@@ -64,7 +68,7 @@ documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
 source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 

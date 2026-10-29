@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -66,18 +66,34 @@ defense = [
   "presidio-anonymizer>=2.2",
   "spacy>=3.7,<4",
   "typer>=0.25,<0.26",
+  # Security minimum for filelock, pulled in by presidio-analyzer (GHSA-rfpc-qcw5-3pc4).
+  "filelock>=4.2.1",
+  # Security minimum for requests, pulled in by presidio-analyzer, spacy (GHSA-gc5v-m9x4-r6x2).
+  "requests>=2.33.0",
 ]
 guardrails = [
   "dataclasses-json>=0.6,<0.7",
   "nemoguardrails>=0.11,<0.22",
+  # Pillow <13 has image-decoder memory-safety vulnerabilities.
+  "pillow>=13.0.0,<14.0.0",
   "nvidia-nat-langchain == {version}",
+  # Security minimum for aiohttp, pulled in by nemoguardrails (GHSA-494j-54xm-rwp3).
+  "aiohttp>=3.14.4",
+  # Security minimum for filelock, pulled in by nemoguardrails (GHSA-rfpc-qcw5-3pc4).
+  "filelock>=4.2.1",
+  # Security minimum for fsspec, pulled in by nemoguardrails (GHSA-27vj-qcqg-25rc).
+  "fsspec>=2026.6.0",
+  # Security minimum for multidict, pulled in by nemoguardrails (GHSA-54p9-h82j-f925).
+  "multidict>=6.9.1",
+  # Security minimum for pydantic-settings, pulled in by nemoguardrails (GHSA-4xgf-cpjx-pc3j).
+  "pydantic-settings>=2.14.2",
 ]
 test = [
   "nvidia-nat-test == {version}",
 ]
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 

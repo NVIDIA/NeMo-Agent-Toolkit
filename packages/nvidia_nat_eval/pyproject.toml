@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -69,7 +69,15 @@ full = [
   "nvidia-nat-core == {version}",
   "openpyxl~=3.1",
   # Used by `nat eval` progress reporting through the CLI and evaluation runtime.
-  "tqdm~=4.67"
+  "tqdm~=4.67",
+  # Security minimum for aiohttp, pulled in by datasets (GHSA-494j-54xm-rwp3).
+  "aiohttp>=3.14.4",
+  # Security minimum for filelock, pulled in by datasets (GHSA-rfpc-qcw5-3pc4).
+  "filelock>=4.2.1",
+  # Security minimum for fsspec, pulled in by datasets (GHSA-27vj-qcqg-25rc).
+  "fsspec>=2026.6.0",
+  # Security minimum for multidict, pulled in by datasets (GHSA-54p9-h82j-f925).
+  "multidict>=6.9.1",
 ]
 test = [
   "boto3~=1.35",
@@ -77,11 +85,13 @@ test = [
   "nvidia-nat-core[async_endpoints] == {version}",
   "nvidia-nat-test == {version}",
   "openpyxl~=3.1",
-  "tqdm~=4.67"
+  "tqdm~=4.67",
+  # Security minimum for filelock, pulled in by datasets (GHSA-rfpc-qcw5-3pc4).
+  "filelock>=4.2.1",
 ]
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 

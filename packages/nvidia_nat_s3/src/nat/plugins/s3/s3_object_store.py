@@ -15,7 +15,7 @@
 
 import logging
 
-import aioboto3
+from aiobotocore.session import get_session
 from botocore.client import BaseClient
 from botocore.exceptions import ClientError
 
@@ -43,7 +43,7 @@ class S3ObjectStore(ObjectStore):
         super().__init__()
 
         self.bucket_name = bucket_name
-        self.session = aioboto3.Session()
+        self.session = get_session()
         self._client: BaseClient | None = None
         self._client_context = None
 
@@ -62,7 +62,7 @@ class S3ObjectStore(ObjectStore):
         if self._client_context is not None:
             raise RuntimeError("Connection already established")
 
-        self._client_context = self.session.client("s3", **self._client_args)
+        self._client_context = self.session.create_client("s3", **self._client_args)
         if self._client_context is None:
             raise RuntimeError("Connection unable to be established")
         self._client = await self._client_context.__aenter__()

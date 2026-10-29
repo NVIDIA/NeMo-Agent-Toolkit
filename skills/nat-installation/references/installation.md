@@ -37,6 +37,13 @@ Before marking installation complete:
 
 Can't check all boxes? Review and update the installation until you can check all boxes.
 
+## Security Dependency Updates
+
+- Raise declared minimum versions as well as refreshing lockfiles.
+- Declare transitive security minimums in the owning package or matching optional extra, with a comment naming the parent dependency and relevant advisory. Avoid `tool.uv.constraint-dependencies` for these fixes: published package metadata must enforce the minimums, including in independently locked packages and examples.
+- For build-tool vulnerabilities, update `build-system.requires`, build constraints, and workflow templates as applicable.
+- Regenerate and check all tracked lockfiles outside Git submodules.
+
 ## Hello World Workflow
 
 ## Create the NeMo Agent Toolkit workflow configuration file

@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 [tool.setuptools_scm]
 git_describe_command = "git describe --long --first-parent"
@@ -185,7 +185,7 @@ dev = [
   "httpx-sse~=0.4",
   "ipython~=8.31",
   "langchain-community~=0.3", # web ingest script
-  "nbconvert", # Version determined by jupyter
+  "nbconvert>=7.17.2",
   "pre-commit>=4.0,<5.0",
   "python-docx~=1.1",
   "ruff==0.15.0", # align with .pre-commit-config.yaml
@@ -206,8 +206,30 @@ dev = [
   "sphinx-mermaid",
   "sphinx-reredirects~=1.1",
   # transitive dependencies
-  "virtualenv>=21.14.9",
+  "virtualenv>=21.14.10",
   "werkzeug>=3.1.9",
+  # Security minimum for aiohttp, pulled in by langchain-community (GHSA-494j-54xm-rwp3).
+  "aiohttp>=3.14.4",
+  # Security minimum for anyio, pulled in by langchain-community (GHSA-5p39-cfhj-2xmp).
+  "anyio>=4.14.2",
+  # Security minimum for certifi, pulled in by langchain-community, twine, myst-parser (GHSA-6q48-6c7w-9gw2).
+  "certifi>=2026.10.19",
+  # Security minimum for filelock, pulled in by pre-commit, virtualenv (GHSA-rfpc-qcw5-3pc4).
+  "filelock>=4.2.1",
+  # Security minimum for idna, pulled in by langchain-community, twine, myst-parser (GHSA-65pc-fj4g-8rjx).
+  "idna>=3.15",
+  # Security minimum for mistune, pulled in by nbconvert, nbsphinx (PYSEC-2026-2208).
+  "mistune>=3.3.4",
+  # Security minimum for multidict, pulled in by langchain-community (GHSA-54p9-h82j-f925).
+  "multidict>=6.9.1",
+  # Security minimum for pydantic-settings, pulled in by langchain-community (GHSA-4xgf-cpjx-pc3j).
+  "pydantic-settings>=2.14.2",
+  # Security minimum for requests, pulled in by langchain-community, twine, myst-parser (GHSA-gc5v-m9x4-r6x2).
+  "requests>=2.33.0",
+  # Security minimum for soupsieve, pulled in by beautifulsoup4, nbconvert, nbsphinx (GHSA-j934-xhv5-fg8f).
+  "soupsieve>=2.9.0",
+  # Security minimum for tornado, pulled in by nbconvert, nbsphinx (PYSEC-2026-3928).
+  "tornado>=6.6",
 ]
 
 [tool.setuptools]

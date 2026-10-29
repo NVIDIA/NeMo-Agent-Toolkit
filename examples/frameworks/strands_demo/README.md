@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-A minimal example showcasing a Strands agent that answers questions about Strands documentation using a curated URL knowledge base and the native Strands `http_request` tool.
+A minimal example showcasing a Strands agent that answers questions about Strands documentation using a curated URL knowledge base and a native Strands `http_request` tool defined in the example. The tool fetches documentation with HTTP GET and can convert HTML to Markdown.
 
 > [!NOTE]
 > The CLI `optimize` workflow at the end of this example can take 10-20 minutes to run.

@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -64,6 +64,10 @@ dependencies = [
   "microsoft-agents-hosting-core~=0.8.0",
   "nvidia-nat-core == {version}",
   "nvidia-nat-opentelemetry == {version}",
+  # Security minimum for aiohttp, pulled in by microsoft-agents-hosting-aiohttp (GHSA-494j-54xm-rwp3).
+  "aiohttp>=3.14.4",
+  # Security minimum for multidict, pulled in by microsoft-agents-hosting-aiohttp (GHSA-54p9-h82j-f925).
+  "multidict>=6.9.1",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
@@ -75,7 +79,7 @@ mcp = [
 ]
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 
