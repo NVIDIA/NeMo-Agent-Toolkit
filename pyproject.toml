@@ -189,7 +189,7 @@ dev = [
   "pre-commit>=4.0,<5.0",
   "python-docx~=1.1",
   "ruff==0.15.0", # align with .pre-commit-config.yaml
-  "setuptools >= 64",
+  "setuptools>=84.1.0",
   "setuptools_scm>=8",
   "twine~=6.0",
   "uv>=0.13.4,<0.14", # compatible with crewai-cli
@@ -206,6 +206,7 @@ dev = [
   "sphinx-mermaid",
   "sphinx-reredirects~=1.1",
   # transitive dependencies
+  "virtualenv>=21.14.9",
   "werkzeug>=3.1.9",
 ]
 
