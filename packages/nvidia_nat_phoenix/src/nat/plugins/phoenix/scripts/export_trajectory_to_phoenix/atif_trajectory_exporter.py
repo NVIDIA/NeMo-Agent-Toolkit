@@ -646,9 +646,9 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
     ) -> Span:
         """Build a Span with standard NAT attributes."""
         parent_span = None
-        if parent_id:
-            # A parent that is not a span of this trajectory ("root", or the root agent scope
-            # of an ATOF-converted trajectory) hangs the span off the workflow span.
+        if parent_id or span_kind is not SpanKind.WORKFLOW:
+            # A parent that is not a span of this trajectory (none, "root", or the root agent
+            # scope of an ATOF-converted trajectory) hangs the span off the workflow span.
             ps = span_lookup.get(parent_id) or span_lookup.get(f"workflow_{session_id}")
             if ps is not None:
                 parent_span = ps.model_copy()

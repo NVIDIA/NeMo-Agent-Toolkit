@@ -20,7 +20,7 @@ import pytest
 from nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.atif_trajectory_exporter import ATIFTrajectorySpanExporter
 
 
-def _trajectory(root_parent_id: str) -> dict[str, Any]:
+def _trajectory(root_parent_id: str | None) -> dict[str, Any]:
     """User question, an LLM step that calls one tool, and the final LLM answer.
 
     Every step and tool call names ``root_parent_id`` as its parent.
@@ -31,7 +31,7 @@ def _trajectory(root_parent_id: str) -> dict[str, Any]:
             "function_id": function_id,
             "function_name": function_name,
             "parent_id": root_parent_id,
-            "parent_name": "my_agent",
+            "parent_name": None if root_parent_id is None else "my_agent",
         }
 
     return {
@@ -88,8 +88,8 @@ def _trajectory(root_parent_id: str) -> dict[str, Any]:
     }
 
 
-@pytest.mark.parametrize("root_parent_id", ["root", "agent-1"])
-def test_top_level_spans_are_children_of_the_workflow_span(root_parent_id: str) -> None:
+@pytest.mark.parametrize("root_parent_id", ["root", "agent-1", None])
+def test_top_level_spans_are_children_of_the_workflow_span(root_parent_id: str | None) -> None:
     """``agent-1`` is the root agent scope of an ATOF-converted trajectory, which is not a span."""
     spans = ATIFTrajectorySpanExporter().convert(_trajectory(root_parent_id))
 
