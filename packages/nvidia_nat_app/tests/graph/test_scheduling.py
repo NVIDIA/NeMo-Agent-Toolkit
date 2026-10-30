@@ -271,6 +271,27 @@ class TestComputeOptimizedOrder:
         flat = [n for stage in order for n in stage]
         assert flat.index("a") < flat.index("b") < flat.index("c")
 
+    @pytest.mark.parametrize("confidence", ["partial", "opaque"])
+    def test_successor_of_uncertain_node_runs_after_it(self, make_node, confidence):
+        """p's writes are not fully known, so c (after p in the graph) must not run before it."""
+        g = Graph()
+        g.add_node("a")
+        g.add_node("p")
+        g.add_node("c")
+        g.add_edge("a", "p")
+        g.add_edge("p", "c")
+        g.entry_point = "a"
+        analyses = {
+            "a": make_node("a", writes={"q"}),
+            "p": make_node("p", reads={"q"}, confidence=confidence),
+            "c": make_node("c", reads={"r"}),
+        }
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo)
+        flat = [n for stage in order for n in stage]
+        assert flat.index("a") < flat.index("p") < flat.index("c")
+        assert all(edge.edge_type == EdgeType.NECESSARY for edge in classify_edges(g, analyses))
+
     def test_write_write_conflict_serializes_nodes(self, make_node, diamond_graph):
         """Two nodes writing the same non-reducer key must not be in the same stage."""
         g = diamond_graph

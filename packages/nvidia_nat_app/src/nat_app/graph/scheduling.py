@@ -402,12 +402,18 @@ def _apply_confidence_fallbacks(
     all_cycle_nodes: set[str],
     all_node_names: set[str],
 ) -> dict[str, set[str]]:
-    """Add edge-based deps for nodes with confidence != 'full' and not in cycles."""
+    """Add edge-based deps for nodes with confidence != 'full' and not in cycles.
+
+    Both directions are kept: the node's writes are not fully known, so a successor
+    may read something it writes (the same edges ``classify_edges`` reports as necessary).
+    """
     for name, analysis in node_analyses.items():
         if analysis.confidence != "full" and name not in all_cycle_nodes:
             for src, tgt in edge_pairs:
                 if tgt == name and src in all_node_names:
                     dependencies[name].add(src)
+                elif src == name and tgt in all_node_names:
+                    dependencies[tgt].add(name)
     return dependencies
 
 
