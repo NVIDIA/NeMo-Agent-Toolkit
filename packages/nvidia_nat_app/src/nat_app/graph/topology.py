@@ -441,19 +441,48 @@ def _source_component_nodes(
     rev_adj: dict[str, list[str]],
 ) -> list[str]:
     """Pending nodes whose strongly connected component has no pending predecessor outside it."""
+    # Tarjan's SCC over the pending nodes (iterative), once per call
+    node_index: dict[str, int] = {}
+    node_lowlink: dict[str, int] = {}
+    component: dict[str, int] = {}
+    on_stack: set[str] = set()
+    stack: list[str] = []
+    for root in pending:
+        if root in node_index:
+            continue
+        node_index[root] = node_lowlink[root] = len(node_index)
+        stack.append(root)
+        on_stack.add(root)
+        work: list[tuple[str, int]] = [(root, 0)]
+        while work:
+            node, ni = work[-1]
+            if ni < len(adj[node]):
+                work[-1] = (node, ni + 1)
+                w = adj[node][ni]
+                if w not in pending:
+                    continue
+                if w not in node_index:
+                    node_index[w] = node_lowlink[w] = len(node_index)
+                    stack.append(w)
+                    on_stack.add(w)
+                    work.append((w, 0))
+                elif w in on_stack:
+                    node_lowlink[node] = min(node_lowlink[node], node_index[w])
+                continue
+            work.pop()
+            if work:
+                parent = work[-1][0]
+                node_lowlink[parent] = min(node_lowlink[parent], node_lowlink[node])
+            if node_lowlink[node] == node_index[node]:
+                while True:
+                    w = stack.pop()
+                    on_stack.discard(w)
+                    component[w] = node_index[node]
+                    if w == node:
+                        break
 
-    def closure(start: str, neighbors: dict[str, list[str]]) -> set[str]:
-        seen: set[str] = set()
-        stack = [start]
-        while stack:
-            for nb in neighbors[stack.pop()]:
-                if nb in pending and nb not in seen:
-                    seen.add(nb)
-                    stack.append(nb)
-        return seen
-
-    nodes = [n for n in pending if closure(n, rev_adj) <= closure(n, adj) | {n}]
-    return nodes or list(pending)
+    entered = {component[n] for n in pending for p in rev_adj[n] if p in pending and component[p] != component[n]}
+    return [n for n in pending if component[n] not in entered]
 
 
 def detect_routers(graph: Graph) -> list[RouterInfo]:
