@@ -394,14 +394,24 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
             from mcp.server.auth.settings import AuthSettings
 
             server_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}"
-            auth_settings = AuthSettings(issuer_url=AnyHttpUrl(self.front_end_config.server_auth.issuer_url),
-                                         required_scopes=self.front_end_config.server_auth.scopes,
-                                         resource_server_url=AnyHttpUrl(server_url))
+            resource_server_url = str(AnyHttpUrl(server_url))
+            configured_audience = self.front_end_config.server_auth.audience
+            auth_settings = AuthSettings(
+                issuer_url=AnyHttpUrl(self.front_end_config.server_auth.issuer_url),
+                required_scopes=self.front_end_config.server_auth.scopes,
+                resource_server_url=AnyHttpUrl(resource_server_url),
+                # NAT's verifier enforces a nonempty configured audience itself. Otherwise
+                # delegate the unset-audience resource check to the patched MCP SDK 1.30.
+                validate_token_resource=not bool(configured_audience),
+            )
 
-            # Create token verifier
+            # Create token verifier; return the matching audience as AccessToken.resource for mcp>=1.30.
             from nat.plugins.mcp.server.introspection_token_verifier import IntrospectionTokenVerifier
 
-            token_verifier = IntrospectionTokenVerifier(self.front_end_config.server_auth)
+            token_verifier = IntrospectionTokenVerifier(
+                self.front_end_config.server_auth,
+                resource_server_url=resource_server_url,
+            )
 
         return FastMCP(name=self.front_end_config.name,
                        host=self.front_end_config.host,
