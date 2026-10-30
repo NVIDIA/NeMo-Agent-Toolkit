@@ -406,7 +406,7 @@ def test_setup_reps(dataset_handler, mock_input_df, dataset_id_key):
 
 
 @pytest.mark.parametrize("num_passes", [0, 1])
-def test_adjust_dataset_rejects_empty_input(num_passes):
+def test_adjust_dataset_rejects_empty_input(num_passes: int):
     """Reject empty input for automatic and fixed pass counts."""
     dataset_handler = DatasetHandler(EvalDatasetJsonConfig(),
                                      reps=1,
@@ -419,11 +419,10 @@ def test_adjust_dataset_rejects_empty_input(num_passes):
 
 
 @pytest.mark.parametrize("num_passes", [0, 1])
-def test_preprocess_dataframe_rejects_dataset_emptied_by_filter(num_passes):
+def test_preprocess_dataframe_rejects_dataset_emptied_by_filter(num_passes: int):
     """Reject datasets emptied by filtering for both pass-count modes."""
-    dataset_config = EvalDatasetJsonConfig(
-        filter=EvalFilterConfig(allowlist=EvalFilterEntryConfig(field={"id": ["not-present"]}))
-    )
+    dataset_config = EvalDatasetJsonConfig(filter=EvalFilterConfig(allowlist=EvalFilterEntryConfig(
+        field={"id": ["not-present"]})))
     dataset_handler = DatasetHandler(dataset_config,
                                      reps=1,
                                      concurrency=2,
@@ -592,7 +591,7 @@ def test_custom_empty_dataset_respects_size_adjustment(temp_nested_json_file: Pa
                                                        num_passes: int):
     """Handle empty custom datasets consistently for both pass-count modes."""
     dataset_config = EvalDatasetCustomConfig(function=f"{__name__}.sample_empty_custom_parser",
-                                              file_path=temp_nested_json_file)
+                                             file_path=temp_nested_json_file)
     dataset_handler = DatasetHandler(dataset_config,
                                      reps=1,
                                      concurrency=2,
