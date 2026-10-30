@@ -187,7 +187,8 @@ def test_prefixspan_subworkflow_with_text_no_patterns(minimal_valid_df):
             or "No patterns passed coverage/duration thresholds." in res.textual_report)
 
 
-def test_prefixspan_subworkflow_with_text_keeps_llm_start_text(minimal_valid_df):
+def test_prefixspan_subworkflow_with_text_keeps_llm_start_text(
+        minimal_valid_df: list[list[IntermediatePropertyAdaptor]]) -> None:
     """The LLM_START text must survive the matching LLM_END, which carries no input text."""
 
     result = prefixspan_subworkflow_with_text(minimal_valid_df, min_support=1, top_k=10)
