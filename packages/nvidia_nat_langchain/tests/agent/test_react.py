@@ -2442,3 +2442,15 @@ async def test_react_workflow_keeps_the_callbacks_of_a_parent_run(per_user):
                                                                          config={"callbacks": [CountLLMEnds()]})
     assert CountLLMEnds.calls == 2
     assert response.usage.total_tokens == 300
+
+
+async def test_agent_node_raises_on_truncated_output(mock_react_agent_no_raise):
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    truncated = AIMessage(content="Thought: I know this.\nFinal Answer: LangSmith is a platform for",
+                          response_metadata={"finish_reason": "length"})
+    with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = truncated
+        with pytest.raises(RuntimeError, match="finish_reason='length'"):
+            await mock_react_agent_no_raise.agent_node(ReActGraphState(messages=[HumanMessage(content="hi")]))
