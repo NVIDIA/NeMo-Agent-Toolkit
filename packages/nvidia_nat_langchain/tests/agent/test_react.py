@@ -2454,3 +2454,19 @@ async def test_agent_node_raises_on_truncated_output(mock_react_agent_no_raise):
         mock_stream_llm.return_value = truncated
         with pytest.raises(RuntimeError, match="finish_reason='length'"):
             await mock_react_agent_no_raise.agent_node(ReActGraphState(messages=[HumanMessage(content="hi")]))
+
+
+async def test_agent_node_raises_on_truncated_output_in_agentic_cycle(mock_react_agent_no_raise):
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    truncated = AIMessage(content="Thought: search more.\nAction: Tool A\nAction Input: {\"query\": \"Lang",
+                          response_metadata={"finish_reason": "length"})
+    state = ReActGraphState(messages=[HumanMessage(content="hi")],
+                            agent_scratchpad=[AgentAction(tool="Tool A", tool_input="hello", log="test")],
+                            tool_responses=[ToolMessage(name="Tool A", tool_call_id="Tool A", content="result")])
+    with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = truncated
+        with pytest.raises(RuntimeError, match="finish_reason='length'"):
+            await mock_react_agent_no_raise.agent_node(state)
+        assert "agent_scratchpad" in mock_stream_llm.call_args.args[1]
