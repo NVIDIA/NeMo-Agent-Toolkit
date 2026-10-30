@@ -119,7 +119,8 @@ def _on_prompt_study_end(
                 for k, v in prompt_format_map.items() if v
             },
         ),
-        total_trials=trial_number_offset + generations * pop_size,
+        # Every generation plus the final population is evaluated, and each candidate is numbered.
+        total_trials=trial_number_offset + (generations + 1) * pop_size,
     )
 
 

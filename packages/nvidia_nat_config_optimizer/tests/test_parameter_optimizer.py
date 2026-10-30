@@ -20,6 +20,7 @@ from unittest.mock import patch
 import pytest
 
 from nat.data_models.config import Config
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerMetric
@@ -268,10 +269,10 @@ def test_optimize_parameters_warns_when_an_evaluator_failed_on_items(tmp_path: P
 
     class _EvalRun:
 
-        def __init__(self, config):  # noqa: ANN001
+        def __init__(self, config: EvaluationRunConfig):
             self.config = config
 
-        async def run_and_evaluate(self):
+        async def run_and_evaluate(self) -> SimpleNamespace:
             return SimpleNamespace(evaluation_results=[("Accuracy", accuracy)])
 
     with patch("nat.plugins.config_optimizer.parameters.optimizer.optuna.create_study",
