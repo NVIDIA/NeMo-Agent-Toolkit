@@ -10,11 +10,14 @@ For agent projects, always install with the `langchain` extra — it is required
 uv add "nvidia-nat[langchain]"
 ```
 
-For all framework integrations:
+For most framework integrations:
 
 ```bash
-uv add "nvidia-nat[all]"         # All extras
+uv add "nvidia-nat[most]"
 ```
+
+See the [installation guide](../../../docs/source/get-started/installation.md)
+for excluded integrations, dependency conflicts, and unresolved security findings.
 
 ## Optional Extras
 
