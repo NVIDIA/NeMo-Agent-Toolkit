@@ -254,6 +254,11 @@ def sample_custom_parser(file_path: Path, difficulty: str = "") -> EvalInput:
     return EvalInput(eval_input_items=eval_items)
 
 
+def sample_empty_custom_parser(file_path: Path) -> EvalInput:
+    """Test implementation of a custom dataset parser that returns no items."""
+    return EvalInput(eval_input_items=[])
+
+
 @pytest.fixture
 def custom_dataset_config():
     """Fixture for dataset configuration."""
@@ -566,6 +571,23 @@ def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
     # check that there are two medium entries in the eval_input
     assert len(eval_input.eval_input_items) == 2
     assert all(item.full_dataset_entry['difficulty'] == 'medium' for item in eval_input.eval_input_items)
+
+
+@pytest.mark.parametrize("adjust_dataset_size", [False, True])
+def test_custom_empty_dataset_respects_size_adjustment(temp_nested_json_file, adjust_dataset_size):
+    dataset_config = EvalDatasetCustomConfig(function=f"{__name__}.sample_empty_custom_parser",
+                                              file_path=temp_nested_json_file)
+    dataset_handler = DatasetHandler(dataset_config,
+                                     reps=1,
+                                     concurrency=2,
+                                     adjust_dataset_size=adjust_dataset_size)
+
+    if adjust_dataset_size:
+        with pytest.raises(ValueError, match="Input dataset is empty"):
+            dataset_handler.get_eval_input_from_dataset("")
+    else:
+        eval_input = dataset_handler.get_eval_input_from_dataset("")
+        assert eval_input.eval_input_items == []
 
 
 def test_custom_pre_eval_process_function():

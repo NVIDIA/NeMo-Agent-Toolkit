@@ -260,7 +260,7 @@ class DatasetHandler:
         Returns:
             Preprocessed EvalInput object
         """
-        if not eval_input.eval_input_items:
+        if not eval_input.eval_input_items and not self.adjust_dataset_size:
             return eval_input
 
         input_df = self._eval_input_to_dataframe(eval_input)
