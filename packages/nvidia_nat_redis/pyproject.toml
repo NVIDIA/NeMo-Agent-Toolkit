@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8"]
 
 
 [tool.setuptools]
@@ -46,14 +46,26 @@ classifiers = [
 ]
 dependencies = [
   "nemo-agent-toolkit-redis>=0.2.0,<2.0.0",
+  # Security minimum for anyio, pulled in by nemo-agent-toolkit-redis (GHSA-5p39-cfhj-2xmp).
+  "anyio>=4.14.2",
+  # Security minimum for certifi, pulled in by nemo-agent-toolkit-redis (GHSA-6q48-6c7w-9gw2).
+  "certifi>=2026.10.19",
+  # Security minimum for idna, pulled in by nemo-agent-toolkit-redis (GHSA-65pc-fj4g-8rjx).
+  "idna>=3.15",
+  # Security minimum for requests, pulled in by nemo-agent-toolkit-redis (GHSA-gc5v-m9x4-r6x2).
+  "requests>=2.33.0",
 ]
 
 [project.urls]
 documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
 source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
+[dependency-groups]
+# Resolve the local core source when maintaining this compatibility package.
+dev = ["nvidia-nat-core>=1.8.0"]
+
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8"]
 managed = true
 config-settings = { editable_mode = "compat" }
 

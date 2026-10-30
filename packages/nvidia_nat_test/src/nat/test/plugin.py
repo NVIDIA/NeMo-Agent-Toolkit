@@ -651,7 +651,7 @@ def minio_server_fixture(fail_missing: bool) -> Generator[dict[str, str | int]]:
     except ImportError:
         if fail_missing:
             raise
-        pytest.skip("aioboto3 not installed, skipping MinIO tests")
+        pytest.skip("botocore not installed, skipping MinIO tests")
     except Exception as e:
         if fail_missing:
             raise
@@ -681,7 +681,7 @@ def langfuse_bucket_fixture(fail_missing: bool, minio_server: dict[str, str | in
     except ImportError:
         if fail_missing:
             raise
-        pytest.skip("aioboto3 not installed, skipping MinIO tests")
+        pytest.skip("botocore not installed, skipping MinIO tests")
     except Exception as e:
         if fail_missing:
             raise

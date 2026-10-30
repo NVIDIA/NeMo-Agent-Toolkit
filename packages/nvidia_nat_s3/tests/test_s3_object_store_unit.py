@@ -59,7 +59,7 @@ async def test_create_missing_bucket_in_client_region(monkeypatch, region, defau
                           secret_key="testing",
                           region=region)
 
-    async with store.session.client("s3", **store._client_args) as client:
+    async with store.session.create_client("s3", **store._client_args) as client:
         stubber = AioStubber(client)
         stubber.add_client_error("head_bucket",
                                  service_error_code="404",
@@ -69,7 +69,7 @@ async def test_create_missing_bucket_in_client_region(monkeypatch, region, defau
         client_context = AsyncMock()
         client_context.__aenter__.return_value = client
 
-        with stubber, patch.object(store.session, "client", return_value=client_context):
+        with stubber, patch.object(store.session, "create_client", return_value=client_context):
             async with store as opened_store:
                 assert opened_store is store
             stubber.assert_no_pending_responses()
@@ -85,13 +85,13 @@ async def test_existing_bucket_is_not_created():
                           secret_key="testing",
                           region="eu-west-1")
 
-    async with store.session.client("s3", **store._client_args) as client:
+    async with store.session.create_client("s3", **store._client_args) as client:
         stubber = AioStubber(client)
         stubber.add_response("head_bucket", {}, {"Bucket": "test-bucket"})
         client_context = AsyncMock()
         client_context.__aenter__.return_value = client
 
-        with stubber, patch.object(store.session, "client", return_value=client_context):
+        with stubber, patch.object(store.session, "create_client", return_value=client_context):
             async with store:
                 pass
             stubber.assert_no_pending_responses()

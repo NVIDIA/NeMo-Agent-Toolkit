@@ -17,6 +17,7 @@
 # isort:skip_file
 """AutoGen plugin registration for NAT components."""
 
+from . import instrumentation
 from . import llm
 from . import tool_wrapper
 from . import callback_handler

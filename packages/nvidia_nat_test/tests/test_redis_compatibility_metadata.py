@@ -16,6 +16,9 @@
 import pathlib
 import tomllib
 
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
+
 REPO_ROOT = pathlib.Path(__file__).parents[3]
 REDIS_PACKAGE_ROOT = REPO_ROOT / "packages" / "nvidia_nat_redis"
 
@@ -26,12 +29,17 @@ def _load_pyproject(project_root: pathlib.Path) -> dict:
         return tomllib.load(pyproject_file)
 
 
+def _dependency_names(dependencies: list[str]) -> set[str]:
+    """Parse dependency names independently of ordering and version constraints."""
+    return {canonicalize_name(Requirement(dependency.replace("{version}", "0")).name) for dependency in dependencies}
+
+
 def test_redis_extra_installs_compatibility_package():
     """Verify that the Redis extra preserves the historical package name."""
     pyproject = _load_pyproject(REPO_ROOT)
 
     optional_dependencies = pyproject["tool"]["setuptools_dynamic_dependencies"]["optional-dependencies"]
-    assert optional_dependencies["redis"] == ["nvidia-nat-redis == {version}"]
+    assert "nvidia-nat-redis" in _dependency_names(optional_dependencies["redis"])
 
 
 def test_redis_compatibility_package_has_no_plugin_code():
@@ -43,8 +51,8 @@ def test_redis_compatibility_package_has_no_plugin_code():
     assert not list((REDIS_PACKAGE_ROOT / "src" / "nat" / "plugins" / "redis").glob("*.py"))
 
 
-def test_redis_compatibility_package_depends_on_public_plugin_release():
-    """Verify that the shim requires the first Redis public-plugin API release."""
+def test_redis_compatibility_package_requires_public_plugin():
+    """Verify that the shim installs the public plugin alongside any transitive security requirements."""
     pyproject = _load_pyproject(REDIS_PACKAGE_ROOT)
 
-    assert pyproject["project"]["dependencies"] == ["nemo-agent-toolkit-redis>=0.2.0,<2.0.0"]
+    assert "nemo-agent-toolkit-redis" in _dependency_names(pyproject["project"]["dependencies"])

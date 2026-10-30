@@ -14,7 +14,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -55,9 +55,26 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "agno[openai]>=2.9.0,<3.0.0",
-  "gitpython>=3.1.60",
+  "gitpython>=3.2.1",
   "google-search-results>=2.4.2,<3.0.0",
-  "litellm>=1.83.0,<1.85.0",
+  # Security minimum for LiteLLM proxy authentication (GHSA-7hp6-4w63-5g45).
+  "litellm>=1.100.4,<2.0.0",
+  # Security minimum for aiohttp, pulled in by litellm (GHSA-494j-54xm-rwp3).
+  "aiohttp>=3.14.4",
+  # Security minimum for filelock, pulled in by litellm (GHSA-rfpc-qcw5-3pc4).
+  "filelock>=4.2.1",
+  # Security minimum for fsspec, pulled in by litellm (GHSA-27vj-qcqg-25rc).
+  "fsspec>=2026.6.0",
+  # Security minimum for h2, pulled in by agno (GHSA-6hr6-w5qg-qmwg).
+  "h2>=4.4.1",
+  # Security minimum for hpack, pulled in by agno (PYSEC-2026-4053).
+  "hpack>=4.2.0",
+  # Security minimum for multidict, pulled in by litellm (GHSA-54p9-h82j-f925).
+  "multidict>=6.9.1",
+  # Security minimum for pydantic-settings, pulled in by agno, litellm (GHSA-4xgf-cpjx-pc3j).
+  "pydantic-settings>=2.14.2",
+  # Security minimum for requests, pulled in by google-search-results, litellm (GHSA-gc5v-m9x4-r6x2).
+  "requests>=2.33.0",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
@@ -66,7 +83,7 @@ test = [
 ]
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 

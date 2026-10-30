@@ -14,7 +14,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -54,9 +54,25 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
-  "google-adk>=1.28.1,<2.0.0",
-  "litellm>=1.83.0,<1.85.0",
-  "opentelemetry-exporter-otlp<1.42.0",
+  "google-adk>=2.12.0,<3.0.0",
+  # Security minimum for LiteLLM proxy authentication (GHSA-7hp6-4w63-5g45).
+  "litellm>=1.100.4,<2.0.0",
+  "opentelemetry-exporter-otlp>=1.42.0,<2.0.0",
+  # Security minimum for aiohttp, pulled in by litellm (GHSA-494j-54xm-rwp3).
+  "aiohttp>=3.14.4",
+  # Security minimum for filelock, pulled in by litellm (GHSA-rfpc-qcw5-3pc4).
+  "filelock>=4.2.1",
+  # Security minimum for fsspec, pulled in by litellm (GHSA-27vj-qcqg-25rc).
+  "fsspec>=2026.6.0",
+  # Security minimum for multidict, pulled in by litellm (GHSA-54p9-h82j-f925).
+  "multidict>=6.9.1",
+  # Security minimum for pyasn1, pulled in by google-adk (PYSEC-2026-2263).
+  "pyasn1>=0.6.4",
+  # Security minimum for pydantic-settings, pulled in by litellm (GHSA-4xgf-cpjx-pc3j).
+  "pydantic-settings>=2.14.2",
+  # Security minimum for requests, pulled in by google-adk, litellm, opentelemetry-exporter-otlp
+  # (GHSA-gc5v-m9x4-r6x2).
+  "requests>=2.33.0",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
@@ -65,7 +81,7 @@ test = [
 ]
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 

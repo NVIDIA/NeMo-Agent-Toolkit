@@ -127,4 +127,15 @@ async def test_evaluator_handles_item_failure(mock_input_items):
     assert isinstance(failed_item.reasoning, dict)
     assert "Evaluator error" in failed_item.reasoning["error"]
     assert "Intentional failure" in failed_item.reasoning["error"]
+    # The failure must be distinguishable from a genuinely low score via the `error` field
+    assert failed_item.error is not None
+    assert "Intentional failure" in failed_item.error
     assert output.average_score == 0.0
+
+
+async def test_evaluator_successful_items_have_no_error(mock_input_items):
+    """Successful items keep `error` unset so only failures carry an error."""
+    evaluator = MockSimilarityEvaluator()
+    output = await evaluator.evaluate(mock_input_items)
+
+    assert all(item.error is None for item in output.eval_output_items)

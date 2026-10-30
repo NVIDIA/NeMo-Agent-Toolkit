@@ -154,6 +154,34 @@ def test_create_workflow_with_invalid_name(tmp_path):
     assert "Workflow name cannot be empty" in result.stderr
 
 
+@pytest.mark.parametrize(
+    "workflow_name",
+    ["my agent", "3d-agent", "class", "a.b", "a/b", r"a\b", "../x", "_agent", "-agent", "agent_", "agent-", "_", "é"])
+def test_create_workflow_rejects_invalid_package_name(tmp_path, workflow_name: str):
+    """Names that cannot be a Python package or distribution name are rejected before anything is created."""
+    workflow_dir = tmp_path / "workflows"
+    workflow_dir.mkdir()
+
+    # "--" keeps click from reading a name such as "-agent" as an option, so the name validation is what rejects it.
+    result = CliRunner().invoke(create_command,
+                                ["--no-install", "--workflow-dir", str(workflow_dir), "--", workflow_name])
+
+    assert result.exit_code == 2
+    assert "Python" in result.output
+    assert list(tmp_path.iterdir()) == [workflow_dir]
+    assert list(workflow_dir.iterdir()) == []
+
+
+@pytest.mark.parametrize("workflow_name, module_name", [("my-agent", "my_agent"), ("my_agent", "my_agent"),
+                                                        ("agent2", "agent2")])
+def test_create_workflow_accepts_valid_package_name(tmp_path, workflow_name: str, module_name: str):
+    result = CliRunner().invoke(create_command, ["--no-install", "--workflow-dir", str(tmp_path), workflow_name])
+
+    assert result.exit_code == 0
+    register_py = (tmp_path / workflow_name / "src" / module_name / "register.py").read_text()
+    assert f"from .{module_name} import {module_name}_function" in register_py
+
+
 def test_create_workflow_that_already_exists_fails(tmp_path):
     (tmp_path / "test_workflow").mkdir()
 
