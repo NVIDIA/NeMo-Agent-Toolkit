@@ -16,6 +16,7 @@
 
 import pytest
 
+from nat_app.constraints.models import ResolvedConstraints
 from nat_app.graph.models import EdgeType
 from nat_app.graph.scheduling import analyze_cycle_body
 from nat_app.graph.scheduling import classify_edges
@@ -334,6 +335,46 @@ class TestComputeOptimizedOrder:
         order = compute_optimized_order(g, analyses, topo)
         stage_of = {n: i for i, stage in enumerate(order) for n in stage}
         assert stage_of["a"] < stage_of["p"] < stage_of["b"] < stage_of["c"]
+
+    def test_partial_node_with_a_known_write_runs_before_its_successor(self, make_node):
+        """reset writes a and then clears the state, so its other writes are unknown; use reads b,
+        which reset may have cleared."""
+        g = Graph()
+        for name in ("start", "reset", "use"):
+            g.add_node(name)
+        g.add_edge("start", "reset")
+        g.add_edge("reset", "use")
+        g.entry_point = "start"
+        analyses = {
+            "start": make_node("start", writes={"b"}),
+            "reset": make_node("reset", writes={"a"}, confidence="partial"),
+            "use": make_node("use", reads={"b"}),
+        }
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo)
+        assert order == [{"start"}, {"reset"}, {"use"}]
+
+    def test_explicit_dependency_against_the_graph_order_is_kept(self, make_node, caplog):
+        """p is declared to depend on c, which comes after p in the graph: c runs first and the
+        conflict is logged."""
+        g = Graph()
+        for name in ("a", "p", "c"):
+            g.add_node(name)
+        g.add_edge("a", "p")
+        g.add_edge("p", "c")
+        g.entry_point = "a"
+        analyses = {
+            "a": make_node("a", writes={"q"}),
+            "p": make_node("p", reads={"q"}, confidence="partial"),
+            "c": make_node("c", reads={"r"}),
+        }
+        constraints = {"p": ResolvedConstraints(name="p", explicit_dependencies={"c"})}
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo, resolved_constraints=constraints)
+        stage_of = {n: i for i, stage in enumerate(order) for n in stage}
+        assert stage_of["a"] < stage_of["p"]
+        assert stage_of["c"] < stage_of["p"]
+        assert "Explicit dependency of 'p' on 'c' goes against the graph order" in caplog.text
 
     def test_write_write_conflict_serializes_nodes(self, make_node, diamond_graph):
         """Two nodes writing the same non-reducer key must not be in the same stage."""

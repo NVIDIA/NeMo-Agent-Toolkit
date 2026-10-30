@@ -401,14 +401,24 @@ def _apply_confidence_fallbacks(
     edge_pairs: list[tuple[str, str]],
     all_cycle_nodes: set[str],
     all_node_names: set[str],
+    constraints: dict[str, ResolvedConstraints],
 ) -> dict[str, set[str]]:
     """Keep the graph order around nodes with confidence != 'full' that are not in cycles.
 
     Such a node's reads and writes are not fully known, so it runs after every node above it
     in the graph and before every node below it (the edges ``classify_edges`` reports as
     necessary, followed transitively). A data dependency pointing the other way is dropped,
-    since it would form a cycle with that order.
+    since it would form a cycle with that order. An explicit dependency pointing the other
+    way is kept instead, and the graph order is not added for that pair.
     """
+    explicit = {(name, dep) for name, c in constraints.items() for dep in c.explicit_dependencies}
+
+    def _keep_order(before: str, after: str) -> bool:
+        if (before, after) not in explicit:
+            return True
+        logger.warning("Explicit dependency of '%s' on '%s' goes against the graph order; keeping it", before, after)
+        return False
+
     successors: dict[str, set[str]] = {n: set() for n in all_node_names}
     predecessors: dict[str, set[str]] = {n: set() for n in all_node_names}
     for src, tgt in edge_pairs:
@@ -430,11 +440,13 @@ def _apply_confidence_fallbacks(
         if analysis.confidence == "full" or name in all_cycle_nodes:
             continue
         for ancestor in _reachable(name, predecessors):
-            dependencies[name].add(ancestor)
-            dependencies[ancestor].discard(name)
+            if _keep_order(ancestor, name):
+                dependencies[name].add(ancestor)
+                dependencies[ancestor].discard(name)
         for descendant in _reachable(name, successors):
-            dependencies[descendant].add(name)
-            dependencies[name].discard(descendant)
+            if _keep_order(name, descendant):
+                dependencies[descendant].add(name)
+                dependencies[name].discard(descendant)
     return dependencies
 
 
@@ -665,7 +677,12 @@ def compute_optimized_order(
             node_to_cycles.setdefault(n, set()).add(idx)
 
     dependencies = _build_data_dependencies(graph, all_node_names, node_analyses, node_to_cycles, writes_no_reducer)
-    dependencies = _apply_confidence_fallbacks(dependencies, node_analyses, edge_pairs, all_cycle_nodes, all_node_names)
+    dependencies = _apply_confidence_fallbacks(dependencies,
+                                               node_analyses,
+                                               edge_pairs,
+                                               all_cycle_nodes,
+                                               all_node_names,
+                                               constraints)
     dependencies = _apply_constraints(dependencies, constraints, edge_pairs, all_node_names)
     dependencies = _apply_cycle_body_ordering(dependencies, topology, edge_pairs, node_analyses, writes_no_reducer)
     cycle_back_edges = {c.back_edge for c in topology.cycles} if topology.cycles else set()
