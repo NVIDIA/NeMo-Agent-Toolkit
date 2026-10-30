@@ -402,18 +402,39 @@ def _apply_confidence_fallbacks(
     all_cycle_nodes: set[str],
     all_node_names: set[str],
 ) -> dict[str, set[str]]:
-    """Add edge-based deps for nodes with confidence != 'full' and not in cycles.
+    """Keep the graph order around nodes with confidence != 'full' that are not in cycles.
 
-    Both directions are kept: the node's writes are not fully known, so a successor
-    may read something it writes (the same edges ``classify_edges`` reports as necessary).
-    The edge's direction wins over an opposite data dependency between the same two nodes.
+    Such a node's reads and writes are not fully known, so it runs after every node above it
+    in the graph and before every node below it (the edges ``classify_edges`` reports as
+    necessary, followed transitively). A data dependency pointing the other way is dropped,
+    since it would form a cycle with that order.
     """
+    successors: dict[str, set[str]] = {n: set() for n in all_node_names}
+    predecessors: dict[str, set[str]] = {n: set() for n in all_node_names}
+    for src, tgt in edge_pairs:
+        if src in all_node_names and tgt in all_node_names:
+            successors[src].add(tgt)
+            predecessors[tgt].add(src)
+
+    def _reachable(start: str, neighbors: dict[str, set[str]]) -> set[str]:
+        seen: set[str] = set()
+        stack = [start]
+        while stack:
+            for nxt in neighbors[stack.pop()]:
+                if nxt not in seen:
+                    seen.add(nxt)
+                    stack.append(nxt)
+        return seen
+
     for name, analysis in node_analyses.items():
-        if analysis.confidence != "full" and name not in all_cycle_nodes:
-            for src, tgt in edge_pairs:
-                if src in all_node_names and tgt in all_node_names and name in (src, tgt):
-                    dependencies[tgt].add(src)
-                    dependencies[src].discard(tgt)
+        if analysis.confidence == "full" or name in all_cycle_nodes:
+            continue
+        for ancestor in _reachable(name, predecessors):
+            dependencies[name].add(ancestor)
+            dependencies[ancestor].discard(name)
+        for descendant in _reachable(name, successors):
+            dependencies[descendant].add(name)
+            dependencies[name].discard(descendant)
     return dependencies
 
 

@@ -288,8 +288,8 @@ class TestComputeOptimizedOrder:
         }
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
-        flat = [n for stage in order for n in stage]
-        assert flat.index("a") < flat.index("p") < flat.index("c")
+        stage_of = {n: i for i, stage in enumerate(order) for n in stage}
+        assert stage_of["a"] < stage_of["p"] < stage_of["c"]
         assert all(edge.edge_type == EdgeType.NECESSARY for edge in classify_edges(g, analyses))
 
     def test_uncertain_node_edge_wins_over_an_opposite_data_dependency(self, make_node):
@@ -310,9 +310,30 @@ class TestComputeOptimizedOrder:
         }
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
-        flat = [n for stage in order for n in stage]
-        assert flat.index("a") < flat.index("p") < flat.index("c")
-        assert flat.index("p") < flat.index("d")
+        stage_of = {n: i for i, stage in enumerate(order) for n in stage}
+        assert stage_of["a"] < stage_of["p"] < stage_of["c"]
+        assert stage_of["p"] < stage_of["d"]
+
+    def test_uncertain_node_keeps_order_with_indirect_descendants(self, make_node):
+        """p reads x, which c overwrites two steps later, and c reads what b writes. p must
+        not wait for c, or p -> c -> b -> p becomes a cycle."""
+        g = Graph()
+        for name in ("a", "p", "b", "c"):
+            g.add_node(name)
+        g.add_edge("a", "p")
+        g.add_edge("p", "b")
+        g.add_edge("b", "c")
+        g.entry_point = "a"
+        analyses = {
+            "a": make_node("a", writes={"x"}),
+            "p": make_node("p", reads={"x"}, confidence="partial"),
+            "b": make_node("b", writes={"y"}),
+            "c": make_node("c", reads={"y"}, writes={"x"}),
+        }
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo)
+        stage_of = {n: i for i, stage in enumerate(order) for n in stage}
+        assert stage_of["a"] < stage_of["p"] < stage_of["b"] < stage_of["c"]
 
     def test_write_write_conflict_serializes_nodes(self, make_node, diamond_graph):
         """Two nodes writing the same non-reducer key must not be in the same stage."""
