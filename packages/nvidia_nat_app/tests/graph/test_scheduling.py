@@ -290,6 +290,29 @@ class TestComputeOptimizedOrder:
         flat = [n for stage in order for n in stage]
         assert flat.index("start") < flat.index("summarize") < flat.index("rewrite")
 
+    @pytest.mark.parametrize("disable_parallelization", [False, True])
+    def test_dependency_cycle_is_broken_in_graph_order(self, make_node, disable_parallelization):
+        """a and c are on parallel branches, so their data dependencies form the cycle
+        a -> c -> b -> a; breaking it must still run a before b (a -> b is a graph edge)."""
+        g = Graph()
+        for name in ("s", "a", "b", "c"):
+            g.add_node(name)
+        g.add_edge("s", "a")
+        g.add_edge("s", "c")
+        g.add_edge("a", "b")
+        g.entry_point = "s"
+        analyses = {
+            "s": make_node("s"),
+            "a": make_node("a", reads={"x", "y"}),
+            "b": make_node("b", writes={"x"}),
+            "c": make_node("c", reads={"x"}, writes={"y"}),
+        }
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo, disable_parallelization=disable_parallelization)
+        flat = [n for stage in order for n in stage]
+        assert flat[0] == "s"
+        assert flat.index("a") < flat.index("b")
+
     def test_write_write_conflict_serializes_nodes(self, make_node, diamond_graph):
         """Two nodes writing the same non-reducer key must not be in the same stage."""
         g = diamond_graph

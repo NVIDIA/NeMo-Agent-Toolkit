@@ -541,12 +541,52 @@ def _apply_post_cycle_ordering(
     return dependencies
 
 
+def _graph_order(graph: Graph, back_edges: set[tuple[str, str]]) -> dict[str, int]:
+    """Rank nodes in the graph's own order: topological over the edges that are not cycle
+    back-edges, ties broken by BFS distance from the entry point, then by name.
+
+    Breaking a dependency cycle by running the remaining node with the lowest rank never runs
+    a node before one that precedes it in the graph.
+    """
+    nodes = graph.node_names
+    successors: dict[str, list[str]] = {n: [] for n in nodes}
+    pending: dict[str, int] = {n: 0 for n in nodes}
+    for src, tgt in graph.edge_pairs:
+        if src in nodes and tgt in nodes and src != tgt and (src, tgt) not in back_edges:
+            successors[src].append(tgt)
+            pending[tgt] += 1
+
+    distance: dict[str, int] = {}
+    queue: deque[str] = deque([graph.entry_point] if graph.entry_point in nodes else [])
+    while queue:
+        node = queue.popleft()
+        if node in distance:
+            continue
+        distance[node] = len(distance)
+        queue.extend(succ for succ in successors[node] if succ not in distance)
+
+    def tie_break(node: str) -> tuple[int, str]:
+        return distance.get(node, len(nodes)), node
+
+    order: dict[str, int] = {}
+    while pending:
+        ready = [n for n, count in pending.items() if count == 0] or list(pending)
+        node = min(ready, key=tie_break)
+        order[node] = len(order)
+        del pending[node]
+        for succ in successors[node]:
+            if succ in pending:
+                pending[succ] -= 1
+    return order
+
+
 def _build_parallel_stages(
     all_node_names: set[str],
     dependencies: dict[str, set[str]],
     graph: Graph,
     branch_info: dict[str, BranchInfo],
     constraints: dict[str, ResolvedConstraints],
+    graph_order: dict[str, int],
 ) -> list[set[str]]:
     """While-loop with _split_by_branch, _stage_order_with_entry_first, force_sequential."""
     node_branch: dict[str, tuple[str, str]] = {}
@@ -561,9 +601,8 @@ def _build_parallel_stages(
         ready = {n for n in remaining if not (dependencies.get(n, set()) & remaining)}
         if not ready:
             logger.warning("Possible circular dependency in: %s", remaining)
-            # Prefer graph's structural entry point when breaking the cycle
-            entry = graph.entry_point if graph.entry_point else ""
-            ready = {entry} if entry in remaining else {next(iter(remaining))}
+            # Break the cycle with the node that comes first in the graph
+            ready = {min(remaining, key=graph_order.__getitem__)}
         ready = _split_by_branch(ready, node_branch)
         ordered_ready = _stage_order_with_entry_first(ready, graph.entry_point)
         stage: set[str] = set()
@@ -660,9 +699,10 @@ def compute_optimized_order(
                                               all_cycle_nodes,
                                               topology)
 
+    graph_order = _graph_order(graph, cycle_back_edges)
     if disable_parallelization:
-        return _sequential_stages(all_node_names, dependencies, graph.entry_point)
-    return _build_parallel_stages(all_node_names, dependencies, graph, branch_info, constraints)
+        return _sequential_stages(all_node_names, dependencies, graph.entry_point, graph_order)
+    return _build_parallel_stages(all_node_names, dependencies, graph, branch_info, constraints, graph_order)
 
 
 def _split_by_branch(
@@ -715,6 +755,7 @@ def _sequential_stages(
     node_names: set[str],
     dependencies: dict[str, set[str]],
     entry_point: str,
+    graph_order: dict[str, int],
 ) -> list[set[str]]:
     """Fallback: fully sequential ordering.
 
@@ -722,6 +763,7 @@ def _sequential_stages(
         node_names: All node names in the graph.
         dependencies: Per-node dependency sets.
         entry_point: The graph entry-point node.
+        graph_order: Node ranks from ``_graph_order``, used to break dependency cycles.
 
     Returns:
         List of single-node stages in dependency-respecting order.
@@ -731,7 +773,7 @@ def _sequential_stages(
     while remaining:
         ready = {n for n in remaining if not (dependencies.get(n, set()) & remaining)}
         if not ready:
-            ready = {next(iter(remaining))}
+            ready = {min(remaining, key=graph_order.__getitem__)}
         ordered = _stage_order_with_entry_first(ready, entry_point)
         stages.append({ordered[0]})
         remaining.discard(ordered[0])
