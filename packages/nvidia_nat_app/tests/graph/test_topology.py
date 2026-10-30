@@ -140,6 +140,29 @@ class TestCycleNodeOrder:
         order = cycle_node_order(cycles[0], g.edge_pairs)
         assert order == ["plan", "fetch_a", "fetch_b", "merge", "check"]
 
+    def test_fan_in_waits_for_an_inner_cycle(self):
+        """inner_a <-> inner_b is an inner cycle feeding merge; merge must still come after inner_b."""
+        from nat_app.graph.topology import CycleInfo
+
+        edges = [
+            ("entry", "side"),
+            ("entry", "inner_a"),
+            ("inner_a", "inner_b"),
+            ("inner_b", "inner_a"),
+            ("side", "merge"),
+            ("inner_b", "merge"),
+            ("merge", "check"),
+            ("check", "entry"),
+        ]
+        cycle = CycleInfo(
+            nodes={"entry", "side", "inner_a", "inner_b", "merge", "check"},
+            entry_node="entry",
+            exit_node="check",
+            back_edge=("check", "entry"),
+        )
+        order = cycle_node_order(cycle, edges)
+        assert order == ["entry", "side", "inner_a", "inner_b", "merge", "check"]
+
 
 class TestDetectRouters:
 

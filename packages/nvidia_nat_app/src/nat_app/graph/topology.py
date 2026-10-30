@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import logging
 from collections import deque
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 
@@ -418,12 +419,13 @@ def cycle_node_order(cycle: CycleInfo, edges: list[tuple[str, str]]) -> list[str
 
     # A DFS preorder can put a fan-in node before one of its inputs, so emit the nodes in
     # topological order and use the preorder only to break ties. An inner cycle leaves no
-    # node ready; then the earliest remaining node in preorder goes next.
+    # node ready; then the next node comes from an inner cycle that no other pending node
+    # leads into, so nodes after that inner cycle still wait for it.
     rank = {n: i for i, n in enumerate(preorder)}
     pending = {n: len(rev_adj[n]) for n in cycle.nodes}
     order: list[str] = []
     while pending:
-        ready = [n for n, count in pending.items() if count == 0] or list(pending)
+        ready = [n for n, count in pending.items() if count == 0] or _source_component_nodes(pending, adj, rev_adj)
         node = min(ready, key=rank.__getitem__)
         order.append(node)
         del pending[node]
@@ -431,6 +433,27 @@ def cycle_node_order(cycle: CycleInfo, edges: list[tuple[str, str]]) -> list[str
             if neighbor in pending:
                 pending[neighbor] -= 1
     return order
+
+
+def _source_component_nodes(
+    pending: Mapping[str, int],
+    adj: dict[str, list[str]],
+    rev_adj: dict[str, list[str]],
+) -> list[str]:
+    """Pending nodes whose strongly connected component has no pending predecessor outside it."""
+
+    def closure(start: str, neighbors: dict[str, list[str]]) -> set[str]:
+        seen: set[str] = set()
+        stack = [start]
+        while stack:
+            for nb in neighbors[stack.pop()]:
+                if nb in pending and nb not in seen:
+                    seen.add(nb)
+                    stack.append(nb)
+        return seen
+
+    nodes = [n for n in pending if closure(n, rev_adj) <= closure(n, adj) | {n}]
+    return nodes or list(pending)
 
 
 def detect_routers(graph: Graph) -> list[RouterInfo]:
