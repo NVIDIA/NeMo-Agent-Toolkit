@@ -146,6 +146,9 @@ class DatasetHandler:
 
         original_size = input_df.shape[0]
 
+        if original_size == 0:
+            raise ValueError("Input dataset is empty and cannot be adjusted to the requested size.")
+
         # Calculate target size
         if self.num_passes > 0:
             # When num_passes is specified, always use concurrency * num_passes

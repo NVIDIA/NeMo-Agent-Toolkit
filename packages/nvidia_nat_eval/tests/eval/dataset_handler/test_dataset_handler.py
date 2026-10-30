@@ -24,6 +24,8 @@ from nat.data_models.dataset_handler import EvalDatasetCustomConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonlConfig
 from nat.data_models.dataset_handler import EvalDatasetStructureConfig
+from nat.data_models.dataset_handler import EvalFilterConfig
+from nat.data_models.dataset_handler import EvalFilterEntryConfig
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.intermediate_step import IntermediateStep
@@ -396,6 +398,24 @@ def test_setup_reps(dataset_handler, mock_input_df, dataset_id_key):
 
     assert len(replicated_df) == len(mock_input_df) * dataset_handler.reps, "Dataset should be replicated correctly"
     assert all("_rep" in str(i) for i in replicated_df[dataset_id_key]), "IDs should be suffixed with `_repX`"
+
+
+def test_adjust_dataset_rejects_empty_input():
+    dataset_handler = DatasetHandler(EvalDatasetJsonConfig(), reps=1, concurrency=2, adjust_dataset_size=True)
+
+    with pytest.raises(ValueError, match="Input dataset is empty"):
+        dataset_handler.adjust_dataset(pd.DataFrame(columns=["id", "question"]))
+
+
+def test_preprocess_dataframe_rejects_dataset_emptied_by_filter():
+    dataset_config = EvalDatasetJsonConfig(
+        filter=EvalFilterConfig(allowlist=EvalFilterEntryConfig(field={"id": ["not-present"]}))
+    )
+    dataset_handler = DatasetHandler(dataset_config, reps=1, concurrency=2, adjust_dataset_size=True)
+    input_df = pd.DataFrame({"id": ["1"], "question": ["What is AI?"]})
+
+    with pytest.raises(ValueError, match="Input dataset is empty"):
+        dataset_handler._preprocess_dataframe(input_df)
 
 
 @pytest.fixture
