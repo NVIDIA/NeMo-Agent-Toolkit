@@ -324,7 +324,10 @@ class _NodeASTVisitor(ast.NodeVisitor):
                 self.has_dynamic_keys = True
                 self.warnings.append("Dynamic key in state.get()")
 
-        if isinstance(node.func, ast.Attribute) and node.func.attr in _MUTATING_METHODS:
+        if (isinstance(node.func, ast.Attribute) and node.func.attr in _MUTATING_METHODS
+                and (state_obj := self._get_obj_for_node(node.func.value)) is not None):
+            self._record_state_method_call(node, state_obj, node.func.attr)
+        elif isinstance(node.func, ast.Attribute) and node.func.attr in _MUTATING_METHODS:
             receiver = node.func.value
             obj, path = self._extract_nested_path(receiver)
             if obj and path:
@@ -340,6 +343,42 @@ class _NodeASTVisitor(ast.NodeVisitor):
         self._check_special_calls(node)
         self._check_state_passed_to_call(node)
         self.generic_visit(node)
+
+    def _record_state_method_call(self, node: ast.Call, obj: str, method: str) -> None:
+        """Record a mutating method called on the state object itself, e.g. ``state.update({...})``
+        or ``state.pop("key")``. Keys that cannot be named make the analysis partial."""
+        if method in ("pop", "setdefault", "__setitem__", "__delitem__") and node.args:
+            key = self._extract_string_key(node.args[0])
+            if key:
+                if method in ("pop", "setdefault"):
+                    self.reads.add(obj, key)
+                self.mutations.add(obj, key)
+                return
+        elif method == "update":
+            keys = self._update_call_keys(node)
+            if keys is not None:
+                for key in keys:
+                    self.mutations.add(obj, key)
+                return
+        self.has_dynamic_keys = True
+        self.warnings.append(f"State keys changed by {method}() could not be determined")
+
+    def _update_call_keys(self, node: ast.Call) -> list[str] | None:
+        """Keys written by ``update({"a": ...}, b=...)``, or None if any key is not a literal."""
+        keys: list[str] = []
+        for arg in node.args:
+            if not isinstance(arg, ast.Dict):
+                return None
+            for key_node in arg.keys:
+                key = self._extract_string_key(key_node) if key_node is not None else None
+                if key is None:
+                    return None
+                keys.append(key)
+        for kw in node.keywords:
+            if kw.arg is None:
+                return None
+            keys.append(kw.arg)
+        return keys
 
     def _check_special_calls(self, node: ast.Call):
         if not self._special_call_names:

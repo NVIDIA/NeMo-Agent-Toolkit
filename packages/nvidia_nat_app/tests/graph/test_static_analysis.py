@@ -243,6 +243,68 @@ class TestKnownSafeAttrs:
         assert not r.has_unknown_attr_access
 
 
+class TestMutatingMethodOnState:
+
+    def test_update_with_dict_literal(self):
+
+        def fn(state):
+            state.update({"a": 1, "b": 2})
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.mutations.all_fields_flat == {"a", "b"}
+        assert not r.has_dynamic_keys
+
+    def test_update_with_keywords(self):
+
+        def fn(state):
+            state.update(a=1)
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.mutations.all_fields_flat == {"a"}
+
+    def test_pop_reads_and_writes_the_key(self):
+
+        def fn(state):
+            value = state.pop("a")
+            return {"b": value}
+
+        r = analyze_function_ast(fn)
+        assert r.reads.all_fields_flat == {"a"}
+        assert r.mutations.all_fields_flat == {"a"}
+        assert r.writes.all_fields_flat == {"b"}
+
+    def test_setdefault_reads_and_writes_the_key(self):
+
+        def fn(state):
+            state.setdefault("a", []).append(1)
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.reads.all_fields_flat == {"a"}
+        assert r.mutations.all_fields_flat == {"a"}
+
+    def test_update_with_a_variable_is_dynamic(self):
+
+        def fn(state):
+            extra = {"a": 1}
+            state.update(extra)
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+
+    def test_clear_is_dynamic(self):
+
+        def fn(state):
+            state.clear()
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+
+
 class TestParamToObj:
 
     def test_multi_param_tracks_both(self):
