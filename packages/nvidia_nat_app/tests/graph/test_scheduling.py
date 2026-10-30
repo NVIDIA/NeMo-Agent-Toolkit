@@ -292,6 +292,28 @@ class TestComputeOptimizedOrder:
         assert flat.index("a") < flat.index("p") < flat.index("c")
         assert all(edge.edge_type == EdgeType.NECESSARY for edge in classify_edges(g, analyses))
 
+    def test_uncertain_node_edge_wins_over_an_opposite_data_dependency(self, make_node):
+        """p reads x, which its successor c overwrites; d reads what p writes. The p -> c edge
+        must not leave a p <-> c cycle that lets d run before p."""
+        g = Graph()
+        for name in ("a", "p", "c", "d"):
+            g.add_node(name)
+        g.add_edge("a", "p")
+        g.add_edge("p", "c")
+        g.add_edge("c", "d")
+        g.entry_point = "a"
+        analyses = {
+            "a": make_node("a", writes={"x"}),
+            "p": make_node("p", reads={"x"}, writes={"y"}, confidence="partial"),
+            "c": make_node("c", writes={"x"}),
+            "d": make_node("d", reads={"y"}),
+        }
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo)
+        flat = [n for stage in order for n in stage]
+        assert flat.index("a") < flat.index("p") < flat.index("c")
+        assert flat.index("p") < flat.index("d")
+
     def test_write_write_conflict_serializes_nodes(self, make_node, diamond_graph):
         """Two nodes writing the same non-reducer key must not be in the same stage."""
         g = diamond_graph

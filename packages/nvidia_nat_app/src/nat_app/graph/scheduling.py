@@ -406,14 +406,14 @@ def _apply_confidence_fallbacks(
 
     Both directions are kept: the node's writes are not fully known, so a successor
     may read something it writes (the same edges ``classify_edges`` reports as necessary).
+    The edge's direction wins over an opposite data dependency between the same two nodes.
     """
     for name, analysis in node_analyses.items():
         if analysis.confidence != "full" and name not in all_cycle_nodes:
             for src, tgt in edge_pairs:
-                if tgt == name and src in all_node_names:
-                    dependencies[name].add(src)
-                elif src == name and tgt in all_node_names:
-                    dependencies[tgt].add(name)
+                if src in all_node_names and tgt in all_node_names and name in (src, tgt):
+                    dependencies[tgt].add(src)
+                    dependencies[src].discard(tgt)
     return dependencies
 
 
