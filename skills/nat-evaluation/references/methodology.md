@@ -10,10 +10,10 @@ Every agent exhibits behavior across five dimensions. Your evaluator suite shoul
 
 | Dimension | What Can Go Wrong | How to Evaluate |
 | --------- | ----------------- | --------------- |
-| **Reasoning** | Logical errors in chain-of-thought, incorrect conclusions | RAGAS AnswerAccuracy, custom LLM-as-judge |
+| **Reasoning** | Logical errors in chain-of-thought, incorrect conclusions | configurable RAG accuracy rubric, custom LLM-as-judge |
 | **Planning** | Inefficient action sequences, loops, abandoned paths | Trajectory evaluation, step count analysis, profiler |
 | **Tool Use** | Wrong tools, incorrect parameters, misinterpreted results | Trajectory evaluation, custom tool selection checks |
-| **Memory** | Context overflow, irrelevant retrieval, forgetting details | RAGAS ContextRelevance, ResponseGroundedness |
+| **Memory** | Context overflow, irrelevant retrieval, forgetting details | configurable RAG context relevance rubric, groundedness rubric |
 | **Adaptation** | Overfitting to history, inconsistent persona | Consistency across runs, error recovery evaluation |
 
 ## The Evaluation Mental Model
@@ -26,7 +26,7 @@ Before generating configs, understand what you're evaluating. **Use every source
 
 ### Discovery step: list registered evaluators
 
-Before writing any eval config, run `nat info components -t evaluator` to see the evaluator `_type` values actually registered in the current environment. Do not assume an evaluator (e.g. `ragas`, `trajectory`, `tunable_rag_evaluator`, `langsmith_judge`) is available — confirm it is, or install the matching extra (see [../../nat-installation/references/installation.md](../../nat-installation/references/installation.md)). The same applies to dataset readers (`nat info components -t dataset`) and any custom evaluators registered via `register.py`.
+Before writing any eval config, run `nat info components -t evaluator` to see the evaluator `_type` values actually registered in the current environment. Do not assume an evaluator (e.g. `trajectory`, `tunable_rag_evaluator`, `langsmith_judge`) is available — confirm it is, or install the matching extra (see [../../nat-installation/references/installation.md](../../nat-installation/references/installation.md)). The same applies to dataset readers (`nat info components -t dataset`) and any custom evaluators registered via `register.py`.
 
 ### Evaluation surface and downstream consumers
 
@@ -63,7 +63,7 @@ Summarize your understanding in a brief context table. Only ask for what you can
 
 | Agent Type | NeMo Agent Toolkit Config | Key Adaptations |
 | ---------- | ---------- | --------------- |
-| **RAG chatbot** | `react_agent` with `webpage_query` | Weight RAGAS AnswerAccuracy + ResponseGroundedness. Add ContextRelevance. Focus dataset on retrieval-heavy cases. |
+| **RAG chatbot** | `react_agent` with `webpage_query` | Weight configurable RAG accuracy rubric + groundedness rubric. Add context relevance rubric. Focus dataset on retrieval-heavy cases. |
 | **Multi-agent workflow** | `router` or `sequential` | Trajectory evaluation critical for delegation. Add routing accuracy evaluator. |
 | **Agent-to-Agent (A2A)** | `nat a2a serve` | Dataset should include cross-agent coordination tasks. Trajectory captures delegation decisions. |
 | **Conversational / multi-turn** | `react_agent` with memory | Context retention across turns, goal completion rate. |
@@ -79,9 +79,9 @@ Identify 3-5 quality dimensions and set numeric thresholds. Infer reasonable def
 
 | Dimension | Description | NeMo Agent Toolkit Evaluator |
 | --------- | ----------- | ------------- |
-| Correctness | Factually accurate outputs matching ground truth | `ragas` / `AnswerAccuracy` |
-| Groundedness | Response grounded in retrieved context, no hallucination | `ragas` / `ResponseGroundedness` |
-| Context Relevance | Retrieved context is relevant to the question | `ragas` / `ContextRelevance` |
+| Correctness | Factually accurate outputs matching ground truth | `tunable_rag_evaluator` / `accuracy rubric` |
+| Groundedness | Response grounded in retrieved context, no hallucination | `tunable_rag_evaluator` / `groundedness rubric` |
+| Context Relevance | Retrieved context is relevant to the question | `tunable_rag_evaluator` / `context relevance rubric` |
 | Completeness | Addresses all parts of the question | Custom LLM-as-judge evaluator |
 | Coherence | Logically structured, clear communication | Custom LLM-as-judge evaluator |
 
@@ -119,9 +119,9 @@ For each chosen dimension, set three tiers:
 
 | Level | Purpose | Example |
 | ----- | ------- | ------- |
-| **Minimum** | Below this = don't deploy | AnswerAccuracy > 0.85 |
-| **Target** | Production readiness goal | AnswerAccuracy > 0.93 |
-| **Stretch** | Aspirational | AnswerAccuracy > 0.97 |
+| **Minimum** | Below this = don't deploy | accuracy rubric > 0.85 |
+| **Target** | Production readiness goal | accuracy rubric > 0.93 |
+| **Stretch** | Aspirational | accuracy rubric > 0.97 |
 
 Infer sensible defaults: safety should always be near 1.0, correctness typically 0.85+ minimum, efficiency metrics depend on the use case.
 
@@ -131,9 +131,9 @@ Assess what ground truth data exists — this shapes which evaluators you can us
 
 | Availability | Description | Evaluator Impact |
 | ------------ | ----------- | ---------------- |
-| **Full Reference** | Correct answers for all test cases | Use reference-based: `ragas` / `AnswerAccuracy`, trajectory matching |
+| **Full Reference** | Correct answers for all test cases | Use reference-based: `tunable_rag_evaluator` / `accuracy rubric`, trajectory matching |
 | **Partial Reference** | Reference outputs for some scenarios | Reference-based where available; fall back to reference-free for the rest |
-| **No Reference** | No ground truth (e.g., production traffic) | Reference-free only: `ResponseGroundedness`, `ContextRelevance`, `trajectory` (LLM judge), custom safety |
+| **No Reference** | No ground truth (e.g., production traffic) | Reference-free only: `groundedness rubric`, `context relevance rubric`, `trajectory` (LLM judge), custom safety |
 
 > This assessment directly shapes your evaluator suite. Offline evaluation (Step 7) uses reference-based metrics; online uses reference-free only. Planning this upfront avoids rework when you split configs later.
 
@@ -204,14 +204,14 @@ Map quality dimensions to concrete NeMo Agent Toolkit evaluators using the Test 
 
 ```text
               ┌─────────────────────────────┐
-              │  L4: End-to-End Scenarios    │  ragas / AnswerAccuracy
+              │  L4: End-to-End Scenarios    │  tunable_rag_evaluator / accuracy rubric
               │  (Most realistic)            │  Full task completion
               ├─────────────────────────────┤
               │  L3: Trajectory Evaluation   │  trajectory evaluator
               │  (Decision quality)          │  Tool sequence quality
               ├─────────────────────────────┤
-              │  L2: Component & Tool        │  ragas / ResponseGroundedness
-              │  (Single capabilities)       │  ragas / ContextRelevance
+              │  L2: Component & Tool        │  tunable_rag_evaluator / groundedness rubric
+              │  (Single capabilities)       │  tunable_rag_evaluator / context relevance rubric
               ├─────────────────────────────┤
               │  L1: Foundation              │  Custom SafetyEvaluator
               │  (LLM response quality)      │  Custom CompletenessEvaluator
@@ -222,9 +222,9 @@ Map quality dimensions to concrete NeMo Agent Toolkit evaluators using the Test 
 
 | NeMo Agent Toolkit `_type` | Metric / Mode | What It Measures | Requires Reference? |
 | ----------- | ------------- | ---------------- | ------------------- |
-| `ragas` | `AnswerAccuracy` | Semantic accuracy vs. reference answer | Yes |
-| `ragas` | `ResponseGroundedness` | Response supported by retrieved context | No |
-| `ragas` | `ContextRelevance` | Retrieved context relevant to question | No |
+| `tunable_rag_evaluator` | `accuracy rubric` | Semantic accuracy vs. reference answer | Yes |
+| `tunable_rag_evaluator` | `groundedness rubric` | Response supported by retrieved context | No |
+| `tunable_rag_evaluator` | `context relevance rubric` | Retrieved context relevant to question | No |
 | `trajectory` | *(overall)* | Quality of full tool-call sequence | Uses LLM judge |
 | `tunable_rag_evaluator` | *(custom dimensions)* | Customizable LLM-as-judge with adjustable scoring weights and optional custom judge prompt | No |
 | `langsmith_judge` | *(prompt name or template)* | LLM-as-judge via openevals prebuilt or custom prompt | Optional |
@@ -234,20 +234,7 @@ Map quality dimensions to concrete NeMo Agent Toolkit evaluators using the Test 
 | `red_teaming_evaluator` | filtered trajectory judge | Red-team scenario success/failure | Uses expected behavior |
 | Custom | User-defined via `BaseEvaluator` | Any domain-specific metric | User-defined |
 
-**Additional RAGAS Metrics (available via `_type: ragas`):**
-
-Beyond the three core metrics above, RAGAS exposes additional metrics — change the `metric` field in `eval_config.yml`:
-
-| RAGAS Metric | What It Measures | Requires Reference? | When to Use |
-| ------------ | ---------------- | ------------------- | ----------- |
-| `FactualCorrectness` | Factual accuracy (accepts `mode` kwarg) | Yes | More granular than AnswerAccuracy — supports different strictness modes |
-| `Faithfulness` | Claims inferable from given context | No | Stricter hallucination check than ResponseGroundedness |
-| `AnswerRelevancy` | Whether the answer addresses the question | No | Detecting off-topic or evasive responses |
-| `ContextPrecision` | Proportion of retrieved context that is relevant | Yes | Optimizing retrieval precision |
-| `ContextRecall` | Whether all relevant info was retrieved | Yes | Ensuring retrieval completeness |
-| `NoiseSensitivity` | Robustness to irrelevant context | Yes | RAG agents with noisy retrieval |
-
-> Available metrics depend on your `ragas` package version. Check [RAGAS docs](https://docs.ragas.io/) for the full list.
+Use explicit judge prompts for accuracy, groundedness, and context relevance. These are not Ragas benchmark metrics; rebaseline thresholds after migration.
 
 **Discover evaluators available in the current NeMo Agent Toolkit installation:**
 
@@ -257,7 +244,6 @@ nat info components -t evaluator
 
 Full config examples and field reference for each evaluator type:
 
-- [`evaluators/evaluator-ragas.md`](evaluators/evaluator-ragas.md) — RAGAS metrics (requires `nvidia-nat[ragas]`)
 - [`evaluators/evaluator-tunable-rag.md`](evaluators/evaluator-tunable-rag.md) — tunable RAG evaluator
 - [`evaluators/evaluator-langsmith-judge.md`](evaluators/evaluator-langsmith-judge.md) — LLM-as-judge (requires `nvidia-nat[langchain]`)
 - [`evaluators/evaluator-langsmith.md`](evaluators/evaluator-langsmith.md) — built-in openevals + custom evaluators (requires `nvidia-nat[langchain]`)
@@ -270,18 +256,18 @@ For ATIF support, trajectory/reference requirements, and downstream suitability 
 
 | What You Want to Measure | Evaluation Approach | NeMo Agent Toolkit Evaluator(s) | Pyramid Level |
 | ------------------------ | ------------------- | ---------------- | ------------- |
-| Does the agent solve the task? | Final Response | `ragas` / `AnswerAccuracy` | L4 |
+| Does the agent solve the task? | Final Response | `tunable_rag_evaluator` / `accuracy rubric` | L4 |
 | Does the agent pick the right tools? | Single Step | Custom rule-based tool selection check | L2 |
 | Does the agent take an efficient path? | Trajectory | `trajectory` evaluator | L3 |
 | Does the agent reason correctly? | Trajectory + Single Step | `trajectory` + custom step-level evaluator | L3 |
 | Does the agent recover from errors? | Trajectory | `trajectory` on error-recovery examples | L3 |
-| Is the response grounded? | Final Response | `ragas` / `ResponseGroundedness` | L2 |
+| Is the response grounded? | Final Response | `tunable_rag_evaluator` / `groundedness rubric` | L2 |
 | Is the response safe? | Final Response | Custom `SafetyEvaluator` | L1 |
 | Does the agent resist red-team attacks? | Trajectory + Scenario | `red_teaming_evaluator` with red-team runner/middleware | L4 |
 
 ### Critical Design Rule
 
-Use a **different LLM model** for evaluation than the agent uses. Configure separate `llms:` entries in `eval_config.yml` for evaluator judges. Set `max_tokens: 8` for RAGAS metrics, `max_tokens: 1024` for trajectory evaluation.
+Use a **different LLM model** for evaluation than the agent uses. Configure separate `llms:` entries in `eval_config.yml` for evaluator judges. Set `max_tokens: 512` or higher for configurable RAG judges, `max_tokens: 1024` for trajectory evaluation.
 
 ### Decomposing evaluators by quality dimension
 
@@ -421,7 +407,7 @@ Analyze results and generate a prioritized iteration plan:
 ### Offline (Pre-Deploy)
 
 - Trigger: Every PR / pre-release
-- Config: `eval_config.yml` with full suite (RAGAS + trajectory + custom)
+- Config: `eval_config.yml` with full suite (configurable RAG + trajectory + custom)
 - Data: Golden dataset with reference answers
 - Decision: Block deploy if below threshold
 - Generate: GitHub Actions workflow + threshold checker script
@@ -432,7 +418,7 @@ Analyze results and generate a prioritized iteration plan:
 - Config: `online_eval_config.yml` with **reference-free evaluators only**
 - Data: Production trace exports
 - Decision: Alert on anomalies
-- Evaluators: ResponseGroundedness, ContextRelevance, trajectory, safety (NO AnswerAccuracy — no ground truth for live traffic)
+- Evaluators: groundedness rubric, context relevance rubric, trajectory, safety (NO accuracy rubric — no ground truth for live traffic)
 
 ## Step 8: Scale Your Evaluation Practice
 
@@ -442,8 +428,8 @@ Always include the maturity progression when discussing Steps 7-8.
 
 | Stage | Dataset | Evaluators | Automation | What to Focus On |
 | ----- | ------- | ---------- | ---------- | ---------------- |
-| **Prototype** | 10-20 examples | 1-2 RAGAS metrics | Manual `nat eval` | Get accuracy + safety working. Iterate fast. |
-| **Alpha** | 50-100 examples | RAGAS + trajectory | PR-triggered | Add trajectory evaluators. Start CI/CD. |
+| **Prototype** | 10-20 examples | 1-2 configurable RAG metrics | Manual `nat eval` | Get accuracy + safety working. Iterate fast. |
+| **Alpha** | 50-100 examples | configurable RAG + trajectory | PR-triggered | Add trajectory evaluators. Start CI/CD. |
 | **Beta** | 200-500 examples | + custom evaluators | CI/CD gated | Full pyramid + profiler. Quality gates block deploys. |
 | **Production** | 500+ examples | Full pyramid | Continuous + alerts | Online monitoring. Auto-add failures to dataset. |
 
@@ -451,7 +437,7 @@ Always include the maturity progression when discussing Steps 7-8.
 
 - [ ] CI/CD integration (`nat eval` on every PR)
 - [ ] Quality gates (threshold checker blocks deploys)
-- [ ] Offline eval config (RAGAS + trajectory + custom evaluators + profiler)
+- [ ] Offline eval config (configurable RAG + trajectory + custom evaluators + profiler)
 - [ ] Online eval config (reference-free evaluators only)
 - [ ] Custom evaluators registered via `@register_evaluator`
 - [ ] Dataset growth pipeline (auto-add production failures)
@@ -464,9 +450,9 @@ Always include the maturity progression when discussing Steps 7-8.
 | ------- | --------------- |
 | Testing only happy paths | Include adversarial, edge cases, error recovery |
 | Same LLM evaluating itself | Use different model in `eval.llms` vs workflow `llms` |
-| Only RAGAS evaluators | Layer with trajectory + custom rule-based evaluators |
+| Only Configurable RAG evaluators | Layer with trajectory + custom rule-based evaluators |
 | Ignoring the profiler | Enable `profiler` section — it catches latency/token issues for free |
-| Using AnswerAccuracy in production | Online = reference-free metrics only (ResponseGroundedness, ContextRelevance, trajectory) |
+| Using accuracy rubric in production | Online = reference-free metrics only (groundedness rubric, context relevance rubric, trajectory) |
 | Skipping `nat validate` before eval | Config errors waste eval time — validate first |
 | Setting `max_concurrency` too low | Default to `8`; only decrease if you see 429 rate-limit errors |
 | Generic evaluators for specialized agents | Build domain-specific evaluators via `BaseEvaluator` |

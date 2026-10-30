@@ -15,7 +15,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 [tool.setuptools_scm]
 git_describe_command = "git describe --long --first-parent"
@@ -36,7 +36,7 @@ classifiers = ["Programming Language :: Python"]
 dependencies = [
   "nvidia-nat[langchain,opentelemetry,phoenix,weave,test] == {version}",
   "nat_simple_calculator",
-  "langsmith~=0.8",
+  "langsmith>=0.8.18,<1.0.0",
   "galileo~=1.27",
 ]
 

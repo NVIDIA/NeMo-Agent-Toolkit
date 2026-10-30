@@ -469,9 +469,13 @@ class A365OtelExporter(OtelSpanExporter):
     ):
         """Initialize the A365 exporter."""
         self._token_extractor = (token_extractor if token_extractor is not None else _get_token_extractor(None))
+        # The turn identity is read when spans are exported, so a batch holding spans of several turns would be
+        # exported under one turn's identity. Export each span on its own until the identity is stamped per span.
+        if batch_size != 1:
+            logger.debug("A365 exporter exports spans one at a time; ignoring batch_size=%d", batch_size)
         super().__init__(
             context_state=context_state,
-            batch_size=batch_size,
+            batch_size=1,
             flush_interval=flush_interval,
             max_queue_size=max_queue_size,
             drop_on_overflow=drop_on_overflow,

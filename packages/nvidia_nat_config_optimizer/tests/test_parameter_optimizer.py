@@ -1117,3 +1117,26 @@ class TestGridSearchIntegration:
                                     full_space=full_space,
                                     optimizer_config=optimizer_config,
                                     opt_run_config=run_cfg)
+
+
+@pytest.mark.parametrize(
+    "space, expected_type",
+    [
+        (SearchSpace(low=128, high=1024), int),
+        (SearchSpace(low=1, high=10, log=True), int),
+        (SearchSpace(low=1, high=20, step=5), int),
+        (SearchSpace(low=0, high=0.6, step=0.2), float),
+        (SearchSpace(low=1, high=10, step=0.5), float),
+        (SearchSpace(low=0.0, high=1.0), float),
+    ],
+)
+def test_search_space_suggest_with_optuna_trial(space: SearchSpace, expected_type: type):
+    """SearchSpace.suggest() should work with a real Optuna trial for every range form."""
+    import optuna
+
+    trial = optuna.create_study().ask()
+
+    value = space.suggest(trial, "param")
+
+    assert isinstance(value, expected_type)
+    assert space.low <= value <= space.high

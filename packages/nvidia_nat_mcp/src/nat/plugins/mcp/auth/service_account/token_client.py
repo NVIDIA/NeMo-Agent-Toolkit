@@ -16,6 +16,7 @@
 import asyncio
 import base64
 import logging
+from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 
@@ -76,7 +77,7 @@ class ServiceAccountTokenClient:
         if not self._cached_token or not self._token_expires_at:
             return False
         buffer = timedelta(seconds=self.token_cache_buffer_seconds)
-        return datetime.now() < (self._token_expires_at - buffer)
+        return datetime.now(UTC) < (self._token_expires_at - buffer)
 
     async def get_access_token(self) -> SecretStr:
         """
@@ -137,7 +138,7 @@ class ServiceAccountTokenClient:
                         raise RuntimeError("Access token not found in token response")
                     self._cached_token = SecretStr(access_token)
                     expires_in = token_data.get("expires_in", 3600)
-                    self._token_expires_at = datetime.now() + timedelta(seconds=expires_in)
+                    self._token_expires_at = datetime.now(UTC) + timedelta(seconds=expires_in)
 
                     logger.info("Service account token acquired (expires in %ss)", expires_in)
                     return self._cached_token

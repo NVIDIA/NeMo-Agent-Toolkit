@@ -458,6 +458,8 @@ function_groups:
 | `include: [add]`      | ✓ (all functions)           | ✓ (only `add`)      | ✓ (only `add`)              |
 | `exclude: [divide]`   | ✓ (all functions)           | ✗                   | ✓ (except `divide`)         |
 
+A function that is available as an agent tool can also be the entry point of a workflow, even when it is not in the global registry. For example, `nat mcp serve` publishes each of them as an MCP tool, and a FastAPI endpoint can name one in `function_name`.
+
 ## Using Function Groups
 
 ### Creating Custom Function Groups

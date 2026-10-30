@@ -63,6 +63,7 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
     if isinstance(llm_config, RetryMixin) and llm_config.do_auto_retry:
         client = patch_with_retry(client,
                                   retries=llm_config.num_retries,
+                                  max_wait=llm_config.retry_max_wait,
                                   retry_codes=llm_config.retry_on_status_codes,
                                   retry_on_messages=llm_config.retry_on_errors)
 
@@ -91,11 +92,15 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
 
     # LlamaIndex uses context_size instead of max_tokens
     config_dict = llm_config.model_dump(
-        exclude={"api_type", "credentials_profile_name", "thinking", "top_p", "type", "verify_ssl"},
+        exclude={"api_type", "credentials_profile_name", "region_name", "thinking", "top_p", "type", "verify_ssl"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
     )
+    # The "None" string default means no region, so boto3 falls back to the AWS configuration.
+    if llm_config.region_name not in (None, "None"):
+        config_dict["region_name"] = llm_config.region_name
+
     # LlamaIndex names the AWS profile `profile_name` and silently drops unknown keyword arguments.
     if llm_config.credentials_profile_name is not None:
         config_dict["profile_name"] = llm_config.credentials_profile_name

@@ -346,6 +346,23 @@ class TestBedrockLangChain:
                 pass
         mock_chat.assert_not_called()
 
+    @pytest.mark.parametrize("round_trip", [False, True], ids=["as_loaded", "after_round_trip"])
+    @patch("langchain_aws.ChatBedrockConverse")
+    async def test_default_region_not_forwarded(self, mock_chat, bedrock_cfg, mock_builder, round_trip):
+        """The "None" default must not reach boto3, even after the round trip that `nat serve` does."""
+        if round_trip:
+            bedrock_cfg = AWSBedrockModelConfig.model_validate(
+                bedrock_cfg.model_dump(mode="json", by_alias=True, round_trip=True))
+            assert "region_name" in bedrock_cfg.model_fields_set
+        async with aws_bedrock_langchain(bedrock_cfg, mock_builder):
+            assert "region_name" not in mock_chat.call_args.kwargs
+
+    @patch("langchain_aws.ChatBedrockConverse")
+    async def test_region_forwarded(self, mock_chat, mock_builder):
+        cfg = AWSBedrockModelConfig(model_name="ai21.j2-ultra", region_name="us-west-2")
+        async with aws_bedrock_langchain(cfg, mock_builder):
+            assert mock_chat.call_args.kwargs["region_name"] == "us-west-2"
+
 
 # ---------------------------------------------------------------------------
 # Dynamo → LangChain wrapper tests
