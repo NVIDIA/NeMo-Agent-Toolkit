@@ -124,6 +124,22 @@ class TestCycleNodeOrder:
         order = cycle_node_order(cycles[0], g.edge_pairs)
         assert set(order) == cycles[0].nodes
 
+    def test_fan_in_node_follows_all_its_inputs(self):
+        """plan fans out to fetch_a and fetch_b, which both feed merge."""
+        g = Graph()
+        for name in ("plan", "fetch_a", "fetch_b", "merge", "check"):
+            g.add_node(name)
+        g.add_edge("plan", "fetch_a")
+        g.add_edge("plan", "fetch_b")
+        g.add_edge("fetch_a", "merge")
+        g.add_edge("fetch_b", "merge")
+        g.add_edge("merge", "check")
+        g.add_edge("check", "plan")
+        g.entry_point = "plan"
+        cycles = detect_cycles(g)
+        order = cycle_node_order(cycles[0], g.edge_pairs)
+        assert order == ["plan", "fetch_a", "fetch_b", "merge", "check"]
+
 
 class TestDetectRouters:
 

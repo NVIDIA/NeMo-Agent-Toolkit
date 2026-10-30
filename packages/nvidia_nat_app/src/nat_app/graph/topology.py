@@ -400,23 +400,36 @@ def cycle_node_order(cycle: CycleInfo, edges: list[tuple[str, str]]) -> list[str
         Cycle nodes ordered from entry, following forward edges.
     """
     cycle_edges = [(s, t) for s, t in edges if s in cycle.nodes and t in cycle.nodes and (s, t) != cycle.back_edge]
-    adj, _ = _build_adj(cycle.nodes, cycle_edges)
+    adj, rev_adj = _build_adj(cycle.nodes, cycle_edges)
 
-    order: list[str] = []
+    preorder: list[str] = []
     visited: set[str] = set()
 
     def walk(node: str) -> None:
         if node in visited:
             return
         visited.add(node)
-        order.append(node)
+        preorder.append(node)
         for neighbor in adj.get(node, []):
             walk(neighbor)
 
     walk(cycle.entry_node)
-    for n in cycle.nodes:
-        if n not in visited:
-            order.append(n)
+    preorder.extend(sorted(n for n in cycle.nodes if n not in visited))
+
+    # A DFS preorder can put a fan-in node before one of its inputs, so emit the nodes in
+    # topological order and use the preorder only to break ties. An inner cycle leaves no
+    # node ready; then the earliest remaining node in preorder goes next.
+    rank = {n: i for i, n in enumerate(preorder)}
+    pending = {n: len(rev_adj[n]) for n in cycle.nodes}
+    order: list[str] = []
+    while pending:
+        ready = [n for n, count in pending.items() if count == 0] or list(pending)
+        node = min(ready, key=rank.__getitem__)
+        order.append(node)
+        del pending[node]
+        for neighbor in adj[node]:
+            if neighbor in pending:
+                pending[neighbor] -= 1
     return order
 
 

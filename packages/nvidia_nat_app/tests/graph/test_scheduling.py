@@ -299,6 +299,32 @@ class TestComputeOptimizedOrderMultiCycle:
             all_nodes |= stage
         assert all_nodes == g.node_names
 
+    def test_sequential_cycle_body_runs_fan_in_after_its_inputs(self, make_node):
+        """A cycle body that cannot be parallelized is chained in an order where
+        merge still runs after both of the fetches it reads from."""
+        g = Graph()
+        for name in ("plan", "fetch_a", "fetch_b", "merge", "check"):
+            g.add_node(name)
+        g.add_edge("plan", "fetch_a")
+        g.add_edge("plan", "fetch_b")
+        g.add_edge("fetch_a", "merge")
+        g.add_edge("fetch_b", "merge")
+        g.add_edge("merge", "check")
+        g.add_edge("check", "plan")
+        g.entry_point = "plan"
+        analyses = {
+            "plan": make_node("plan", writes={"q"}),
+            "fetch_a": make_node("fetch_a", reads={"q"}, writes={"a"}),
+            "fetch_b": make_node("fetch_b", reads={"q"}, writes={"b"}, confidence="partial"),
+            "merge": make_node("merge", reads={"a", "b"}, writes={"m"}),
+            "check": make_node("check", reads={"m"}),
+        }
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo)
+        flat = [n for stage in order for n in stage]
+        assert flat.index("fetch_a") < flat.index("merge")
+        assert flat.index("fetch_b") < flat.index("merge") < flat.index("check")
+
     def test_nested_cycles_ordering(self, make_node, nested_cycle_graph):
         g = nested_cycle_graph
         analyses = {
