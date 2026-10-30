@@ -381,6 +381,23 @@ class _NodeASTVisitor(ast.NodeVisitor):
                 self.has_unknown_attr_access = True
         self.generic_visit(node)
 
+    def visit_Compare(self, node: ast.Compare):  # pylint: disable=invalid-name
+        # ``"key" in state`` depends on whether an earlier node set the key, so it reads it.
+        operands = [node.left, *node.comparators]
+        for i, op in enumerate(node.ops):
+            if not isinstance(op, (ast.In, ast.NotIn)):
+                continue
+            obj = self._get_obj_for_node(node.comparators[i])
+            if obj is None:
+                continue
+            key = self._extract_string_key(operands[i])
+            if key:
+                self.reads.add(obj, key)
+            else:
+                self.has_dynamic_keys = True
+                self.warnings.append("Dynamic key in a membership test on state")
+        self.generic_visit(node)
+
     def visit_Assign(self, node: ast.Assign):  # pylint: disable=invalid-name
         for target in node.targets:
             self._handle_assign_target(target, node.value)

@@ -243,6 +243,44 @@ class TestKnownSafeAttrs:
         assert not r.has_unknown_attr_access
 
 
+class TestMembershipTest:
+
+    def test_in_state_reads_the_key(self):
+
+        def fn(state):
+            if "docs" in state:
+                return {"ready": True}
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.reads.all_fields_flat == {"docs"}
+
+    def test_not_in_state_reads_the_key(self):
+
+        def fn(state):
+            return {"missing": "docs" not in state}
+
+        r = analyze_function_ast(fn)
+        assert r.reads.all_fields_flat == {"docs"}
+
+    def test_dynamic_key_in_state_is_flagged(self):
+
+        def fn(state, key="docs"):
+            return {"present": key.upper() in state}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+
+    def test_membership_in_a_local_dict_is_not_a_state_read(self):
+
+        def fn(_state):
+            local = {"docs": 1}
+            return {"present": "docs" in local}
+
+        r = analyze_function_ast(fn)
+        assert not r.reads
+
+
 class TestParamToObj:
 
     def test_multi_param_tracks_both(self):
