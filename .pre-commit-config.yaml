@@ -58,6 +58,7 @@ repos:
     rev: v3.14.2
     hooks:
       - id: markdown-link-check
+        language_version: 24.11.0
         args: ["-q", "--config", "ci/markdown-link-check-config.json"]
         exclude: "^(packages/nvidia_nat_core/src/nat/meta/pypi\\.md|CHANGELOG\\.md)$"
 
