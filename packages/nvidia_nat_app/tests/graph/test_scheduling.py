@@ -321,9 +321,9 @@ class TestComputeOptimizedOrderMultiCycle:
         }
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
-        flat = [n for stage in order for n in stage]
-        assert flat.index("fetch_a") < flat.index("merge")
-        assert flat.index("fetch_b") < flat.index("merge") < flat.index("check")
+        stage_of = {n: i for i, stage in enumerate(order) for n in stage}
+        assert stage_of["fetch_a"] < stage_of["merge"]
+        assert stage_of["fetch_b"] < stage_of["merge"] < stage_of["check"]
 
     def test_nested_cycles_ordering(self, make_node, nested_cycle_graph):
         g = nested_cycle_graph
