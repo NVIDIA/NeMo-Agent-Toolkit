@@ -615,8 +615,8 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
             for rejected in sorted_candidates[i + 1:]:
                 score_diff = chosen.score - rejected.score
 
-                # Apply minimum score difference filter; a tie carries no preference
-                if score_diff <= 0 or score_diff < self.config.min_score_diff:
+                # Apply minimum score difference filter; a tie or NaN (inf - inf) carries no preference
+                if not score_diff > 0 or score_diff < self.config.min_score_diff:
                     self._metrics["skipped_score_diff"] = (self._metrics.get("skipped_score_diff", 0) + 1)
                     continue
 
@@ -664,8 +664,8 @@ class DPOTrajectoryBuilder(TrajectoryBuilder):
 
         score_diff = chosen.score - rejected.score
 
-        # Apply minimum score difference filter; a tie carries no preference
-        if score_diff <= 0 or score_diff < self.config.min_score_diff:
+        # Apply minimum score difference filter; a tie or NaN (inf - inf) carries no preference
+        if not score_diff > 0 or score_diff < self.config.min_score_diff:
             self._metrics["skipped_score_diff"] = (self._metrics.get("skipped_score_diff", 0) + 1)
             return []
 
