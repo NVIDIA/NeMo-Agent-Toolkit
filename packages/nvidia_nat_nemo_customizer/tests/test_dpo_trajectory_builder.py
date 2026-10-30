@@ -582,6 +582,32 @@ class TestDPOTrajectoryBuilder:
         for pair in pairs:
             assert pair.score_diff >= 0.3
 
+    def test_exhaustive_pairs_skip_tied_scores(self, dpo_builder):
+        """Candidates with the same score carry no preference, even with min_score_diff=0."""
+        candidates = [
+            CandidateStep("ex_1", "t0", 0, "p", "r1", 0.8),
+            CandidateStep("ex_1", "t0", 1, "p", "r2", 0.8),
+            CandidateStep("ex_1", "t0", 2, "p", "r3", 0.5),
+        ]
+
+        pairs = dpo_builder._generate_preference_pairs({"ex_1::t0": candidates})
+
+        assert len(pairs) == 2
+        assert all(pair.chosen_score > pair.rejected_score for pair in pairs)
+
+    def test_best_vs_worst_skips_a_tie(self, dpo_config):
+        """When every candidate has the same score there is no best and worst."""
+        dpo_config.exhaustive_pairs = False
+        builder = DPOTrajectoryBuilder(dpo_config)
+        candidates = [
+            CandidateStep("ex_1", "t0", 0, "p", "r1", 0.7),
+            CandidateStep("ex_1", "t0", 1, "p", "r2", 0.7),
+        ]
+
+        pairs = builder._generate_preference_pairs({"ex_1::t0": candidates})
+
+        assert pairs == []
+
     def test_generate_pairs_max_pairs_per_turn(self, dpo_config):
         """Test max_pairs_per_turn limit."""
         dpo_config.max_pairs_per_turn = 2
