@@ -241,7 +241,7 @@ async def test_optimize_prompts_warns_when_an_evaluator_failed_on_items(tmp_path
     optimizer_config = _make_optimizer_config(tmp_path)
     optimizer_config.prompt.prompt_recombination_function = None
     optimizer_config.reps_per_param_set = 1
-    optimizer_config.prompt.ga_population_size = 1
+    optimizer_config.prompt.ga_population_size = 2
 
     full_space = {"p": SearchSpace(is_prompt=True, prompt="X", prompt_purpose="Y")}
     run_cfg = _make_run_config(base_cfg)
@@ -271,11 +271,12 @@ async def test_optimize_prompts_warns_when_an_evaluator_failed_on_items(tmp_path
                                optimizer_config=optimizer_config,
                                opt_run_config=run_cfg)
 
-    warnings = {r.getMessage() for r in caplog.records if r.name == eval_runtime_loader.__name__}
-    assert warnings == {
-        "prompt optimization candidate: evaluator 'Accuracy' failed on 1/4 items; "
-        "its average_score is lowered by the failures"
-    }
+    warnings = [r.getMessage() for r in caplog.records if r.name == eval_runtime_loader.__name__]
+    # one generation of two candidates (trials 0-1) plus the two final offspring (trials 2-3), each warned once
+    assert sorted(warnings) == [
+        f"prompt candidate trial {trial}: evaluator 'Accuracy' failed on 1/4 items; "
+        "the failed items are counted in its average_score" for trial in range(4)
+    ]
 
 
 async def test_optimize_prompts_with_oracle_feedback(tmp_path: Path):

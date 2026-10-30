@@ -36,16 +36,18 @@ def load_evaluation_run() -> type:
 def warn_on_evaluator_errors(evaluation_results: Iterable[tuple[str, Any]], *, context: str) -> None:
     """Log a warning for every evaluator whose output contains failed items.
 
-    Failed items are scored 0.0, so they lower `average_score` (the optimization objective) without being
-    distinguishable from a poor answer. The warning names the evaluator and the failure count so a transient
-    judge outage is not mistaken for a bad configuration. Outputs without `eval_output_items` are ignored.
+    Failed items are scored 0.0 and counted in `average_score` (the optimization objective) as if they had been
+    judged, so they are indistinguishable from a poor answer. The warning names the evaluator and the failure
+    count so a transient judge outage is not mistaken for a bad configuration. Outputs without
+    `eval_output_items` are ignored.
     """
     for evaluator_name, eval_output in evaluation_results:
         items = getattr(eval_output, "eval_output_items", None) or []
         num_errors = sum(1 for item in items if getattr(item, "error", None) is not None)
         if num_errors:
-            logger.warning("%s: evaluator '%s' failed on %d/%d items; its average_score is lowered by the failures",
-                           context,
-                           evaluator_name,
-                           num_errors,
-                           len(items))
+            logger.warning(
+                "%s: evaluator '%s' failed on %d/%d items; the failed items are counted in its average_score",
+                context,
+                evaluator_name,
+                num_errors,
+                len(items))

@@ -290,7 +290,7 @@ def test_optimize_parameters_warns_when_an_evaluator_failed_on_items(tmp_path: P
 
     warnings = [r.getMessage() for r in caplog.records if r.name == eval_runtime_loader.__name__]
     assert warnings == [
-        "trial 0: evaluator 'Accuracy' failed on 1/4 items; its average_score is lowered by the failures"
+        "trial 0: evaluator 'Accuracy' failed on 1/4 items; the failed items are counted in its average_score"
     ]
 
 

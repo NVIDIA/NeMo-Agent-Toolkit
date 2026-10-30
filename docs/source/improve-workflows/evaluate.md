@@ -297,7 +297,7 @@ Per evaluator results:
 | trajectory_accuracy |        0.9  | 0/10     | trajectory_accuracy_output.json |
 ```
 
-The `Errors` column counts the items the evaluator failed on (for example, a judge LLM timeout) out of the items it evaluated. A failed item is scored `0.0` and carries an `error` field in the evaluator output file, so a non-zero count means the average score is lower than the workflow's answers alone would warrant. The same counts are available in code as `EvalOutput.num_errors` and `EvalOutput.num_items`.
+The `Errors` column counts the items the evaluator failed on (for example, a judge LLM timeout) out of the items it evaluated. A failed item is scored `0.0` and carries an `error` field in the evaluator output file, so a non-zero count means the average score includes items that were never actually judged and does not reflect only the answers produced by the workflow. The same counts are available in code as `EvalOutput.num_errors` and `EvalOutput.num_items`.
 
 ## Workflow Output
 The `nat eval` command runs the workflow on all the entries in the `dataset`. The output of these runs is stored in `workflow_output.json` under the `output_dir` specified in the configuration file.

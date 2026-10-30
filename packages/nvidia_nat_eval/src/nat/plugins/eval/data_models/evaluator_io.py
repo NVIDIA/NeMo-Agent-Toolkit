@@ -51,7 +51,7 @@ class EvalOutput(BaseModel):
         """Number of items whose evaluation failed (`error` is set).
 
         Failed items are scored 0.0 and still count towards `average_score`, so a non-zero value means the
-        average is lower than the workflow's answers alone would warrant.
+        average includes items that were never actually judged.
         """
         return count_evaluator_errors(self)
 

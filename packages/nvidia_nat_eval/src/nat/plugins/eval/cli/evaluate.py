@@ -173,7 +173,7 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
         else:
             row.append(str(eval_output.average_score))
 
-        # Errors as "failed/total" so a judge outage is visible next to the average it lowered
+        # Errors as "failed/total" so a judge outage is visible next to the average it is counted in
         num_items = len(getattr(eval_output, "eval_output_items", None) or [])
         row.append(f"{count_evaluator_errors(eval_output)}/{num_items}")
 

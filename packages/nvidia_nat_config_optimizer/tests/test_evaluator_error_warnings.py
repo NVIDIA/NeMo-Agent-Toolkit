@@ -37,7 +37,7 @@ def test_warns_once_per_failing_evaluator(caplog):
 
     assert len(caplog.records) == 1
     assert caplog.records[0].getMessage() == ("trial 7: evaluator 'Accuracy' failed on 1/4 items; "
-                                              "its average_score is lowered by the failures")
+                                              "the failed items are counted in its average_score")
 
 
 def test_no_warning_without_failures_or_items(caplog):

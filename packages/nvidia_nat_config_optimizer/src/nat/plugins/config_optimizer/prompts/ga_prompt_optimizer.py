@@ -176,7 +176,8 @@ class GAPromptOptimizer(BasePromptOptimizer):
         all_eval_outputs: list[Any] = []
         for _ in range(reps):
             eval_output = await EvaluationRun(config=eval_cfg).run_and_evaluate()
-            warn_on_evaluator_errors(eval_output.evaluation_results, context="prompt optimization candidate")
+            warn_on_evaluator_errors(eval_output.evaluation_results,
+                                     context=f"prompt candidate trial {ind.trial_number}")
             res = eval_output.evaluation_results
             all_results.append(res)
             all_eval_outputs.append(eval_output)
@@ -667,6 +668,10 @@ class GAPromptOptimizer(BasePromptOptimizer):
                     offspring.append(child)
                 population = next_population + offspring
 
+            # Number the final offspring like every other candidate so their evaluation is attributable
+            for idx, ind in enumerate(population):
+                if ind.trial_number is None:
+                    ind.trial_number = trial_number_offset + generations * pop_size + idx
             await self._evaluate_population(
                 population,
                 base_cfg,
