@@ -380,7 +380,12 @@ def _build_data_dependencies(
             if a_cycles and a_cycles & node_to_cycles.get(node_b, set()):
                 continue
             if writes_no_reducer[node_a].overlaps(analysis_b.reads):
-                dependencies[node_b].add(node_a)
+                # When node_b comes first in the graph it reads the value from before node_a
+                # overwrites it, so node_a has to wait for node_b instead.
+                if node_a in reachable_from[node_b] and node_b not in reachable_from[node_a]:
+                    dependencies[node_a].add(node_b)
+                else:
+                    dependencies[node_b].add(node_a)
             # Write-write conflict: both nodes write overlapping non-reducer fields.
             # Order by graph reachability (upstream first), else lexicographic tiebreaker.
             elif writes_no_reducer[node_a].overlaps(writes_no_reducer[node_b]):

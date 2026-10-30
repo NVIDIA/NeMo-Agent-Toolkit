@@ -271,6 +271,25 @@ class TestComputeOptimizedOrder:
         flat = [n for stage in order for n in stage]
         assert flat.index("a") < flat.index("b") < flat.index("c")
 
+    def test_reader_runs_before_a_later_node_that_overwrites_the_field(self, make_node):
+        """summarize reads draft before rewrite overwrites it, so rewrite must not run first."""
+        g = Graph()
+        g.add_node("start")
+        g.add_node("summarize")
+        g.add_node("rewrite")
+        g.add_edge("start", "summarize")
+        g.add_edge("summarize", "rewrite")
+        g.entry_point = "start"
+        analyses = {
+            "start": make_node("start", writes={"draft"}),
+            "summarize": make_node("summarize", reads={"draft"}, writes={"summary"}),
+            "rewrite": make_node("rewrite", reads={"draft"}, writes={"draft"}),
+        }
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo)
+        flat = [n for stage in order for n in stage]
+        assert flat.index("start") < flat.index("summarize") < flat.index("rewrite")
+
     def test_write_write_conflict_serializes_nodes(self, make_node, diamond_graph):
         """Two nodes writing the same non-reducer key must not be in the same stage."""
         g = diamond_graph
