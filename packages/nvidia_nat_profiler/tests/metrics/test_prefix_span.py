@@ -185,3 +185,11 @@ def test_prefixspan_subworkflow_with_text_no_patterns(minimal_valid_df):
     assert len(res.patterns) == 0
     assert ("No frequent patterns found" in res.textual_report
             or "No patterns passed coverage/duration thresholds." in res.textual_report)
+
+
+def test_prefixspan_subworkflow_with_text_keeps_llm_start_text(minimal_valid_df):
+    """The LLM_START text must survive the matching LLM_END, which carries no input text."""
+
+    result = prefixspan_subworkflow_with_text(minimal_valid_df, min_support=1, top_k=10)
+
+    assert ["LLM:llama-3|Hello world"] in [pat.pattern for pat in result.patterns]

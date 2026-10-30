@@ -108,7 +108,8 @@ def build_call_sequence_for_example(example_df: pd.DataFrame) -> list[PrefixCall
                 end_time = ts
                 duration = max(0.0, end_time - start_info["start_time"])
                 # If we only have llm_text_input at END, override if not present
-                if op_type == "LLM" and "llm_text_input" in row and pd.notna(row["llm_text_input"]):
+                if (op_type == "LLM" and not start_info["llm_text_input"] and "llm_text_input" in row
+                        and pd.notna(row["llm_text_input"])):
                     start_info["llm_text_input"] = str(row["llm_text_input"])
 
                 node = PrefixCallNode(uuid=uuid,
