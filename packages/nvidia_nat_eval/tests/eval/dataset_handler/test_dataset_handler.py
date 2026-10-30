@@ -587,7 +587,9 @@ def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
 
 @pytest.mark.parametrize("adjust_dataset_size", [False, True])
 @pytest.mark.parametrize("num_passes", [0, 1])
-def test_custom_empty_dataset_respects_size_adjustment(temp_nested_json_file, adjust_dataset_size, num_passes):
+def test_custom_empty_dataset_respects_size_adjustment(temp_nested_json_file: Path,
+                                                       adjust_dataset_size: bool,
+                                                       num_passes: int):
     """Handle empty custom datasets consistently for both pass-count modes."""
     dataset_config = EvalDatasetCustomConfig(function=f"{__name__}.sample_empty_custom_parser",
                                               file_path=temp_nested_json_file)
