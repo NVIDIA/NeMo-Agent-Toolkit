@@ -13,8 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import model_validator
 
 
 class TokenUsageBaseModel(BaseModel):
@@ -25,3 +28,17 @@ class TokenUsageBaseModel(BaseModel):
     cached_tokens: int = Field(default=0, description="Number of tokens read from cache.")
     reasoning_tokens: int = Field(default=0, description="Number of tokens used for reasoning.")
     total_tokens: int = Field(default=0, description="Number of tokens total.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _flatten_nested_details(cls, data: Any) -> Any:
+        """Read cached/reasoning counts from OpenAI-style nested usage details when the flat fields are absent."""
+        if not isinstance(data, dict):
+            return data
+
+        for flat, details_key, nested in (("cached_tokens", "prompt_tokens_details", "cached_tokens"),
+                                          ("reasoning_tokens", "completion_tokens_details", "reasoning_tokens")):
+            details = data.get(details_key)
+            if data.get(flat) is None and isinstance(details, dict) and details.get(nested) is not None:
+                data = {**data, flat: details[nested]}
+        return data
