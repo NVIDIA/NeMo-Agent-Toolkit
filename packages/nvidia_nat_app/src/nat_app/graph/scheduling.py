@@ -367,9 +367,16 @@ def _build_data_dependencies(
     node_analyses: dict[str, NodeAnalysis],
     node_to_cycles: dict[str, set[int]],
     writes_no_reducer: dict[str, AccessSet],
+    constraints: dict[str, ResolvedConstraints],
 ) -> dict[str, set[str]]:
-    """Build dependency dict from write/read overlap and write-write conflicts, excluding nodes that share a cycle."""
+    """Build dependency dict from write/read overlap and write-write conflicts, excluding nodes that share a cycle.
+
+    A node that reads a field before a later node in the graph overwrites it runs first. When
+    explicit dependencies make the reader wait for that writer, directly or through other nodes,
+    the reader runs after the writer instead.
+    """
     dependencies: dict[str, set[str]] = {name: set() for name in all_node_names}
+    read_before_write: list[tuple[str, str]] = []
     # Precompute reachability for graph-based ordering of write-write conflicts.
     reachable_from = {n: graph._compute_reachable(n) for n in all_node_names}
     for node_a, analysis_a in node_analyses.items():
@@ -383,7 +390,7 @@ def _build_data_dependencies(
                 # When node_b comes first in the graph it reads the value from before node_a
                 # overwrites it, so node_a has to wait for node_b instead.
                 if node_a in reachable_from[node_b] and node_b not in reachable_from[node_a]:
-                    dependencies[node_a].add(node_b)
+                    read_before_write.append((node_b, node_a))
                 else:
                     dependencies[node_b].add(node_a)
             # Write-write conflict: both nodes write overlapping non-reducer fields.
@@ -397,7 +404,37 @@ def _build_data_dependencies(
                     dependencies[node_b].add(node_a)
                 else:
                     dependencies[node_a].add(node_b)
+
+    explicit = {name: c.explicit_dependencies for name, c in constraints.items()}
+    for reader, writer in sorted(read_before_write):
+        if _waits_through_explicit(reader, writer, dependencies, explicit):
+            logger.warning(
+                "Explicit dependencies make '%s' wait for '%s', which overwrites a field it reads; "
+                "keeping that order",
+                reader,
+                writer)
+            dependencies[reader].add(writer)
+        else:
+            dependencies[writer].add(reader)
     return dependencies
+
+
+def _waits_through_explicit(node: str, target: str, dependencies: dict[str, set[str]],
+                            explicit: dict[str, set[str]]) -> bool:
+    """Whether ``node`` has to wait for ``target`` through a chain that includes an explicit dependency."""
+    seen = {(node, False)}
+    stack = [(node, False)]
+    while stack:
+        current, through_explicit = stack.pop()
+        steps = [(dep, through_explicit) for dep in dependencies.get(current, set())]
+        steps += [(dep, True) for dep in explicit.get(current, set())]
+        for step in steps:
+            if step == (target, True):
+                return True
+            if step not in seen:
+                seen.add(step)
+                stack.append(step)
+    return False
 
 
 def _apply_confidence_fallbacks(
@@ -681,7 +718,12 @@ def compute_optimized_order(
         for n in cs:
             node_to_cycles.setdefault(n, set()).add(idx)
 
-    dependencies = _build_data_dependencies(graph, all_node_names, node_analyses, node_to_cycles, writes_no_reducer)
+    dependencies = _build_data_dependencies(graph,
+                                            all_node_names,
+                                            node_analyses,
+                                            node_to_cycles,
+                                            writes_no_reducer,
+                                            constraints)
     dependencies = _apply_confidence_fallbacks(dependencies, node_analyses, edge_pairs, all_cycle_nodes, all_node_names)
     dependencies = _apply_constraints(dependencies, constraints, edge_pairs, all_node_names)
     dependencies = _apply_cycle_body_ordering(dependencies, topology, edge_pairs, node_analyses, writes_no_reducer)
