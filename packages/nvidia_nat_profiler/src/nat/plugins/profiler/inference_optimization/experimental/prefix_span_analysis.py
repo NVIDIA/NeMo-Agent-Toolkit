@@ -262,7 +262,8 @@ def compute_coverage_and_duration(sequences_map: dict[int, list[PrefixCallNode]]
                                   prefixspan_patterns: list[tuple[list[str], int]],
                                   top_k: int,
                                   min_coverage: float = 0.0,
-                                  max_text_len: int = 20) -> list[FrequentPattern]:
+                                  max_text_len: int = 20,
+                                  prefix_list: list[str] = None) -> list[FrequentPattern]:
     """
     For each pattern from prefixspan, compute:
 
@@ -270,12 +271,13 @@ def compute_coverage_and_duration(sequences_map: dict[int, list[PrefixCallNode]]
     - average_duration: sum of durations of calls in sub-sequence / total occurrences
 
     Then filter by min_coverage and pick top_k, sorted by frequency, coverage, avg_duration desc.
+    Pass the same prefix_list as to run_prefixspan, so the tokens match the mined patterns.
     """
     # We'll also rebuild token sequences for matching
     token_sequences = {}
     call_sequences = {}
     for ex_num, call_list in sequences_map.items():
-        token_seq = [build_token(c, max_text_len) for c in call_list]
+        token_seq = [build_token(c, max_text_len, prefix_list) for c in call_list]
         token_sequences[ex_num] = token_seq
         call_sequences[ex_num] = call_list
 
@@ -379,7 +381,8 @@ def prefixspan_subworkflow_with_text(all_steps: list[list[IntermediateStep]],
                                                    prefixspan_patterns,
                                                    top_k=top_k,
                                                    min_coverage=min_coverage,
-                                                   max_text_len=max_text_len)
+                                                   max_text_len=max_text_len,
+                                                   prefix_list=prefix_list)
     if not final_patterns:
         return PrefixSpanSubworkflowResult(patterns=[],
                                            textual_report="No patterns passed coverage/duration thresholds.")
