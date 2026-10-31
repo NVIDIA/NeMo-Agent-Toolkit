@@ -401,13 +401,76 @@ def _apply_confidence_fallbacks(
     edge_pairs: list[tuple[str, str]],
     all_cycle_nodes: set[str],
     all_node_names: set[str],
+    constraints: dict[str, ResolvedConstraints],
 ) -> dict[str, set[str]]:
-    """Add edge-based deps for nodes with confidence != 'full' and not in cycles."""
-    for name, analysis in node_analyses.items():
-        if analysis.confidence != "full" and name not in all_cycle_nodes:
-            for src, tgt in edge_pairs:
-                if tgt == name and src in all_node_names:
-                    dependencies[name].add(src)
+    """Keep the graph order around nodes with confidence != 'full' that are not in cycles.
+
+    Such a node's reads and writes are not fully known, so it runs after every node above it
+    in the graph and before every node below it (the edges ``classify_edges`` reports as
+    necessary, followed transitively). The explicit dependencies and the data dependencies that
+    follow the graph order come first: when they already make the upper node of a pair wait for
+    the lower one, directly or through other nodes (an explicit dependency against the graph
+    order), the graph order is not added for that pair. Data dependencies against the graph
+    order come last and are dropped when they would close a cycle.
+    """
+    uncertain = sorted(name for name, analysis in node_analyses.items()
+                       if analysis.confidence != "full" and name not in all_cycle_nodes)
+    if not uncertain:
+        return dependencies
+
+    successors: dict[str, set[str]] = {n: set() for n in all_node_names}
+    predecessors: dict[str, set[str]] = {n: set() for n in all_node_names}
+    for src, tgt in edge_pairs:
+        if src in all_node_names and tgt in all_node_names:
+            successors[src].add(tgt)
+            predecessors[tgt].add(src)
+
+    def _reachable(start: str, neighbors: dict[str, set[str]]) -> set[str]:
+        seen: set[str] = set()
+        stack = [start]
+        while stack:
+            for nxt in neighbors[stack.pop()]:
+                if nxt not in seen:
+                    seen.add(nxt)
+                    stack.append(nxt)
+        return seen
+
+    below = {n: _reachable(n, successors) for n in all_node_names}
+    against_order: list[tuple[str, str]] = []
+    for name in sorted(dependencies):
+        for dep in sorted(dependencies[name]):
+            if dep in below.get(name, ()) and name not in below.get(dep, ()):
+                against_order.append((dep, name))
+                dependencies[name].discard(dep)
+
+    explicit = {name: c.explicit_dependencies for name, c in constraints.items()}
+
+    def _waits_for(node: str, target: str) -> bool:
+        seen = {node}
+        stack = [node]
+        while stack:
+            current = stack.pop()
+            for dep in dependencies.get(current, set()) | explicit.get(current, set()):
+                if dep == target:
+                    return True
+                if dep not in seen:
+                    seen.add(dep)
+                    stack.append(dep)
+        return False
+
+    for name in uncertain:
+        pairs = [(ancestor, name) for ancestor in sorted(_reachable(name, predecessors))]
+        pairs += [(name, descendant) for descendant in sorted(below[name])]
+        for before, after in pairs:
+            if _waits_for(before, after):
+                logger.warning("Dependencies already make '%s' wait for '%s', against the graph order; keeping that",
+                               before,
+                               after)
+            else:
+                dependencies[after].add(before)
+    for before, after in against_order:
+        if not _waits_for(before, after):
+            dependencies[after].add(before)
     return dependencies
 
 
@@ -638,7 +701,12 @@ def compute_optimized_order(
             node_to_cycles.setdefault(n, set()).add(idx)
 
     dependencies = _build_data_dependencies(graph, all_node_names, node_analyses, node_to_cycles, writes_no_reducer)
-    dependencies = _apply_confidence_fallbacks(dependencies, node_analyses, edge_pairs, all_cycle_nodes, all_node_names)
+    dependencies = _apply_confidence_fallbacks(dependencies,
+                                               node_analyses,
+                                               edge_pairs,
+                                               all_cycle_nodes,
+                                               all_node_names,
+                                               constraints)
     dependencies = _apply_constraints(dependencies, constraints, edge_pairs, all_node_names)
     dependencies = _apply_cycle_body_ordering(dependencies, topology, edge_pairs, node_analyses, writes_no_reducer)
     cycle_back_edges = {c.back_edge for c in topology.cycles} if topology.cycles else set()
