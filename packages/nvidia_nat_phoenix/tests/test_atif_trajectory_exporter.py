@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 from typing import Any
 
 import pytest
@@ -178,3 +179,36 @@ def test_workflow_span_covers_a_trajectory_that_ends_on_a_tool_call() -> None:
 
     assert tool.end_time == 3_000_000_000
     assert root.end_time == tool.end_time
+
+
+def test_workflow_span_covers_steps_timed_only_by_their_iso_timestamp() -> None:
+    """A user step at 1, an agent step at 2 whose tool call runs from 2.5 to 3, and a final answer at 4."""
+
+    def iso(epoch: float) -> str:
+        return datetime.datetime.fromtimestamp(epoch, tz=datetime.UTC).isoformat()
+
+    trajectory = _trajectory("root")
+    user, agent, answer = trajectory["steps"]
+    user["timestamp"] = iso(1.0)
+    agent["timestamp"] = iso(2.0)
+    del agent["extra"]["invocation"]
+    agent["tool_calls"][0]["extra"]["invocation"] = {"start_timestamp": 2.5, "end_timestamp": 3.0}
+    answer["timestamp"] = iso(4.0)
+    del answer["extra"]["invocation"]
+
+    root, *_ = ATIFTrajectorySpanExporter().convert(trajectory)
+
+    assert (root.start_time, root.end_time) == (1_000_000_000, 4_000_000_000)
+
+
+def test_tool_call_without_ancestry_does_not_shift_the_others() -> None:
+    trajectory = _trajectory("root")
+    agent = trajectory["steps"][1]
+    agent["tool_calls"].insert(0, {"tool_call_id": "call-0", "function_name": "lookup", "arguments": {}})
+    agent["observation"]["results"].insert(0, {"content": "no ancestry"})
+
+    spans = ATIFTrajectorySpanExporter().convert(trajectory)
+
+    tool_spans = [span for span in spans if span.name in ("lookup", "pow")]
+    assert [span.name for span in tool_spans] == ["pow"]
+    assert (tool_spans[0].start_time, tool_spans[0].end_time) == (2_000_000_000, 3_000_000_000)
