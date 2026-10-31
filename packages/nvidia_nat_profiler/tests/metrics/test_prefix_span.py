@@ -185,3 +185,28 @@ def test_prefixspan_subworkflow_with_text_no_patterns(minimal_valid_df):
     assert len(res.patterns) == 0
     assert ("No frequent patterns found" in res.textual_report
             or "No patterns passed coverage/duration thresholds." in res.textual_report)
+
+
+def test_prefixspan_subworkflow_with_text_keeps_llm_start_text(
+        minimal_valid_df: list[list[IntermediatePropertyAdaptor]]) -> None:
+    """The LLM_START text must survive the matching LLM_END, which carries no input text."""
+
+    result = prefixspan_subworkflow_with_text(minimal_valid_df, min_support=1, top_k=10)
+
+    assert ["LLM:llama-3|Hello world"] in [pat.pattern for pat in result.patterns]
+
+
+def test_prefixspan_subworkflow_with_text_prefix_list_keeps_coverage_and_duration(
+        minimal_valid_df: list[list[IntermediatePropertyAdaptor]]) -> None:
+    """Coverage and duration are counted on the same prefix-normalized tokens the patterns are mined from."""
+
+    result = prefixspan_subworkflow_with_text(minimal_valid_df,
+                                              min_support=1,
+                                              top_k=10,
+                                              min_coverage=0.1,
+                                              prefix_list=["Hello w"])
+
+    patterns = {tuple(pat.pattern): pat for pat in result.patterns}
+    llm_pattern = patterns[("LLM:llama-3|<common_prefix>orld", )]
+    assert llm_pattern.coverage == 0.5
+    assert llm_pattern.average_duration == 1.0
