@@ -374,7 +374,52 @@ class TestComputeOptimizedOrder:
         stage_of = {n: i for i, stage in enumerate(order) for n in stage}
         assert stage_of["a"] < stage_of["p"]
         assert stage_of["c"] < stage_of["p"]
-        assert "Explicit dependency of 'p' on 'c' goes against the graph order" in caplog.text
+        assert "Dependencies already make 'p' wait for 'c', against the graph order" in caplog.text
+
+    def test_explicit_dependency_against_the_graph_order_through_other_nodes_is_kept(self, make_node):
+        """p is declared to depend on c, and c reads what b writes, so b and c both run before p
+        even though p comes before them in the graph."""
+        g = Graph()
+        for name in ("a", "p", "b", "c"):
+            g.add_node(name)
+        g.add_edge("a", "p")
+        g.add_edge("p", "b")
+        g.add_edge("b", "c")
+        g.entry_point = "a"
+        analyses = {
+            "a": make_node("a", writes={"q"}),
+            "p": make_node("p", reads={"q"}, confidence="partial"),
+            "b": make_node("b", writes={"x"}),
+            "c": make_node("c", reads={"x"}),
+        }
+        constraints = {"p": ResolvedConstraints(name="p", explicit_dependencies={"c"})}
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo, resolved_constraints=constraints)
+        stage_of = {n: i for i, stage in enumerate(order) for n in stage}
+        assert stage_of["a"] < stage_of["p"]
+        assert stage_of["b"] < stage_of["c"] < stage_of["p"]
+
+    def test_data_dependency_against_the_graph_order_does_not_reorder_a_partial_node(self, make_node):
+        """a reads x and c, below p, writes it: the graph order a -> p -> c is kept instead of
+        forming the cycle a -> c -> p -> a."""
+        g = Graph()
+        for name in ("r", "a", "p", "c"):
+            g.add_node(name)
+        g.add_edge("r", "a")
+        g.add_edge("a", "p")
+        g.add_edge("p", "c")
+        g.entry_point = "r"
+        analyses = {
+            "r": make_node("r"),
+            "a": make_node("a", reads={"x"}),
+            "p": make_node("p", confidence="partial"),
+            "c": make_node("c", writes={"x"}),
+        }
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo)
+        stage_of = {n: i for i, stage in enumerate(order) for n in stage}
+        assert stage_of["r"] < stage_of["p"]
+        assert stage_of["a"] < stage_of["p"] < stage_of["c"]
 
     def test_write_write_conflict_serializes_nodes(self, make_node, diamond_graph):
         """Two nodes writing the same non-reducer key must not be in the same stage."""

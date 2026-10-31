@@ -407,17 +407,16 @@ def _apply_confidence_fallbacks(
 
     Such a node's reads and writes are not fully known, so it runs after every node above it
     in the graph and before every node below it (the edges ``classify_edges`` reports as
-    necessary, followed transitively). A data dependency pointing the other way is dropped,
-    since it would form a cycle with that order. An explicit dependency pointing the other
-    way is kept instead, and the graph order is not added for that pair.
+    necessary, followed transitively). The explicit dependencies and the data dependencies that
+    follow the graph order come first: when they already make the upper node of a pair wait for
+    the lower one, directly or through other nodes (an explicit dependency against the graph
+    order), the graph order is not added for that pair. Data dependencies against the graph
+    order come last and are dropped when they would close a cycle.
     """
-    explicit = {(name, dep) for name, c in constraints.items() for dep in c.explicit_dependencies}
-
-    def _keep_order(before: str, after: str) -> bool:
-        if (before, after) not in explicit:
-            return True
-        logger.warning("Explicit dependency of '%s' on '%s' goes against the graph order; keeping it", before, after)
-        return False
+    uncertain = sorted(name for name, analysis in node_analyses.items()
+                       if analysis.confidence != "full" and name not in all_cycle_nodes)
+    if not uncertain:
+        return dependencies
 
     successors: dict[str, set[str]] = {n: set() for n in all_node_names}
     predecessors: dict[str, set[str]] = {n: set() for n in all_node_names}
@@ -436,17 +435,42 @@ def _apply_confidence_fallbacks(
                     stack.append(nxt)
         return seen
 
-    for name, analysis in node_analyses.items():
-        if analysis.confidence == "full" or name in all_cycle_nodes:
-            continue
-        for ancestor in _reachable(name, predecessors):
-            if _keep_order(ancestor, name):
-                dependencies[name].add(ancestor)
-                dependencies[ancestor].discard(name)
-        for descendant in _reachable(name, successors):
-            if _keep_order(name, descendant):
-                dependencies[descendant].add(name)
-                dependencies[name].discard(descendant)
+    below = {n: _reachable(n, successors) for n in all_node_names}
+    against_order: list[tuple[str, str]] = []
+    for name in sorted(dependencies):
+        for dep in sorted(dependencies[name]):
+            if dep in below.get(name, ()) and name not in below.get(dep, ()):
+                against_order.append((dep, name))
+                dependencies[name].discard(dep)
+
+    explicit = {name: c.explicit_dependencies for name, c in constraints.items()}
+
+    def _waits_for(node: str, target: str) -> bool:
+        seen = {node}
+        stack = [node]
+        while stack:
+            current = stack.pop()
+            for dep in dependencies.get(current, set()) | explicit.get(current, set()):
+                if dep == target:
+                    return True
+                if dep not in seen:
+                    seen.add(dep)
+                    stack.append(dep)
+        return False
+
+    for name in uncertain:
+        pairs = [(ancestor, name) for ancestor in sorted(_reachable(name, predecessors))]
+        pairs += [(name, descendant) for descendant in sorted(below[name])]
+        for before, after in pairs:
+            if _waits_for(before, after):
+                logger.warning("Dependencies already make '%s' wait for '%s', against the graph order; keeping that",
+                               before,
+                               after)
+            else:
+                dependencies[after].add(before)
+    for before, after in against_order:
+        if not _waits_for(before, after):
+            dependencies[after].add(before)
     return dependencies
 
 
