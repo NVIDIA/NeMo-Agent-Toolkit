@@ -667,6 +667,30 @@ def test_system_prompt_scenario(factory: _PayloadFactory, opt_in_extractors: Non
     assert trajectory.steps[0].message == "Answer in one word."
 
 
+def test_anthropic_system_prompt_as_text_blocks(opt_in_extractors: None) -> None:
+    """Anthropic's ``system`` can also be a list of blocks: every text block is
+    kept and the other blocks are skipped."""
+    events = _build_simple(_FACTORIES["anthropic"])
+    llm_start = next(e for e in events if e.category == "llm" and e.scope_category == "start")
+    llm_start.data["system"] = [
+        {
+            "type": "text", "text": "Answer in one word. "
+        },
+        {
+            "type": "image", "source": {
+                "type": "url", "url": "https://example.com/map.png"
+            }
+        },
+        {
+            "type": "text", "text": "Use English."
+        },
+    ]
+    trajectory = convert(events)
+
+    assert [s.source for s in trajectory.steps] == ["system", "user", "agent"]
+    assert trajectory.steps[0].message == "Answer in one word. Use English."
+
+
 def test_nested_scenario(factory: _PayloadFactory, opt_in_extractors: None) -> None:
     """All three providers handle a tool round-trip: user query → agent
     with one tool_call and one observation → final agent text."""
