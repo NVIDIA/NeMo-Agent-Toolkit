@@ -367,9 +367,16 @@ def _build_data_dependencies(
     node_analyses: dict[str, NodeAnalysis],
     node_to_cycles: dict[str, set[int]],
     writes_no_reducer: dict[str, AccessSet],
+    constraints: dict[str, ResolvedConstraints],
 ) -> dict[str, set[str]]:
-    """Build dependency dict from write/read overlap and write-write conflicts, excluding nodes that share a cycle."""
+    """Build dependency dict from write/read overlap and write-write conflicts, excluding nodes that share a cycle.
+
+    A node that reads a field before a later node in the graph overwrites it runs first. When
+    explicit dependencies make the reader wait for that writer, directly or through other nodes,
+    the reader runs after the writer instead.
+    """
     dependencies: dict[str, set[str]] = {name: set() for name in all_node_names}
+    read_before_write: list[tuple[str, str]] = []
     # Precompute reachability for graph-based ordering of write-write conflicts.
     reachable_from = {n: graph._compute_reachable(n) for n in all_node_names}
     for node_a, analysis_a in node_analyses.items():
@@ -380,7 +387,12 @@ def _build_data_dependencies(
             if a_cycles and a_cycles & node_to_cycles.get(node_b, set()):
                 continue
             if writes_no_reducer[node_a].overlaps(analysis_b.reads):
-                dependencies[node_b].add(node_a)
+                # When node_b comes first in the graph it reads the value from before node_a
+                # overwrites it, so node_a has to wait for node_b instead.
+                if node_a in reachable_from[node_b] and node_b not in reachable_from[node_a]:
+                    read_before_write.append((node_b, node_a))
+                else:
+                    dependencies[node_b].add(node_a)
             # Write-write conflict: both nodes write overlapping non-reducer fields.
             # Order by graph reachability (upstream first), else lexicographic tiebreaker.
             elif writes_no_reducer[node_a].overlaps(writes_no_reducer[node_b]):
@@ -392,7 +404,37 @@ def _build_data_dependencies(
                     dependencies[node_b].add(node_a)
                 else:
                     dependencies[node_a].add(node_b)
+
+    explicit = {name: c.explicit_dependencies for name, c in constraints.items()}
+    for reader, writer in sorted(read_before_write):
+        if _waits_through_explicit(reader, writer, dependencies, explicit):
+            logger.warning(
+                "Explicit dependencies make '%s' wait for '%s', which overwrites a field it reads; "
+                "keeping that order",
+                reader,
+                writer)
+            dependencies[reader].add(writer)
+        else:
+            dependencies[writer].add(reader)
     return dependencies
+
+
+def _waits_through_explicit(node: str, target: str, dependencies: dict[str, set[str]],
+                            explicit: dict[str, set[str]]) -> bool:
+    """Whether ``node`` has to wait for ``target`` through a chain that includes an explicit dependency."""
+    seen = {(node, False)}
+    stack = [(node, False)]
+    while stack:
+        current, through_explicit = stack.pop()
+        steps = [(dep, through_explicit) for dep in dependencies.get(current, set())]
+        steps += [(dep, True) for dep in explicit.get(current, set())]
+        for step in steps:
+            if step == (target, True):
+                return True
+            if step not in seen:
+                seen.add(step)
+                stack.append(step)
+    return False
 
 
 def _apply_confidence_fallbacks(
@@ -599,12 +641,52 @@ def _apply_post_cycle_ordering(
     return dependencies
 
 
+def _graph_order(graph: Graph, back_edges: set[tuple[str, str]]) -> dict[str, int]:
+    """Rank nodes in the graph's own order: topological over the edges that are not cycle
+    back-edges, ties broken by BFS distance from the entry point, then by name.
+
+    Breaking a dependency cycle by running the remaining node with the lowest rank never runs
+    a node before one that precedes it in the graph.
+    """
+    nodes = graph.node_names
+    successors: dict[str, list[str]] = {n: [] for n in nodes}
+    pending: dict[str, int] = {n: 0 for n in nodes}
+    for src, tgt in graph.edge_pairs:
+        if src in nodes and tgt in nodes and src != tgt and (src, tgt) not in back_edges:
+            successors[src].append(tgt)
+            pending[tgt] += 1
+
+    distance: dict[str, int] = {}
+    queue: deque[str] = deque([graph.entry_point] if graph.entry_point in nodes else [])
+    while queue:
+        node = queue.popleft()
+        if node in distance:
+            continue
+        distance[node] = len(distance)
+        queue.extend(succ for succ in successors[node] if succ not in distance)
+
+    def tie_break(node: str) -> tuple[int, str]:
+        return distance.get(node, len(nodes)), node
+
+    order: dict[str, int] = {}
+    while pending:
+        ready = [n for n, count in pending.items() if count == 0] or list(pending)
+        node = min(ready, key=tie_break)
+        order[node] = len(order)
+        del pending[node]
+        for succ in successors[node]:
+            if succ in pending:
+                pending[succ] -= 1
+    return order
+
+
 def _build_parallel_stages(
     all_node_names: set[str],
     dependencies: dict[str, set[str]],
     graph: Graph,
     branch_info: dict[str, BranchInfo],
     constraints: dict[str, ResolvedConstraints],
+    graph_order: dict[str, int],
 ) -> list[set[str]]:
     """While-loop with _split_by_branch, _stage_order_with_entry_first, force_sequential."""
     node_branch: dict[str, tuple[str, str]] = {}
@@ -619,9 +701,8 @@ def _build_parallel_stages(
         ready = {n for n in remaining if not (dependencies.get(n, set()) & remaining)}
         if not ready:
             logger.warning("Possible circular dependency in: %s", remaining)
-            # Prefer graph's structural entry point when breaking the cycle
-            entry = graph.entry_point if graph.entry_point else ""
-            ready = {entry} if entry in remaining else {next(iter(remaining))}
+            # Break the cycle with the node that comes first in the graph
+            ready = {min(remaining, key=graph_order.__getitem__)}
         ready = _split_by_branch(ready, node_branch)
         ordered_ready = _stage_order_with_entry_first(ready, graph.entry_point)
         stage: set[str] = set()
@@ -700,7 +781,12 @@ def compute_optimized_order(
         for n in cs:
             node_to_cycles.setdefault(n, set()).add(idx)
 
-    dependencies = _build_data_dependencies(graph, all_node_names, node_analyses, node_to_cycles, writes_no_reducer)
+    dependencies = _build_data_dependencies(graph,
+                                            all_node_names,
+                                            node_analyses,
+                                            node_to_cycles,
+                                            writes_no_reducer,
+                                            constraints)
     dependencies = _apply_confidence_fallbacks(dependencies,
                                                node_analyses,
                                                edge_pairs,
@@ -723,9 +809,10 @@ def compute_optimized_order(
                                               all_cycle_nodes,
                                               topology)
 
+    graph_order = _graph_order(graph, cycle_back_edges)
     if disable_parallelization:
-        return _sequential_stages(all_node_names, dependencies, graph.entry_point)
-    return _build_parallel_stages(all_node_names, dependencies, graph, branch_info, constraints)
+        return _sequential_stages(all_node_names, dependencies, graph.entry_point, graph_order)
+    return _build_parallel_stages(all_node_names, dependencies, graph, branch_info, constraints, graph_order)
 
 
 def _split_by_branch(
@@ -778,6 +865,7 @@ def _sequential_stages(
     node_names: set[str],
     dependencies: dict[str, set[str]],
     entry_point: str,
+    graph_order: dict[str, int],
 ) -> list[set[str]]:
     """Fallback: fully sequential ordering.
 
@@ -785,6 +873,7 @@ def _sequential_stages(
         node_names: All node names in the graph.
         dependencies: Per-node dependency sets.
         entry_point: The graph entry-point node.
+        graph_order: Node ranks from ``_graph_order``, used to break dependency cycles.
 
     Returns:
         List of single-node stages in dependency-respecting order.
@@ -794,7 +883,7 @@ def _sequential_stages(
     while remaining:
         ready = {n for n in remaining if not (dependencies.get(n, set()) & remaining)}
         if not ready:
-            ready = {next(iter(remaining))}
+            ready = {min(remaining, key=graph_order.__getitem__)}
         ordered = _stage_order_with_entry_first(ready, entry_point)
         stages.append({ordered[0]})
         remaining.discard(ordered[0])

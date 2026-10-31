@@ -272,6 +272,101 @@ class TestComputeOptimizedOrder:
         flat = [n for stage in order for n in stage]
         assert flat.index("a") < flat.index("b") < flat.index("c")
 
+    def test_reader_runs_before_a_later_node_that_overwrites_the_field(self, make_node):
+        """summarize reads draft before rewrite overwrites it, so rewrite must not run first."""
+        g = Graph()
+        g.add_node("start")
+        g.add_node("summarize")
+        g.add_node("rewrite")
+        g.add_edge("start", "summarize")
+        g.add_edge("summarize", "rewrite")
+        g.entry_point = "start"
+        analyses = {
+            "start": make_node("start", writes={"draft"}),
+            "summarize": make_node("summarize", reads={"draft"}, writes={"summary"}),
+            "rewrite": make_node("rewrite", reads={"draft"}, writes={"draft"}),
+        }
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo)
+        stage_of = {n: i for i, stage in enumerate(order) for n in stage}
+        assert stage_of["start"] < stage_of["summarize"] < stage_of["rewrite"]
+
+    @pytest.mark.parametrize("disable_parallelization", [False, True])
+    def test_explicit_dependency_on_the_later_writer_is_kept(self, make_node, caplog, disable_parallelization):
+        """summarize is declared to depend on rewrite, so it reads draft after rewrite overwrites it."""
+        g = Graph()
+        g.add_node("start")
+        g.add_node("summarize")
+        g.add_node("rewrite")
+        g.add_edge("start", "summarize")
+        g.add_edge("summarize", "rewrite")
+        g.entry_point = "start"
+        analyses = {
+            "start": make_node("start", writes={"draft"}),
+            "summarize": make_node("summarize", reads={"draft"}, writes={"summary"}),
+            "rewrite": make_node("rewrite", reads={"draft"}, writes={"draft"}),
+        }
+        constraints = {"summarize": ResolvedConstraints(name="summarize", explicit_dependencies={"rewrite"})}
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g,
+                                        analyses,
+                                        topo,
+                                        resolved_constraints=constraints,
+                                        disable_parallelization=disable_parallelization)
+        assert order == [{"start"}, {"rewrite"}, {"summarize"}]
+        assert "Explicit dependencies make 'summarize' wait for 'rewrite'" in caplog.text
+        assert "Possible circular dependency" not in caplog.text
+
+    @pytest.mark.parametrize("disable_parallelization", [False, True])
+    def test_explicit_chain_to_the_later_writer_is_kept(self, make_node, disable_parallelization):
+        """summarize is declared to depend on check, which reads what rewrite writes, so summarize
+        also runs after rewrite."""
+        g = Graph()
+        for name in ("start", "summarize", "rewrite", "check"):
+            g.add_node(name)
+        g.add_edge("start", "summarize")
+        g.add_edge("summarize", "rewrite")
+        g.add_edge("start", "check")
+        g.entry_point = "start"
+        analyses = {
+            "start": make_node("start", writes={"draft"}),
+            "summarize": make_node("summarize", reads={"draft"}, writes={"summary"}),
+            "rewrite": make_node("rewrite", reads={"draft"}, writes={"draft", "final"}),
+            "check": make_node("check", reads={"final"}),
+        }
+        constraints = {"summarize": ResolvedConstraints(name="summarize", explicit_dependencies={"check"})}
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g,
+                                        analyses,
+                                        topo,
+                                        resolved_constraints=constraints,
+                                        disable_parallelization=disable_parallelization)
+        stage_of = {n: i for i, stage in enumerate(order) for n in stage}
+        assert stage_of["start"] < stage_of["rewrite"] < stage_of["check"] < stage_of["summarize"]
+
+    @pytest.mark.parametrize("disable_parallelization", [False, True])
+    def test_dependency_cycle_is_broken_in_graph_order(self, make_node, disable_parallelization):
+        """a and c are on parallel branches, so their data dependencies form the cycle
+        a -> c -> b -> a; breaking it must still run a before b (a -> b is a graph edge)."""
+        g = Graph()
+        for name in ("s", "a", "b", "c"):
+            g.add_node(name)
+        g.add_edge("s", "a")
+        g.add_edge("s", "c")
+        g.add_edge("a", "b")
+        g.entry_point = "s"
+        analyses = {
+            "s": make_node("s"),
+            "a": make_node("a", reads={"x", "y"}),
+            "b": make_node("b", writes={"x"}),
+            "c": make_node("c", reads={"x"}, writes={"y"}),
+        }
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo, disable_parallelization=disable_parallelization)
+        stage_of = {n: i for i, stage in enumerate(order) for n in stage}
+        assert order[0] == {"s"}
+        assert stage_of["a"] < stage_of["b"]
+
     @pytest.mark.parametrize("confidence", ["partial", "opaque"])
     def test_successor_of_uncertain_node_runs_after_it(self, make_node, confidence):
         """p's writes are not fully known, so c (after p in the graph) must not run before it."""
