@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -19,10 +20,12 @@ from unittest.mock import patch
 import pytest
 
 from nat.data_models.config import Config
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerMetric
 from nat.data_models.optimizer import OptimizerRunConfig
+from nat.plugins.config_optimizer import eval_runtime_loader
 from nat.plugins.config_optimizer.parameters.optimizer import optimize_parameters
 
 
@@ -244,6 +247,52 @@ def test_optimize_parameters_happy_path(tmp_path: Path):
 
     # Silence unused warnings
     assert apply_mock and pick_mock and viz_mock and eval_run_mock
+
+
+def test_optimize_parameters_warns_when_an_evaluator_failed_on_items(tmp_path: Path, caplog):
+    """A judge failure scores 0.0 and lowers the objective; the trial must say so instead of failing silently."""
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
+
+    base_cfg = Config()
+    optimizer_config = OptimizerConfig(
+        output_path=tmp_path / "opt",
+        eval_metrics={"acc": OptimizerMetric(evaluator_name="Accuracy", direction="maximize", weight=1.0)},
+        reps_per_param_set=1,
+    )
+    optimizer_config.numeric.n_trials = 1
+    run_cfg = _make_run_config(base_cfg)
+
+    items = [EvalOutputItem(id=i, score=1.0, reasoning={}) for i in range(3)]
+    items.append(EvalOutputItem(id=3, score=0.0, reasoning={"error": "judge timed out"}, error="judge timed out"))
+    accuracy = EvalOutput(average_score=0.75, eval_output_items=items)
+
+    class _EvalRun:
+
+        def __init__(self, config: EvaluationRunConfig):
+            self.config = config
+
+        async def run_and_evaluate(self) -> SimpleNamespace:
+            return SimpleNamespace(evaluation_results=[("Accuracy", accuracy)])
+
+    with patch("nat.plugins.config_optimizer.parameters.optimizer.optuna.create_study",
+               side_effect=lambda **kwargs: _FakeStudy(kwargs.get("directions", []))), \
+         patch("nat.plugins.config_optimizer.parameters.optimizer.load_evaluation_run", return_value=_EvalRun), \
+         patch("nat.plugins.config_optimizer.parameters.optimizer.apply_suggestions", return_value=base_cfg), \
+         patch("nat.plugins.config_optimizer.parameters.optimizer.pick_trial",
+               return_value=SimpleNamespace(params={})), \
+         patch("nat.plugins.config_optimizer.parameters.pareto_visualizer.create_pareto_visualization"), \
+         caplog.at_level(logging.WARNING, logger=eval_runtime_loader.__name__):
+
+        optimize_parameters(base_cfg=base_cfg,
+                            full_space={"param": SearchSpace(values=[1, 2])},
+                            optimizer_config=optimizer_config,
+                            opt_run_config=run_cfg)
+
+    warnings = [r.getMessage() for r in caplog.records if r.name == eval_runtime_loader.__name__]
+    assert warnings == [
+        "trial 0: evaluator 'Accuracy' failed on 1/4 items; the failed items are counted in its average_score"
+    ]
 
 
 def test_optimize_parameters_requires_output_path(tmp_path: Path):

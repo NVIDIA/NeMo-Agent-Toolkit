@@ -32,6 +32,7 @@ from nat.data_models.optimizer import OptimizerRunConfig
 from nat.data_models.optimizer import SamplerType
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.plugins.config_optimizer.eval_runtime_loader import load_evaluation_run
+from nat.plugins.config_optimizer.eval_runtime_loader import warn_on_evaluator_errors
 from nat.plugins.config_optimizer.parameters.selection import pick_trial
 from nat.plugins.config_optimizer.update_helpers import apply_suggestions
 
@@ -178,6 +179,7 @@ def optimize_parameters(
                 endpoint_timeout=opt_run_config.endpoint_timeout,
             )
             eval_output = await _run_eval(EvaluationRun(config=eval_cfg))
+            warn_on_evaluator_errors(eval_output.evaluation_results, context=f"trial {trial.number}")
             values = []
             for metric_name in eval_metrics:
                 metric = next(r[1] for r in eval_output.evaluation_results if r[0] == metric_name)

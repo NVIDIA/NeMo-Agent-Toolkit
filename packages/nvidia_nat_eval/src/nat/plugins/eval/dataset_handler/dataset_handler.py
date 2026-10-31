@@ -152,6 +152,9 @@ class DatasetHandler:
 
         original_size = input_df.shape[0]
 
+        if original_size == 0:
+            raise ValueError("Input dataset is empty and cannot be adjusted to the requested size.")
+
         # Calculate target size
         if self.num_passes > 0:
             # When num_passes is specified, always use concurrency * num_passes
@@ -263,7 +266,7 @@ class DatasetHandler:
         Returns:
             Preprocessed EvalInput object
         """
-        if not eval_input.eval_input_items:
+        if not eval_input.eval_input_items and not self.adjust_dataset_size:
             return eval_input
 
         input_df = self._eval_input_to_dataframe(eval_input)

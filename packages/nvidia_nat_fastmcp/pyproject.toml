@@ -60,6 +60,8 @@ dependencies = [
   "fastmcp>=3.4.10,<4.0.0",
   # Security minimum for dnspython, pulled in by fastmcp (GHSA-45c3-73f7-pv4m).
   "dnspython>=2.9.0",
+  # Security minimum for mcp, pulled in by fastmcp (MCP SDK 1.30.0 fixes).
+  "mcp>=1.30.0,<2.0.0",
   # Security minimum for pydantic-settings, pulled in by fastmcp (GHSA-4xgf-cpjx-pc3j).
   "pydantic-settings>=2.14.2",
   # Security minimum for requests, pulled in by fastmcp (GHSA-gc5v-m9x4-r6x2).
