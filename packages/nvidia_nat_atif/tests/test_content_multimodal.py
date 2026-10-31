@@ -253,21 +253,25 @@ def test_normalize_content_parts_preserves_non_dict_and_invalid_entries() -> Non
     assert normalize_content_parts(all_invalid) == ["lost prompt"]
 
     with pytest.raises(pydantic.ValidationError):
-        Step(step_id="step-1", source="user", message=all_invalid)
+        Step(step_id=1, source="user", message=all_invalid)
 
     # Mixed list must not silently drop non-dict entries
     mixed = ["lost prompt", {"type": "text", "text": "Valid question"}]
     assert normalize_content_parts(mixed) == ["lost prompt", {"type": "text", "text": "Valid question"}]
 
     with pytest.raises(pydantic.ValidationError):
-        Step(step_id="step-2", source="user", message=mixed)
+        Step(step_id=2, source="user", message=mixed)
 
     # All non-string / non-dict entries
     all_ints = [123, 456]
     assert normalize_content_parts(all_ints) == [123, 456]
 
     with pytest.raises(pydantic.ValidationError):
-        Step(step_id="step-3", source="user", message=all_ints)
+        Step(step_id=3, source="user", message=all_ints)
+
+    # Valid message case isolates content-part validation from Step.step_id validation
+    valid_step = Step(step_id=1, source="user", message=[{"type": "text", "text": "Valid question"}])
+    assert valid_step.step_id == 1
 
 
 def test_normalize_content_parts_list() -> None:

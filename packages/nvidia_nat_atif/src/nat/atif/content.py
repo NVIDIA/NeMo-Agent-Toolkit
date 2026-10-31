@@ -139,10 +139,11 @@ def normalize_content_part(part: Any) -> Any:
     """Normalize a raw or vendor-specific content part to an ATIF ContentPart dict.
 
     Handles:
-    - Text parts (``{"type": "text", "text": "..."}``)
-    - OpenAI image parts (``{"type": "image_url", "image_url": ...}``) -> mapped to ATIF
+
+    * Text parts (``{"type": "text", "text": "..."}``).
+    * OpenAI image parts (``{"type": "image_url", "image_url": ...}``) mapped to ATIF
       image parts with inferred media_type.
-    - Standard ATIF image parts (``{"type": "image", "source": ...}``)
+    * Standard ATIF image parts (``{"type": "image", "source": ...}``).
 
     Leaves non-dict or unhandled parts intact so downstream ContentPart validation
     or callers can reject them appropriately without silently dropping data.
