@@ -243,6 +243,106 @@ class TestKnownSafeAttrs:
         assert not r.has_unknown_attr_access
 
 
+class TestMutatingMethodOnState:
+
+    def test_update_with_dict_literal(self):
+
+        def fn(state):
+            state.update({"a": 1, "b": 2})
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.mutations.all_fields_flat == {"a", "b"}
+        assert not r.has_dynamic_keys
+
+    def test_update_with_keywords(self):
+
+        def fn(state):
+            state.update(a=1)
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.mutations.all_fields_flat == {"a"}
+
+    def test_pop_reads_and_writes_the_key(self):
+
+        def fn(state):
+            value = state.pop("a")
+            return {"b": value}
+
+        r = analyze_function_ast(fn)
+        assert r.reads.all_fields_flat == {"a"}
+        assert r.mutations.all_fields_flat == {"a"}
+        assert r.writes.all_fields_flat == {"b"}
+
+    def test_setdefault_reads_and_writes_the_key(self):
+
+        def fn(state):
+            state.setdefault("a", []).append(1)
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.reads.all_fields_flat == {"a"}
+        assert r.mutations.all_fields_flat == {"a"}
+
+    def test_update_with_a_variable_is_dynamic(self):
+
+        def fn(state):
+            extra = {"a": 1}
+            state.update(extra)
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+
+    def test_clear_is_dynamic(self):
+
+        def fn(state):
+            state.clear()
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+
+
+class TestMembershipTest:
+
+    def test_in_state_reads_the_key(self):
+
+        def fn(state):
+            if "docs" in state:
+                return {"ready": True}
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.reads.all_fields_flat == {"docs"}
+
+    def test_not_in_state_reads_the_key(self):
+
+        def fn(state):
+            return {"missing": "docs" not in state}
+
+        r = analyze_function_ast(fn)
+        assert r.reads.all_fields_flat == {"docs"}
+
+    def test_dynamic_key_in_state_is_flagged(self):
+
+        def fn(state, key="docs"):
+            return {"present": key.upper() in state}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+
+    def test_membership_in_a_local_dict_is_not_a_state_read(self):
+
+        def fn(_state):
+            local = {"docs": 1}
+            return {"present": "docs" in local}
+
+        r = analyze_function_ast(fn)
+        assert not r.reads
+
+
 class TestParamToObj:
 
     def test_multi_param_tracks_both(self):

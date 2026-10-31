@@ -124,6 +124,45 @@ class TestCycleNodeOrder:
         order = cycle_node_order(cycles[0], g.edge_pairs)
         assert set(order) == cycles[0].nodes
 
+    def test_fan_in_node_follows_all_its_inputs(self):
+        """plan fans out to fetch_a and fetch_b, which both feed merge."""
+        g = Graph()
+        for name in ("plan", "fetch_a", "fetch_b", "merge", "check"):
+            g.add_node(name)
+        g.add_edge("plan", "fetch_a")
+        g.add_edge("plan", "fetch_b")
+        g.add_edge("fetch_a", "merge")
+        g.add_edge("fetch_b", "merge")
+        g.add_edge("merge", "check")
+        g.add_edge("check", "plan")
+        g.entry_point = "plan"
+        cycles = detect_cycles(g)
+        order = cycle_node_order(cycles[0], g.edge_pairs)
+        assert order == ["plan", "fetch_a", "fetch_b", "merge", "check"]
+
+    def test_fan_in_waits_for_an_inner_cycle(self):
+        """inner_a <-> inner_b is an inner cycle feeding merge; merge must still come after inner_b."""
+        from nat_app.graph.topology import CycleInfo
+
+        edges = [
+            ("entry", "side"),
+            ("entry", "inner_a"),
+            ("inner_a", "inner_b"),
+            ("inner_b", "inner_a"),
+            ("side", "merge"),
+            ("inner_b", "merge"),
+            ("merge", "check"),
+            ("check", "entry"),
+        ]
+        cycle = CycleInfo(
+            nodes={"entry", "side", "inner_a", "inner_b", "merge", "check"},
+            entry_node="entry",
+            exit_node="check",
+            back_edge=("check", "entry"),
+        )
+        order = cycle_node_order(cycle, edges)
+        assert order == ["entry", "side", "inner_a", "inner_b", "merge", "check"]
+
 
 class TestDetectRouters:
 

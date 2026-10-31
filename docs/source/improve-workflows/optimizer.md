@@ -93,7 +93,7 @@ The optimization process follows the steps outlined in the diagram above:
 
 5.  **Workflow Execution**: The NeMo Agent Toolkit workflow is executed using the suggested parameters for that trial. This is repeated `reps_per_param_set` times to ensure the results are statistically stable.
 
-6.  **[Evaluation](./evaluate.md)**: The output of each workflow run is passed to the evaluators defined in the `eval_metrics` configuration. Each evaluator calculates a score for a specific objective (such as correctness, latency, or creativity).
+6.  **[Evaluation](./evaluate.md)**: The output of each workflow run is passed to the evaluators defined in the `eval_metrics` configuration. Each evaluator calculates a score for a specific objective (such as correctness, latency, or creativity). If an evaluator fails on some items (for example, a judge LLM timeout), those items score `0.0` and are included in the objective as if they had been judged; the optimizer logs a warning naming the evaluator and the number of failed items so the trial is not mistaken for a poor configuration.
 
 7.  **Recording Results**:
     - Numeric trials: scores are combined per `multi_objective_combination_mode` and recorded in the Optuna study.

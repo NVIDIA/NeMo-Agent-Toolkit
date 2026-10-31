@@ -24,6 +24,8 @@ from nat.data_models.dataset_handler import EvalDatasetCustomConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonlConfig
 from nat.data_models.dataset_handler import EvalDatasetStructureConfig
+from nat.data_models.dataset_handler import EvalFilterConfig
+from nat.data_models.dataset_handler import EvalFilterEntryConfig
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.intermediate_step import IntermediateStep
@@ -252,6 +254,11 @@ def sample_custom_parser(file_path: Path, difficulty: str = "") -> EvalInput:
     return EvalInput(eval_input_items=eval_items)
 
 
+def sample_empty_custom_parser(file_path: Path) -> EvalInput:
+    """Test implementation of a custom dataset parser that returns no items."""
+    return EvalInput(eval_input_items=[])
+
+
 @pytest.fixture
 def custom_dataset_config():
     """Fixture for dataset configuration."""
@@ -396,6 +403,35 @@ def test_setup_reps(dataset_handler, mock_input_df, dataset_id_key):
 
     assert len(replicated_df) == len(mock_input_df) * dataset_handler.reps, "Dataset should be replicated correctly"
     assert all("_rep" in str(i) for i in replicated_df[dataset_id_key]), "IDs should be suffixed with `_repX`"
+
+
+@pytest.mark.parametrize("num_passes", [0, 1])
+def test_adjust_dataset_rejects_empty_input(num_passes: int):
+    """Reject empty input for automatic and fixed pass counts."""
+    dataset_handler = DatasetHandler(EvalDatasetJsonConfig(),
+                                     reps=1,
+                                     concurrency=2,
+                                     num_passes=num_passes,
+                                     adjust_dataset_size=True)
+
+    with pytest.raises(ValueError, match="Input dataset is empty"):
+        dataset_handler.adjust_dataset(pd.DataFrame(columns=["id", "question"]))
+
+
+@pytest.mark.parametrize("num_passes", [0, 1])
+def test_preprocess_dataframe_rejects_dataset_emptied_by_filter(num_passes: int):
+    """Reject datasets emptied by filtering for both pass-count modes."""
+    dataset_config = EvalDatasetJsonConfig(filter=EvalFilterConfig(allowlist=EvalFilterEntryConfig(
+        field={"id": ["not-present"]})))
+    dataset_handler = DatasetHandler(dataset_config,
+                                     reps=1,
+                                     concurrency=2,
+                                     num_passes=num_passes,
+                                     adjust_dataset_size=True)
+    input_df = pd.DataFrame({"id": ["1"], "question": ["What is AI?"]})
+
+    with pytest.raises(ValueError, match="Input dataset is empty"):
+        dataset_handler._preprocess_dataframe(input_df)
 
 
 @pytest.fixture
@@ -546,6 +582,28 @@ def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
     # check that there are two medium entries in the eval_input
     assert len(eval_input.eval_input_items) == 2
     assert all(item.full_dataset_entry['difficulty'] == 'medium' for item in eval_input.eval_input_items)
+
+
+@pytest.mark.parametrize("adjust_dataset_size", [False, True])
+@pytest.mark.parametrize("num_passes", [0, 1])
+def test_custom_empty_dataset_respects_size_adjustment(temp_nested_json_file: Path,
+                                                       adjust_dataset_size: bool,
+                                                       num_passes: int):
+    """Handle empty custom datasets consistently for both pass-count modes."""
+    dataset_config = EvalDatasetCustomConfig(function=f"{__name__}.sample_empty_custom_parser",
+                                             file_path=temp_nested_json_file)
+    dataset_handler = DatasetHandler(dataset_config,
+                                     reps=1,
+                                     concurrency=2,
+                                     num_passes=num_passes,
+                                     adjust_dataset_size=adjust_dataset_size)
+
+    if adjust_dataset_size:
+        with pytest.raises(ValueError, match="Input dataset is empty"):
+            dataset_handler.get_eval_input_from_dataset("")
+    else:
+        eval_input = dataset_handler.get_eval_input_from_dataset("")
+        assert eval_input.eval_input_items == []
 
 
 def test_custom_pre_eval_process_function():

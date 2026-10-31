@@ -448,6 +448,10 @@ def _anthropic_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
       message dropped (tool I/O is captured by tool scope events, not
       LLM input messages — see module-level note above).
 
+    The top-level ``system`` field (a string or a list of text blocks) is
+    emitted first as a ``system`` message, since Anthropic carries the
+    system prompt outside ``messages``.
+
     Non-dict messages and non-string roles are skipped.
     """
     if not isinstance(data, dict):
@@ -457,6 +461,12 @@ def _anthropic_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
         return []
 
     out: list[dict[str, Any]] = []
+    system = data.get("system")
+    if isinstance(system, list):
+        system = _anthropic_join_text_blocks(system)
+    if isinstance(system, str) and system:
+        out.append({"role": "system", "content": system})
+
     for msg in messages:
         if not isinstance(msg, dict):
             continue
@@ -470,19 +480,18 @@ def _anthropic_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
             continue
 
         if isinstance(content, list):
-            text_parts: list[str] = []
-            for block in content:
-                if not isinstance(block, dict):
-                    continue
-                if block.get("type") == "text":
-                    text = block.get("text", "")
-                    if isinstance(text, str) and text:
-                        text_parts.append(text)
-            if text_parts:
-                out.append({"role": role, "content": "".join(text_parts)})
+            text = _anthropic_join_text_blocks(content)
+            if text:
+                out.append({"role": role, "content": text})
             # Pure tool_use / tool_result messages: skip — captured elsewhere.
 
     return out
+
+
+def _anthropic_join_text_blocks(blocks: list[Any]) -> str:
+    """Concatenate the ``text`` of every ``{"type": "text"}`` block."""
+    return "".join(block["text"] for block in blocks
+                   if isinstance(block, dict) and block.get("type") == "text" and isinstance(block.get("text"), str))
 
 
 def _anthropic_normalize_output_message(data: Any, ) -> tuple[str, list[dict[str, Any]]]:
@@ -617,7 +626,9 @@ def _gemini_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
     Role aliasing: Gemini uses ``"model"`` for assistant turns —
     normalised to ``"assistant"`` so downstream consumers see a uniform
     vocabulary. Tool call/response parts are dropped from input
-    extraction (captured by tool scope events).
+    extraction (captured by tool scope events). The top-level
+    ``systemInstruction`` is emitted first as a ``system`` message. A turn
+    without a ``role`` is a user turn, as Gemini allows for single-turn requests.
     """
     if not isinstance(data, dict):
         return []
@@ -626,10 +637,16 @@ def _gemini_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
         return []
 
     out: list[dict[str, Any]] = []
+    system_instruction = data.get("systemInstruction")
+    if isinstance(system_instruction, dict):
+        system = _gemini_walk_parts_for_text(system_instruction.get("parts"))
+        if system:
+            out.append({"role": "system", "content": system})
+
     for turn in contents:
         if not isinstance(turn, dict):
             continue
-        role = turn.get("role")
+        role = turn.get("role") or "user"
         if role == "model":
             role = "assistant"
         if not isinstance(role, str):
