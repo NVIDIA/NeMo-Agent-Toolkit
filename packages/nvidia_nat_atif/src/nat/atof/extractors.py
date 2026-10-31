@@ -72,6 +72,8 @@ hook fields on SchemaMap to handle the irreducible transforms.
 from __future__ import annotations
 
 import json
+import os
+import re
 from collections.abc import Callable
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -79,6 +81,7 @@ from dataclasses import field
 from typing import Any
 from typing import Protocol
 from typing import runtime_checkable
+from urllib.parse import urlsplit
 
 # ---------------------------------------------------------------------------
 # Protocol interfaces
@@ -366,17 +369,133 @@ class SchemaMapLlmExtractor:
 
 
 # ---------------------------------------------------------------------------
-# Built-in: OpenAI chat-completions schema map (no hooks, pure paths)
+# Built-in: OpenAI chat-completions schema map (output paths + input hook)
 # ---------------------------------------------------------------------------
+#
+# OpenAI input messages are path-addressable except for one case: a
+# ``user``/``system`` content may be a list of typed parts, and an
+# ``image_url`` part is not an ATIF ``ContentPart``. Passing such a list
+# through unchanged makes ``Step`` validation fail, which loses the whole
+# trajectory rather than just the image, so the input hook re-shapes the
+# parts instead of handing them over verbatim.
+#
+# ATIF pins ``ImageSource.media_type`` to four values. A part whose media
+# type cannot be derived (signed URLs without an extension, ``data:``
+# URLs carrying another MIME type, ``input_audio``/``file`` parts) is
+# dropped rather than raising, matching how the Anthropic and Gemini
+# input hooks already handle blocks ATIF cannot represent.
 
-# Order matters: the engine tries paths left-to-right and returns the first
-# non-None hit. ``content.messages`` precedes ``messages`` so a payload
-# carrying both (rare) prefers the nested form, matching the historical
-# precedence of the hand-rolled OpenAI extractor.
+_ATIF_IMAGE_MEDIA_TYPES = frozenset({"image/jpeg", "image/png", "image/gif", "image/webp"})
+
+_IMAGE_URL_SUFFIX_TO_MEDIA_TYPE = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+}
+
+_DATA_URL_MEDIA_TYPE_RE = re.compile(r"^data:([^;,]+)")
+
+
+def _openai_image_media_type(url: str) -> str | None:
+    """Return the ATIF ``media_type`` for an OpenAI image reference.
+
+    ``data:`` URLs declare their MIME type; plain URLs are classified by
+    file extension. Anything else returns ``None`` — ATIF cannot express
+    an image without a media type.
+    """
+    if url.startswith("data:"):
+        match = _DATA_URL_MEDIA_TYPE_RE.match(url)
+        if match is None:
+            return None
+        media_type = match.group(1).strip().lower()
+        return media_type if media_type in _ATIF_IMAGE_MEDIA_TYPES else None
+    suffix = os.path.splitext(urlsplit(url).path)[1].lower()
+    return _IMAGE_URL_SUFFIX_TO_MEDIA_TYPE.get(suffix)
+
+
+def _openai_image_part(block: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Translate an OpenAI ``image_url`` block into an ATIF ``image`` part."""
+    image_url = block.get("image_url")
+    url = image_url.get("url") if isinstance(image_url, Mapping) else image_url
+    if not isinstance(url, str) or not url:
+        return None
+    media_type = _openai_image_media_type(url)
+    if media_type is None:
+        return None
+    return {"type": "image", "source": {"media_type": media_type, "path": url}}
+
+
+def _openai_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
+    """Flatten OpenAI ``messages`` (with polymorphic content) to
+    ``[{"role", "content"}]`` for the converter.
+
+    Accepts both wire shapes the schema map documents — ``{"messages":
+    [...]}`` and ``{"content": {"messages": [...]}}`` — with the nested
+    form taking precedence, matching the previous path ordering.
+
+    Per-message rules:
+
+    - String content -> emitted unchanged.
+    - List content -> ATIF ``ContentPart`` list: ``text`` parts are kept,
+      ``image_url`` parts become ATIF ``image`` parts, and parts ATIF
+      cannot represent are dropped.
+    - List content with only unrepresentable parts -> message dropped.
+    - ``None`` content (assistant tool-call turns) -> emitted unchanged.
+
+    Non-dict messages and non-string roles are skipped.
+    """
+    if not isinstance(data, dict):
+        return []
+
+    messages = data.get("messages")
+    nested = data.get("content")
+    if isinstance(nested, dict) and isinstance(nested.get("messages"), list):
+        messages = nested["messages"]
+    if not isinstance(messages, list):
+        return []
+
+    out: list[dict[str, Any]] = []
+    for msg in messages:
+        if not isinstance(msg, dict):
+            continue
+        role = msg.get("role")
+        if not isinstance(role, str):
+            continue
+        content = msg.get("content")
+
+        if isinstance(content, str) or content is None:
+            out.append({"role": role, "content": content})
+            continue
+
+        if isinstance(content, list):
+            parts: list[dict[str, Any]] = []
+            for block in content:
+                if not isinstance(block, Mapping):
+                    continue
+                block_type = block.get("type")
+                if block_type == "text":
+                    text = block.get("text")
+                    if isinstance(text, str):
+                        parts.append({"type": "text", "text": text})
+                elif block_type == "image_url":
+                    part = _openai_image_part(block)
+                    if part is not None:
+                        parts.append(part)
+            if parts:
+                out.append({"role": role, "content": parts})
+            continue
+
+        out.append({"role": role, "content": content})
+
+    return out
+
+
 OPENAI_CHAT_COMPLETIONS_V1_MAP = SchemaMap(
     name="openai/chat-completions",
     version="1",
-    input_messages_paths=("content.messages", "messages"),
+    normalize_input_messages=_openai_normalize_input_messages,
     output_text_paths=("content", "choices.0.message.content"),
     output_tool_calls_paths=("tool_calls", "choices.0.message.tool_calls"),
     tool_call_id_paths=("id", ),

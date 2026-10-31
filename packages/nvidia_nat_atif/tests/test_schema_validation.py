@@ -866,6 +866,150 @@ def test_register_gemini_idempotent() -> None:
 
 
 # ---------------------------------------------------------------------------
+# OpenAI multimodal input
+# ---------------------------------------------------------------------------
+
+_OPENAI_SCHEMA = {"name": "openai/chat-completions", "version": "1"}
+
+
+def _multimodal_events(llm_input: dict[str, Any]) -> list[Event]:
+    """Round trip with one user turn whose content is a list of parts."""
+    agent_msg = "A red square."
+    return [
+        ScopeEvent(
+            scope_category="start",
+            uuid="agent-s",
+            parent_uuid=None,
+            timestamp=_ts(0),
+            name="test_agent",
+            attributes=[],
+            category="agent",
+            data={"input": "what is this"},
+        ),
+        ScopeEvent(
+            scope_category="start",
+            uuid="llm-s",
+            parent_uuid="agent-s",
+            timestamp=_ts(1),
+            name="test_llm",
+            attributes=[],
+            category="llm",
+            category_profile={"model_name": "test"},
+            data=llm_input,
+            data_schema=_OPENAI_SCHEMA,
+        ),
+        ScopeEvent(
+            scope_category="end",
+            uuid="llm-s",
+            parent_uuid="agent-s",
+            timestamp=_ts(2),
+            name="test_llm",
+            attributes=[],
+            category="llm",
+            category_profile={"model_name": "test"},
+            data={"content": agent_msg},
+            data_schema=_OPENAI_SCHEMA,
+        ),
+        ScopeEvent(
+            scope_category="end",
+            uuid="agent-s",
+            parent_uuid=None,
+            timestamp=_ts(3),
+            name="test_agent",
+            attributes=[],
+            category="agent",
+            data={"response": agent_msg},
+        ),
+    ]
+
+
+def test_openai_image_url_part_becomes_atif_image_part() -> None:
+    """An OpenAI ``image_url`` part must not break conversion.
+
+    Regression test: the list was previously passed through verbatim, so
+    ``{"type": "image_url", ...}`` failed ``ContentPart`` validation and
+    ``convert()`` raised instead of producing a trajectory.
+    """
+    png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=="
+    events = _multimodal_events({
+        "messages": [{
+            "role": "user",
+            "content": [
+                {
+                    "type": "text", "text": "what is this"
+                },
+                {
+                    "type": "image_url", "image_url": {
+                        "url": png
+                    }
+                },
+            ],
+        }]
+    })
+
+    trajectory = convert(events)
+
+    user_step = trajectory.steps[0]
+    assert user_step.source == "user"
+    assert isinstance(user_step.message, list)
+    text_part, image_part = user_step.message
+    assert (text_part.type, text_part.text) == ("text", "what is this")
+    assert image_part.type == "image"
+    assert image_part.source is not None
+    assert image_part.source.media_type == "image/png"
+    assert image_part.source.path == png
+    assert trajectory.steps[1].message == "A red square."
+
+
+def test_openai_image_url_media_type_from_extension() -> None:
+    """A plain URL is classified by its file extension."""
+    url = "https://example.com/assets/photo.JPEG?token=abc"
+    events = _multimodal_events(
+        {"messages": [{
+            "role": "user",
+            "content": [{
+                "type": "image_url", "image_url": {
+                    "url": url
+                }
+            }, ],
+        }]})
+
+    trajectory = convert(events)
+
+    image_part = trajectory.steps[0].message[0]
+    assert image_part.type == "image"
+    assert image_part.source is not None
+    assert image_part.source.media_type == "image/jpeg"
+    assert image_part.source.path == url
+
+
+def test_openai_unknown_image_media_type_keeps_text() -> None:
+    """A source with no derivable media type drops the image, not the turn."""
+    events = _multimodal_events({
+        "messages": [{
+            "role":
+                "user",
+            "content": [
+                {
+                    "type": "text", "text": "what is this"
+                },
+                {
+                    "type": "image_url", "image_url": {
+                        "url": "https://example.com/download?id=42"
+                    }
+                },
+            ],
+        }]
+    })
+
+    trajectory = convert(events)
+
+    parts = trajectory.steps[0].message
+    assert isinstance(parts, list)
+    assert [(part.type, part.text) for part in parts] == [("text", "what is this")]
+
+
+# ---------------------------------------------------------------------------
 # Script entry point
 # ---------------------------------------------------------------------------
 
