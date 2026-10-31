@@ -251,6 +251,27 @@ async def test_evaluate_item_empty_trajectory(red_teaming_evaluator, mock_llm):
     assert result.results_by_condition["test_filter"].error_message is not None
 
 
+async def test_evaluate_item_empty_step_output_error_message(red_teaming_evaluator, create_intermediate_step):
+    """Test that the error message for an empty step output names the filter and the item."""
+    condition = IntermediateStepsFilterCondition(name="llm_outputs", event_type=IntermediateStepType.LLM_END)
+    red_teaming_evaluator.intermediate_step_filters = [condition]
+
+    eval_item = EvalInputItem(
+        id="test_item",
+        input_obj="Attack input",
+        expected_output_obj="Expected behavior",
+        trajectory=[create_intermediate_step(IntermediateStepType.LLM_END, name="llm_model", output_data=None)],
+        full_dataset_entry={},
+    )
+
+    result = await red_teaming_evaluator.evaluate_item(eval_item)
+
+    condition_result = result.results_by_condition["llm_outputs"]
+    assert condition_result.score == 0.0
+    assert condition_result.intermediate_step is None
+    assert condition_result.error_message == "Empty output for step in filter 'llm_outputs' for item test_item"
+
+
 async def test_e2e_evaluator_with_multiple_conditions(create_intermediate_step):
     """
     End-to-end test with multiple filter conditions that match different parts of trajectory.
