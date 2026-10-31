@@ -13,11 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 from typing import Any
 
 import pytest
 
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
 from nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.atif_trajectory_exporter import ATIFTrajectorySpanExporter
+from nat.utils.atif_converter import IntermediateStepToATIFConverter
 
 
 def _trajectory(root_parent_id: str | None) -> dict[str, Any]:
@@ -115,3 +122,93 @@ def test_tool_span_keeps_its_llm_parent() -> None:
     assert tool.parent.context.span_id == llm_1.context.span_id
     for span in (llm_1, llm_2):
         assert span.parent.context.span_id == root.context.span_id
+
+
+def test_tool_metadata_on_the_step_gives_tool_spans() -> None:
+    """IntermediateStepToATIFConverter puts tool ancestry and invocations on the step, not on each tool call."""
+    trajectory = _trajectory("root")
+    agent_step = trajectory["steps"][1]
+    tool_call_extra = agent_step["tool_calls"][0].pop("extra")
+    agent_step["extra"]["tool_ancestry"] = [tool_call_extra["ancestry"]]
+    agent_step["extra"]["tool_invocations"] = [tool_call_extra["invocation"]]
+
+    spans = ATIFTrajectorySpanExporter().convert(trajectory)
+
+    root, _, tool, _ = spans
+    assert tool.name == "pow"
+    assert tool.parent.context.span_id == root.context.span_id
+    assert (tool.start_time, tool.end_time) == (2_000_000_000, 3_000_000_000)
+
+
+def test_trajectory_from_the_intermediate_step_converter_has_tool_spans() -> None:
+
+    def step(event_type: IntermediateStepType, name: str, offset: float, **data: Any) -> IntermediateStep:
+        # END events also carry their start time, half a second earlier.
+        span_start = {"span_event_timestamp": 99.5 + offset} if event_type.endswith("_END") else {}
+        payload = IntermediateStepPayload(event_type=event_type,
+                                          event_timestamp=100.0 + offset,
+                                          name=name,
+                                          data=StreamEventData(**data),
+                                          **span_start)
+        return IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(function_name="my_agent", function_id="fn-1"),
+                                payload=payload)
+
+    intermediate_steps = [
+        step(IntermediateStepType.WORKFLOW_START, "my_agent", 0.0, input="What is 7 squared?"),
+        step(IntermediateStepType.LLM_END, "llm", 1.0, output="I need to call pow"),
+        step(IntermediateStepType.TOOL_END, "pow", 2.0, input={
+            "base": 7, "exp": 2
+        }, output="49"),
+        step(IntermediateStepType.LLM_END, "llm", 3.0, output="7 squared is 49."),
+        step(IntermediateStepType.WORKFLOW_END, "my_agent", 4.0, output="7 squared is 49."),
+    ]
+    trajectory = IntermediateStepToATIFConverter().convert(intermediate_steps)
+
+    spans = ATIFTrajectorySpanExporter().convert(trajectory.model_dump(mode="json", exclude_none=True))
+
+    assert "pow" in [span.name for span in spans]
+
+
+def test_workflow_span_covers_a_trajectory_that_ends_on_a_tool_call() -> None:
+    trajectory = _trajectory("root")
+    # Without the final answer, the pow call (2.0 to 3.0) is the last thing in the trajectory.
+    del trajectory["steps"][2:]
+
+    root, _, tool = ATIFTrajectorySpanExporter().convert(trajectory)
+
+    assert tool.end_time == 3_000_000_000
+    assert root.end_time == tool.end_time
+
+
+def test_workflow_span_covers_steps_timed_only_by_their_iso_timestamp() -> None:
+    """A user step at 1, an agent step at 2 whose tool call runs from 2.5 to 3, and a final answer at 4."""
+
+    def iso(epoch: float) -> str:
+        return datetime.datetime.fromtimestamp(epoch, tz=datetime.UTC).isoformat()
+
+    trajectory = _trajectory("root")
+    user, agent, answer = trajectory["steps"]
+    user["timestamp"] = iso(1.0)
+    agent["timestamp"] = iso(2.0)
+    del agent["extra"]["invocation"]
+    agent["tool_calls"][0]["extra"]["invocation"] = {"start_timestamp": 2.5, "end_timestamp": 3.0}
+    answer["timestamp"] = iso(4.0)
+    del answer["extra"]["invocation"]
+
+    root, *_ = ATIFTrajectorySpanExporter().convert(trajectory)
+
+    assert (root.start_time, root.end_time) == (1_000_000_000, 4_000_000_000)
+
+
+def test_tool_call_without_ancestry_does_not_shift_the_others() -> None:
+    trajectory = _trajectory("root")
+    agent = trajectory["steps"][1]
+    agent["tool_calls"].insert(0, {"tool_call_id": "call-0", "function_name": "lookup", "arguments": {}})
+    agent["observation"]["results"].insert(0, {"content": "no ancestry"})
+
+    spans = ATIFTrajectorySpanExporter().convert(trajectory)
+
+    tool_spans = [span for span in spans if span.name in ("lookup", "pow")]
+    assert [span.name for span in tool_spans] == ["pow"]
+    assert (tool_spans[0].start_time, tool_spans[0].end_time) == (2_000_000_000, 3_000_000_000)

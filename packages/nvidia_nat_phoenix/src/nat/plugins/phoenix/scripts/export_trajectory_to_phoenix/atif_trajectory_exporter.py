@@ -60,25 +60,38 @@ def _is_terminal_agent_step(step: dict[str, Any]) -> bool:
 
 
 def _per_toolcall_meta(
-    tool_calls: list[dict[str, Any]], ) -> tuple[list[AtifAncestry], list[AtifInvocationInfo | None]]:
+    tool_calls: list[dict[str, Any]],
+    step_extra: dict[str, Any] | None = None,
+) -> tuple[list[AtifAncestry], list[AtifInvocationInfo | None], list[int]]:
     """Pull per-tool-call ancestry + invocation out of each tool_call's
     own ``extra`` dict. ATIF v1.7 colocates this metadata with the
     tool_call rather than as parallel arrays on the parent step.
 
-    Tool calls missing ``extra.ancestry`` are skipped from the ancestry
-    list; the invocation list is index-aligned with the ancestry list.
+    Trajectories from ``IntermediateStepToATIFConverter`` carry it as the
+    ``tool_ancestry`` and ``tool_invocations`` arrays on the step's
+    ``extra`` instead, index-aligned with ``tool_calls``; those are used
+    for a tool call that has none of its own.
+
+    Tool calls missing ancestry are skipped; the invocation list and the
+    list of the kept tool calls' indices are index-aligned with the ancestry
+    list.
     """
+    step_extra = step_extra or {}
+    step_ancestry = step_extra.get("tool_ancestry") or []
+    step_invocations = step_extra.get("tool_invocations") or []
     ancestry: list[AtifAncestry] = []
     invocations: list[AtifInvocationInfo | None] = []
-    for tc in tool_calls:
+    call_indices: list[int] = []
+    for idx, tc in enumerate(tool_calls):
         extra = tc.get("extra") or {}
-        anc_dict = extra.get("ancestry")
+        anc_dict = extra.get("ancestry") or (step_ancestry[idx] if idx < len(step_ancestry) else None)
         if not anc_dict:
             continue
         ancestry.append(AtifAncestry.model_validate(anc_dict))
-        inv_dict = extra.get("invocation")
+        inv_dict = extra.get("invocation") or (step_invocations[idx] if idx < len(step_invocations) else None)
         invocations.append(AtifInvocationInfo.model_validate(inv_dict) if inv_dict else None)
-    return ancestry, invocations
+        call_indices.append(idx)
+    return ancestry, invocations, call_indices
 
 
 def _topo_sort_indices(ancestries: list[AtifAncestry]) -> list[int]:
@@ -387,27 +400,26 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
         spans.append(llm_span)
 
         tool_calls = step.get("tool_calls") or []
-        tool_ancestry, tool_invocations = _per_toolcall_meta(tool_calls)
+        tool_ancestry, tool_invocations, call_indices = _per_toolcall_meta(tool_calls, step.get("extra"))
         obs_results = (step.get("observation") or {}).get("results") or []
 
         if tool_calls and tool_ancestry:
             sorted_indices = _topo_sort_indices(tool_ancestry)
 
             for idx in sorted_indices:
-                if idx >= len(tool_calls):
-                    continue
-                tc = tool_calls[idx]
+                call_idx = call_indices[idx]
+                tc = tool_calls[call_idx]
                 t_anc = tool_ancestry[idx]
                 t_inv = tool_invocations[idx] if idx < len(tool_invocations) else None
 
                 obs_content: str | None = None
-                if idx < len(obs_results):
-                    content = obs_results[idx].get("content")
+                if call_idx < len(obs_results):
+                    content = obs_results[call_idx].get("content")
                     obs_content = (content if isinstance(content, str) else
                                    (json.dumps(content, default=str) if content else None))
 
                     # Track subagent delegation refs
-                    for ref in obs_results[idx].get("subagent_trajectory_ref") or []:
+                    for ref in obs_results[call_idx].get("subagent_trajectory_ref") or []:
                         sub_sid = ref.get("session_id")
                         if sub_sid:
                             delegation_refs[sub_sid] = t_anc.function_id
@@ -498,26 +510,25 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
         spans.append(func_span)
 
         tool_calls = step.get("tool_calls") or []
-        tool_ancestry, tool_invocations = _per_toolcall_meta(tool_calls)
+        tool_ancestry, tool_invocations, call_indices = _per_toolcall_meta(tool_calls, step.get("extra"))
         obs_results = (step.get("observation") or {}).get("results") or []
 
         if tool_calls and tool_ancestry:
             sorted_indices = _topo_sort_indices(tool_ancestry)
 
             for idx in sorted_indices:
-                if idx >= len(tool_calls):
-                    continue
-                tc = tool_calls[idx]
+                call_idx = call_indices[idx]
+                tc = tool_calls[call_idx]
                 t_anc = tool_ancestry[idx]
                 t_inv = tool_invocations[idx] if idx < len(tool_invocations) else None
 
                 obs_content: str | None = None
-                if idx < len(obs_results):
-                    content = obs_results[idx].get("content")
+                if call_idx < len(obs_results):
+                    content = obs_results[call_idx].get("content")
                     obs_content = (content if isinstance(content, str) else
                                    (json.dumps(content, default=str) if content else None))
 
-                    for ref in obs_results[idx].get("subagent_trajectory_ref") or []:
+                    for ref in obs_results[call_idx].get("subagent_trajectory_ref") or []:
                         sub_sid = ref.get("session_id")
                         if sub_sid:
                             delegation_refs[sub_sid] = t_anc.function_id
@@ -691,47 +702,32 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
 
     @staticmethod
     def _trajectory_time_bounds(steps: list[dict[str, Any]]) -> tuple[float, float]:
-        """Find the earliest and latest timestamps across all steps.
+        """Find the earliest and latest timestamps of the spans built from the steps.
 
-        Prefers ``extra.invocation`` epoch timestamps (authoritative)
-        and only falls back to ISO ``step.timestamp`` fields when no
-        invocation timestamps are available.
+        Like the spans themselves, each step uses its ``extra.invocation``
+        epoch timestamps when it has them and its ISO ``step.timestamp``
+        otherwise. Tool call invocations count too, whether they are on the
+        tool call (``tool_calls[].extra.invocation``) or in the step's
+        ``extra.tool_invocations``.
         """
-        inv_first = float("inf")
-        inv_last = 0.0
-        iso_first = float("inf")
-        iso_last = 0.0
+        times: list[float] = []
 
         for step in steps:
-            ts = step.get("timestamp")
-            if ts:
-                epoch = _iso_to_epoch(ts)
-                iso_first = min(iso_first, epoch)
-                iso_last = max(iso_last, epoch)
-
             extra = step.get("extra") or {}
-            inv = extra.get("invocation")
-            if inv:
-                if inv.get("start_timestamp"):
-                    inv_first = min(inv_first, inv["start_timestamp"])
-                if inv.get("end_timestamp"):
-                    inv_last = max(inv_last, inv["end_timestamp"])
+            inv = extra.get("invocation") or {}
+            end = inv.get("end_timestamp")
+            if end is None and step.get("timestamp"):
+                end = _iso_to_epoch(step["timestamp"])
+            start = inv.get("start_timestamp")
+            if start is None:
+                start = end
+            times.extend(ts for ts in (start, end) if ts)
 
-            for ti in extra.get("tool_invocations") or []:
-                if ti and ti.get("start_timestamp"):
-                    inv_first = min(inv_first, ti["start_timestamp"])
-                if ti and ti.get("end_timestamp"):
-                    inv_last = max(inv_last, ti["end_timestamp"])
+            tool_call_invocations = [(tc.get("extra") or {}).get("invocation") for tc in step.get("tool_calls") or []]
+            for ti in (extra.get("tool_invocations") or []) + tool_call_invocations:
+                if ti:
+                    times.extend(ti[key] for key in ("start_timestamp", "end_timestamp") if ti.get(key))
 
-        # Prefer invocation timestamps per-boundary; fall back to ISO independently
-        has_inv_first = inv_first != float("inf")
-        has_inv_last = inv_last != 0.0
-        first_ts = inv_first if has_inv_first else iso_first
-        last_ts = inv_last if has_inv_last else iso_last
-
-        if first_ts == float("inf"):
-            first_ts = 0.0
-        if last_ts == float("inf") or last_ts == 0.0:
-            last_ts = first_ts
-
-        return first_ts, last_ts
+        if not times:
+            return 0.0, 0.0
+        return min(times), max(times)
