@@ -60,23 +60,33 @@ def _is_terminal_agent_step(step: dict[str, Any]) -> bool:
 
 
 def _per_toolcall_meta(
-    tool_calls: list[dict[str, Any]], ) -> tuple[list[AtifAncestry], list[AtifInvocationInfo | None]]:
+    tool_calls: list[dict[str, Any]],
+    step_extra: dict[str, Any] | None = None,
+) -> tuple[list[AtifAncestry], list[AtifInvocationInfo | None]]:
     """Pull per-tool-call ancestry + invocation out of each tool_call's
     own ``extra`` dict. ATIF v1.7 colocates this metadata with the
     tool_call rather than as parallel arrays on the parent step.
 
-    Tool calls missing ``extra.ancestry`` are skipped from the ancestry
-    list; the invocation list is index-aligned with the ancestry list.
+    Trajectories from ``IntermediateStepToATIFConverter`` carry it as the
+    ``tool_ancestry`` and ``tool_invocations`` arrays on the step's
+    ``extra`` instead, index-aligned with ``tool_calls``; those are used
+    for a tool call that has none of its own.
+
+    Tool calls missing ancestry are skipped from the ancestry list; the
+    invocation list is index-aligned with the ancestry list.
     """
+    step_extra = step_extra or {}
+    step_ancestry = step_extra.get("tool_ancestry") or []
+    step_invocations = step_extra.get("tool_invocations") or []
     ancestry: list[AtifAncestry] = []
     invocations: list[AtifInvocationInfo | None] = []
-    for tc in tool_calls:
+    for idx, tc in enumerate(tool_calls):
         extra = tc.get("extra") or {}
-        anc_dict = extra.get("ancestry")
+        anc_dict = extra.get("ancestry") or (step_ancestry[idx] if idx < len(step_ancestry) else None)
         if not anc_dict:
             continue
         ancestry.append(AtifAncestry.model_validate(anc_dict))
-        inv_dict = extra.get("invocation")
+        inv_dict = extra.get("invocation") or (step_invocations[idx] if idx < len(step_invocations) else None)
         invocations.append(AtifInvocationInfo.model_validate(inv_dict) if inv_dict else None)
     return ancestry, invocations
 
@@ -387,7 +397,7 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
         spans.append(llm_span)
 
         tool_calls = step.get("tool_calls") or []
-        tool_ancestry, tool_invocations = _per_toolcall_meta(tool_calls)
+        tool_ancestry, tool_invocations = _per_toolcall_meta(tool_calls, step.get("extra"))
         obs_results = (step.get("observation") or {}).get("results") or []
 
         if tool_calls and tool_ancestry:
@@ -498,7 +508,7 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
         spans.append(func_span)
 
         tool_calls = step.get("tool_calls") or []
-        tool_ancestry, tool_invocations = _per_toolcall_meta(tool_calls)
+        tool_ancestry, tool_invocations = _per_toolcall_meta(tool_calls, step.get("extra"))
         obs_results = (step.get("observation") or {}).get("results") or []
 
         if tool_calls and tool_ancestry:
@@ -717,7 +727,10 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
                 if inv.get("end_timestamp"):
                     inv_last = max(inv_last, inv["end_timestamp"])
 
-            for ti in extra.get("tool_invocations") or []:
+            # Tool call timings are on each tool_call (ATIF v1.7) or in the step's
+            # tool_invocations array (IntermediateStepToATIFConverter).
+            tool_call_invocations = [(tc.get("extra") or {}).get("invocation") for tc in step.get("tool_calls") or []]
+            for ti in (extra.get("tool_invocations") or []) + tool_call_invocations:
                 if ti and ti.get("start_timestamp"):
                     inv_first = min(inv_first, ti["start_timestamp"])
                 if ti and ti.get("end_timestamp"):
