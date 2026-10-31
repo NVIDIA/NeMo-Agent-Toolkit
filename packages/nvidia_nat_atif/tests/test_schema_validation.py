@@ -147,10 +147,14 @@ class _AnthropicFactory(_PayloadFactory):
     schema = {"name": "anthropic/messages", "version": "1"}
 
     def llm_input(self, messages: list[dict[str, str]]) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "model": "claude-3-5-sonnet-20241022",
-            "messages": list(messages),
+            "messages": [m for m in messages if m["role"] != "system"],
         }
+        system = [m["content"] for m in messages if m["role"] == "system"]
+        if system:
+            payload["system"] = " ".join(system)
+        return payload
 
     def llm_output_text(self, text: str) -> dict[str, Any]:
         return {
@@ -229,8 +233,12 @@ class _GeminiFactory(_PayloadFactory):
             "parts": [{
                 "text": m["content"]
             }],
-        } for m in messages]
-        return {"contents": contents}
+        } for m in messages if m["role"] != "system"]
+        payload: dict[str, Any] = {"contents": contents}
+        system = [{"text": m["content"]} for m in messages if m["role"] == "system"]
+        if system:
+            payload["systemInstruction"] = {"parts": system}
+        return payload
 
     def llm_output_text(self, text: str) -> dict[str, Any]:
         return {
@@ -350,13 +358,16 @@ def _ts(second: int) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _build_simple(factory: _PayloadFactory) -> list[Event]:
+def _build_simple(factory: _PayloadFactory, system_msg: str | None = None) -> list[Event]:
     """Scenario: user asks a question, LLM responds in plain text. No tools.
 
-    Expected ATIF: 2 steps (user query, agent reply).
+    Expected ATIF: 2 steps (user query, agent reply), plus a leading system
+    step when ``system_msg`` is given.
     """
     user_msg = "What's the capital of France?"
     agent_msg = "Paris."
+    llm_messages = [{"role": "system", "content": system_msg}] if system_msg else []
+    llm_messages.append({"role": "user", "content": user_msg})
     return [
         ScopeEvent(
             scope_category="start",
@@ -377,9 +388,7 @@ def _build_simple(factory: _PayloadFactory) -> list[Event]:
             attributes=[],
             category="llm",
             category_profile={"model_name": "test"},
-            data=factory.llm_input([{
-                "role": "user", "content": user_msg
-            }]),
+            data=factory.llm_input(llm_messages),
             data_schema=factory.schema,
         ),
         ScopeEvent(
@@ -644,6 +653,54 @@ def test_simple_scenario(factory: _PayloadFactory, opt_in_extractors: None) -> N
     assert user_step.message == "What's the capital of France?"
     assert agent_step.message == "Paris."
     assert not agent_step.tool_calls
+
+
+def test_system_prompt_scenario(factory: _PayloadFactory, opt_in_extractors: None) -> None:
+    """All three providers keep the system prompt, which Anthropic and Gemini
+    carry outside the message list (``system`` / ``systemInstruction``)."""
+    events = _build_simple(factory, system_msg="Answer in one word.")
+    trajectory = convert(events)
+
+    sources = [s.source for s in trajectory.steps]
+    assert sources == ["system", "user",
+                       "agent"], (f"{factory.schema['name']}: expected [system, user, agent], got {sources}")
+    assert trajectory.steps[0].message == "Answer in one word."
+
+
+def test_anthropic_system_prompt_as_text_blocks(opt_in_extractors: None) -> None:
+    """Anthropic's ``system`` can also be a list of blocks: every text block is
+    kept and the other blocks are skipped."""
+    events = _build_simple(_FACTORIES["anthropic"])
+    llm_start = next(e for e in events if e.category == "llm" and e.scope_category == "start")
+    llm_start.data["system"] = [
+        {
+            "type": "text", "text": "Answer in one word. "
+        },
+        {
+            "type": "image", "source": {
+                "type": "url", "url": "https://example.com/map.png"
+            }
+        },
+        {
+            "type": "text", "text": "Use English."
+        },
+    ]
+    trajectory = convert(events)
+
+    assert [s.source for s in trajectory.steps] == ["system", "user", "agent"]
+    assert trajectory.steps[0].message == "Answer in one word. Use English."
+
+
+def test_gemini_turn_without_a_role_is_a_user_turn(opt_in_extractors: None) -> None:
+    """Gemini lets a single-turn request leave out ``role``; that turn is the user's."""
+    events = _build_simple(_FACTORIES["gemini"], system_msg="Answer in one word.")
+    llm_start = next(e for e in events if e.category == "llm" and e.scope_category == "start")
+    for turn in llm_start.data["contents"]:
+        del turn["role"]
+    trajectory = convert(events)
+
+    assert [s.source for s in trajectory.steps] == ["system", "user", "agent"]
+    assert trajectory.steps[1].message == "What's the capital of France?"
 
 
 def test_nested_scenario(factory: _PayloadFactory, opt_in_extractors: None) -> None:
