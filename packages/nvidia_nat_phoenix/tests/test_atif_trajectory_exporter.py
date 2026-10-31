@@ -99,3 +99,19 @@ def test_top_level_spans_are_children_of_the_workflow_span(root_parent_id: str |
     for span in children:
         assert span.parent is not None, f"{span.name} has no parent"
         assert span.parent.context.span_id == root.context.span_id
+
+
+def test_tool_span_keeps_its_llm_parent() -> None:
+    """A tool call whose parent is a span of the trajectory stays under that span."""
+    trajectory = _trajectory("root")
+    tool_ancestry = trajectory["steps"][1]["tool_calls"][0]["extra"]["ancestry"]
+    tool_ancestry["parent_id"] = "llm-1"
+    tool_ancestry["parent_name"] = "llm"
+    spans = ATIFTrajectorySpanExporter().convert(trajectory)
+
+    root, llm_1, tool, llm_2 = spans
+    assert [span.name for span in (llm_1, tool, llm_2)] == ["llm", "pow", "llm"]
+    assert root.parent is None
+    assert tool.parent.context.span_id == llm_1.context.span_id
+    for span in (llm_1, llm_2):
+        assert span.parent.context.span_id == root.context.span_id
