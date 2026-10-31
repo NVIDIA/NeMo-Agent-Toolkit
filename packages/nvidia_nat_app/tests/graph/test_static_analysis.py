@@ -292,6 +292,18 @@ class TestMutatingMethodOnState:
             state.update(extra)
             return {}
 
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+
+    def test_clear_is_dynamic(self):
+
+        def fn(state):
+            state.clear()
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+
 
 class TestMembershipTest:
 
@@ -317,15 +329,6 @@ class TestMembershipTest:
 
         def fn(state, key="docs"):
             return {"present": key.upper() in state}
-
-        r = analyze_function_ast(fn)
-        assert r.has_dynamic_keys
-
-    def test_clear_is_dynamic(self):
-
-        def fn(state):
-            state.clear()
-            return {}
 
         r = analyze_function_ast(fn)
         assert r.has_dynamic_keys
