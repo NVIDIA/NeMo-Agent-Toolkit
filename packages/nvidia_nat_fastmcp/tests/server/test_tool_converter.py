@@ -12,16 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests for FastMCP tool_converter parameter name sanitization."""
+"""Tests for FastMCP tool conversion and parameter name sanitization."""
 
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
+import pytest
+from fastmcp import Client
+from fastmcp import FastMCP
+from pydantic import Field
 from pydantic import create_model
 
 from nat.plugins.fastmcp.server.tool_converter import _build_name_mapping
 from nat.plugins.fastmcp.server.tool_converter import _sanitize_parameter_name
 from nat.plugins.fastmcp.server.tool_converter import create_function_wrapper
+from nat.plugins.fastmcp.server.tool_converter import register_function_with_mcp
 from nat.runtime.session import SessionManager
 
 
@@ -160,3 +165,89 @@ class TestParameterNameSanitization:
         wrapper = create_function_wrapper("tool", _mock_session_manager(), schema)
 
         assert "from_" in wrapper.__annotations__
+
+
+@pytest.mark.parametrize("field_name", ["labels", "from"])
+@pytest.mark.parametrize("data_aware", [False, True])
+async def test_registered_tool_defers_default_factory(field_name, data_aware):
+    """Omission stays optional and factories run once per call in the original model."""
+    factory_calls = []
+
+    def factory():
+        factory_calls.append(None)
+        return []
+
+    def data_factory(data):
+        factory_calls.append(data["query"])
+        return [data["query"]]
+
+    schema = create_model(
+        "FactorySchema",
+        **{
+            "query": (int, Field(gt=0, description="Query identifier")),
+            field_name: (list[int],
+                         Field(default_factory=data_factory if data_aware else factory, validate_default=True)),
+            "limit": (int, Field(default=10, ge=1, description="Result limit")),
+        })
+    mock_sm = _mock_session_manager()
+    mock_sm.workflow = MagicMock(input_schema=schema)
+    server = FastMCP("factory-test")
+    register_function_with_mcp(server, "tool", mock_sm)
+    safe_name = _sanitize_parameter_name(field_name)
+
+    async with Client(server) as client:
+        tools = await client.list_tools()
+        assert tools[0].inputSchema["required"] == ["query"]
+        properties = tools[0].inputSchema["properties"]
+        assert properties["query"]["exclusiveMinimum"] == 0
+        assert properties["query"]["description"] == "Query identifier"
+        assert properties["limit"]["minimum"] == 1
+        assert properties["limit"]["description"] == "Result limit"
+        assert properties["limit"]["default"] == 10
+        assert factory_calls == []
+        for _ in range(2):
+            result = await client.call_tool("tool", {"query": "7"})
+            assert not result.is_error
+
+        first, second = [call.args[0] for call in mock_sm.run.call_args_list]
+        assert getattr(first, field_name) == ([7] if data_aware else [])
+        assert getattr(first, field_name) is not getattr(second, field_name)
+        assert first.limit == 10
+        assert field_name not in first.model_fields_set
+        assert factory_calls == ([7, 7] if data_aware else [None, None])
+
+        result = await client.call_tool("tool", {"query": 7, safe_name: [9]})
+        assert not result.is_error
+        assert getattr(mock_sm.run.call_args.args[0], field_name) == [9]
+        assert field_name in mock_sm.run.call_args.args[0].model_fields_set
+        assert len(factory_calls) == 2
+
+        for arguments in ({"query": 7, safe_name: None}, {safe_name: []}):
+            result = await client.call_tool("tool", arguments, raise_on_error=False)
+            assert result.is_error
+        assert mock_sm.run.call_count == 3
+
+
+@pytest.mark.parametrize("default_value, succeeds", [([1], True), ([], False), (["invalid"], False)])
+async def test_registered_tool_validates_factory_default(default_value, succeeds):
+    """The original model still validates the factory's type and constraints."""
+    schema = create_model("ValidatedFactorySchema",
+                          labels=(list[int],
+                                  Field(default_factory=lambda: default_value,
+                                        min_length=1,
+                                        description="Selected labels",
+                                        validate_default=True)))
+    mock_sm = _mock_session_manager()
+    mock_sm.workflow = MagicMock(input_schema=schema)
+    server = FastMCP("factory-validation-test")
+    register_function_with_mcp(server, "tool", mock_sm)
+
+    async with Client(server) as client:
+        tools = await client.list_tools()
+        input_schema = tools[0].inputSchema
+        assert "labels" not in input_schema.get("required", [])
+        assert input_schema["properties"]["labels"]["minItems"] == 1
+        assert input_schema["properties"]["labels"]["description"] == "Selected labels"
+        result = await client.call_tool("tool", {}, raise_on_error=False)
+    assert result.is_error is not succeeds
+    assert mock_sm.run.call_count == int(succeeds)
