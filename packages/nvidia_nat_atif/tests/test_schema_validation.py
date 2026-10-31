@@ -691,6 +691,18 @@ def test_anthropic_system_prompt_as_text_blocks(opt_in_extractors: None) -> None
     assert trajectory.steps[0].message == "Answer in one word. Use English."
 
 
+def test_gemini_turn_without_a_role_is_a_user_turn(opt_in_extractors: None) -> None:
+    """Gemini lets a single-turn request leave out ``role``; that turn is the user's."""
+    events = _build_simple(_FACTORIES["gemini"], system_msg="Answer in one word.")
+    llm_start = next(e for e in events if e.category == "llm" and e.scope_category == "start")
+    for turn in llm_start.data["contents"]:
+        del turn["role"]
+    trajectory = convert(events)
+
+    assert [s.source for s in trajectory.steps] == ["system", "user", "agent"]
+    assert trajectory.steps[1].message == "What's the capital of France?"
+
+
 def test_nested_scenario(factory: _PayloadFactory, opt_in_extractors: None) -> None:
     """All three providers handle a tool round-trip: user query → agent
     with one tool_call and one observation → final agent text."""

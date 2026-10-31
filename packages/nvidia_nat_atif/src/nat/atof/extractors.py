@@ -627,7 +627,8 @@ def _gemini_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
     normalised to ``"assistant"`` so downstream consumers see a uniform
     vocabulary. Tool call/response parts are dropped from input
     extraction (captured by tool scope events). The top-level
-    ``systemInstruction`` is emitted first as a ``system`` message.
+    ``systemInstruction`` is emitted first as a ``system`` message. A turn
+    without a ``role`` is a user turn, as Gemini allows for single-turn requests.
     """
     if not isinstance(data, dict):
         return []
@@ -645,7 +646,7 @@ def _gemini_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
     for turn in contents:
         if not isinstance(turn, dict):
             continue
-        role = turn.get("role")
+        role = turn.get("role") or "user"
         if role == "model":
             role = "assistant"
         if not isinstance(role, str):
