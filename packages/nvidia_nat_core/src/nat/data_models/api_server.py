@@ -765,7 +765,7 @@ class WebSocketUserMessage(BaseModel):
     user: User = User()
     error: Error = Error()
     schema_version: str = "1.0.0"
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 class WebSocketUserInteractionResponseMessage(BaseModel):
@@ -783,7 +783,7 @@ class WebSocketUserInteractionResponseMessage(BaseModel):
     user: User = User()
     error: Error = Error()
     schema_version: str = "1.0.0"
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 class AuthMethod(StrEnum):
@@ -907,7 +907,7 @@ class WebSocketSystemIntermediateStepMessage(BaseModel):
     conversation_id: str | None = None
     content: SystemIntermediateStepContent
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 class SystemResponseContent(BaseModel):
@@ -932,7 +932,7 @@ class WebSocketSystemResponseTokenMessage(BaseModel):
     conversation_id: str | None = None
     content: SystemResponseContent | Error | GenerateResponse
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
     @field_validator("content")
     @classmethod
@@ -964,7 +964,7 @@ class WebSocketSystemInteractionMessage(BaseModel):
     conversation_id: str | None = None
     content: HumanPrompt
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 class ObservabilityTraceContent(BaseModel):
@@ -987,7 +987,7 @@ class WebSocketObservabilityTraceMessage(BaseModel):
     parent_id: str = "default"
     conversation_id: str | None = None
     content: ObservabilityTraceContent
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 # ======== GenerateResponse Converters ========
