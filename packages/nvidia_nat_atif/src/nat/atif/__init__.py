@@ -29,8 +29,12 @@ from nat.atif.atif_step_extra import AtifAncestry
 from nat.atif.atif_step_extra import AtifInvocationInfo
 from nat.atif.atif_step_extra import AtifStepExtra
 from nat.atif.atif_step_extra import AtifToolCallExtra
+from nat.atif.content import SUPPORTED_IMAGE_MEDIA_TYPES
 from nat.atif.content import ContentPart
 from nat.atif.content import ImageSource
+from nat.atif.content import infer_image_media_type
+from nat.atif.content import normalize_content_part
+from nat.atif.content import normalize_content_parts
 from nat.atif.final_metrics import FinalMetrics
 from nat.atif.metrics import Metrics
 from nat.atif.observation import Observation
@@ -81,8 +85,12 @@ __all__ = [
     "Metrics",
     "Observation",
     "ObservationResult",
+    "SUPPORTED_IMAGE_MEDIA_TYPES",
     "Step",
     "SubagentTrajectoryRef",
     "ToolCall",
     "Trajectory",
+    "infer_image_media_type",
+    "normalize_content_part",
+    "normalize_content_parts",
 ]

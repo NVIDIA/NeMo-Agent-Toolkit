@@ -41,6 +41,8 @@ from __future__ import annotations
 
 import json
 
+from nat.atif.content import ContentPart
+from nat.atif.content import ImageSource
 from nat.atof import ScopeEvent
 from nat.atof.scripts.atof_to_atif_converter import convert
 
@@ -893,6 +895,381 @@ def test_no_llm_orchestrator_step_has_no_model_name() -> None:
     assert dispatch_step.tool_calls is not None
     assert len(dispatch_step.tool_calls) == 1
     assert dispatch_step.tool_calls[0].tool_call_id == "tc-013-1"
+
+
+def test_tier1_openai_multimodal_vision_conversion() -> None:
+    """Verify that convert() handles OpenAI multimodal messages containing image_url parts."""
+    events = [
+        ScopeEvent(
+            uuid="root-agent",
+            parent_uuid=None,
+            scope_category="start",
+            timestamp="2026-01-14T00:00:00Z",
+            name="vision_agent",
+            attributes=[],
+            category="agent",
+            data={"query": "describe image"},
+        ),
+        ScopeEvent(
+            uuid="llm-call-1",
+            parent_uuid="root-agent",
+            scope_category="start",
+            timestamp="2026-01-14T00:00:01Z",
+            name="gpt-4o",
+            attributes=[],
+            category="llm",
+            category_profile={"model_name": "gpt-4o"},
+            data={
+                "messages": [{
+                    "role":
+                        "user",
+                    "content": [
+                        {
+                            "type": "text", "text": "What is in this image?"
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": (
+                                    "data:image/png;base64,"
+                                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+                                ),
+                            },
+                        },
+                    ],
+                }],
+            },
+            data_schema={
+                "name": "openai/chat-completions", "version": "1"
+            },
+        ),
+        ScopeEvent(
+            uuid="llm-call-1",
+            parent_uuid="root-agent",
+            scope_category="end",
+            timestamp="2026-01-14T00:00:02Z",
+            name="gpt-4o",
+            attributes=[],
+            category="llm",
+            category_profile={"model_name": "gpt-4o"},
+            data={"content": "This is a 1x1 black pixel PNG image."},
+            data_schema={
+                "name": "openai/chat-completions", "version": "1"
+            },
+        ),
+        ScopeEvent(
+            uuid="root-agent",
+            parent_uuid=None,
+            scope_category="end",
+            timestamp="2026-01-14T00:00:03Z",
+            name="vision_agent",
+            attributes=[],
+            category="agent",
+            data=None,
+        ),
+    ]
+
+    trajectory = convert(events)
+    assert len(trajectory.steps) == 2
+    user_step = trajectory.steps[0]
+    agent_step = trajectory.steps[1]
+
+    assert user_step.source == "user"
+    assert isinstance(user_step.message, list)
+    assert len(user_step.message) == 2
+
+    text_part = user_step.message[0]
+    image_part = user_step.message[1]
+    assert isinstance(text_part, ContentPart)
+    assert text_part.type == "text"
+    assert text_part.text == "What is in this image?"
+
+    assert isinstance(image_part, ContentPart)
+    assert image_part.type == "image"
+    assert isinstance(image_part.source, ImageSource)
+    assert image_part.source.media_type == "image/png"
+    assert image_part.source.path.startswith("data:image/png;base64,")
+
+    assert agent_step.source == "agent"
+    assert agent_step.message == "This is a 1x1 black pixel PNG image."
+    assert agent_step.model_name == "gpt-4o"
+
+    # Verify JSON round-trip serialization
+    dumped = trajectory.model_dump(exclude_none=True, mode="json")
+    assert dumped["steps"][0]["message"][1]["source"]["media_type"] == "image/png"
+
+
+def test_tier1_multimodal_deduplication_multi_turn() -> None:
+    """Verify that identical multimodal input content is not duplicate-emitted on continuations."""
+    multimodal_user_content = [
+        {
+            "type": "text", "text": "Analyze image"
+        },
+        {
+            "type": "image_url", "image_url": {
+                "url": "https://example.com/photo.jpeg"
+            }
+        },
+    ]
+    events = [
+        ScopeEvent(
+            uuid="root-agent",
+            parent_uuid=None,
+            scope_category="start",
+            timestamp="2026-01-14T00:00:00Z",
+            name="agent",
+            attributes=[],
+            category="agent",
+            data=None,
+        ),
+        # First turn
+        ScopeEvent(
+            uuid="llm-1",
+            parent_uuid="root-agent",
+            scope_category="start",
+            timestamp="2026-01-14T00:00:01Z",
+            name="llm",
+            attributes=[],
+            category="llm",
+            data={"messages": [{
+                "role": "user", "content": multimodal_user_content
+            }]},
+        ),
+        ScopeEvent(
+            uuid="llm-1",
+            parent_uuid="root-agent",
+            scope_category="end",
+            timestamp="2026-01-14T00:00:02Z",
+            name="llm",
+            attributes=[],
+            category="llm",
+            data={"content": "Turn 1 answer"},
+        ),
+        # Continuation turn with same user message + assistant reply + new user query
+        ScopeEvent(
+            uuid="llm-2",
+            parent_uuid="root-agent",
+            scope_category="start",
+            timestamp="2026-01-14T00:00:03Z",
+            name="llm",
+            attributes=[],
+            category="llm",
+            data={
+                "messages": [
+                    {
+                        "role": "user", "content": multimodal_user_content
+                    },
+                    {
+                        "role": "assistant", "content": "Turn 1 answer"
+                    },
+                    {
+                        "role": "user", "content": "What about lighting?"
+                    },
+                ]
+            },
+        ),
+        ScopeEvent(
+            uuid="llm-2",
+            parent_uuid="root-agent",
+            scope_category="end",
+            timestamp="2026-01-14T00:00:04Z",
+            name="llm",
+            attributes=[],
+            category="llm",
+            data={"content": "Turn 2 answer"},
+        ),
+        ScopeEvent(
+            uuid="root-agent",
+            parent_uuid=None,
+            scope_category="end",
+            timestamp="2026-01-14T00:00:05Z",
+            name="agent",
+            attributes=[],
+            category="agent",
+            data=None,
+        ),
+    ]
+
+    trajectory = convert(events)
+    # Expected steps: user (multimodal), agent (turn 1), user ("What about lighting?"), agent (turn 2)
+    sources = [s.source for s in trajectory.steps]
+    assert sources == ["user", "agent", "user", "agent"]
+    assert isinstance(trajectory.steps[0].message, list)
+    assert trajectory.steps[2].message == "What about lighting?"
+
+
+def test_tier1_multimodal_unsupported_image_url_fails_gracefully() -> None:
+    """Verify that convert() raises ValueError when image_url media type cannot be inferred."""
+    events = [
+        ScopeEvent(
+            uuid="root-agent",
+            parent_uuid=None,
+            scope_category="start",
+            timestamp="2026-01-14T00:00:00Z",
+            name="agent",
+            attributes=[],
+            category="agent",
+            data=None,
+        ),
+        ScopeEvent(
+            uuid="llm-1",
+            parent_uuid="root-agent",
+            scope_category="start",
+            timestamp="2026-01-14T00:00:01Z",
+            name="llm",
+            attributes=[],
+            category="llm",
+            data={
+                "messages": [{
+                    "role":
+                        "user",
+                    "content": [{
+                        "type": "image_url", "image_url": {
+                            "url": "https://example.com/asset.unsupported_ext"
+                        }
+                    }, ],
+                }],
+            },
+        ),
+        ScopeEvent(
+            uuid="llm-1",
+            parent_uuid="root-agent",
+            scope_category="end",
+            timestamp="2026-01-14T00:00:02Z",
+            name="llm",
+            attributes=[],
+            category="llm",
+            data={"content": "dummy"},
+        ),
+        ScopeEvent(
+            uuid="root-agent",
+            parent_uuid=None,
+            scope_category="end",
+            timestamp="2026-01-14T00:00:03Z",
+            name="agent",
+            attributes=[],
+            category="agent",
+            data=None,
+        ),
+    ]
+
+    import pytest
+    with pytest.raises(ValueError, match="supported image media_type"):
+        convert(events)
+
+
+def test_tier1_conversion_mixed_content_list_with_invalid_entry_raises() -> None:
+    """Verify that convert() raises ValidationError on mixed content containing invalid entries."""
+    events = [
+        ScopeEvent(
+            uuid="root-agent",
+            parent_uuid=None,
+            scope_category="start",
+            timestamp="2026-01-14T00:00:00Z",
+            name="agent",
+            attributes=[],
+            category="agent",
+            data=None,
+        ),
+        ScopeEvent(
+            uuid="llm-1",
+            parent_uuid="root-agent",
+            scope_category="start",
+            timestamp="2026-01-14T00:00:01Z",
+            name="llm",
+            attributes=[],
+            category="llm",
+            data={
+                "messages": [{
+                    "role": "user",
+                    "content": ["lost prompt", {
+                        "type": "text", "text": "Valid question"
+                    }],
+                }],
+            },
+        ),
+        ScopeEvent(
+            uuid="llm-1",
+            parent_uuid="root-agent",
+            scope_category="end",
+            timestamp="2026-01-14T00:00:02Z",
+            name="llm",
+            attributes=[],
+            category="llm",
+            data={"content": "dummy"},
+        ),
+        ScopeEvent(
+            uuid="root-agent",
+            parent_uuid=None,
+            scope_category="end",
+            timestamp="2026-01-14T00:00:03Z",
+            name="agent",
+            attributes=[],
+            category="agent",
+            data=None,
+        ),
+    ]
+
+    import pydantic
+    import pytest
+    with pytest.raises(pydantic.ValidationError):
+        convert(events)
+
+
+def test_tier1_conversion_all_invalid_content_list_raises() -> None:
+    """Verify that convert() raises ValidationError when all content list items are invalid."""
+    events = [
+        ScopeEvent(
+            uuid="root-agent",
+            parent_uuid=None,
+            scope_category="start",
+            timestamp="2026-01-14T00:00:00Z",
+            name="agent",
+            attributes=[],
+            category="agent",
+            data=None,
+        ),
+        ScopeEvent(
+            uuid="llm-1",
+            parent_uuid="root-agent",
+            scope_category="start",
+            timestamp="2026-01-14T00:00:01Z",
+            name="llm",
+            attributes=[],
+            category="llm",
+            data={
+                "messages": [{
+                    "role": "user",
+                    "content": ["lost prompt"],
+                }],
+            },
+        ),
+        ScopeEvent(
+            uuid="llm-1",
+            parent_uuid="root-agent",
+            scope_category="end",
+            timestamp="2026-01-14T00:00:02Z",
+            name="llm",
+            attributes=[],
+            category="llm",
+            data={"content": "dummy"},
+        ),
+        ScopeEvent(
+            uuid="root-agent",
+            parent_uuid=None,
+            scope_category="end",
+            timestamp="2026-01-14T00:00:03Z",
+            name="agent",
+            attributes=[],
+            category="agent",
+            data=None,
+        ),
+    ]
+
+    import pydantic
+    import pytest
+    with pytest.raises(pydantic.ValidationError):
+        convert(events)
 
 
 if __name__ == "__main__":
