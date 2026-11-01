@@ -193,6 +193,20 @@ def test_workflow_span_ignores_a_step_tool_invocation_the_tool_call_overrides() 
     assert root.end_time == tool.end_time
 
 
+def test_workflow_span_ignores_the_tool_calls_of_a_skipped_step() -> None:
+    """A step without step-level ancestry gives no spans, so its tool calls are not read."""
+    trajectory = _trajectory("root")
+    skipped = trajectory["steps"][1]
+    del skipped["extra"]["ancestry"]
+    del skipped["tool_calls"][0]["extra"]["ancestry"]["function_name"]
+    skipped["tool_calls"][0]["extra"]["invocation"] = {"start_timestamp": 2.0, "end_timestamp": 9.0}
+
+    root, llm_2 = ATIFTrajectorySpanExporter().convert(trajectory)
+
+    assert llm_2.end_time == 4_000_000_000
+    assert root.end_time == llm_2.end_time
+
+
 def test_workflow_span_covers_steps_timed_only_by_their_iso_timestamp() -> None:
     """A user step at 1, an agent step at 2 whose tool call runs from 2.5 to 3, and a final answer at 4."""
 

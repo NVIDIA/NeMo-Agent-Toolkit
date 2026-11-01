@@ -709,6 +709,8 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
         otherwise. Tool call invocations count too, picked by
         ``_per_toolcall_meta`` as for the tool spans: the tool call's own
         ``extra.invocation``, else the step's ``extra.tool_invocations`` entry.
+        Tool calls of a step without a valid ``AtifStepExtra`` are not read,
+        since ``convert`` skips that step.
         """
         times: list[float] = []
 
@@ -723,6 +725,11 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
                 start = end
             times.extend(ts for ts in (start, end) if ts)
 
+            try:
+                AtifStepExtra.model_validate(extra)
+            except Exception:
+                # convert() skips this step, so its tool calls give no spans.
+                continue
             _, tool_invocations, _ = _per_toolcall_meta(step.get("tool_calls") or [], extra)
             for ti in tool_invocations:
                 if ti is not None:
