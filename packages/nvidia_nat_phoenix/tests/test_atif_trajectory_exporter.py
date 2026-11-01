@@ -181,6 +181,18 @@ def test_workflow_span_covers_a_trajectory_that_ends_on_a_tool_call() -> None:
     assert root.end_time == tool.end_time
 
 
+def test_workflow_span_ignores_a_step_tool_invocation_the_tool_call_overrides() -> None:
+    trajectory = _trajectory("root")
+    del trajectory["steps"][2:]
+    # The tool call's own invocation (2.0 to 3.0) wins over the step's older entry.
+    trajectory["steps"][1]["extra"]["tool_invocations"] = [{"start_timestamp": 2.0, "end_timestamp": 9.0}]
+
+    root, _, tool = ATIFTrajectorySpanExporter().convert(trajectory)
+
+    assert tool.end_time == 3_000_000_000
+    assert root.end_time == tool.end_time
+
+
 def test_workflow_span_covers_steps_timed_only_by_their_iso_timestamp() -> None:
     """A user step at 1, an agent step at 2 whose tool call runs from 2.5 to 3, and a final answer at 4."""
 

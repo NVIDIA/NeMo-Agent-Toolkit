@@ -706,9 +706,9 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
 
         Like the spans themselves, each step uses its ``extra.invocation``
         epoch timestamps when it has them and its ISO ``step.timestamp``
-        otherwise. Tool call invocations count too, whether they are on the
-        tool call (``tool_calls[].extra.invocation``) or in the step's
-        ``extra.tool_invocations``.
+        otherwise. Tool call invocations count too, picked by
+        ``_per_toolcall_meta`` as for the tool spans: the tool call's own
+        ``extra.invocation``, else the step's ``extra.tool_invocations`` entry.
         """
         times: list[float] = []
 
@@ -723,10 +723,10 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
                 start = end
             times.extend(ts for ts in (start, end) if ts)
 
-            tool_call_invocations = [(tc.get("extra") or {}).get("invocation") for tc in step.get("tool_calls") or []]
-            for ti in (extra.get("tool_invocations") or []) + tool_call_invocations:
-                if ti:
-                    times.extend(ti[key] for key in ("start_timestamp", "end_timestamp") if ti.get(key))
+            _, tool_invocations, _ = _per_toolcall_meta(step.get("tool_calls") or [], extra)
+            for ti in tool_invocations:
+                if ti is not None:
+                    times.extend(ts for ts in (ti.start_timestamp, ti.end_timestamp) if ts)
 
         if not times:
             return 0.0, 0.0
