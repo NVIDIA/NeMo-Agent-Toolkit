@@ -406,8 +406,10 @@ def _build_data_dependencies(
                     dependencies[node_a].add(node_b)
 
     explicit = {name: c.explicit_dependencies for name, c in constraints.items()}
+    # Without explicit dependencies no chain can include one, so skip the searches.
+    has_explicit = any(explicit.values())
     for reader, writer in sorted(read_before_write):
-        if _waits_through_explicit(reader, writer, dependencies, explicit):
+        if has_explicit and _waits_through_explicit(reader, writer, dependencies, explicit):
             logger.warning(
                 "Explicit dependencies make '%s' wait for '%s', which overwrites a field it reads; "
                 "keeping that order",
