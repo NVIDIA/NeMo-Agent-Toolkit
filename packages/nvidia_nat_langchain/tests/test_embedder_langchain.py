@@ -13,14 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
 
 from nat.embedder.azure_openai_embedder import AzureOpenAIEmbedderModelConfig
+from nat.embedder.huggingface_embedder import HuggingFaceEmbedderConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.embedder.openai_embedder import OpenAIEmbedderModelConfig
 from nat.plugins.langchain.embedder import azure_openai_langchain
+from nat.plugins.langchain.embedder import huggingface_langchain
 from nat.plugins.langchain.embedder import nim_langchain
 from nat.plugins.langchain.embedder import openai_langchain
 
@@ -113,3 +116,33 @@ class TestNIMEmbedderLangChain:
         async with nim_langchain(nim_embedder_config, mock_builder):
             mock_embeddings.assert_called_once()
             assert mock_embeddings.call_args.kwargs["verify_ssl"] is verify_ssl
+
+
+class TestHuggingFaceLangChain:
+
+    @patch("langchain_huggingface.HuggingFaceEmbeddings")
+    async def test_auto_device_is_left_to_sentence_transformers(self, mock_embeddings):
+        config = HuggingFaceEmbedderConfig(model_name="BAAI/bge-small-en-v1.5", do_auto_retry=False)
+
+        async with huggingface_langchain(config, MagicMock()):
+            pass
+
+        assert "device" not in mock_embeddings.call_args.kwargs["model_kwargs"]
+
+    @patch("langchain_huggingface.HuggingFaceEmbeddings")
+    async def test_explicit_device_is_passed(self, mock_embeddings):
+        config = HuggingFaceEmbedderConfig(model_name="BAAI/bge-small-en-v1.5", device="cpu", do_auto_retry=False)
+
+        async with huggingface_langchain(config, MagicMock()):
+            pass
+
+        assert mock_embeddings.call_args.kwargs["model_kwargs"]["device"] == "cpu"
+
+    @patch("langchain_huggingface.HuggingFaceEmbeddings")
+    async def test_max_seq_length_is_set_on_the_model(self, mock_embeddings):
+        config = HuggingFaceEmbedderConfig(model_name="BAAI/bge-small-en-v1.5", max_seq_length=128, do_auto_retry=False)
+
+        async with huggingface_langchain(config, MagicMock()):
+            pass
+
+        assert mock_embeddings.return_value._client.max_seq_length == 128

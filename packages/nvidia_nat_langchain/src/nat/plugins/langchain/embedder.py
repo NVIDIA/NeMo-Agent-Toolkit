@@ -113,9 +113,11 @@ async def huggingface_langchain(embedder_config: HuggingFaceEmbedderConfig, _bui
     else:
         from langchain_huggingface import HuggingFaceEmbeddings
 
-        model_kwargs = {
-            "device": embedder_config.device,
-        }
+        model_kwargs = {}
+
+        # SentenceTransformer rejects "auto" and picks the device itself when none is given
+        if embedder_config.device != "auto":
+            model_kwargs["device"] = embedder_config.device
 
         if embedder_config.trust_remote_code:
             model_kwargs["trust_remote_code"] = True
@@ -130,6 +132,9 @@ async def huggingface_langchain(embedder_config: HuggingFaceEmbedderConfig, _bui
             model_kwargs=model_kwargs,
             encode_kwargs=encode_kwargs,
         )
+
+        if embedder_config.max_seq_length is not None:
+            client._client.max_seq_length = embedder_config.max_seq_length
 
     if isinstance(embedder_config, RetryMixin) and embedder_config.do_auto_retry:
         client = patch_with_retry(client,
