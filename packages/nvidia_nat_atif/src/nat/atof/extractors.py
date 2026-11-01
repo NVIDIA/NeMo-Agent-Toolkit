@@ -80,6 +80,8 @@ from typing import Any
 from typing import Protocol
 from typing import runtime_checkable
 
+from nat.atif.content import normalize_content_parts
+
 # ---------------------------------------------------------------------------
 # Protocol interfaces
 # ---------------------------------------------------------------------------
@@ -373,10 +375,46 @@ class SchemaMapLlmExtractor:
 # non-None hit. ``content.messages`` precedes ``messages`` so a payload
 # carrying both (rare) prefers the nested form, matching the historical
 # precedence of the hand-rolled OpenAI extractor.
+
+
+def _openai_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
+    """Flatten and normalize OpenAI ``messages`` to ATIF-shaped messages.
+
+    Handles both direct ``{"messages": [...]}`` and nested
+    ``{"content": {"messages": [...]}}`` shapes.
+
+    String content is passed through unchanged. Multimodal list content
+    (containing ``text`` parts and ``image_url`` parts) is normalized to
+    ATIF-compliant ContentPart dicts (mapping ``image_url`` parts to ATIF
+    image parts with inferred media type).
+    """
+    if not isinstance(data, dict):
+        return []
+    raw = _resolve_first(data, ("content.messages", "messages"))
+    if not isinstance(raw, list):
+        return []
+
+    out: list[dict[str, Any]] = []
+    for msg in raw:
+        if not isinstance(msg, dict):
+            continue
+        role = msg.get("role")
+        if not isinstance(role, str):
+            continue
+        content = msg.get("content")
+        if isinstance(content, list):
+            normalized = normalize_content_parts(content)
+            out.append({**msg, "role": role, "content": normalized})
+        else:
+            out.append(msg)
+    return out
+
+
 OPENAI_CHAT_COMPLETIONS_V1_MAP = SchemaMap(
     name="openai/chat-completions",
     version="1",
     input_messages_paths=("content.messages", "messages"),
+    normalize_input_messages=_openai_normalize_input_messages,
     output_text_paths=("content", "choices.0.message.content"),
     output_tool_calls_paths=("tool_calls", "choices.0.message.tool_calls"),
     tool_call_id_paths=("id", ),

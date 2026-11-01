@@ -97,6 +97,159 @@ def test_openai_extract_input_messages_empty_returns_empty() -> None:
     assert DEFAULT_LLM_EXTRACTOR.extract_input_messages(None) == []
 
 
+def test_openai_extract_input_messages_multimodal_data_url() -> None:
+    payload = {
+        "messages": [{
+            "role":
+                "user",
+            "content": [
+                {
+                    "type": "text", "text": "What is in this image?"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": (
+                            "data:image/png;base64,"
+                            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+                        ),
+                    },
+                },
+            ],
+        }],
+    }
+    messages = DEFAULT_LLM_EXTRACTOR.extract_input_messages(payload)
+    assert len(messages) == 1
+    assert messages[0]["role"] == "user"
+    assert messages[0]["content"] == [
+        {
+            "type": "text", "text": "What is in this image?"
+        },
+        {
+            "type": "image",
+            "source": {
+                "media_type":
+                    "image/png",
+                "path":
+                    ("data:image/png;base64,"
+                     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="),
+            },
+        },
+    ]
+
+
+def test_openai_extract_input_messages_multimodal_http_url() -> None:
+    payload = {
+        "messages": [{
+            "role":
+                "user",
+            "content": [
+                {
+                    "type": "text", "text": "Inspect this diagram"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "https://example.com/diagram.jpeg?token=secret",
+                        "detail": "high",
+                    },
+                },
+            ],
+        }],
+    }
+    messages = DEFAULT_LLM_EXTRACTOR.extract_input_messages(payload)
+    assert messages[0]["content"] == [
+        {
+            "type": "text", "text": "Inspect this diagram"
+        },
+        {
+            "type": "image",
+            "source": {
+                "media_type": "image/jpeg",
+                "path": "https://example.com/diagram.jpeg?token=secret",
+            },
+        },
+    ]
+
+
+def test_openai_extract_input_messages_multimodal_string_image_url() -> None:
+    payload = {
+        "messages": [{
+            "role": "user",
+            "content": [{
+                "type": "image_url", "image_url": "https://example.com/asset.webp"
+            }, ],
+        }],
+    }
+    messages = DEFAULT_LLM_EXTRACTOR.extract_input_messages(payload)
+    assert messages[0]["content"] == [
+        {
+            "type": "image",
+            "source": {
+                "media_type": "image/webp",
+                "path": "https://example.com/asset.webp",
+            },
+        },
+    ]
+
+
+def test_openai_extract_input_messages_nested_multimodal() -> None:
+    payload = {
+        "content": {
+            "messages": [{
+                "role":
+                    "user",
+                "content": [
+                    {
+                        "type": "text", "text": "Analyze"
+                    },
+                    {
+                        "type": "image_url", "image_url": {
+                            "url": "https://example.com/fig.gif"
+                        }
+                    },
+                ],
+            }],
+        },
+    }
+    messages = DEFAULT_LLM_EXTRACTOR.extract_input_messages(payload)
+    assert messages[0]["content"][1]["source"]["media_type"] == "image/gif"
+
+
+def test_openai_extract_input_messages_unsupported_media_type_raises() -> None:
+    payload = {
+        "messages": [{
+            "role": "user",
+            "content": [{
+                "type": "image_url", "image_url": {
+                    "url": "https://example.com/unsupported.bmp"
+                }
+            }, ],
+        }],
+    }
+    import pytest
+    with pytest.raises(ValueError, match="supported image media_type"):
+        DEFAULT_LLM_EXTRACTOR.extract_input_messages(payload)
+
+
+def test_openai_extract_input_messages_preserves_mixed_list_entries() -> None:
+    payload = {
+        "messages": [{
+            "role": "user",
+            "content": ["lost prompt", {
+                "type": "text", "text": "Valid prompt"
+            }],
+        }],
+    }
+    messages = DEFAULT_LLM_EXTRACTOR.extract_input_messages(payload)
+    assert messages[0]["content"] == [
+        "lost prompt",
+        {
+            "type": "text", "text": "Valid prompt"
+        },
+    ]
+
+
 def test_openai_extract_output_text_direct() -> None:
     assert DEFAULT_LLM_EXTRACTOR.extract_output_text({"content": "hello"}) == "hello"
 
