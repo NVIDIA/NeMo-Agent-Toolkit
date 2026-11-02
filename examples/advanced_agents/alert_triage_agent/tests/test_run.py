@@ -137,13 +137,16 @@ def test_invalid_json(client, invalid_data, expected_error):
                      id='custom_host_port_env_file'),
         pytest.param([], {
             'host': '0.0.0.0', 'port': 5000, 'env_file': '.env', 'config_file': DEFAULT_CONFIG_FILE
-        }, id='default_args'),
+        },
+                     id='default_args'),
         pytest.param(['--port', '3000'], {
             'host': '0.0.0.0', 'port': 3000, 'env_file': '.env', 'config_file': DEFAULT_CONFIG_FILE
-        }, id='partial_override'),
+        },
+                     id='partial_override'),
         pytest.param(['--config_file', '/custom/config.yml'], {
             'host': '0.0.0.0', 'port': 5000, 'env_file': '.env', 'config_file': '/custom/config.yml'
-        }, id='custom_config_file')
+        },
+                     id='custom_config_file')
     ])
 def test_parse_args(args, expected):
     """Test command line argument parsing with different argument combinations."""
