@@ -151,9 +151,9 @@ class TestHuggingFaceLangChain:
     @patch("huggingface_hub.InferenceClient")
     @patch("langchain_huggingface.HuggingFaceEndpointEmbeddings")
     async def test_remote_endpoint_url_configures_inference_clients(self,
-                                                                    mock_endpoint_embeddings,
-                                                                    mock_sync_client,
-                                                                    mock_async_client):
+                                                                    mock_endpoint_embeddings: MagicMock,
+                                                                    mock_sync_client: MagicMock,
+                                                                    mock_async_client: MagicMock):
         config = HuggingFaceEmbedderConfig(
             endpoint_url="http://localhost:8080",
             api_key="test-token",
@@ -188,9 +188,9 @@ class TestHuggingFaceLangChain:
     @patch("huggingface_hub.InferenceClient")
     @patch("langchain_huggingface.HuggingFaceEndpointEmbeddings")
     async def test_remote_endpoint_url_with_explicit_model_name(self,
-                                                                mock_endpoint_embeddings,
-                                                                mock_sync_client,
-                                                                mock_async_client):
+                                                                mock_endpoint_embeddings: MagicMock,
+                                                                mock_sync_client: MagicMock,
+                                                                mock_async_client: MagicMock):
         config = HuggingFaceEmbedderConfig(
             model_name="BAAI/bge-large-en-v1.5",
             endpoint_url="https://api-inference.huggingface.co/models/BAAI/bge-large-en-v1.5",
