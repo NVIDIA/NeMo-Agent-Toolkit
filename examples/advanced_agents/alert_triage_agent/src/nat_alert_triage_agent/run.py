@@ -130,7 +130,8 @@ def start_process(alert: dict, env_file: str) -> None:
             f"[start_process] Launching triage for alert '{alert.get('alert_name')}' on host '{alert.get('host_id')}'")
         with subprocess.Popen(cmd) as process:
             if process.wait() != 0:
-                print(f"[start_process] Triage for alert '{alert.get('alert_name')}' exited with {process.returncode}")
+                print(f"[start_process] Triage for alert '{alert.get('alert_name')}' (id {alert.get('alert_id')}) "
+                      f"on host '{alert.get('host_id')}' exited with {process.returncode}")
     except Exception as e:
         print(f"[start_process] Failed to start process: {e}")
 
@@ -173,9 +174,10 @@ def parse_args():
     parser.add_argument("--host", default="0.0.0.0", help="Host/IP to bind to (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=5000, help="Port to listen on (default: 5000)")
     parser.add_argument("--env_file", default=".env", help="Path to the .env file (default: .env)")
-    parser.add_argument("--config_file",
-                        default="examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml",
-                        help="Workflow config file for each triage run (default: the live-mode config)")
+    parser.add_argument(
+        "--config_file",
+        default="examples/advanced_agents/alert_triage_agent/src/nat_alert_triage_agent/configs/config_live_mode.yml",
+        help="Workflow config file for each triage run (default: the live-mode config)")
     return parser.parse_args()
 
 

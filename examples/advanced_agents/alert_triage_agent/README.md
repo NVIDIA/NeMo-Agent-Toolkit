@@ -333,7 +333,7 @@ To run the agent live, follow these steps:
    Provide a live alert in JSON format and invoke the agent using:
 
    ```bash
-   nat run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml --input {your_alert_in_json_format}
+   nat run --config_file=examples/advanced_agents/alert_triage_agent/src/nat_alert_triage_agent/configs/config_live_mode.yml --input {your_alert_in_json_format}
    ```
 This will trigger a full end-to-end triage process using live data sources.
 
@@ -362,7 +362,7 @@ To use this mode, first ensure you have configured your live environment as desc
    Protocol   : HTTP
    Listening  : 0.0.0.0:5000
    Env File   : examples/advanced_agents/alert_triage_agent/.your_custom_env
-   Config File: examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml
+   Config File: examples/advanced_agents/alert_triage_agent/src/nat_alert_triage_agent/configs/config_live_mode.yml
    Endpoint   : POST /alerts with JSON payload
    ```
 
