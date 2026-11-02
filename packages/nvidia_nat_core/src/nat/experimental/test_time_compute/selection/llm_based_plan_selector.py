@@ -124,5 +124,5 @@ async def register_llm_based_plan_selection(config: LLMBasedPlanSelectionConfig,
     Register the LLMBasedPlanSelector with the provided configuration.
     """
     selector = LLMBasedPlanSelector(config)
-    await selector.build_components(Builder())
+    await selector.build_components(builder)
     yield selector
