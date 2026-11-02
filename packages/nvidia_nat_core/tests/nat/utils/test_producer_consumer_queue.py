@@ -21,6 +21,45 @@ from nat.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
 from nat.utils.producer_consumer_queue import QueueClosed
 
 
+@pytest.mark.parametrize("buffered", [False, True])
+async def test_put_nowait_rejects_closed_queue_without_changing_task_accounting(buffered):
+    queue = AsyncIOProducerConsumerQueue(maxsize=1)
+    if buffered:
+        queue.put_nowait("buffered")
+    await queue.close()
+    with pytest.raises(QueueClosed):
+        queue.put_nowait("late")
+    assert queue.qsize() == int(buffered)
+    if buffered:
+        assert await queue.get() == "buffered"
+        queue.task_done()
+    await asyncio.wait_for(queue.join(), timeout=1)
+
+
+async def test_get_nowait_drains_closed_queue_then_reports_closure():
+    queue = AsyncIOProducerConsumerQueue()
+    queue.put_nowait("buffered")
+    await queue.close()
+    assert queue.get_nowait() == "buffered"
+    queue.task_done()
+    with pytest.raises(QueueClosed):
+        queue.get_nowait()
+    await asyncio.wait_for(queue.join(), timeout=1)
+
+
+async def test_nowait_operations_preserve_open_queue_empty_and_full_errors():
+    queue = AsyncIOProducerConsumerQueue(maxsize=1)
+    with pytest.raises(asyncio.QueueEmpty):
+        queue.get_nowait()
+    queue.put_nowait("buffered")
+    with pytest.raises(asyncio.QueueFull):
+        queue.put_nowait("overflow")
+    assert queue.get_nowait() == "buffered"
+    queue.task_done()
+    await queue.close()
+    await asyncio.wait_for(queue.join(), timeout=1)
+
+
 @pytest.mark.parametrize("producers", [False, True])
 @pytest.mark.parametrize("cancel_first", [False, True])
 async def test_close_wakes_all_waiters(producers, cancel_first):

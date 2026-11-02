@@ -88,6 +88,18 @@ class AsyncIOProducerConsumerQueue(asyncio.Queue, typing.Generic[_T]):
 
         return self.put_nowait(item)
 
+    def put_nowait(self, item):
+        """Add an item immediately, unless the queue has been closed."""
+        if self._is_closed:
+            raise QueueClosed
+        return super().put_nowait(item)
+
+    def get_nowait(self) -> _T:
+        """Drain buffered items immediately, reporting closure once empty."""
+        if self._is_closed and self.empty():
+            raise QueueClosed
+        return super().get_nowait()
+
     async def get(self) -> _T:
         """Remove and return an item from the queue.
 
