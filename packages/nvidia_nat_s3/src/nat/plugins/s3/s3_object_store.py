@@ -165,7 +165,6 @@ class S3ObjectStore(ObjectStore):
                 raise NoSuchKeyError(key=key, additional_message=str(e)) from e
             raise
 
-        results = await self._client.delete_object(Bucket=self.bucket_name, Key=key)
-
-        if results.get('DeleteMarker', False):
-            raise NoSuchKeyError(key=key, additional_message="Object was a delete marker")
+        # The key is known to exist at this point. In a versioning-enabled bucket, deleting it adds a delete marker
+        # and the response reports `DeleteMarker: True`; that is a successful delete, not a missing key.
+        await self._client.delete_object(Bucket=self.bucket_name, Key=key)
