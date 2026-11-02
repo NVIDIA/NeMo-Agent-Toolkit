@@ -362,6 +362,7 @@ To use this mode, first ensure you have configured your live environment as desc
    Protocol   : HTTP
    Listening  : 0.0.0.0:5000
    Env File   : examples/advanced_agents/alert_triage_agent/.your_custom_env
+   Config File: examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml
    Endpoint   : POST /alerts with JSON payload
    ```
 
