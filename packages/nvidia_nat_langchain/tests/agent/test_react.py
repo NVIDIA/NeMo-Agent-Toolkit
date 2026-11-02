@@ -2470,3 +2470,68 @@ async def test_agent_node_raises_on_truncated_output_in_agentic_cycle(mock_react
         with pytest.raises(RuntimeError, match="finish_reason='length'"):
             await mock_react_agent_no_raise.agent_node(state)
         assert "agent_scratchpad" in mock_stream_llm.call_args.args[1]
+
+
+_CUT_NATIVE_CALL = {"name": "Tool A", "args": {"query": "Lang"}, "id": "call_1", "type": "tool_call"}
+
+
+@pytest.mark.parametrize(
+    "response_metadata, expects_finish_reason, reason",
+    [
+        pytest.param(
+            {"model_provider": "openai"}, False, "stream ended without finish_reason", id="openai_stream_ended"),
+        pytest.param({
+            "status": "incomplete", "incomplete_details": {
+                "reason": "max_output_tokens"
+            }
+        },
+                     False,
+                     "status='incomplete'",
+                     id="responses_incomplete"),
+        pytest.param({}, True, "stream ended without finish_reason", id="finish_reason_client_no_metadata"),
+    ],
+)
+async def test_agent_node_raises_on_cut_off_native_tool_call(mock_react_agent_no_raise,
+                                                             monkeypatch,
+                                                             response_metadata,
+                                                             expects_finish_reason,
+                                                             reason):
+    """A native tool call from a reply that did not end normally must not become an AgentAction."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", True)
+    monkeypatch.setattr(mock_react_agent_no_raise, "_expects_finish_reason", expects_finish_reason, raising=False)
+    cut = AIMessage(content="", tool_calls=[_CUT_NATIVE_CALL], response_metadata=response_metadata)
+    state = ReActGraphState(messages=[HumanMessage(content="hi")])
+    with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = cut
+        with pytest.raises(RuntimeError, match="truncated") as exc_info:
+            await mock_react_agent_no_raise.agent_node(state)
+    assert reason in str(exc_info.value)
+    assert state.agent_scratchpad == []
+
+
+@pytest.mark.parametrize(
+    "response_metadata",
+    [
+        pytest.param({
+            "finish_reason": "tool_calls", "model_provider": "openai"
+        }, id="chat_tool_calls"),
+        pytest.param({"status": "completed"}, id="responses_completed"),
+        pytest.param({}, id="no_metadata_mock_model"),
+    ],
+)
+async def test_agent_node_accepts_complete_native_tool_call(mock_react_agent_no_raise, monkeypatch, response_metadata):
+    """Complete native tool calls, and tool calls from models without metadata, still become an AgentAction."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", True)
+    complete = AIMessage(content="", tool_calls=[_CUT_NATIVE_CALL], response_metadata=response_metadata)
+    state = ReActGraphState(messages=[HumanMessage(content="hi")])
+    with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = complete
+        result = await mock_react_agent_no_raise.agent_node(state)
+    assert isinstance(result.agent_scratchpad[-1], AgentAction)
+    assert result.agent_scratchpad[-1].tool == "Tool A"
