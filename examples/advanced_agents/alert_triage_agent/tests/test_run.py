@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -21,6 +22,8 @@ import pytest
 from nat_alert_triage_agent import run
 
 DEFAULT_CONFIG_FILE = 'examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml'
+DEFAULT_CONFIG_PATH = (Path(__file__).resolve().parents[1] / 'configs' / 'config_live_mode.yml').resolve()
+REPO_ROOT = Path(__file__).resolve().parents[4]
 
 
 @pytest.fixture
@@ -150,6 +153,10 @@ def test_parse_args(args, expected):
         assert parsed_args.port == expected['port']
         assert parsed_args.env_file == expected['env_file']
         assert parsed_args.config_file == expected['config_file']
+        if expected['config_file'] == DEFAULT_CONFIG_FILE:
+            default_path = (REPO_ROOT / parsed_args.config_file).resolve()
+            assert default_path == DEFAULT_CONFIG_PATH
+            assert default_path.is_file()
 
 
 @pytest.mark.parametrize('exit_code,expect_message',
