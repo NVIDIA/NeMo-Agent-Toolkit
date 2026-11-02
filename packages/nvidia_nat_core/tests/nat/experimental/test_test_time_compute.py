@@ -13,13 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+
 import pytest
 
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.experimental.test_time_compute.models.selection_config import LLMBasedPlanSelectionConfig
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
 from nat.experimental.test_time_compute.models.ttc_item import TTCItem
+from nat.experimental.test_time_compute.selection.llm_based_plan_selector import LLMBasedPlanSelector
+from nat.experimental.test_time_compute.selection.llm_based_plan_selector import register_llm_based_plan_selection
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -135,3 +143,20 @@ async def test_build_components_and_ainvoke_roundtrip():
     for new, old in zip(new_items, original_items):
         assert new.input == old.input
         assert new.metadata == {"invoked": True}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tests for the llm_based_plan_selection registration
+# ──────────────────────────────────────────────────────────────────────────────
+async def test_llm_based_plan_selection_builds_with_the_given_builder():
+    """The registered strategy resolves its selection LLM through the builder it is given."""
+    config = LLMBasedPlanSelectionConfig(selection_llm="selector_llm")
+    llm = MagicMock()
+    builder = MagicMock(spec=Builder)
+    builder.get_llm = AsyncMock(return_value=llm)
+
+    async with register_llm_based_plan_selection(config, builder) as selector:
+        assert isinstance(selector, LLMBasedPlanSelector)
+        assert selector.llm_bound is llm
+
+    builder.get_llm.assert_awaited_once_with("selector_llm", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
