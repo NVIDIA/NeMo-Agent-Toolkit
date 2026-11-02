@@ -155,6 +155,18 @@ class S3ObjectStore(ObjectStore):
             raise
 
     async def delete_object(self, key: str) -> None:
+        """
+        Delete an ObjectStoreItem from the S3 bucket by key.
+
+        In a versioning-enabled bucket the delete adds a delete marker, which is still a successful delete.
+
+        Args:
+            key (str): The key to delete the item from.
+
+        Raises:
+            RuntimeError: If the S3 client is not connected.
+            NoSuchKeyError: If the item does not exist.
+        """
         if self._client is None:
             raise RuntimeError("Connection not established")
 
