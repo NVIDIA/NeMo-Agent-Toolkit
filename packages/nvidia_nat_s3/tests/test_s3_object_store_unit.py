@@ -19,6 +19,7 @@ from unittest.mock import patch
 import pytest
 from aiobotocore.stub import AioStubber
 
+from nat.data_models.object_store import NoSuchKeyError
 from nat.plugins.s3.s3_object_store import S3ObjectStore
 
 
@@ -97,3 +98,53 @@ async def test_existing_bucket_is_not_created():
             stubber.assert_no_pending_responses()
 
         client_context.__aexit__.assert_awaited_once()
+
+
+async def test_delete_object_in_versioned_bucket_succeeds():
+    """A delete marker in the response means a versioned bucket deleted the existing object."""
+    store = S3ObjectStore(bucket_name="test-bucket",
+                          endpoint_url=None,
+                          access_key="testing",
+                          secret_key="testing",
+                          region="eu-west-1")
+    object_params = {"Bucket": "test-bucket", "Key": "test-key"}
+
+    async with store.session.create_client("s3", **store._client_args) as client:
+        stubber = AioStubber(client)
+        stubber.add_response("head_bucket", {}, {"Bucket": "test-bucket"})
+        stubber.add_response("get_object", {"ContentType": "text/plain"}, object_params)
+        stubber.add_response("delete_object", {"DeleteMarker": True, "VersionId": "version-1"}, object_params)
+        client_context = AsyncMock()
+        client_context.__aenter__.return_value = client
+
+        with stubber, patch.object(store.session, "create_client", return_value=client_context):
+            async with store:
+                await store.delete_object("test-key")
+            stubber.assert_no_pending_responses()
+
+
+async def test_delete_missing_object_raises_no_such_key():
+    """Deleting a key that does not exist still raises NoSuchKeyError without sending a delete."""
+    store = S3ObjectStore(bucket_name="test-bucket",
+                          endpoint_url=None,
+                          access_key="testing",
+                          secret_key="testing",
+                          region="eu-west-1")
+
+    async with store.session.create_client("s3", **store._client_args) as client:
+        stubber = AioStubber(client)
+        stubber.add_response("head_bucket", {}, {"Bucket": "test-bucket"})
+        stubber.add_client_error("get_object",
+                                 service_error_code="NoSuchKey",
+                                 http_status_code=404,
+                                 expected_params={
+                                     "Bucket": "test-bucket", "Key": "test-key"
+                                 })
+        client_context = AsyncMock()
+        client_context.__aenter__.return_value = client
+
+        with stubber, patch.object(store.session, "create_client", return_value=client_context):
+            async with store:
+                with pytest.raises(NoSuchKeyError):
+                    await store.delete_object("test-key")
+            stubber.assert_no_pending_responses()
