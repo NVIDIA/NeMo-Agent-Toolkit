@@ -17,22 +17,19 @@
 
 # Contributing to NVIDIA NeMo Agent Toolkit
 
-Contributions to NeMo Agent Toolkit fall into the following three categories.
+:::{warning}
 
-* To report a bug, request a new feature, or report a problem with
-   documentation, file a [bug](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/new/choose)
-    describing in detail the problem or new feature. The NeMo Agent Toolkit team evaluates
-    and triages bugs and schedules them for a release. If you believe the
-    bug needs priority attention, comment on the bug to notify the
-    team.
-* To propose and implement a new Feature, file a new feature request
-    [issue](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/new/choose). Describe the
-    intended feature and discuss the design and implementation with the team and
-    community. Once the team agrees that the plan is good, go ahead and
-    implement it, using the [code contributions](#code-contributions) guide below.
-* To implement a feature or bug-fix for an existing outstanding issue,
-    follow the [code contributions](#code-contributions) guide below. If you
-    need more context on a particular issue, ask in a comment.
+⚠️ **Deprecation Notice:** NVIDIA NeMo Agent Toolkit has been deprecated as of October 2026 and will reach end of life (EOL) by end of year **2026**. Depending on your needs, migrate to: [NeMo Relay](<https://github.com/NVIDIA/NeMo-Relay>) for observability, middleware, and governance. [NeMo Helix](<https://github.com/NVIDIA-NeMo/nemo-helix>) for a unified CLI with evaluation, optimization, and hardening capabilities. [NeMo Fabric](<https://github.com/NVIDIA/NeMo-Fabric>) for a consistent interface to run agent harnesses and custom agents.
+We recommend completing your migration before the EOL date.
+
+:::
+
+NeMo Agent Toolkit accepts only bug reports and bug-fix contributions during the remaining maintenance period.
+
+* **Issues:** Only bugs should be filed. Feature requests will be closed. To report a bug, file a [bug report](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/new/choose) describing the problem in detail. The team evaluates and triages bugs. If you believe a bug needs priority attention, comment on the issue to notify the team.
+* **Pull requests:** Only bug fixes may be opened as pull requests. Follow the [code contributions](#code-contributions) guide below to fix an existing bug. If you need more context on an issue, ask in a comment.
+
+Newly opened issues and pull requests receive an automated comment with the deprecation notice and the applicable contribution policy.
 
 As contributors and maintainers of NeMo Agent Toolkit, you are expected to abide by the NeMo Agent Toolkit code of conduct. More information can be found at: [Contributor Code of Conduct](./code-of-conduct.md).
 
@@ -130,10 +127,10 @@ Due to maintaining separate packages, some of which conflict with one another, t
 
 ## Code contributions
 
-Please ensure that all new contributions adhere to the latest version notes within the [Migration Guide](../migration-guide.md).
+Only bug-fix pull requests are accepted. Please ensure that all contributions adhere to the latest version notes within the [Migration Guide](../migration-guide.md).
 
 ### Example Workflow Contributions
-We welcome contributions of new example workflows in this repository and in the [NeMo-Agent-Toolkit-Examples](https://github.com/NVIDIA/NeMo-Agent-Toolkit-Examples) repository. The difference is that examples in this repository are maintained, tested, and updated with each release of the NeMo Agent Toolkit. These examples have high quality standards and demonstrate a capability of the NeMo Agent Toolkit, while examples in the NeMo-Agent-Toolkit-Examples repository are community contributed and are tied to a specific version of the NeMo Agent Toolkit, and do not need to demonstrate a specific capability of the library.
+Only bug fixes to existing example workflows are accepted in this repository. New example workflows and feature additions are no longer accepted.
 
 ### Your first issue
 
