@@ -176,7 +176,7 @@ def parse_args():
     parser.add_argument("--env_file", default=".env", help="Path to the .env file (default: .env)")
     parser.add_argument(
         "--config_file",
-        default="examples/advanced_agents/alert_triage_agent/src/nat_alert_triage_agent/configs/config_live_mode.yml",
+        default="examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml",
         help="Workflow config file for each triage run (default: the live-mode config)")
     return parser.parse_args()
 

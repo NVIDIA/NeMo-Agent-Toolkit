@@ -20,8 +20,7 @@ import pytest
 
 from nat_alert_triage_agent import run
 
-DEFAULT_CONFIG_FILE = ('examples/advanced_agents/alert_triage_agent/src/'
-                       'nat_alert_triage_agent/configs/config_live_mode.yml')
+DEFAULT_CONFIG_FILE = 'examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml'
 
 
 @pytest.fixture
