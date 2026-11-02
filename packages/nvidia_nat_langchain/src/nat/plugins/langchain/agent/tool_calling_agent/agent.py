@@ -98,6 +98,53 @@ def extract_token_usage(response: BaseMessage) -> UsageMetadata | None:
     return None
 
 
+# Chat model classes whose complete replies always carry ``finish_reason`` (OpenAI wire format). ``ChatNVIDIA``
+# (NIM) does not set ``model_provider``; when its stream ends early the accumulated metadata is empty.
+_FINISH_REASON_CLIENTS: frozenset[str] = frozenset({"ChatOpenAI", "AzureChatOpenAI", "ChatNVIDIA"})
+
+
+def _reports_finish_reason(llm: object) -> bool:
+    """Return True if ``llm`` (or the model inside a configurable/bound wrapper) always reports ``finish_reason``."""
+    for _ in range(8):  # unwrap RunnableConfigurableFields (.default) and RunnableBinding (.bound)
+        if llm is None:
+            return False
+        if any(cls.__name__ in _FINISH_REASON_CLIENTS for cls in type(llm).__mro__):
+            return True
+        llm = getattr(llm, "default", None) or getattr(llm, "bound", None)
+    return False
+
+
+def _truncation_reason(response: AIMessage, expects_finish_reason: bool = False) -> str | None:
+    """Return why ``response`` is truncated, or ``None`` if it ended normally.
+
+    A reply is truncated when:
+
+    * Chat Completions reports ``finish_reason="length"``;
+    * the Responses API reports ``status="incomplete"`` (for example ``max_output_tokens``), which never sets
+      ``finish_reason``;
+    * an OpenAI-wire reply (``model_provider="openai"``: Chat Completions or Responses, including
+      OpenAI-compatible servers) carries tool calls but neither ``finish_reason`` nor ``status``: the stream ended
+      before the server sent its final event, so the tool call arguments may be cut off. LangChain still builds a
+      tool call from such arguments with a partial JSON parser, so they cannot be trusted. Other providers report
+      the end of a reply under other keys, so this check is limited to the OpenAI wire formats: replies marked
+      ``model_provider="openai"``, or any reply when ``expects_finish_reason`` is True (the agent's model is
+      ``ChatOpenAI``, ``AzureChatOpenAI`` or ``ChatNVIDIA``).
+    """
+    metadata: dict = getattr(response, "response_metadata", None) or {}
+    finish_reason: str | None = metadata.get("finish_reason")
+    status: str | None = metadata.get("status")
+    if finish_reason == LLMFinishReason.LENGTH:
+        return "finish_reason='length'"
+    if status == "incomplete":
+        details = metadata.get("incomplete_details") or {}
+        reason = details.get("reason") if isinstance(details, dict) else None
+        return f"status='incomplete', reason={reason!r}"
+    if (response.tool_calls and finish_reason is None and status is None
+            and (expects_finish_reason or metadata.get("model_provider") == "openai")):
+        return "stream ended without finish_reason"
+    return None
+
+
 class ToolCallAgentGraph(DualNodeAgent):
     """Configurable LangGraph Tool Calling Agent. A Tool Calling Agent requires an LLM which supports tool calling.
     A tool Calling Agent utilizes the tool input parameters to select the optimal tool.  Supports handling tool errors.
@@ -123,6 +170,7 @@ class ToolCallAgentGraph(DualNodeAgent):
                          callbacks=callbacks,
                          detailed_logs=detailed_logs,
                          log_response_max_chars=log_response_max_chars)
+        self._expects_finish_reason: bool = _reports_finish_reason(llm)
 
         # some LLMs support tool calling
         # these models accept the tool's input schema and decide when to use a tool based on the input's relevance
@@ -226,16 +274,18 @@ class ToolCallAgentGraph(DualNodeAgent):
         """
         metadata: dict = getattr(response, "response_metadata", {})
         finish_reason: str | None = metadata.get("finish_reason")
+        truncation: str | None = _truncation_reason(response, self._expects_finish_reason)
 
-        # Output truncated — can cause GraphRecursionError loop if unhandled
-        if finish_reason == LLMFinishReason.LENGTH:
+        # Output truncated — can cause GraphRecursionError loop if unhandled, and a cut-off
+        # tool call must not be executed with partially parsed arguments.
+        if truncation is not None:
             if self._max_truncation_retries > 0:
                 response = await self._retry_on_truncation(response, state)
             else:
                 usage: UsageMetadata = self._get_token_usage(response)
                 truncated_content: str = str(response.content)[:500] if response.content else "<empty>"
                 model_name: str = metadata.get("model_name", "unknown")
-                msg: str = (f"LLM output truncated (finish_reason='length'). "
+                msg: str = (f"LLM output truncated ({truncation}). "
                             f"model={model_name}, "
                             f"output_tokens={usage['output_tokens']}, "
                             f"input_tokens={usage['input_tokens']}, "
@@ -319,10 +369,8 @@ class ToolCallAgentGraph(DualNodeAgent):
             self.agent = self.agent.first | self.bound_llm  # type: ignore[union-attr]
 
             response = await self._invoke_llm(state)
-            metadata: dict = getattr(response, "response_metadata", {})
-            finish_reason: str | None = metadata.get("finish_reason")
 
-            if finish_reason != LLMFinishReason.LENGTH:
+            if _truncation_reason(response, self._expects_finish_reason) is None:
                 logger.info(
                     "%s Truncation retry succeeded on attempt %d with max_tokens=%d",
                     AGENT_LOG_PREFIX,

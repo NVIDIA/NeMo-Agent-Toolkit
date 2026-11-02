@@ -545,6 +545,132 @@ async def test_validate_truncation_raises_when_disabled(error_mock_llm, mock_too
     assert "partial output here" in msg
 
 
+_CUT_TOOL_CALL = {
+    "name": "T", "args": {
+        "path": "report.txt", "content": "line 01\nline"
+    }, "id": "call_1", "type": "tool_call"
+}
+
+
+@pytest.mark.parametrize(
+    "response_metadata, reason",
+    [
+        pytest.param({
+            "model_provider": "openai", "model_name": "test-model"
+        },
+                     "stream ended without finish_reason",
+                     id="chat_stream_ended_early"),
+        pytest.param(
+            {
+                "model_name": "test-model",
+                "status": "incomplete",
+                "incomplete_details": {
+                    "reason": "max_output_tokens"
+                }
+            },
+            "status='incomplete', reason='max_output_tokens'",
+            id="responses_incomplete"),
+    ],
+)
+async def test_validate_cut_off_tool_call_raises(error_mock_llm, mock_tool, response_metadata, reason):
+    """A tool call from a reply that did not end normally must not reach the tool node."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    response = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata=response_metadata)
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with pytest.raises(RuntimeError, match="truncated") as exc_info:
+        await agent._validate_llm_response(response, state)
+
+    assert reason in str(exc_info.value)
+
+
+async def test_validate_cut_off_tool_call_delegates_to_retry(error_mock_llm, mock_tool):
+    """A Responses-API incomplete reply uses the same truncation retry path as finish_reason=length."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=1, truncation_scaling_fn=lambda c: c + 512)
+    truncated = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata={"status": "incomplete"})
+    good = AIMessage(content="complete", response_metadata={"status": "completed"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_retry_on_truncation", new_callable=AsyncMock, return_value=good) as mock_retry:
+        result = await agent._validate_llm_response(truncated, state)
+
+    mock_retry.assert_awaited_once()
+    assert result.content == "complete"
+
+
+@pytest.mark.parametrize(
+    "response_metadata",
+    [
+        pytest.param({"finish_reason": "tool_calls"}, id="chat_tool_calls"),
+        pytest.param({"status": "completed"}, id="responses_completed"),
+    ],
+)
+async def test_validate_complete_tool_call_passes(error_mock_llm, mock_tool, response_metadata):
+    """Tool calls from a reply that ended normally are returned unchanged."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    response = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata=response_metadata)
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    result = await agent._validate_llm_response(response, state)
+
+    assert result.tool_calls == response.tool_calls
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        pytest.param(AIMessage(content="answer", response_metadata={"model_provider": "openai"}),
+                     id="openai_text_without_finish_reason"),
+        pytest.param(AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata={}),
+                     id="tool_call_without_provider_metadata"),
+        pytest.param(AIMessage(content="",
+                               tool_calls=[_CUT_TOOL_CALL],
+                               response_metadata={
+                                   "model_provider": "anthropic", "stop_reason": "tool_use"
+                               }),
+                     id="other_provider_tool_call"),
+    ],
+)
+async def test_validate_reply_without_openai_terminator_passes(error_mock_llm, mock_tool, response):
+    """Only OpenAI-wire tool calls are checked for a missing terminator; text replies and other providers pass."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    result = await agent._validate_llm_response(response, state)
+
+    assert result is response
+
+
+async def test_validate_cut_off_tool_call_raises_without_metadata_for_finish_reason_client(error_mock_llm, mock_tool):
+    """ChatNVIDIA (NIM) leaves response_metadata empty when its stream ends early; the agent knows its model
+    always reports finish_reason, so a tool call without one is treated as cut off."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    agent._expects_finish_reason = True
+    response = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata={})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with pytest.raises(RuntimeError, match="stream ended without finish_reason"):
+        await agent._validate_llm_response(response, state)
+
+
+def test_reports_finish_reason_unwraps_client(error_mock_llm):
+    """The model class is found through configurable (``default``) and bound (``bound``) wrappers."""
+    from nat.plugins.langchain.agent.tool_calling_agent.agent import _reports_finish_reason
+
+    class ChatNVIDIA:  # stand-in with the same class name as langchain_nvidia_ai_endpoints.ChatNVIDIA
+        pass
+
+    class Wrapper:
+
+        def __init__(self, default=None, bound=None):
+            self.default = default
+            self.bound = bound
+
+    assert _reports_finish_reason(Wrapper(default=Wrapper(bound=ChatNVIDIA())))
+    assert not _reports_finish_reason(error_mock_llm)
+    assert not _reports_finish_reason(None)
+
+
 async def test_validate_truncation_delegates_to_retry(error_mock_llm, mock_tool):
     """finish_reason=length with max_truncation_retries>0 delegates to _retry_on_truncation."""
     agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=2, truncation_scaling_fn=lambda c: c + 512)
