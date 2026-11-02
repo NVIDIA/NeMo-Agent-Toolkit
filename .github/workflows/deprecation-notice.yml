@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Deprecation notice
+
+on:
+  issues:
+    types: [opened]
+  # Use the base branch workflow and token so fork PRs can receive a comment.
+  # Never check out or execute code from the pull request in this workflow.
+  pull_request_target:
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  deprecation-notice:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Comment with deprecation notice and contribution policy
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            const marker = '<!-- nat-deprecation-notice -->';
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...context.repo,
+              issue_number,
+              per_page: 100,
+            });
+            if (comments.some(comment => comment.user?.type === 'Bot' && comment.body?.includes(marker))) {
+              core.info('Deprecation notice already posted.');
+              return;
+            }
+
+            const notice = [
+              "> [!WARNING]",
+              "> ⚠️ **Deprecation Notice:** NVIDIA NeMo Agent Toolkit has been deprecated as of October 2026 and will reach end of life (EOL) by end of year **2026**. Depending on your needs, migrate to: [NeMo Relay](<https://github.com/NVIDIA/NeMo-Relay>) for observability, middleware, and governance. [NeMo Helix](<https://github.com/NVIDIA-NeMo/nemo-helix>) for a unified CLI with evaluation, optimization, and hardening capabilities. [NeMo Fabric](<https://github.com/NVIDIA/NeMo-Fabric>) for a consistent interface to run agent harnesses and custom agents.",
+              "> We recommend completing your migration before the EOL date.",
+            ].join('\n');
+            const policy = context.eventName === 'issues'
+              ? '**Issue policy:** Only bugs should be filed. Feature requests will be closed.'
+              : '**Pull request policy:** Only bug fixes may be opened as pull requests.';
+
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number,
+              body: `${marker}\n${notice}\n\n${policy}`,
+            });
