@@ -110,7 +110,7 @@ async def huggingface_langchain(embedder_config: HuggingFaceEmbedderConfig, _bui
 
         token = get_secret_value(embedder_config.api_key)
         client = HuggingFaceEndpointEmbeddings(
-            model=embedder_config.model_name or "sentence-transformers/all-MiniLM-L6-v2",
+            model=embedder_config.model_name,
             huggingfacehub_api_token=token,
         )
         client.client = InferenceClient(model=embedder_config.endpoint_url,

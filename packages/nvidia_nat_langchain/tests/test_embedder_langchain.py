@@ -168,7 +168,7 @@ class TestHuggingFaceLangChain:
             assert client is mock_instance
 
         mock_endpoint_embeddings.assert_called_once_with(
-            model="sentence-transformers/all-MiniLM-L6-v2",
+            model=None,
             huggingfacehub_api_token="test-token",
         )
         mock_sync_client.assert_called_once_with(
