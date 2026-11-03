@@ -165,6 +165,7 @@ class ToolCallAgentGraph(DualNodeAgent):
         max_empty_response_retries: int = 0,
         max_iterations: int | None = None,
     ):
+        """Bind ``tools`` to ``llm`` and assemble the agent node, tool node and edges."""
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
