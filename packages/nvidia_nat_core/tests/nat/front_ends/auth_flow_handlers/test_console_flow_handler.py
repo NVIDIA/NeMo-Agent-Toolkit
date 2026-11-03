@@ -19,10 +19,10 @@ import socket
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
-import httpx
+import httpx2
 import pytest
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from httpx import ASGITransport
+from httpx2 import ASGITransport
 from mock_oauth2_server import MockOAuth2Server
 
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
@@ -124,7 +124,7 @@ async def test_oauth2_flow_in_process(monkeypatch, mock_server):
     async def _drive(url: str):
         opened.append(url)
         # 1) hit mock auth server (ASGI)
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
             transport=ASGITransport(app=mock_server._app),
             base_url="http://testserver",
             follow_redirects=False,
@@ -139,7 +139,7 @@ async def test_oauth2_flow_in_process(monkeypatch, mock_server):
         while handler.redirect_app is None:
             await asyncio.sleep(0.01)
 
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
                 transport=ASGITransport(app=handler.redirect_app),
                 base_url="http://localhost",
                 follow_redirects=True,
@@ -226,7 +226,7 @@ async def test_console_oauth2_concurrent_flows_use_isolated_clients(monkeypatch,
     drive_task_labels: dict[asyncio.Task, str] = {}
 
     async def _drive(url: str, *, label: str) -> None:
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
                 transport=ASGITransport(app=mock_server._app),
                 base_url="http://testserver",
                 follow_redirects=False,
@@ -244,7 +244,7 @@ async def test_console_oauth2_concurrent_flows_use_isolated_clients(monkeypatch,
         while handler.redirect_app is None:
             await asyncio.sleep(0.01)
 
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
                 transport=ASGITransport(app=handler.redirect_app),
                 base_url="http://localhost",
                 follow_redirects=True,

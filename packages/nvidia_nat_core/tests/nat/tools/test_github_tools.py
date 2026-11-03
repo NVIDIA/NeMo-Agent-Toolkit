@@ -143,6 +143,34 @@ async def test_get_file_requests_the_raw_url_for_any_ref(ref: str, monkeypatch: 
     assert str(requests[0].url) == f"https://raw.githubusercontent.com/owner/repo/{ref}/docs/README.md"
 
 
+@pytest.mark.parametrize(("link_suffix", "expected"),
+                         [
+                             ("?plain=1#L2", "```second line\n```"),
+                             ("?plain=1#L2-L3", "```second line\nthird line\n```"),
+                             ("?plain=1", "```first line\nsecond line\nthird line\n\n```"),
+                             ("#L0", "Error: Line 0 is out of range for the file main/docs/README.md"),
+                             ("#L3-L2", "Error: Line range 3-2 is reversed"),
+                         ])
+async def test_get_file_handles_line_references(link_suffix: str, expected: str, monkeypatch: pytest.MonkeyPatch):
+    from nat.tool.github_tools import GithubFilesGroupConfig
+    from nat.tool.github_tools import github_files_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text="first line\nsecond line\nthird line\n")
+
+    real_async_client = httpx.AsyncClient
+
+    def async_client_with_mock_transport(*args: Any, **kwargs: Any) -> httpx.AsyncClient:
+        return real_async_client(*args, transport=httpx.MockTransport(handler), **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", async_client_with_mock_transport)
+
+    async with github_files_tool(GithubFilesGroupConfig(), MagicMock()) as function_info:
+        result = await function_info.single_fn(f"https://github.com/owner/repo/blob/main/docs/README.md{link_suffix}")
+
+    assert result == expected
+
+
 @pytest.mark.parametrize("since", ["yesterday", "2026-10-01", "2026-10-01 00:00:00", "2026-1-1T0:0:0Z", 20261001])
 def test_get_issue_rejects_since_values_that_are_not_iso_8601_timestamps(since: str | int):
     from nat.tool.github_tools import GithubGetIssueModel

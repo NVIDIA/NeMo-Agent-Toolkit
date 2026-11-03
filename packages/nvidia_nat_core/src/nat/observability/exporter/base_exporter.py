@@ -377,6 +377,17 @@ class BaseExporter(Exporter):
         except Exception as e:
             logger.exception("%s: Error while waiting for tasks: %s", self.name, e)
 
+    async def close(self):
+        """Release what this exporter shares with its per-run copies, whether or not it was started itself.
+
+        Per-run copies share the processors of this instance, so this is where a batcher's remaining items are
+        exported for the last time. Safe to call more than once.
+        """
+        if self._running:
+            await self.stop()
+        else:
+            await self._cleanup()
+
     @override
     async def stop(self):
         """Stop the exporter immediately without waiting for background tasks.

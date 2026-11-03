@@ -69,7 +69,8 @@ class FileExportMixin(ResourceConflictMixin):
         self._max_files = max_files
         self._cleanup_on_init = cleanup_on_init
         self._lock = asyncio.Lock()
-        self._first_write = True
+        # An object, not a bool: each run writes through a shallow copy, and all copies must see the first write.
+        self._first_write_done = asyncio.Event()
 
         # Initialize file paths first, then check for conflicts via ResourceConflictMixin
         self._setup_file_paths()
@@ -230,9 +231,8 @@ class FileExportMixin(ResourceConflictMixin):
                     await self._roll_file()
 
                 # Determine file mode
-                if self._first_write and self._mode == FileMode.OVERWRITE:
+                if not self._first_write_done.is_set() and self._mode == FileMode.OVERWRITE:
                     file_mode = "w"
-                    self._first_write = False
                 else:
                     file_mode = "a"
 
@@ -246,6 +246,9 @@ class FileExportMixin(ResourceConflictMixin):
                         # Handle single string
                         await f.write(item)
                         await f.write("\n")
+
+                if file_mode == "w":
+                    self._first_write_done.set()
 
         except Exception as e:
             logger.exception("Error exporting event: %s", e)

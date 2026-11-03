@@ -17,7 +17,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-import httpx
+import httpx2
 from authlib.common.errors import AuthlibBaseError as OAuthError
 from fastapi import FastAPI
 from fastapi import Request
@@ -113,7 +113,7 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
                                 headers={
                                     "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
                                 })
-        except httpx.HTTPError as e:
+        except httpx2.HTTPError as e:
             logger.error("Network error during token fetch for state %s: %s", state, e)
             if not flow_state.future.done():
                 flow_state.future.set_exception(RuntimeError(f"Network error during token fetch: {e}"))

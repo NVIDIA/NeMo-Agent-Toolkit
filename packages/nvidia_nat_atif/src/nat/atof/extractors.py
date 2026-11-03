@@ -80,6 +80,8 @@ from typing import Any
 from typing import Protocol
 from typing import runtime_checkable
 
+from nat.atif.content import normalize_content_parts
+
 # ---------------------------------------------------------------------------
 # Protocol interfaces
 # ---------------------------------------------------------------------------
@@ -373,10 +375,46 @@ class SchemaMapLlmExtractor:
 # non-None hit. ``content.messages`` precedes ``messages`` so a payload
 # carrying both (rare) prefers the nested form, matching the historical
 # precedence of the hand-rolled OpenAI extractor.
+
+
+def _openai_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
+    """Flatten and normalize OpenAI ``messages`` to ATIF-shaped messages.
+
+    Handles both direct ``{"messages": [...]}`` and nested
+    ``{"content": {"messages": [...]}}`` shapes.
+
+    String content is passed through unchanged. Multimodal list content
+    (containing ``text`` parts and ``image_url`` parts) is normalized to
+    ATIF-compliant ContentPart dicts (mapping ``image_url`` parts to ATIF
+    image parts with inferred media type).
+    """
+    if not isinstance(data, dict):
+        return []
+    raw = _resolve_first(data, ("content.messages", "messages"))
+    if not isinstance(raw, list):
+        return []
+
+    out: list[dict[str, Any]] = []
+    for msg in raw:
+        if not isinstance(msg, dict):
+            continue
+        role = msg.get("role")
+        if not isinstance(role, str):
+            continue
+        content = msg.get("content")
+        if isinstance(content, list):
+            normalized = normalize_content_parts(content)
+            out.append({**msg, "role": role, "content": normalized})
+        else:
+            out.append(msg)
+    return out
+
+
 OPENAI_CHAT_COMPLETIONS_V1_MAP = SchemaMap(
     name="openai/chat-completions",
     version="1",
     input_messages_paths=("content.messages", "messages"),
+    normalize_input_messages=_openai_normalize_input_messages,
     output_text_paths=("content", "choices.0.message.content"),
     output_tool_calls_paths=("tool_calls", "choices.0.message.tool_calls"),
     tool_call_id_paths=("id", ),
@@ -448,6 +486,10 @@ def _anthropic_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
       message dropped (tool I/O is captured by tool scope events, not
       LLM input messages — see module-level note above).
 
+    The top-level ``system`` field (a string or a list of text blocks) is
+    emitted first as a ``system`` message, since Anthropic carries the
+    system prompt outside ``messages``.
+
     Non-dict messages and non-string roles are skipped.
     """
     if not isinstance(data, dict):
@@ -457,6 +499,12 @@ def _anthropic_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
         return []
 
     out: list[dict[str, Any]] = []
+    system = data.get("system")
+    if isinstance(system, list):
+        system = _anthropic_join_text_blocks(system)
+    if isinstance(system, str) and system:
+        out.append({"role": "system", "content": system})
+
     for msg in messages:
         if not isinstance(msg, dict):
             continue
@@ -470,19 +518,18 @@ def _anthropic_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
             continue
 
         if isinstance(content, list):
-            text_parts: list[str] = []
-            for block in content:
-                if not isinstance(block, dict):
-                    continue
-                if block.get("type") == "text":
-                    text = block.get("text", "")
-                    if isinstance(text, str) and text:
-                        text_parts.append(text)
-            if text_parts:
-                out.append({"role": role, "content": "".join(text_parts)})
+            text = _anthropic_join_text_blocks(content)
+            if text:
+                out.append({"role": role, "content": text})
             # Pure tool_use / tool_result messages: skip — captured elsewhere.
 
     return out
+
+
+def _anthropic_join_text_blocks(blocks: list[Any]) -> str:
+    """Concatenate the ``text`` of every ``{"type": "text"}`` block."""
+    return "".join(block["text"] for block in blocks
+                   if isinstance(block, dict) and block.get("type") == "text" and isinstance(block.get("text"), str))
 
 
 def _anthropic_normalize_output_message(data: Any, ) -> tuple[str, list[dict[str, Any]]]:
@@ -572,15 +619,22 @@ def register_anthropic_messages_v1() -> None:
 
 
 def _gemini_walk_parts_for_text(parts: Any) -> str:
+    """Extract and concatenate text from Gemini parts, strings, or text dicts."""
+    if isinstance(parts, str):
+        return parts
+    if isinstance(parts, dict):
+        text = parts.get("text")
+        return text if isinstance(text, str) else ""
     if not isinstance(parts, list):
         return ""
     chunks: list[str] = []
     for part in parts:
-        if not isinstance(part, dict):
-            continue
-        text = part.get("text")
-        if isinstance(text, str):
-            chunks.append(text)
+        if isinstance(part, str):
+            chunks.append(part)
+        elif isinstance(part, dict):
+            text = part.get("text")
+            if isinstance(text, str):
+                chunks.append(text)
     return "".join(chunks)
 
 
@@ -617,7 +671,9 @@ def _gemini_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
     Role aliasing: Gemini uses ``"model"`` for assistant turns —
     normalised to ``"assistant"`` so downstream consumers see a uniform
     vocabulary. Tool call/response parts are dropped from input
-    extraction (captured by tool scope events).
+    extraction (captured by tool scope events). The top-level
+    ``systemInstruction`` is emitted first as a ``system`` message. A turn
+    without a ``role`` is a user turn, as Gemini allows for single-turn requests.
     """
     if not isinstance(data, dict):
         return []
@@ -626,10 +682,21 @@ def _gemini_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
         return []
 
     out: list[dict[str, Any]] = []
+    system = ""
+    for key in ("systemInstruction", "system_instruction"):
+        candidate = data.get(key)
+        if isinstance(candidate, dict):
+            candidate = candidate.get("parts", candidate)
+        system = _gemini_walk_parts_for_text(candidate)
+        if system:
+            break
+    if system:
+        out.append({"role": "system", "content": system})
+
     for turn in contents:
         if not isinstance(turn, dict):
             continue
-        role = turn.get("role")
+        role = turn.get("role") or "user"
         if role == "model":
             role = "assistant"
         if not isinstance(role, str):

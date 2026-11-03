@@ -440,7 +440,8 @@ class TestPatchLLMBasedOnConfig:
         config = TestConfigWithRetry(model_name="gpt-4",
                                      num_retries=3,
                                      retry_on_status_codes=[500, 502],
-                                     retry_on_errors=["timeout"])
+                                     retry_on_errors=["timeout"],
+                                     retry_max_wait=10.0)
 
         mock_patched_client = MagicMock()
         mock_patch_retry.return_value = mock_patched_client
@@ -450,6 +451,7 @@ class TestPatchLLMBasedOnConfig:
         # Verify retry patching was called
         mock_patch_retry.assert_called_once_with(mock_client,
                                                  retries=3,
+                                                 max_wait=10.0,
                                                  retry_codes=[500, 502],
                                                  retry_on_messages=["timeout"])
         assert result == mock_patched_client
@@ -531,6 +533,7 @@ class TestPatchLLMBasedOnConfig:
         # Verify retry patching was called first on the original client
         mock_patch_retry.assert_called_once_with(mock_client,
                                                  retries=3,
+                                                 max_wait=60.0,
                                                  retry_codes=[500, 502],
                                                  retry_on_messages=["timeout"])
 

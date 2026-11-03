@@ -38,6 +38,7 @@ from langgraph.errors import GraphRecursionError
 from pydantic import BaseModel
 from pydantic import Field
 
+from nat.llm.utils.constants import LLMFinishReason
 from nat.plugins.langchain.agent.base import AGENT_CALL_LOG_MESSAGE
 from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
 from nat.plugins.langchain.agent.base import INPUT_SCHEMA_MESSAGE
@@ -309,6 +310,10 @@ class ReActAgentGraph(DualNodeAgent):
                         logger.debug("%s The agent's scratchpad (with tool result) was:\n%s",
                                      AGENT_LOG_PREFIX,
                                      agent_scratchpad)
+                # A truncated reply would be parsed as a complete answer or tool input (#2518)
+                if getattr(output_message, "response_metadata", {}).get("finish_reason") == LLMFinishReason.LENGTH:
+                    raise RuntimeError("LLM output truncated (finish_reason='length'). "
+                                       f"Truncated output: {str(output_message.content)[:500]!r}")
                 try:
                     # check if the agent has the final answer yet
                     logger.debug("%s Successfully obtained agent response. Parsing agent's response", AGENT_LOG_PREFIX)

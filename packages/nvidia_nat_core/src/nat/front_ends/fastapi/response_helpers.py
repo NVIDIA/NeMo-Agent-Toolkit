@@ -33,6 +33,12 @@ from nat.runtime.session import Session
 from nat.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
 
 
+def _error_event(e: Exception) -> str:
+    """A workflow failure as an SSE `error` event, as the interactive streaming routes send it."""
+    error = Error(code=ErrorTypes.WORKFLOW_ERROR, message=str(e), details=type(e).__name__)
+    return f"event: error\ndata: {error.model_dump_json()}\n\n"
+
+
 async def generate_streaming_response_as_str(payload: typing.Any,
                                              *,
                                              session: Session,
@@ -64,7 +70,7 @@ async def generate_streaming_response_as_str(payload: typing.Any,
             yield ChatResponseChunk.create_streaming_chunk("", finish_reason="stop").get_stream_data()
             yield "data: [DONE]\n\n"
     except Exception as e:
-        yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=str(e), details=type(e).__name__).model_dump_json()
+        yield _error_event(e)
 
 
 async def generate_streaming_response(payload: typing.Any,
@@ -209,7 +215,7 @@ async def generate_streaming_response_full_as_str(payload: typing.Any,
                 raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                                  str(type(item)))
     except Exception as e:
-        yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=str(e), details=type(e).__name__).model_dump_json()
+        yield _error_event(e)
 
 
 async def generate_streaming_response_atif(payload: typing.Any,
@@ -280,4 +286,4 @@ async def generate_streaming_response_atif_as_str(payload: typing.Any,
             else:
                 raise ValueError("Unexpected item type in ATIF stream: " + str(type(item)))
     except Exception as e:
-        yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=str(e), details=type(e).__name__).model_dump_json()
+        yield _error_event(e)

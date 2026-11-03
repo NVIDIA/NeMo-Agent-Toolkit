@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
+
 import pytest
 from pydantic import TypeAdapter
 from pydantic import ValidationError
@@ -23,6 +25,15 @@ from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import Message
 from nat.data_models.api_server import OAuthMode
 from nat.data_models.api_server import OAuthModePreferencePayload
+from nat.data_models.api_server import WebSocketMessageStatus
+from nat.data_models.api_server import WebSocketMessageType
+from nat.data_models.api_server import WebSocketObservabilityTraceMessage
+from nat.data_models.api_server import WebSocketSystemInteractionMessage
+from nat.data_models.api_server import WebSocketSystemIntermediateStepMessage
+from nat.data_models.api_server import WebSocketSystemResponseTokenMessage
+from nat.data_models.api_server import WebSocketUserInteractionResponseMessage
+from nat.data_models.api_server import WebSocketUserMessage
+from nat.data_models.api_server import WorkflowSchemaType
 from nat.utils.type_converter import GlobalTypeConverter
 
 
@@ -77,3 +88,38 @@ def test_chat_request_content_parts_convert_to_text(model, content, expected):
     request = model(messages=[{"role": "user", "content": content}])
 
     assert GlobalTypeConverter.convert(request, to_type=str) == expected
+
+
+def _websocket_messages() -> list:
+    """Build one of each WebSocket message model without passing a timestamp."""
+    user_content = {"messages": [{"role": "user", "content": [_text("hi")]}]}
+    return [
+        WebSocketUserMessage(type=WebSocketMessageType.USER_MESSAGE,
+                             schema_type=WorkflowSchemaType.CHAT,
+                             content=user_content),
+        WebSocketUserInteractionResponseMessage(type=WebSocketMessageType.USER_INTERACTION_MESSAGE,
+                                                content=user_content),
+        WebSocketSystemIntermediateStepMessage(type=WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE,
+                                               content={
+                                                   "name": "step", "payload": "data"
+                                               },
+                                               status=WebSocketMessageStatus.IN_PROGRESS),
+        WebSocketSystemResponseTokenMessage(type=WebSocketMessageType.RESPONSE_MESSAGE,
+                                            content={"text": "hello"},
+                                            status=WebSocketMessageStatus.IN_PROGRESS),
+        WebSocketSystemInteractionMessage(content={
+            "input_type": "text", "text": "Continue?"
+        },
+                                          status=WebSocketMessageStatus.IN_PROGRESS),
+        WebSocketObservabilityTraceMessage(content={"observability_trace_id": "trace-1"}),
+    ]
+
+
+def test_websocket_message_timestamps_default_to_creation_time():
+    # The timestamp default used to be computed once at import, so every message built
+    # without an explicit timestamp carried the time the module was loaded.
+    before = datetime.datetime.now(datetime.UTC)
+
+    for message in _websocket_messages():
+        timestamp = datetime.datetime.fromisoformat(message.timestamp)
+        assert timestamp >= before, type(message).__name__

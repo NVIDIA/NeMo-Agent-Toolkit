@@ -40,3 +40,27 @@ class EvalOutput(BaseModel):
 
     average_score: Any = Field(description="Average score across all evaluated items.")
     eval_output_items: list[SerializeAsAny[EvalOutputItem]] = Field(description="List of evaluation results.")
+
+    @property
+    def num_items(self) -> int:
+        """Number of evaluated items."""
+        return len(self.eval_output_items)
+
+    @property
+    def num_errors(self) -> int:
+        """Number of items whose evaluation failed (`error` is set).
+
+        Failed items are scored 0.0 and still count towards `average_score`, so a non-zero value means the
+        average includes items that were never actually judged.
+        """
+        return count_evaluator_errors(self)
+
+
+def count_evaluator_errors(eval_output: Any) -> int:
+    """Count the items of an evaluator output whose `error` is set.
+
+    Works on `EvalOutput` and on any object exposing `eval_output_items` with item-level `error` attributes;
+    anything else counts as having no errors.
+    """
+    items = getattr(eval_output, "eval_output_items", None) or []
+    return sum(1 for item in items if getattr(item, "error", None) is not None)

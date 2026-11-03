@@ -167,7 +167,7 @@ class _MockAsyncOAuth2Client:
 def patch_httpx_and_oauth(monkeypatch, jwks_from_private):
 
     monkeypatch.setattr(
-        "nat.authentication.credential_validator.bearer_token_validator.httpx.AsyncClient",
+        "nat.authentication.credential_validator.bearer_token_validator.httpx2.AsyncClient",
         _MockAsyncHTTPClient,
         raising=True,
     )

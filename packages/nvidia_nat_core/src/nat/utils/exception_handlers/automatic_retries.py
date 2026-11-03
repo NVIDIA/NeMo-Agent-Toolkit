@@ -21,10 +21,13 @@ wrapped callable always executes at least once.
 import asyncio
 import contextvars
 import copy
+import datetime
+import email.utils
 import functools
 import gc
 import inspect
 import logging
+import math
 import re
 import threading
 import time
@@ -230,11 +233,74 @@ class _YieldTracker:
             close()
 
 
+def _response_headers(exc: BaseException) -> dict[str, str] | None:
+    """The HTTP response headers an exception carries, keyed in lower case."""
+    response = getattr(exc, "response", None)
+    if isinstance(response, dict):
+        # botocore ClientError (e.g. Bedrock throttling)
+        metadata = response.get("ResponseMetadata")
+        headers = metadata.get("HTTPHeaders") if isinstance(metadata, dict) else None
+    else:
+        # httpx / requests responses, as on LiteLLM and OpenAI errors
+        headers = getattr(response, "headers", None)
+    if headers is None or not hasattr(headers, "items"):
+        return None
+    try:
+        return {str(key).lower(): str(value) for key, value in headers.items()}
+    except Exception:
+        return None
+
+
+def _retry_after_seconds(exc: BaseException) -> float | None:
+    """
+    The wait a provider asked for in `retry-after-ms` or `Retry-After` (seconds or an HTTP date), or None.
+    """
+    headers = _response_headers(exc)
+    if not headers:
+        return None
+    value = headers.get("retry-after-ms")
+    if value is not None:
+        try:
+            wait_ms = float(value)
+            if math.isfinite(wait_ms) and wait_ms >= 0:
+                return wait_ms / 1000
+        except ValueError:
+            pass
+        # an unusable retry-after-ms falls back to Retry-After
+    value = headers.get("retry-after")
+    if value is None:
+        return None
+    try:
+        wait = float(value)
+        return wait if math.isfinite(wait) and wait >= 0 else None
+    except ValueError:
+        pass
+    try:
+        when = email.utils.parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=datetime.UTC)
+    return max(0.0, (when - datetime.datetime.now(datetime.UTC)).total_seconds())
+
+
+def _wait_before_retry(exc: BaseException, delay: float, max_wait: float) -> float:
+    """Wait for the provider's Retry-After when it sent one (at most `max_wait`), else the backoff delay."""
+    try:
+        retry_after = _retry_after_seconds(exc)
+    except Exception:
+        # reading the header must never cost the retry itself
+        logger.debug("Could not read Retry-After from %s", type(exc).__name__, exc_info=True)
+        retry_after = None
+    return min(retry_after, max_wait) if retry_after is not None else delay
+
+
 def _retry_decorator(
     *,
     retries: int = 3,
     base_delay: float = 0.25,
     backoff: float = 2.0,
+    max_wait: float = 60.0,
     retry_on: Exc = (Exception, ),
     retry_codes: Sequence[CodePattern] | None = None,
     retry_on_messages: Sequence[str] | None = None,
@@ -359,7 +425,7 @@ def _retry_decorator(
                                            msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
                             raise
 
-                        await asyncio.sleep(delay)
+                        await asyncio.sleep(_wait_before_retry(exc, delay, max_wait))
                         delay *= backoff
 
                 if last_exception:
@@ -412,7 +478,7 @@ def _retry_decorator(
                                        msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
                         raise
 
-                    await asyncio.sleep(delay)
+                    await asyncio.sleep(_wait_before_retry(exc, delay, max_wait))
                     delay *= backoff
                 else:
                     # A completed attempt that produced no chunks after a prior
@@ -459,7 +525,7 @@ def _retry_decorator(
                                            msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
                             raise
 
-                        time.sleep(delay)
+                        time.sleep(_wait_before_retry(exc, delay, max_wait))
                         delay *= backoff
                     else:
                         # Same empty-retry guard as the async-generator path: do not
@@ -500,7 +566,7 @@ def _retry_decorator(
                                            msg_substrings=retry_on_messages) or attempt == total_attempts - 1:
                             raise
 
-                        time.sleep(delay)
+                        time.sleep(_wait_before_retry(exc, delay, max_wait))
                         delay *= backoff
 
                 if last_exception:
@@ -541,6 +607,7 @@ def patch_with_retry(
     retries: int = 3,
     base_delay: float = 0.25,
     backoff: float = 2.0,
+    max_wait: float = 60.0,
     retry_on: Exc = (Exception, ),
     retry_codes: Sequence[CodePattern] | None = None,
     retry_on_messages: Sequence[str] | None = None,
@@ -584,6 +651,7 @@ def patch_with_retry(
         retries=retries,
         base_delay=base_delay,
         backoff=backoff,
+        max_wait=max_wait,
         retry_on=retry_on,
         retry_codes=retry_codes,
         retry_on_messages=retry_on_messages,

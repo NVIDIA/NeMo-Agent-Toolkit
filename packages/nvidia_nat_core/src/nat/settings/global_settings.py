@@ -265,8 +265,12 @@ class Settings(HashableBaseModel):
         override_settings_dict = yaml_load(config_file)
 
         settings_dict = self.model_dump()
-        updated_settings = {**override_settings_dict, **settings_dict}
-        self._update_settings(config_obj=updated_settings)
+        updated_settings = {**settings_dict, **override_settings_dict}
+        # The override file applies to this command only, so validate and apply it
+        # to this instance without writing it to the persisted settings. Saving here
+        # would let a temporary --config_file replace the user's saved channels for
+        # every later command.
+        self._revalidate(config_dict=updated_settings)
 
         return self
 

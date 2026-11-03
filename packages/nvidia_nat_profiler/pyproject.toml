@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -58,6 +58,8 @@ dependencies = [
   "nvidia-nat-core == {version}",
   "nvidia-nat-eval == {version}",
   "matplotlib~=3.9",
+  # Pillow <13 has image-decoder memory-safety vulnerabilities.
+  "pillow>=13.0.0,<14.0.0",
   "prefixspan~=0.5.2",
   "scikit-learn~=1.6",
   "tqdm~=4.67",
@@ -69,7 +71,7 @@ test = [
 ]
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 

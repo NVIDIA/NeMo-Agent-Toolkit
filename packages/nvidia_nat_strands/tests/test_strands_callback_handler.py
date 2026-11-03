@@ -319,6 +319,22 @@ class TestStrandsProfilerHandlerEventExtraction:
         expected = {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}
         assert result == expected
 
+    def test_extract_usage_from_event_cache_read_tokens(self, handler):
+        """Bedrock prompt caching reports cacheReadInputTokens; it maps to cached_tokens."""
+        event = {
+            "metadata": {
+                "usage": {
+                    "inputTokens": 10, "outputTokens": 20, "totalTokens": 130, "cacheReadInputTokens": 100
+                }
+            }
+        }
+
+        # pylint: disable=protected-access
+        result = handler._extract_usage_from_event(event)
+
+        expected = {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 130, "cached_tokens": 100}
+        assert result == expected
+
     def test_extract_usage_from_event_missing_metadata(self, handler):
         """Test _extract_usage_from_event without metadata."""
         event = {"other_field": "value"}

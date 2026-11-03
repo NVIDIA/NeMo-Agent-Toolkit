@@ -63,6 +63,7 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
         # yielded part of a stream would send the same chunks twice
         patch_with_retry(client.llm_client,
                          retries=llm_config.num_retries,
+                         max_wait=llm_config.retry_max_wait,
                          retry_codes=llm_config.retry_on_status_codes,
                          retry_on_messages=llm_config.retry_on_errors)
 

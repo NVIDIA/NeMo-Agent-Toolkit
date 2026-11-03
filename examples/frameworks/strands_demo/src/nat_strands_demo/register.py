@@ -69,7 +69,8 @@ async def strands_demo(config: StrandsDemoConfig, builder: Builder) -> AsyncGene
     """
 
     from strands import Agent  # type: ignore
-    from strands_tools import http_request
+
+    from .http_request import http_request
 
     llm = await builder.get_llm(
         config.llm_name,
@@ -80,7 +81,7 @@ async def strands_demo(config: StrandsDemoConfig, builder: Builder) -> AsyncGene
         wrapper_type=LLMFrameworkEnum.STRANDS,
     )
 
-    # Combine NAT tools with Strands http_request tool
+    # Combine NAT tools with the native Strands documentation tool
     all_tools = [*nat_tools, http_request]
 
     async def _run(inputs: str) -> str:

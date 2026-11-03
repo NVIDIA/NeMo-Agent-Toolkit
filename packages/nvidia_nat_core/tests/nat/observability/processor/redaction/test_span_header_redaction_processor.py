@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 from typing import Any
 from unittest.mock import Mock
 from unittest.mock import patch
@@ -510,3 +511,46 @@ class TestSpanHeaderRedactionProcessorTypeIntrospection:
         assert processor.validate_input_type(test_span)
         assert not processor.validate_input_type("not_a_span")
         assert processor.validate_output_type(test_span)
+
+
+@pytest.mark.parametrize("decision", [False, True])
+@pytest.mark.parametrize("result_type", ["future", "task"])
+async def test_redaction_awaits_callback_results(sample_span, mock_context_with_headers, decision, result_type):
+    """Deferred decisions must finish before span attributes are changed or cached."""
+    completed = []
+    calls = []
+    pending = []
+    completion_handles = []
+
+    async def decide(data):
+        await asyncio.sleep(0)
+        completed.append(data)
+        return decision
+
+    def callback(data):
+        calls.append(data)
+        if result_type == "task":
+            result = asyncio.create_task(decide(data))
+        else:
+            result = asyncio.get_running_loop().create_future()
+            completion_handles.append(asyncio.get_running_loop().call_soon(result.set_result, decision))
+        pending.append(result)
+        return result
+
+    processor = SpanHeaderRedactionProcessor(headers=["authorization"], attributes=["user_id"], callback=callback)
+    try:
+        with patch('nat.observability.processor.redaction.span_header_redaction_processor.Context.get',
+                   return_value=mock_context_with_headers):
+            result = await processor.process(sample_span)
+            assert result.attributes["user_id"] == ("[REDACTED]" if decision else "user123")
+            assert pending[0].done()
+            if result_type == "task":
+                assert completed == [{"authorization": "Bearer token123"}]
+            await processor.process(sample_span)
+            assert calls == [{"authorization": "Bearer token123"}]
+    finally:
+        for handle in completion_handles:
+            handle.cancel()
+        for result in pending:
+            result.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)

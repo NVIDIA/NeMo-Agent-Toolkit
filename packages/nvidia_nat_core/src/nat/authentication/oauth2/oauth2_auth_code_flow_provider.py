@@ -19,7 +19,7 @@ from collections.abc import Callable
 from datetime import UTC
 from datetime import datetime
 
-import httpx
+import httpx2
 from authlib.integrations.httpx_client import OAuth2Client as AuthlibOAuth2Client
 from pydantic import SecretStr
 
@@ -73,9 +73,9 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
             )
 
             await self._token_storage.store(user_id, new_auth_result)
-        except httpx.HTTPStatusError:
+        except httpx2.HTTPStatusError:
             return None
-        except httpx.RequestError:
+        except httpx2.RequestError:
             return None
         except Exception:
             # On any other failure, we'll fall back to the full auth flow.

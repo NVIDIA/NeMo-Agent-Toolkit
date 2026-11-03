@@ -21,7 +21,7 @@ from typing import Any
 async def ainvoke_any(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
     """Execute any type of callable and return the result.
 
-    Handles synchronous functions, asynchronous functions, generators,
+    Handles synchronous functions, awaitable results, generators,
     and async generators uniformly, returning the final result value.
 
     A generator is consumed to exhaustion. Its return value is the result where it
@@ -37,8 +37,8 @@ async def ainvoke_any(func: Callable[..., Any], *args: Any, **kwargs: Any) -> An
     result_value = func(*args, **kwargs)
 
     # Handle different return types
-    if inspect.iscoroutine(result_value):
-        # Async function - await the coroutine
+    if inspect.isawaitable(result_value):
+        # Await callbacks returning coroutines, tasks, futures or other awaitables
         return await result_value
 
     if inspect.isgenerator(result_value):

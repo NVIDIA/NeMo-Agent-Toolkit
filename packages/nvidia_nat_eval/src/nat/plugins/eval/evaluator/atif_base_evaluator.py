@@ -50,7 +50,13 @@ class AtifBaseEvaluator(ABC):
                 try:
                     return await self.evaluate_atif_item(sample)
                 except Exception as e:
-                    return EvalOutputItem(id=sample.item_id, score=0.0, reasoning={"error": f"Evaluator error: {e}"})
+                    # Keep score=0.0 for the average, but set `error` so the failure is distinguishable
+                    # from a genuinely low score.
+                    error_message = f"Evaluator error: {e}"
+                    return EvalOutputItem(id=sample.item_id,
+                                          score=0.0,
+                                          reasoning={"error": error_message},
+                                          error=error_message)
 
         output_items = await asyncio.gather(*[wrapped(sample) for sample in atif_samples])
         numeric_scores = [item.score for item in output_items if isinstance(item.score, int | float)]

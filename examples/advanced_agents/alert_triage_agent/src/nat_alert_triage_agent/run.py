@@ -103,6 +103,7 @@ def apply_hsts(response):
 processed_alerts = []
 # will be set in __main__
 ENV_FILE = None
+CONFIG_FILE = None
 
 
 def start_process(alert: dict, env_file: str) -> None:
@@ -120,7 +121,7 @@ def start_process(alert: dict, env_file: str) -> None:
         "run",
         "nat",
         "run",
-        "--config_file=examples/advanced_agents/alert_triage_agent/src/nat_alert_triage_agent/configs/config.yml",
+        f"--config_file={CONFIG_FILE}",
         "--input",
         payload,
     ]
@@ -128,7 +129,9 @@ def start_process(alert: dict, env_file: str) -> None:
         print(
             f"[start_process] Launching triage for alert '{alert.get('alert_name')}' on host '{alert.get('host_id')}'")
         with subprocess.Popen(cmd) as process:
-            process.wait()
+            if process.wait() != 0:
+                print(f"[start_process] Triage for alert '{alert.get('alert_name')}' (id {alert.get('alert_id')}) "
+                      f"on host '{alert.get('host_id')}' exited with {process.returncode}")
     except Exception as e:
         print(f"[start_process] Failed to start process: {e}")
 
@@ -171,18 +174,23 @@ def parse_args():
     parser.add_argument("--host", default="0.0.0.0", help="Host/IP to bind to (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=5000, help="Port to listen on (default: 5000)")
     parser.add_argument("--env_file", default=".env", help="Path to the .env file (default: .env)")
+    parser.add_argument("--config_file",
+                        default="examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml",
+                        help="Workflow config file for each triage run (default: the live-mode config)")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
-    # set the global ENV_FILE for use in the Flask handler
+    # set the global ENV_FILE and CONFIG_FILE for use in the Flask handler
     ENV_FILE = args.env_file
+    CONFIG_FILE = args.config_file
 
     print("---------------[ Alert Triage HTTP Server ]-----------------")
     print("Protocol   : HTTP")
     print(f"Listening  : {args.host}:{args.port}")
     print(f"Env File   : {args.env_file}")
+    print(f"Config File: {args.config_file}")
     print("Endpoint   : POST /alerts with JSON payload\n")
 
     # Start the Flask development server

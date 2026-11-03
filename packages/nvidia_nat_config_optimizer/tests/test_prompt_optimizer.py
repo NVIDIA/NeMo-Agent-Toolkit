@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import logging
 import typing
 from pathlib import Path
 from types import SimpleNamespace
@@ -24,11 +25,13 @@ from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.config import Config
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerMetric
 from nat.data_models.optimizer import OptimizerRunConfig
+from nat.plugins.config_optimizer import eval_runtime_loader
 from nat.plugins.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
 from nat.plugins.config_optimizer.prompts.ga_prompt_optimizer import optimize_prompts
 
@@ -227,6 +230,118 @@ async def test_optimize_prompts_happy_path_without_recombine(tmp_path: Path):
     assert (optimizer_config.output_path / "optimized_prompts.json").exists()
     assert (optimizer_config.output_path / "ga_history_prompts.csv").exists()
     assert (optimizer_config.output_path / "optimized_prompts_gen1.json").exists()
+
+
+async def test_optimize_prompts_warns_when_an_evaluator_failed_on_items(tmp_path: Path, caplog):
+    """A judge failure scores 0.0 and lowers the candidate's metric; the run must say so instead of failing silently."""
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
+
+    await _register_prompt_optimizer_functions()
+    base_cfg = Config()
+    optimizer_config = _make_optimizer_config(tmp_path)
+    optimizer_config.prompt.prompt_recombination_function = None
+    optimizer_config.reps_per_param_set = 1
+    optimizer_config.prompt.ga_population_size = 2
+
+    full_space = {"p": SearchSpace(is_prompt=True, prompt="X", prompt_purpose="Y")}
+    run_cfg = _make_run_config(base_cfg)
+    base_cfg.functions = {"init_fn": InitFunctionConfig()}
+    base_cfg.workflow = InitFunctionConfig()
+
+    items = [EvalOutputItem(id=i, score=1.0, reasoning={}) for i in range(3)]
+    items.append(EvalOutputItem(id=3, score=0.0, reasoning={"error": "judge timed out"}, error="judge timed out"))
+    accuracy = EvalOutput(average_score=0.75, eval_output_items=items)
+
+    class _EvalRun:
+
+        def __init__(self, config: EvaluationRunConfig):
+            self.config = config
+
+        async def run_and_evaluate(self) -> SimpleNamespace:
+            return SimpleNamespace(evaluation_results=[("Accuracy", accuracy)])
+
+    with patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run",
+               return_value=_EvalRun), \
+         patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.apply_suggestions",
+               side_effect=lambda cfg, prompts: Config()), \
+         caplog.at_level(logging.WARNING, logger=eval_runtime_loader.__name__):
+
+        await optimize_prompts(base_cfg=base_cfg,
+                               full_space=full_space,
+                               optimizer_config=optimizer_config,
+                               opt_run_config=run_cfg)
+
+    warnings = [r.getMessage() for r in caplog.records if r.name == eval_runtime_loader.__name__]
+    # one generation of two candidates (trials 0-1) plus the two final offspring (trials 2-3), each warned once
+    assert sorted(warnings) == [
+        f"prompt candidate trial {trial}: evaluator 'Accuracy' failed on 1/4 items; "
+        "the failed items are counted in its average_score" for trial in range(4)
+    ]
+
+
+async def test_optimize_prompts_study_end_counts_the_final_population(tmp_path: Path):
+    """The final offspring are evaluated and numbered too, so `total_trials` must cover them and a final
+    offspring can be reported as the best trial."""
+    from nat.profiler.parameter_optimization.optimizer_callbacks import OptimizerCallbackManager
+    from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+
+    await _register_prompt_optimizer_functions()
+    base_cfg = Config()
+    optimizer_config = _make_optimizer_config(tmp_path)
+    optimizer_config.prompt.prompt_recombination_function = None
+    optimizer_config.reps_per_param_set = 1
+    optimizer_config.prompt.ga_population_size = 2
+    optimizer_config.prompt.ga_generations = 1
+
+    full_space = {"p": SearchSpace(is_prompt=True, prompt="X", prompt_purpose="Y")}
+    run_cfg = _make_run_config(base_cfg)
+    base_cfg.functions = {"init_fn": InitFunctionConfig()}
+    base_cfg.workflow = InitFunctionConfig()
+
+    # Later evaluations score higher, so the best individual comes from the final population.
+    scores = iter([0.1, 0.2, 0.8, 0.9])
+
+    class _EvalRun:
+
+        def __init__(self, config: EvaluationRunConfig):
+            self.config = config
+
+        async def run_and_evaluate(self) -> SimpleNamespace:
+            return SimpleNamespace(evaluation_results=[("Accuracy", SimpleNamespace(average_score=next(scores)))])
+
+    study_ends: list[tuple[TrialResult, int]] = []
+
+    class _Callback:
+
+        def pre_create_experiment(self, dataset_items: list) -> None:
+            pass
+
+        def on_trial_end(self, result: TrialResult) -> None:
+            pass
+
+        def on_study_end(self, *, best_trial: TrialResult, total_trials: int) -> None:
+            study_ends.append((best_trial, total_trials))
+
+    callback_manager = OptimizerCallbackManager()
+    callback_manager.register(_Callback())
+
+    with patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run",
+               return_value=_EvalRun), \
+         patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.apply_suggestions",
+               side_effect=lambda cfg, prompts: Config()):
+
+        await optimize_prompts(base_cfg=base_cfg,
+                               full_space=full_space,
+                               optimizer_config=optimizer_config,
+                               opt_run_config=run_cfg,
+                               callback_manager=callback_manager)
+
+    [(best_trial, total_trials)] = study_ends
+    # one generation of two plus the final population of two: trials 0-3
+    assert total_trials == 4
+    assert best_trial.trial_number in (2, 3)
+    assert best_trial.trial_number < total_trials
 
 
 async def test_optimize_prompts_with_oracle_feedback(tmp_path: Path):

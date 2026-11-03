@@ -23,7 +23,7 @@ both final responses and structured agent-step context in a consistent format.
 
 ## Scope
 
-- **ATIF built-in evaluators** (RAGAS + trajectory lane)
+- **ATIF built-in evaluators** (configurable RAG + trajectory lane)
 - **ATIF custom evaluator** (`atif_cosine_similarity`)
 
 ## Prerequisites

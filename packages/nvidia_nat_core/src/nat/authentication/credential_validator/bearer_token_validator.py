@@ -20,7 +20,7 @@ from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlparse
 
-import httpx
+import httpx2
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from authlib.jose import JsonWebKey
 from authlib.jose import KeySet
@@ -30,7 +30,7 @@ from authlib.jose.errors import JoseError
 from nat.data_models.authentication import TokenValidationResult
 
 logger = logging.getLogger(__name__)
-_TOKEN_VALIDATION_ERRORS = (ValueError, TypeError, KeyError, httpx.HTTPError, JoseError)
+_TOKEN_VALIDATION_ERRORS = (ValueError, TypeError, KeyError, httpx2.HTTPError, JoseError)
 
 
 class BearerTokenValidator:
@@ -165,7 +165,7 @@ class BearerTokenValidator:
 
     @staticmethod
     def _coerce_introspection_response(response: Any) -> dict[str, Any]:
-        """Convert Authlib/httpx introspection responses to a claim dictionary."""
+        """Convert Authlib/httpx2 introspection responses to a claim dictionary."""
         if isinstance(response, Mapping):
             return dict(response)
 
@@ -262,7 +262,7 @@ class BearerTokenValidator:
             oauth_client_kwargs = {
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
-                "timeout": httpx.Timeout(self.timeout),
+                "timeout": httpx2.Timeout(self.timeout),
             }
             if self.client_auth_method:
                 oauth_client_kwargs["token_endpoint_auth_method"] = self.client_auth_method
@@ -331,7 +331,7 @@ class BearerTokenValidator:
 
                 return result
 
-        except (ValueError, TypeError, KeyError, httpx.HTTPError) as e:
+        except (ValueError, TypeError, KeyError, httpx2.HTTPError) as e:
             raise ValueError(f"Introspection failed: {e}") from e
 
     async def _resolve_introspection_endpoint_for_validation(self) -> str | None:
@@ -412,7 +412,7 @@ class BearerTokenValidator:
                 del self._oidc_config_cache[discovery_url]
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx2.AsyncClient(timeout=self.timeout) as client:
                 response = await client.get(discovery_url)
                 response.raise_for_status()
                 config = response.json()
@@ -431,7 +431,7 @@ class BearerTokenValidator:
                 self._oidc_config_cache[discovery_url] = {"config": config, "cache_expires_at": cache_expires_at}
                 return config
 
-        except httpx.HTTPError as e:
+        except httpx2.HTTPError as e:
             raise ValueError(f"OIDC discovery failed: {e}") from e
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid OIDC discovery response: {e}") from e
@@ -459,7 +459,7 @@ class BearerTokenValidator:
                 # Remove expired entry
                 del self._jwks_cache[jwks_uri]
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx2.AsyncClient(timeout=self.timeout) as client:
             response = await client.get(jwks_uri)
             response.raise_for_status()
             jwks_data = response.json()

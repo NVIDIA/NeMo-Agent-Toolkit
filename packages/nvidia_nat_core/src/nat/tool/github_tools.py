@@ -483,7 +483,7 @@ async def github_files_tool(config: GithubFilesGroupConfig, _builder: Builder):
             - https://github.com/org/repo/blob/main/README.md#L409-L417 -> Returns lines 409-417 of the README.md file
             """
 
-            pattern = r"https://github\.com/(?P<repo_path>[^/]*/[^/]*)/blob/(?P<file_path>[^?#]*)(?:#L(?P<start>\d+)(?:-L(?P<end>\d+))?)?"
+            pattern = r"https://github\.com/(?P<repo_path>[^/]*/[^/]*)/blob/(?P<file_path>[^?#]*)(?:\?[^#]*)?(?:#L(?P<start>\d+)(?:-L(?P<end>\d+))?)?"
             match = re.match(pattern, url_text)
             if not match:
                 return ("Invalid github url. Please provide a valid github url. "
@@ -507,7 +507,7 @@ async def github_files_tool(config: GithubFilesGroupConfig, _builder: Builder):
 
             lines = response.text.splitlines()
 
-            if file_metadata.start_line > len(lines):
+            if file_metadata.start_line < 1 or file_metadata.start_line > len(lines):
                 return f"Error: Line {file_metadata.start_line} is out of range for the file {file_metadata.file_path}"
 
             if file_metadata.end_line is None:
@@ -515,6 +515,9 @@ async def github_files_tool(config: GithubFilesGroupConfig, _builder: Builder):
 
             if file_metadata.end_line > len(lines):
                 return f"Error: Line {file_metadata.end_line} is out of range for the file {file_metadata.file_path}"
+
+            if file_metadata.end_line < file_metadata.start_line:
+                return f"Error: Line range {file_metadata.start_line}-{file_metadata.end_line} is reversed"
 
             selected_lines = lines[file_metadata.start_line - 1:file_metadata.end_line]
             response_text = "\n".join(selected_lines)
