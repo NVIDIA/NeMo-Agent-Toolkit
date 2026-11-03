@@ -430,6 +430,19 @@ class ToolCallAgentGraph(DualNodeAgent):
             )
             response = await self._invoke_llm(state)
 
+            # A retry can come back cut off instead of empty: a Responses reply with
+            # ``status="incomplete"`` carries neither text nor tool calls, so it would be
+            # discarded here as another empty reply and the truncation path would never see it.
+            # Hand it back so the caller can route it to the truncation handling.
+            if _truncation_reason(response, self._expects_finish_reason) is not None:
+                logger.warning(
+                    "%s Empty response retry returned a truncated reply on attempt %d; "
+                    "handing it to the truncation path",
+                    AGENT_LOG_PREFIX,
+                    attempt,
+                )
+                return response
+
             has_content: bool = bool(response.content and str(response.content).strip())
             if response.tool_calls or has_content:
                 logger.info(
