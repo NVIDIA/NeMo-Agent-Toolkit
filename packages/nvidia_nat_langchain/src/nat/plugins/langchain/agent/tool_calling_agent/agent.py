@@ -390,6 +390,12 @@ class ToolCallAgentGraph(DualNodeAgent):
 
             response = await self._invoke_llm(state)
 
+            # ``_invoke_llm`` returns the accumulated stream. Convert it before it leaves this
+            # method: ``agent_node`` converted the first reply, so a retry that reaches state
+            # unconverted loses the OpenAI wire ``tool_calls`` that later model turns read.
+            if isinstance(response, AIMessageChunk):
+                response = _chunk_to_message(response)
+
             if _truncation_reason(response, self._expects_finish_reason) is None:
                 logger.info(
                     "%s Truncation retry succeeded on attempt %d with max_tokens=%d",

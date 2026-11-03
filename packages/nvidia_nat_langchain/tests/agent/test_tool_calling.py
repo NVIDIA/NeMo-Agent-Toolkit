@@ -846,6 +846,32 @@ async def test_retry_on_truncation_succeeds(error_mock_llm, mock_tool):
     assert agent._truncation_retries_remaining == 2
 
 
+async def test_retry_on_truncation_converts_a_streamed_retry(error_mock_llm, mock_tool):
+    """The retry's streamed chunk is converted before it leaves this method.
+
+    ``agent_node`` converts the first reply, but the retry runs afterwards. An unconverted
+    chunk reaches state without ``additional_kwargs["tool_calls"]``, the OpenAI wire form
+    that later model turns read.
+    """
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=2, truncation_scaling_fn=lambda c: c + 512)
+    first_response = AIMessage(content="partial",
+                               response_metadata={"finish_reason": "length"},
+                               usage_metadata={
+                                   "output_tokens": 100, "input_tokens": 50, "total_tokens": 150
+                               })
+    retry_chunk = AIMessageChunk(content="",
+                                 tool_calls=[_CUT_TOOL_CALL],
+                                 response_metadata={"finish_reason": "tool_calls"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=retry_chunk):
+        result = await agent._retry_on_truncation(first_response, state)
+
+    assert not isinstance(result, AIMessageChunk)
+    assert result.tool_calls
+    assert result.additional_kwargs["tool_calls"][0]["id"] == "call_1"
+
+
 async def test_retry_on_truncation_exhausted(error_mock_llm, mock_tool):
     """All truncation retries exhausted raises RuntimeError."""
     agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=2, truncation_scaling_fn=lambda c: c + 512)
