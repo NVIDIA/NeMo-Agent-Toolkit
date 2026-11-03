@@ -14,11 +14,16 @@
 # limitations under the License.
 
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from nat_alert_triage_agent import run
+
+DEFAULT_CONFIG_FILE = 'examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml'
+DEFAULT_CONFIG_PATH = (Path(__file__).resolve().parents[1] / 'configs' / 'config_live_mode.yml').resolve()
+REPO_ROOT = Path(__file__).resolve().parents[4]
 
 
 @pytest.fixture
@@ -34,6 +39,7 @@ def reset_global_state():
     """Reset global state before each test."""
     run.processed_alerts = []
     run.ENV_FILE = '.placeholder_env_file_value'
+    run.CONFIG_FILE = '.placeholder_config_file_value'
 
 
 def test_hsts_header(client):
@@ -126,15 +132,21 @@ def test_invalid_json(client, invalid_data, expected_error):
     'args,expected',
     [
         pytest.param(['--host', '127.0.0.1', '--port', '8080', '--env_file', '/custom/.env'], {
-            'host': '127.0.0.1', 'port': 8080, 'env_file': '/custom/.env'
+            'host': '127.0.0.1', 'port': 8080, 'env_file': '/custom/.env', 'config_file': DEFAULT_CONFIG_FILE
         },
                      id='custom_host_port_env_file'),
         pytest.param([], {
-            'host': '0.0.0.0', 'port': 5000, 'env_file': '.env'
-        }, id='default_args'),
+            'host': '0.0.0.0', 'port': 5000, 'env_file': '.env', 'config_file': DEFAULT_CONFIG_FILE
+        },
+                     id='default_args'),
         pytest.param(['--port', '3000'], {
-            'host': '0.0.0.0', 'port': 3000, 'env_file': '.env'
-        }, id='partial_override')
+            'host': '0.0.0.0', 'port': 3000, 'env_file': '.env', 'config_file': DEFAULT_CONFIG_FILE
+        },
+                     id='partial_override'),
+        pytest.param(['--config_file', '/custom/config.yml'], {
+            'host': '0.0.0.0', 'port': 5000, 'env_file': '.env', 'config_file': '/custom/config.yml'
+        },
+                     id='custom_config_file')
     ])
 def test_parse_args(args, expected):
     """Test command line argument parsing with different argument combinations."""
@@ -143,3 +155,27 @@ def test_parse_args(args, expected):
         assert parsed_args.host == expected['host']
         assert parsed_args.port == expected['port']
         assert parsed_args.env_file == expected['env_file']
+        assert parsed_args.config_file == expected['config_file']
+        if expected['config_file'] == DEFAULT_CONFIG_FILE:
+            default_path = (REPO_ROOT / parsed_args.config_file).resolve()
+            assert default_path == DEFAULT_CONFIG_PATH
+            assert default_path.is_file()
+
+
+@pytest.mark.parametrize('exit_code,expect_message',
+                         [pytest.param(0, False, id='clean_exit'), pytest.param(2, True, id='nonzero_exit')])
+def test_start_process_config_file_and_exit_logging(capsys, exit_code, expect_message):
+    """Test that start_process runs the configured workflow file and logs a triage run that fails."""
+    alert = {"alert_id": 1, "alert_name": "InstanceDown", "host_id": "test-instance-1.example.com"}
+
+    with patch('nat_alert_triage_agent.run.subprocess.Popen') as mock_popen:
+        process = mock_popen.return_value.__enter__.return_value
+        process.wait.return_value = exit_code
+        process.returncode = exit_code
+
+        run.start_process(alert, run.ENV_FILE)
+
+        cmd = mock_popen.call_args.args[0]
+        assert f"--config_file={run.CONFIG_FILE}" in cmd
+        captured = capsys.readouterr()
+        assert (f"exited with {exit_code}" in captured.out) == expect_message
