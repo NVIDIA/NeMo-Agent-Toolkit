@@ -742,6 +742,33 @@ async def test_validate_reply_without_openai_terminator_passes(error_mock_llm, m
     assert result is response
 
 
+async def test_validate_unterminated_text_reply_raises_for_finish_reason_client(error_mock_llm, mock_tool):
+    """A text reply from a client that always reports ``finish_reason`` is cut off without one.
+
+    ReAct parses a text ``Action`` out of the content, so a stream that stopped inside
+    ``Action Input`` must not reach the parser.
+    """
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    agent._expects_finish_reason = True
+    response = AIMessage(content='Action: T\nAction Input: {"path": "report.txt",', response_metadata={})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with pytest.raises(RuntimeError, match="stream ended without finish_reason"):
+        await agent._validate_llm_response(response, state)
+
+
+async def test_validate_text_reply_without_finish_reason_passes_for_other_clients(error_mock_llm, mock_tool):
+    """Clients that may omit ``finish_reason`` keep the narrower rule: text replies are not rejected."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    response = AIMessage(content='Action: T\nAction Input: {"path": "report.txt",',
+                         response_metadata={"model_provider": "openai"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    result = await agent._validate_llm_response(response, state)
+
+    assert result is response
+
+
 async def test_validate_cut_off_tool_call_raises_without_metadata_for_finish_reason_client(error_mock_llm, mock_tool):
     """ChatNVIDIA (NIM) leaves response_metadata empty when its stream ends early; the agent knows its model
     always reports finish_reason, so a tool call without one is treated as cut off."""

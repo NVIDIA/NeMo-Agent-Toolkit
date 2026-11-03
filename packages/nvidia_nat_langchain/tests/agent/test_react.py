@@ -2538,6 +2538,26 @@ async def test_agent_node_accepts_complete_native_tool_call(mock_react_agent_no_
     assert result.agent_scratchpad[-1].tool == "Tool A"
 
 
+async def test_agent_node_raises_on_cut_off_text_action(mock_react_agent_no_raise, monkeypatch):
+    """A text ``Action`` whose ``Action Input`` was cut off must not become an AgentAction.
+
+    ReAct parses the reply itself, so a stream that stopped mid arguments would run the tool
+    with a partial input unless a missing terminator counts as truncation.
+    """
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", False)
+    monkeypatch.setattr(mock_react_agent_no_raise, "_expects_finish_reason", True, raising=False)
+    cut = AIMessage(content='Action: Tool A\nAction Input: {"query": "Lang', response_metadata={})
+    state = ReActGraphState(messages=[HumanMessage(content="hi")])
+    with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = cut
+        with pytest.raises(RuntimeError, match="stream ended without finish_reason"):
+            await mock_react_agent_no_raise.agent_node(state)
+    assert state.agent_scratchpad == []
+
+
 class _ChunkStream:
     """Stand-in for the ``prompt | llm`` runnable: replays the chunks a provider stream would emit."""
 

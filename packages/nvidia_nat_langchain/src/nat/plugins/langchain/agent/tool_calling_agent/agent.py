@@ -139,9 +139,16 @@ def _truncation_reason(response: AIMessage, expects_finish_reason: bool = False)
         details = metadata.get("incomplete_details") or {}
         reason = details.get("reason") if isinstance(details, dict) else None
         return f"status='incomplete', reason={reason!r}"
-    if (response.tool_calls and finish_reason is None and status is None
-            and (expects_finish_reason or metadata.get("model_provider") == "openai")):
-        return "stream ended without finish_reason"
+    if finish_reason is None and status is None:
+        # A client that always reports ``finish_reason`` cannot finish a reply without one: the
+        # stream stopped early. That holds for text replies too — ReAct parses a text ``Action``
+        # out of them and would otherwise run it with a partially streamed ``Action Input``.
+        if expects_finish_reason:
+            return "stream ended without finish_reason"
+        # Clients whose metadata we cannot rely on get the narrower check: a tool call without any
+        # terminator is suspicious enough to reject, a text reply is left alone.
+        if response.tool_calls and metadata.get("model_provider") == "openai":
+            return "stream ended without finish_reason"
     return None
 
 
