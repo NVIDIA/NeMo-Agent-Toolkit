@@ -703,6 +703,38 @@ def test_gemini_turn_without_a_role_is_a_user_turn(opt_in_extractors: None) -> N
     assert trajectory.steps[1].message == "What's the capital of France?"
 
 
+@pytest.mark.parametrize(
+    "system_field,system_val",
+    [
+        ("systemInstruction", "Answer in one word."),
+        ("system_instruction", "Answer in one word."),
+        ("systemInstruction", {
+            "text": "Answer in one word."
+        }),
+        ("system_instruction", {
+            "parts": [{
+                "text": "Answer in one word."
+            }]
+        }),
+        ("system_instruction", [{
+            "text": "Answer in one word."
+        }]),
+        ("systemInstruction", ["Answer in one ", "word."]),
+    ],
+)
+def test_gemini_system_prompt_variations(system_field: str, system_val: Any, opt_in_extractors: None) -> None:
+    """Gemini system instructions can be supplied in various formats: string,
+    dict (with parts or text), list of parts or strings, and using snake_case."""
+    events = _build_simple(_FACTORIES["gemini"])
+    llm_start = next(e for e in events if e.category == "llm" and e.scope_category == "start")
+    llm_start.data.pop("systemInstruction", None)
+    llm_start.data[system_field] = system_val
+    trajectory = convert(events)
+
+    assert [s.source for s in trajectory.steps] == ["system", "user", "agent"]
+    assert trajectory.steps[0].message == "Answer in one word."
+
+
 def test_nested_scenario(factory: _PayloadFactory, opt_in_extractors: None) -> None:
     """All three providers handle a tool round-trip: user query → agent
     with one tool_call and one observation → final agent text."""
