@@ -105,20 +105,6 @@ def _incomplete_tool_call_args(chunk: BaseMessage) -> list[str]:
     return incomplete
 
 
-def _message_from_chunk(chunk: BaseMessage) -> AIMessage:
-    """Convert an accumulated reply to a message, recording incomplete tool-call arguments if any.
-
-    Only a streamed chunk keeps the raw argument string, so a plain ``AIMessage`` passes through untouched.
-    """
-    message = _chunk_to_message(chunk)
-    incomplete = _incomplete_tool_call_args(chunk)
-    if incomplete:
-        # Recorded rather than raised: ``_chunk_to_message`` stays a pure conversion and every caller of the
-        # agent's existing truncation handling picks this up through ``_truncation_reason``.
-        message.response_metadata = {**message.response_metadata, TRUNCATED_TOOL_CALL_ARGS: incomplete}
-    return message
-
-
 def _chunk_to_message(chunk: AIMessageChunk) -> AIMessage:
     """Convert an accumulated AIMessageChunk into an AIMessage, preserving tool_calls.
 
@@ -133,13 +119,20 @@ def _chunk_to_message(chunk: AIMessageChunk) -> AIMessage:
         if "tool_calls" in openai_msg:
             additional_kwargs["tool_calls"] = openai_msg["tool_calls"]
 
-    return AIMessage(
+    message = AIMessage(
         content=chunk.content,
         additional_kwargs=additional_kwargs,
         response_metadata=chunk.response_metadata,
         id=chunk.id,
         usage_metadata=chunk.usage_metadata,
     )
+    # A tool call whose raw streamed arguments are not complete JSON is recorded here, not raised: every caller of
+    # the agents' truncation handling reads it from ``response_metadata`` through ``_truncation_reason``, and a
+    # reply that never streamed has no raw string to judge.
+    incomplete = _incomplete_tool_call_args(chunk)
+    if incomplete:
+        message.response_metadata = {**message.response_metadata, TRUNCATED_TOOL_CALL_ARGS: incomplete}
+    return message
 
 
 TOOL_NOT_FOUND_ERROR_MESSAGE = "There is no tool named {tool_name}. Tool must be one of {tools}."
@@ -240,7 +233,7 @@ class BaseAgent(ABC):
         for c in chunks[1:]:
             accumulated = accumulated + c
 
-        return _message_from_chunk(accumulated)
+        return _chunk_to_message(accumulated)
 
     async def _call_llm(self, llm: Runnable, inputs: dict[str, Any]) -> AIMessage:
         """

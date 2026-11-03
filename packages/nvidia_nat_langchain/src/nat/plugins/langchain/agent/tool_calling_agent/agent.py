@@ -39,8 +39,8 @@ from nat.plugins.langchain.agent.base import AGENT_CALL_LOG_MESSAGE
 from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
 from nat.plugins.langchain.agent.base import TRUNCATED_TOOL_CALL_ARGS
 from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.base import _chunk_to_message
 from nat.plugins.langchain.agent.base import _format_agent_thoughts_for_log
-from nat.plugins.langchain.agent.base import _message_from_chunk
 from nat.plugins.langchain.agent.dual_node import DualNodeAgent
 
 if typing.TYPE_CHECKING:
@@ -120,7 +120,7 @@ def _truncation_reason(response: AIMessage) -> str | None:
 
     A reply is truncated when:
 
-    * the streamed tool-call arguments are not complete JSON (recorded by ``_message_from_chunk`` in
+    * the streamed tool-call arguments are not complete JSON (recorded by ``_chunk_to_message`` in
       ``response_metadata``): LangChain's partial-JSON parser turns a cut-off argument string into a usable
       ``args`` dict, so the raw string is the only trustworthy signal, and it says nothing about the provider;
     * Chat Completions reports ``finish_reason="length"``;
@@ -239,7 +239,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             response = await self._invoke_llm(state)
 
             if isinstance(response, AIMessageChunk):
-                response = _message_from_chunk(response)
+                response = _chunk_to_message(response)
 
             response = await self._validate_llm_response(response, state)
 
@@ -402,7 +402,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             # method: ``agent_node`` converted the first reply, so a retry that reaches state
             # unconverted loses the OpenAI wire ``tool_calls`` that later model turns read.
             if isinstance(response, AIMessageChunk):
-                response = _message_from_chunk(response)
+                response = _chunk_to_message(response)
 
             if _truncation_reason(response) is None:
                 logger.info(
@@ -445,10 +445,10 @@ class ToolCallAgentGraph(DualNodeAgent):
             response = await self._invoke_llm(state)
 
             # ``_invoke_llm`` returns the accumulated stream. Convert it before anything reads it:
-            # ``_truncation_reason`` reads the argument verdict that ``_message_from_chunk`` records, and a
+            # ``_truncation_reason`` reads the argument verdict that ``_chunk_to_message`` records, and a
             # chunk that was never converted does not carry it, so the check would silently do nothing here.
             if isinstance(response, AIMessageChunk):
-                response = _message_from_chunk(response)
+                response = _chunk_to_message(response)
 
             # A retry can come back cut off instead of empty
             # ``status="incomplete"`` carries neither text nor tool calls, so it would be
