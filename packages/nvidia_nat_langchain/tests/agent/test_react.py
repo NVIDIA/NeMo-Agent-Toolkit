@@ -28,6 +28,7 @@ from langchain_core.outputs import ChatGeneration
 from langchain_core.outputs import ChatResult
 from langgraph.graph.state import CompiledStateGraph
 
+from nat.plugins.langchain.agent.base import TRUNCATED_TOOL_CALL_ARGS
 from nat.plugins.langchain.agent.base import AgentDecision
 from nat.plugins.langchain.agent.react_agent.agent import NO_INPUT_ERROR_MESSAGE
 from nat.plugins.langchain.agent.react_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
@@ -2477,32 +2478,29 @@ _CUT_NATIVE_CALL = {"name": "Tool A", "args": {"query": "Lang"}, "id": "call_1",
 
 
 @pytest.mark.parametrize(
-    "response_metadata, expects_finish_reason, reason",
+    "response_metadata, reason",
     [
-        pytest.param(
-            {"model_provider": "openai"}, False, "stream ended without finish_reason", id="openai_stream_ended"),
+        pytest.param({TRUNCATED_TOOL_CALL_ARGS: ["Tool A"]},
+                     "tool call arguments are not complete JSON",
+                     id="cut_off_tool_call_args"),
         pytest.param({
             "status": "incomplete", "incomplete_details": {
                 "reason": "max_output_tokens"
             }
         },
-                     False,
                      "status='incomplete'",
                      id="responses_incomplete"),
-        pytest.param({}, True, "stream ended without finish_reason", id="finish_reason_client_no_metadata"),
     ],
 )
 async def test_agent_node_raises_on_cut_off_native_tool_call(mock_react_agent_no_raise,
                                                              monkeypatch,
                                                              response_metadata,
-                                                             expects_finish_reason,
                                                              reason):
     """A native tool call from a reply that did not end normally must not become an AgentAction."""
     from unittest.mock import AsyncMock
     from unittest.mock import patch
 
     monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", True)
-    monkeypatch.setattr(mock_react_agent_no_raise, "_expects_finish_reason", expects_finish_reason, raising=False)
     cut = AIMessage(content="", tool_calls=[_CUT_NATIVE_CALL], response_metadata=response_metadata)
     state = ReActGraphState(messages=[HumanMessage(content="hi")])
     with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
@@ -2538,24 +2536,24 @@ async def test_agent_node_accepts_complete_native_tool_call(mock_react_agent_no_
     assert result.agent_scratchpad[-1].tool == "Tool A"
 
 
-async def test_agent_node_raises_on_cut_off_text_action(mock_react_agent_no_raise, monkeypatch):
-    """A text ``Action`` whose ``Action Input`` was cut off must not become an AgentAction.
+async def test_agent_node_parses_a_text_action_without_finish_reason(mock_react_agent_no_raise, monkeypatch):
+    """A text reply is parsed on its own content, never on ``finish_reason``.
 
-    ReAct parses the reply itself, so a stream that stopped mid arguments would run the tool
-    with a partial input unless a missing terminator counts as truncation.
+    A provider that does not report ``finish_reason`` must not have every text ``Action`` rejected; only an
+    explicit truncation signal (``finish_reason="length"``) stops a text reply.
     """
     from unittest.mock import AsyncMock
     from unittest.mock import patch
 
     monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", False)
-    monkeypatch.setattr(mock_react_agent_no_raise, "_expects_finish_reason", True, raising=False)
-    cut = AIMessage(content='Action: Tool A\nAction Input: {"query": "Lang', response_metadata={})
+    reply = AIMessage(content='Action: Tool A\nAction Input: {"query": "Lang"}', response_metadata={})
     state = ReActGraphState(messages=[HumanMessage(content="hi")])
     with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
-        mock_stream_llm.return_value = cut
-        with pytest.raises(RuntimeError, match="stream ended without finish_reason"):
-            await mock_react_agent_no_raise.agent_node(state)
-    assert state.agent_scratchpad == []
+        mock_stream_llm.return_value = reply
+        result = await mock_react_agent_no_raise.agent_node(state)
+
+    assert isinstance(result.agent_scratchpad[-1], AgentAction)
+    assert result.agent_scratchpad[-1].tool_input == '{"query": "Lang"}'
 
 
 class _ChunkStream:
@@ -2586,7 +2584,32 @@ async def test_agent_node_raises_when_stream_ends_mid_native_tool_call(mock_reac
         ]))
     state = ReActGraphState(messages=[HumanMessage(content="hi")])
 
-    with pytest.raises(RuntimeError, match="stream ended without finish_reason"):
+    with pytest.raises(RuntimeError, match="tool call arguments are not complete JSON"):
         await mock_react_agent_no_raise.agent_node(state)
 
     assert state.agent_scratchpad == []
+
+
+async def test_agent_node_runs_a_complete_tool_call_without_finish_reason(mock_react_agent_no_raise, monkeypatch):
+    """The same stream with complete arguments but no finish_reason becomes an AgentAction.
+
+    Paired with the test above: the check reads the argument string, not the provider's terminator, so a provider
+    that omits ``finish_reason`` keeps working.
+    """
+    monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", True)
+    monkeypatch.setattr(
+        mock_react_agent_no_raise,
+        "agent",
+        _ChunkStream([
+            AIMessageChunk(content=""),
+            AIMessageChunk(content="",
+                           tool_call_chunks=[{
+                               "name": "Tool A", "args": '{"query": "Lang"}', "id": "call_1", "index": 0
+                           }]),
+        ]))
+    state = ReActGraphState(messages=[HumanMessage(content="hi")])
+
+    result = await mock_react_agent_no_raise.agent_node(state)
+
+    assert isinstance(result.agent_scratchpad[-1], AgentAction)
+    assert result.agent_scratchpad[-1].tool == "Tool A"

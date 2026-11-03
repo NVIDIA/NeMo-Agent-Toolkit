@@ -37,9 +37,10 @@ from pydantic import Field
 from nat.llm.utils.constants import LLMFinishReason
 from nat.plugins.langchain.agent.base import AGENT_CALL_LOG_MESSAGE
 from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
+from nat.plugins.langchain.agent.base import TRUNCATED_TOOL_CALL_ARGS
 from nat.plugins.langchain.agent.base import AgentDecision
-from nat.plugins.langchain.agent.base import _chunk_to_message
 from nat.plugins.langchain.agent.base import _format_agent_thoughts_for_log
+from nat.plugins.langchain.agent.base import _message_from_chunk
 from nat.plugins.langchain.agent.dual_node import DualNodeAgent
 
 if typing.TYPE_CHECKING:
@@ -98,57 +99,49 @@ def extract_token_usage(response: BaseMessage) -> UsageMetadata | None:
     return None
 
 
-# Chat model classes whose complete replies always carry ``finish_reason`` (OpenAI wire format). ``ChatNVIDIA``
-# (NIM) does not set ``model_provider``; when its stream ends early the accumulated metadata is empty.
-_FINISH_REASON_CLIENTS: frozenset[str] = frozenset({"ChatOpenAI", "AzureChatOpenAI", "ChatNVIDIA"})
+def _is_empty_reply(response: AIMessage) -> bool:
+    """Return True when a reply carries no content, no tool calls and no unparsable tool calls."""
+    return (not response.tool_calls and not getattr(response, "invalid_tool_calls", None)
+            and not (response.content and str(response.content).strip()))
 
 
-def _reports_finish_reason(llm: object) -> bool:
-    """Return True if ``llm`` (or the model inside a configurable/bound wrapper) always reports ``finish_reason``."""
-    for _ in range(8):  # unwrap RunnableConfigurableFields (.default) and RunnableBinding (.bound)
-        if llm is None:
-            return False
-        if any(cls.__name__ in _FINISH_REASON_CLIENTS for cls in type(llm).__mro__):
-            return True
-        llm = getattr(llm, "default", None) or getattr(llm, "bound", None)
-    return False
+def _empty_response_error(metadata: dict) -> RuntimeError:
+    """Build the error raised when a reply has nothing usable in it.
+
+    Used both when the empty-response retries are exhausted and when a truncation retry comes back empty, so the
+    two dead ends read the same to a caller.
+    """
+    return RuntimeError(f"LLM returned an empty response (no content, no tool calls). "
+                        f"finish_reason={metadata.get('finish_reason')}, response_metadata={metadata}")
 
 
-def _truncation_reason(response: AIMessage, expects_finish_reason: bool = False) -> str | None:
+def _truncation_reason(response: AIMessage) -> str | None:
     """Return why ``response`` is truncated, or ``None`` if it ended normally.
 
     A reply is truncated when:
 
+    * the streamed tool-call arguments are not complete JSON (recorded by ``_message_from_chunk`` in
+      ``response_metadata``): LangChain's partial-JSON parser turns a cut-off argument string into a usable
+      ``args`` dict, so the raw string is the only trustworthy signal, and it says nothing about the provider;
     * Chat Completions reports ``finish_reason="length"``;
-    * the Responses API reports ``status="incomplete"`` (for example ``max_output_tokens``), which never sets
-      ``finish_reason``;
-    * an OpenAI-wire reply (``model_provider="openai"``: Chat Completions or Responses, including
-      OpenAI-compatible servers) carries tool calls but neither ``finish_reason`` nor ``status``: the stream ended
-      before the server sent its final event, so the tool call arguments may be cut off. LangChain still builds a
-      tool call from such arguments with a partial JSON parser, so they cannot be trusted. Other providers report
-      the end of a reply under other keys, so this check is limited to the OpenAI wire formats: replies marked
-      ``model_provider="openai"``, or any reply when ``expects_finish_reason`` is True (the agent's model is
-      ``ChatOpenAI``, ``AzureChatOpenAI`` or ``ChatNVIDIA``).
+    * the Responses API reports ``status="incomplete"`` (for example ``max_output_tokens``).
+
+    A missing ``finish_reason`` on its own is not evidence of truncation: providers are not required to report it,
+    so treating absence as truncation rejects every complete reply from a provider that omits it.
     """
     metadata: dict = getattr(response, "response_metadata", None) or {}
     finish_reason: str | None = metadata.get("finish_reason")
     status: str | None = metadata.get("status")
+    incomplete_calls = metadata.get(TRUNCATED_TOOL_CALL_ARGS)
+    if incomplete_calls:
+        names = incomplete_calls if isinstance(incomplete_calls, str) else ", ".join(incomplete_calls)
+        return f"tool call arguments are not complete JSON ({names})"
     if finish_reason == LLMFinishReason.LENGTH:
         return "finish_reason='length'"
     if status == "incomplete":
         details = metadata.get("incomplete_details") or {}
         reason = details.get("reason") if isinstance(details, dict) else None
         return f"status='incomplete', reason={reason!r}"
-    if finish_reason is None and status is None:
-        # A client that always reports ``finish_reason`` cannot finish a reply without one: the
-        # stream stopped early. That holds for text replies too — ReAct parses a text ``Action``
-        # out of them and would otherwise run it with a partially streamed ``Action Input``.
-        if expects_finish_reason:
-            return "stream ended without finish_reason"
-        # Clients whose metadata we cannot rely on get the narrower check: a tool call without any
-        # terminator is suspicious enough to reject, a text reply is left alone.
-        if response.tool_calls and metadata.get("model_provider") == "openai":
-            return "stream ended without finish_reason"
     return None
 
 
@@ -178,7 +171,6 @@ class ToolCallAgentGraph(DualNodeAgent):
                          callbacks=callbacks,
                          detailed_logs=detailed_logs,
                          log_response_max_chars=log_response_max_chars)
-        self._expects_finish_reason: bool = _reports_finish_reason(llm)
 
         # some LLMs support tool calling
         # these models accept the tool's input schema and decide when to use a tool based on the input's relevance
@@ -247,7 +239,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             response = await self._invoke_llm(state)
 
             if isinstance(response, AIMessageChunk):
-                response = _chunk_to_message(response)
+                response = _message_from_chunk(response)
 
             response = await self._validate_llm_response(response, state)
 
@@ -309,26 +301,29 @@ class ToolCallAgentGraph(DualNodeAgent):
         """
         metadata: dict = getattr(response, "response_metadata", {})
         finish_reason: str | None = metadata.get("finish_reason")
-        truncation: str | None = _truncation_reason(response, self._expects_finish_reason)
+        truncation: str | None = _truncation_reason(response)
 
         # Output truncated — can cause GraphRecursionError loop if unhandled, and a cut-off
         # tool call must not be executed with partially parsed arguments.
         if truncation is not None:
             response = await self._handle_truncation(response, state, truncation)
+            # A truncation retry can itself come back empty. That is the same dead end as an exhausted
+            # empty-response retry, so it must not reach the tool node looking like a valid reply.
+            if _is_empty_reply(response):
+                retry_metadata: dict = getattr(response, "response_metadata", {}) or metadata
+                raise _empty_response_error(retry_metadata)
 
         # Empty response — no content, no tool calls at all
-        if (not response.tool_calls and not getattr(response, "invalid_tool_calls", None)
-                and not (response.content and str(response.content).strip())):
+        if _is_empty_reply(response):
             if self._max_empty_response_retries > 0:
                 response = await self._retry_on_empty_response(state, metadata)
                 # The retry calls the model again, so its reply is a new reply and needs the same
                 # check: a cut-off tool call returned by the retry must not reach the tool node either.
-                truncation = _truncation_reason(response, self._expects_finish_reason)
+                truncation = _truncation_reason(response)
                 if truncation is not None:
                     response = await self._handle_truncation(response, state, truncation)
             else:
-                raise RuntimeError(f"LLM returned an empty response (no content, no tool calls). "
-                                   f"finish_reason={finish_reason}, response_metadata={metadata}")
+                raise _empty_response_error(metadata)
 
         # Invalid tool calls — LLM produced tool call JSON that could not be parsed
         if not response.tool_calls and getattr(response, "invalid_tool_calls", None):
@@ -402,9 +397,9 @@ class ToolCallAgentGraph(DualNodeAgent):
             # method: ``agent_node`` converted the first reply, so a retry that reaches state
             # unconverted loses the OpenAI wire ``tool_calls`` that later model turns read.
             if isinstance(response, AIMessageChunk):
-                response = _chunk_to_message(response)
+                response = _message_from_chunk(response)
 
-            if _truncation_reason(response, self._expects_finish_reason) is None:
+            if _truncation_reason(response) is None:
                 logger.info(
                     "%s Truncation retry succeeded on attempt %d with max_tokens=%d",
                     AGENT_LOG_PREFIX,
@@ -448,7 +443,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             # ``status="incomplete"`` carries neither text nor tool calls, so it would be
             # discarded here as another empty reply and the truncation path would never see it.
             # Hand it back so the caller can route it to the truncation handling.
-            if _truncation_reason(response, self._expects_finish_reason) is not None:
+            if _truncation_reason(response) is not None:
                 logger.warning(
                     "%s Empty response retry returned a truncated reply on attempt %d; "
                     "handing it to the truncation path",

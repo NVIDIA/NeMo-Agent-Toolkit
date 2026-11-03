@@ -53,7 +53,6 @@ from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputPar
 from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParserException
 from nat.plugins.langchain.agent.react_agent.prompt import SYSTEM_PROMPT
 from nat.plugins.langchain.agent.react_agent.prompt import USER_PROMPT
-from nat.plugins.langchain.agent.tool_calling_agent.agent import _reports_finish_reason
 from nat.plugins.langchain.agent.tool_calling_agent.agent import _truncation_reason
 from nat.utils.io.model_processing import remove_r1_think_tags
 
@@ -149,7 +148,6 @@ class ReActAgentGraph(DualNodeAgent):
         self.raise_on_parsing_failure = raise_on_parsing_failure
         self.use_native_tool_calling = use_native_tool_calling
         self.max_tool_calls = max_tool_calls
-        self._expects_finish_reason: bool = _reports_finish_reason(llm)
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
@@ -316,7 +314,7 @@ class ReActAgentGraph(DualNodeAgent):
                                      agent_scratchpad)
                 # A truncated reply would be parsed as a complete answer or tool input (#2518), and a cut-off
                 # native tool call would run with partially parsed arguments
-                truncation: str | None = _truncation_reason(output_message, self._expects_finish_reason)
+                truncation: str | None = _truncation_reason(output_message)
                 if truncation is not None:
                     raise RuntimeError(f"LLM output truncated ({truncation}). "
                                        f"Truncated output: {str(output_message.content)[:500]!r}")

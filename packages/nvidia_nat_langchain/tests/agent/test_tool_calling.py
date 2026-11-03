@@ -33,6 +33,7 @@ from nat.data_models.api_server import ChatResponseChunkChoice
 from nat.data_models.api_server import ChoiceDelta
 from nat.data_models.api_server import ChoiceDeltaToolCall
 from nat.data_models.api_server import ChoiceDeltaToolCallFunction
+from nat.plugins.langchain.agent.base import TRUNCATED_TOOL_CALL_ARGS
 from nat.plugins.langchain.agent.base import AgentDecision
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
@@ -558,10 +559,10 @@ _CUT_TOOL_CALL = {
     "response_metadata, reason",
     [
         pytest.param({
-            "model_provider": "openai", "model_name": "test-model"
+            "model_name": "test-model", TRUNCATED_TOOL_CALL_ARGS: ["T"]
         },
-                     "stream ended without finish_reason",
-                     id="chat_stream_ended_early"),
+                     "tool call arguments are not complete JSON (T)",
+                     id="cut_off_tool_call_args"),
         pytest.param(
             {
                 "model_name": "test-model",
@@ -604,10 +605,10 @@ async def test_validate_cut_off_tool_call_delegates_to_retry(error_mock_llm, moc
     "response_metadata, reason",
     [
         pytest.param({
-            "model_provider": "openai", "model_name": "test-model"
+            "model_name": "test-model", TRUNCATED_TOOL_CALL_ARGS: ["T"]
         },
-                     "stream ended without finish_reason",
-                     id="chat_stream_ended_early"),
+                     "tool call arguments are not complete JSON (T)",
+                     id="cut_off_tool_call_args"),
         pytest.param(
             {
                 "model_name": "test-model",
@@ -692,11 +693,107 @@ async def test_agent_node_raises_when_stream_ends_mid_tool_call(error_mock_llm, 
     ])
     state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
 
-    with pytest.raises(RuntimeError, match="stream ended without finish_reason"):
+    with pytest.raises(RuntimeError, match="tool call arguments are not complete JSON"):
         await agent.agent_node(state)
 
     # The reply never reached the state, so no tool call can be scheduled from it
     assert len(state.messages) == 1
+
+
+def _stream(*calls: tuple[str, str], metadata: dict | None = None) -> "_ChunkStream":
+    """Chunks a provider stream would emit for the given ``(name, raw_argument_string)`` tool calls."""
+    chunks: list[AIMessageChunk] = [AIMessageChunk(content="")]
+    if metadata is not None:
+        chunks.append(AIMessageChunk(content="", response_metadata=metadata))
+    for index, (name, raw_args) in enumerate(calls):
+        chunks.append(
+            AIMessageChunk(content="",
+                           tool_call_chunks=[{
+                               "name": name, "args": raw_args, "id": f"call_{index}", "index": index
+                           }]))
+    return _ChunkStream(chunks)
+
+
+_COMPLETE_ARGS: str = '{"path": "report.txt", "content": "line 01\\nline 02\\n"}'
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        pytest.param({}, id="no_metadata_at_all"),
+        pytest.param({"model_name": "test-model"}, id="no_finish_reason"),
+        pytest.param({"finish_reason": "stop_sequence"}, id="unknown_finish_reason"),
+    ],
+)
+async def test_stream_runs_a_complete_tool_call_whatever_the_finish_reason(error_mock_llm, mock_tool, metadata):
+    """The false rejection Will Killian flagged: a provider that omits or renames finish_reason must still work.
+
+    Nothing about the arguments is wrong, so the reply runs the tool like any other.
+    """
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    agent.agent = _stream(("T", _COMPLETE_ARGS), metadata=metadata)
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    await agent.agent_node(state)
+
+    assert state.messages[-1].tool_calls[0]["name"] == "T"
+    assert state.messages[-1].tool_calls[0]["args"]["content"].startswith("line 01")
+
+
+async def test_stream_with_cut_off_arguments_among_complete_calls_raises(error_mock_llm, mock_tool):
+    """Each tool call is judged on its own: one cut-off call rejects the reply even beside a complete one."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    agent.agent = _stream(("T", _COMPLETE_ARGS), ("T", '{"path": "second.txt", "content": "line 01'), metadata={})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with pytest.raises(RuntimeError, match=r"tool call arguments are not complete JSON \(T\)"):
+        await agent.agent_node(state)
+
+
+@pytest.mark.parametrize("raw_args", ["", "{}"])
+async def test_stream_runs_a_tool_call_that_takes_no_arguments(error_mock_llm, mock_tool, raw_args):
+    """No arguments is a complete argument string, not a truncated one."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    agent.agent = _stream(("T", raw_args), metadata={"finish_reason": "tool_calls"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    await agent.agent_node(state)
+
+    assert state.messages[-1].tool_calls[0]["name"] == "T"
+
+
+async def test_non_streamed_reply_is_not_checked(error_mock_llm, mock_tool):
+    """A reply that never streamed has no raw chunks to inspect, so its behaviour is unchanged."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    agent.agent = _ChunkStream([AIMessage(content="", tool_calls=[_CUT_TOOL_CALL])])  # type: ignore[list-item]
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    await agent.agent_node(state)
+
+    assert state.messages[-1].tool_calls == [_CUT_TOOL_CALL]
+
+
+async def test_nim_stream_with_cut_off_arguments_raises(error_mock_llm, mock_tool):
+    """NIM leaves response_metadata empty, so the argument string is the only evidence there is."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    agent.agent = _stream(("T", '{"path": "report.txt", "content": "line 01'), metadata={})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with pytest.raises(RuntimeError, match="tool call arguments are not complete JSON"):
+        await agent.agent_node(state)
+
+
+async def test_truncation_retry_returning_an_empty_reply_raises(error_mock_llm, mock_tool):
+    """A truncation retry that comes back with nothing usable is the same dead end as an exhausted
+    empty-response retry, and must not reach the tool node as a successful reply."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=1, truncation_scaling_fn=lambda c: c + 512)
+    cut_off = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata={"status": "incomplete"})
+    still_empty = AIMessage(content="", response_metadata={"finish_reason": "stop"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_retry_on_truncation", new_callable=AsyncMock, return_value=still_empty):
+        with pytest.raises(RuntimeError, match="LLM returned an empty response"):
+            await agent._validate_llm_response(cut_off, state)
 
 
 @pytest.mark.parametrize(
@@ -742,25 +839,10 @@ async def test_validate_reply_without_openai_terminator_passes(error_mock_llm, m
     assert result is response
 
 
-async def test_validate_unterminated_text_reply_raises_for_finish_reason_client(error_mock_llm, mock_tool):
-    """A text reply from a client that always reports ``finish_reason`` is cut off without one.
-
-    ReAct parses a text ``Action`` out of the content, so a stream that stopped inside
-    ``Action Input`` must not reach the parser.
-    """
+async def test_validate_text_reply_without_finish_reason_passes(error_mock_llm, mock_tool):
+    """A text reply is never judged by ``finish_reason``: a provider that omits it must not be rejected."""
     agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
-    agent._expects_finish_reason = True
-    response = AIMessage(content='Action: T\nAction Input: {"path": "report.txt",', response_metadata={})
-    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
-
-    with pytest.raises(RuntimeError, match="stream ended without finish_reason"):
-        await agent._validate_llm_response(response, state)
-
-
-async def test_validate_text_reply_without_finish_reason_passes_for_other_clients(error_mock_llm, mock_tool):
-    """Clients that may omit ``finish_reason`` keep the narrower rule: text replies are not rejected."""
-    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
-    response = AIMessage(content='Action: T\nAction Input: {"path": "report.txt",',
+    response = AIMessage(content='Action: T\nAction Input: {"path": "report.txt"}',
                          response_metadata={"model_provider": "openai"})
     state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
 
@@ -769,34 +851,19 @@ async def test_validate_text_reply_without_finish_reason_passes_for_other_client
     assert result is response
 
 
-async def test_validate_cut_off_tool_call_raises_without_metadata_for_finish_reason_client(error_mock_llm, mock_tool):
-    """ChatNVIDIA (NIM) leaves response_metadata empty when its stream ends early; the agent knows its model
-    always reports finish_reason, so a tool call without one is treated as cut off."""
+async def test_validate_nim_reply_without_metadata_passes(error_mock_llm, mock_tool):
+    """ChatNVIDIA (NIM) leaves response_metadata empty; a complete tool call must still run.
+
+    This is the false rejection the provider allowlist caused: no finish_reason is reported and nothing about the
+    arguments is wrong, so there is nothing to reject.
+    """
     agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
-    agent._expects_finish_reason = True
     response = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata={})
     state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
 
-    with pytest.raises(RuntimeError, match="stream ended without finish_reason"):
-        await agent._validate_llm_response(response, state)
+    result = await agent._validate_llm_response(response, state)
 
-
-def test_reports_finish_reason_unwraps_client(error_mock_llm):
-    """The model class is found through configurable (``default``) and bound (``bound``) wrappers."""
-    from nat.plugins.langchain.agent.tool_calling_agent.agent import _reports_finish_reason
-
-    class ChatNVIDIA:  # stand-in with the same class name as langchain_nvidia_ai_endpoints.ChatNVIDIA
-        pass
-
-    class Wrapper:
-
-        def __init__(self, default=None, bound=None):
-            self.default = default
-            self.bound = bound
-
-    assert _reports_finish_reason(Wrapper(default=Wrapper(bound=ChatNVIDIA())))
-    assert not _reports_finish_reason(error_mock_llm)
-    assert not _reports_finish_reason(None)
+    assert result is response
 
 
 async def test_validate_truncation_delegates_to_retry(error_mock_llm, mock_tool):
@@ -1063,10 +1130,10 @@ async def test_retry_on_empty_exhausted(error_mock_llm, mock_tool):
     "response_metadata, reason",
     [
         pytest.param({
-            "model_provider": "openai", "model_name": "test-model"
+            "model_name": "test-model", TRUNCATED_TOOL_CALL_ARGS: ["T"]
         },
-                     "stream ended without finish_reason",
-                     id="chat_stream_ended_early"),
+                     "tool call arguments are not complete JSON (T)",
+                     id="cut_off_tool_call_args"),
         pytest.param(
             {
                 "model_name": "test-model",
@@ -1099,7 +1166,7 @@ async def test_retry_on_empty_returns_a_truncated_reply(error_mock_llm, mock_too
     assert result is cut_off
     # The first retry is enough: the reply is not retried until the budget is gone.
     mock_invoke.assert_awaited_once()
-    assert reason in _truncation_reason(result, agent._expects_finish_reason)
+    assert reason in _truncation_reason(result)
 
 
 def test_extract_token_usage_carries_langchain_cached_tokens():
