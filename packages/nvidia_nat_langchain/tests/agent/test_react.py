@@ -21,6 +21,7 @@ from langchain_core.agents import AgentAction
 from langchain_core.agents import AgentFinish
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessageChunk
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langchain_core.outputs import ChatGeneration
@@ -2535,3 +2536,40 @@ async def test_agent_node_accepts_complete_native_tool_call(mock_react_agent_no_
         result = await mock_react_agent_no_raise.agent_node(state)
     assert isinstance(result.agent_scratchpad[-1], AgentAction)
     assert result.agent_scratchpad[-1].tool == "Tool A"
+
+
+class _ChunkStream:
+    """Stand-in for the ``prompt | llm`` runnable: replays the chunks a provider stream would emit."""
+
+    def __init__(self, chunks: list[AIMessageChunk]):
+        self._chunks = chunks
+
+    async def astream(self, inputs, config=None):
+        for chunk in self._chunks:
+            yield chunk
+
+
+async def test_agent_node_raises_when_stream_ends_mid_native_tool_call(mock_react_agent_no_raise, monkeypatch):
+    """Accumulated chunks that stop mid tool arguments must not become an AgentAction."""
+    monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", True)
+    monkeypatch.setattr(
+        mock_react_agent_no_raise,
+        "agent",
+        _ChunkStream([
+            AIMessageChunk(content=""),
+            AIMessageChunk(content="", response_metadata={"model_provider": "openai"}),
+            AIMessageChunk(content="",
+                           tool_call_chunks=[{
+                               "name": "Tool A",
+                               "args": '{"query": "Lang',
+                               "id": "call_1",
+                               "index": 0
+                           }]),
+        ]))
+    state = ReActGraphState(messages=[HumanMessage(content="hi")])
+
+    with pytest.raises(RuntimeError, match="stream ended without finish_reason"):
+        await mock_react_agent_no_raise.agent_node(state)
+
+    assert state.agent_scratchpad == []
+
