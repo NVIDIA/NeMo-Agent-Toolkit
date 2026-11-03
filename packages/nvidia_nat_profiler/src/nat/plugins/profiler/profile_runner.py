@@ -309,11 +309,11 @@ class ProfilerRunner:
             # ------------------------------------------------------------
             prefix_list = []
             if (self.profile_config.prefix_span_analysis.chain_with_common_prefixes
-                    and "common_prefixes" in inference_optimization_results):
+                    and common_prefix_results is not None):
                 logger.info("Using common prefixes for prefix span analysis")
-                for _, llm_data in inference_optimization_results["common_prefixes"].items():
-                    for prefix_data in llm_data["prefix_info"]:
-                        prefix_list.append(prefix_data["prefix"])
+                for llm_data in common_prefix_results.root.values():
+                    for prefix_data in llm_data.prefix_info:
+                        prefix_list.append(prefix_data.prefix)
 
             prefix_span_analysis = prefixspan_subworkflow_with_text(
                 all_steps,
