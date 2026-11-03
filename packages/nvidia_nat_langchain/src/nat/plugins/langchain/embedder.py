@@ -104,12 +104,21 @@ async def huggingface_langchain(embedder_config: HuggingFaceEmbedderConfig, _bui
     """LangChain client for HuggingFace embedder - local or remote based on endpoint_url."""
 
     if embedder_config.endpoint_url:
+        from huggingface_hub import AsyncInferenceClient
+        from huggingface_hub import InferenceClient
         from langchain_huggingface import HuggingFaceEndpointEmbeddings
 
+        token = get_secret_value(embedder_config.api_key)
         client = HuggingFaceEndpointEmbeddings(
-            model=embedder_config.endpoint_url,
-            huggingfacehub_api_token=get_secret_value(embedder_config.api_key),
+            model=embedder_config.model_name,
+            huggingfacehub_api_token=token,
         )
+        client.client = InferenceClient(model=embedder_config.endpoint_url,
+                                        token=token,
+                                        timeout=embedder_config.timeout)
+        client.async_client = AsyncInferenceClient(model=embedder_config.endpoint_url,
+                                                   token=token,
+                                                   timeout=embedder_config.timeout)
     else:
         from langchain_huggingface import HuggingFaceEmbeddings
 

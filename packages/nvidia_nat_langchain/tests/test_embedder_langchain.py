@@ -146,3 +146,76 @@ class TestHuggingFaceLangChain:
             pass
 
         assert mock_embeddings.return_value._client.max_seq_length == 128
+
+    @patch("huggingface_hub.AsyncInferenceClient")
+    @patch("huggingface_hub.InferenceClient")
+    @patch("langchain_huggingface.HuggingFaceEndpointEmbeddings")
+    async def test_remote_endpoint_url_configures_inference_clients(self,
+                                                                    mock_endpoint_embeddings: MagicMock,
+                                                                    mock_sync_client: MagicMock,
+                                                                    mock_async_client: MagicMock):
+        config = HuggingFaceEmbedderConfig(
+            endpoint_url="http://localhost:8080",
+            api_key="test-token",
+            timeout=45.0,
+            do_auto_retry=False,
+        )
+
+        mock_instance = MagicMock()
+        mock_endpoint_embeddings.return_value = mock_instance
+
+        async with huggingface_langchain(config, MagicMock()) as client:
+            assert client is mock_instance
+
+        mock_endpoint_embeddings.assert_called_once_with(
+            model=None,
+            huggingfacehub_api_token="test-token",
+        )
+        mock_sync_client.assert_called_once_with(
+            model="http://localhost:8080",
+            token="test-token",
+            timeout=45.0,
+        )
+        mock_async_client.assert_called_once_with(
+            model="http://localhost:8080",
+            token="test-token",
+            timeout=45.0,
+        )
+        assert mock_instance.client is mock_sync_client.return_value
+        assert mock_instance.async_client is mock_async_client.return_value
+
+    @patch("huggingface_hub.AsyncInferenceClient")
+    @patch("huggingface_hub.InferenceClient")
+    @patch("langchain_huggingface.HuggingFaceEndpointEmbeddings")
+    async def test_remote_endpoint_url_with_explicit_model_name(self,
+                                                                mock_endpoint_embeddings: MagicMock,
+                                                                mock_sync_client: MagicMock,
+                                                                mock_async_client: MagicMock):
+        config = HuggingFaceEmbedderConfig(
+            model_name="BAAI/bge-large-en-v1.5",
+            endpoint_url="https://api-inference.huggingface.co/models/BAAI/bge-large-en-v1.5",
+            api_key="test-token",
+            timeout=90.0,
+            do_auto_retry=False,
+        )
+
+        mock_instance = MagicMock()
+        mock_endpoint_embeddings.return_value = mock_instance
+
+        async with huggingface_langchain(config, MagicMock()):
+            pass
+
+        mock_endpoint_embeddings.assert_called_once_with(
+            model="BAAI/bge-large-en-v1.5",
+            huggingfacehub_api_token="test-token",
+        )
+        mock_sync_client.assert_called_once_with(
+            model="https://api-inference.huggingface.co/models/BAAI/bge-large-en-v1.5",
+            token="test-token",
+            timeout=90.0,
+        )
+        mock_async_client.assert_called_once_with(
+            model="https://api-inference.huggingface.co/models/BAAI/bge-large-en-v1.5",
+            token="test-token",
+            timeout=90.0,
+        )
