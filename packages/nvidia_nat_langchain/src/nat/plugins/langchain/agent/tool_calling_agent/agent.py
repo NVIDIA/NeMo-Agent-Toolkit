@@ -262,6 +262,33 @@ class ToolCallAgentGraph(DualNodeAgent):
         """
         return extract_token_usage(response) or UsageMetadata(input_tokens=0, output_tokens=0, total_tokens=0)
 
+    async def _handle_truncation(self, response: AIMessage, state: ToolCallAgentGraphState,
+                                 truncation: str) -> AIMessage:
+        """Retry a truncated reply when configured, otherwise raise with token accounting.
+
+        Args:
+            response: The truncated response.
+            state: Current agent graph state.
+            truncation: Why ``response`` is considered truncated, from ``_truncation_reason``.
+
+        Returns:
+            The response from a successful retry.
+        """
+        if self._max_truncation_retries > 0:
+            return await self._retry_on_truncation(response, state)
+
+        metadata: dict = getattr(response, "response_metadata", {})
+        usage: UsageMetadata = self._get_token_usage(response)
+        truncated_content: str = str(response.content)[:500] if response.content else "<empty>"
+        model_name: str = metadata.get("model_name", "unknown")
+        msg: str = (f"LLM output truncated ({truncation}). "
+                    f"model={model_name}, "
+                    f"output_tokens={usage['output_tokens']}, "
+                    f"input_tokens={usage['input_tokens']}, "
+                    f"total_tokens={usage['total_tokens']}. "
+                    f"Truncated output: {truncated_content!r}")
+        raise RuntimeError(msg)
+
     async def _validate_llm_response(self, response: AIMessage, state: ToolCallAgentGraphState) -> AIMessage:
         """Validate the LLM response and attempt recovery if configured.
 
@@ -279,25 +306,18 @@ class ToolCallAgentGraph(DualNodeAgent):
         # Output truncated — can cause GraphRecursionError loop if unhandled, and a cut-off
         # tool call must not be executed with partially parsed arguments.
         if truncation is not None:
-            if self._max_truncation_retries > 0:
-                response = await self._retry_on_truncation(response, state)
-            else:
-                usage: UsageMetadata = self._get_token_usage(response)
-                truncated_content: str = str(response.content)[:500] if response.content else "<empty>"
-                model_name: str = metadata.get("model_name", "unknown")
-                msg: str = (f"LLM output truncated ({truncation}). "
-                            f"model={model_name}, "
-                            f"output_tokens={usage['output_tokens']}, "
-                            f"input_tokens={usage['input_tokens']}, "
-                            f"total_tokens={usage['total_tokens']}. "
-                            f"Truncated output: {truncated_content!r}")
-                raise RuntimeError(msg)
+            response = await self._handle_truncation(response, state, truncation)
 
         # Empty response — no content, no tool calls at all
         if (not response.tool_calls and not getattr(response, "invalid_tool_calls", None)
                 and not (response.content and str(response.content).strip())):
             if self._max_empty_response_retries > 0:
                 response = await self._retry_on_empty_response(state, metadata)
+                # The retry calls the model again, so its reply is a new reply and needs the same
+                # check: a cut-off tool call returned by the retry must not reach the tool node either.
+                truncation = _truncation_reason(response, self._expects_finish_reason)
+                if truncation is not None:
+                    response = await self._handle_truncation(response, state, truncation)
             else:
                 raise RuntimeError(f"LLM returned an empty response (no content, no tool calls). "
                                    f"finish_reason={finish_reason}, response_metadata={metadata}")

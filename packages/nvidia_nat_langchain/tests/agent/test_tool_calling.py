@@ -22,6 +22,7 @@ from unittest.mock import patch
 
 import pytest
 from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessageChunk
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
 from langgraph.graph.state import CompiledStateGraph
@@ -596,6 +597,101 @@ async def test_validate_cut_off_tool_call_delegates_to_retry(error_mock_llm, moc
 
     mock_retry.assert_awaited_once()
     assert result.content == "complete"
+
+
+@pytest.mark.parametrize(
+    "response_metadata, reason",
+    [
+        pytest.param({"model_provider": "openai", "model_name": "test-model"},
+                     "stream ended without finish_reason",
+                     id="chat_stream_ended_early"),
+        pytest.param(
+            {
+                "model_name": "test-model",
+                "status": "incomplete",
+                "incomplete_details": {
+                    "reason": "max_output_tokens"
+                }
+            },
+            "status='incomplete', reason='max_output_tokens'",
+            id="responses_incomplete"),
+    ],
+)
+async def test_empty_response_retry_is_checked_for_truncation(error_mock_llm, mock_tool, response_metadata, reason):
+    """A cut-off reply returned by the empty-response retry must not reach the tool node either."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0, max_empty_response_retries=1)
+    empty = AIMessage(content="", response_metadata={"finish_reason": "stop"})
+    cut_off = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata=response_metadata)
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_retry_on_empty_response", new_callable=AsyncMock, return_value=cut_off) as mock_retry:
+        with pytest.raises(RuntimeError, match="truncated") as exc_info:
+            await agent._validate_llm_response(empty, state)
+
+    mock_retry.assert_awaited_once()
+    assert reason in str(exc_info.value)
+
+
+async def test_empty_response_retry_delegates_truncation_to_retry(error_mock_llm, mock_tool):
+    """A cut-off reply from the empty-response retry uses the same truncation retry path."""
+    agent = _make_agent(error_mock_llm,
+                        mock_tool,
+                        max_truncation_retries=1,
+                        max_empty_response_retries=1,
+                        truncation_scaling_fn=lambda c: c + 512)
+    empty = AIMessage(content="", response_metadata={"finish_reason": "stop"})
+    cut_off = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata={"status": "incomplete"})
+    good = AIMessage(content="complete", response_metadata={"status": "completed"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_retry_on_empty_response", new_callable=AsyncMock,
+                      return_value=cut_off), patch.object(agent,
+                                                          "_retry_on_truncation",
+                                                          new_callable=AsyncMock,
+                                                          return_value=good) as mock_retry:
+        result = await agent._validate_llm_response(empty, state)
+
+    mock_retry.assert_awaited_once()
+    assert result.content == "complete"
+
+
+class _ChunkStream:
+    """Stand-in for ``prompt | llm``: replays the chunks a provider stream would emit."""
+
+    def __init__(self, chunks: list[AIMessageChunk]):
+        self._chunks = chunks
+
+    @property
+    def first(self):
+        return self
+
+    async def astream(self, inputs):
+        for chunk in self._chunks:
+            yield chunk
+
+
+async def test_agent_node_raises_when_stream_ends_mid_tool_call(error_mock_llm, mock_tool):
+    """Chunks accumulated into a tool call whose stream ended mid arguments must raise, not call the tool."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    agent.agent = _ChunkStream([
+        AIMessageChunk(content=""),
+        AIMessageChunk(content="", response_metadata={"model_provider": "openai", "model_name": "test-model"}),
+        AIMessageChunk(content="",
+                       tool_call_chunks=[{
+                           "name": "T",
+                           "args": '{"path": "report.txt", "content": "line 01',
+                           "id": "call_1",
+                           "index": 0
+                       }]),
+    ])
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with pytest.raises(RuntimeError, match="stream ended without finish_reason"):
+        await agent.agent_node(state)
+
+    # The reply never reached the state, so no tool call can be scheduled from it
+    assert len(state.messages) == 1
+
 
 
 @pytest.mark.parametrize(
