@@ -665,10 +665,11 @@ class _ChunkStream:
         self._chunks = chunks
 
     @property
-    def first(self):
+    def first(self) -> "_ChunkStream":
         return self
 
-    async def astream(self, inputs):
+    async def astream(self, inputs: typing.Any) -> typing.AsyncIterator[AIMessageChunk]:
+        """Replay the recorded chunks as an async stream."""
         for chunk in self._chunks:
             yield chunk
 
