@@ -93,6 +93,9 @@ def _incomplete_tool_call_args(chunk: BaseMessage) -> list[str]:
     # ``tool_call_chunks`` only exists on streamed chunks; a non-streamed reply has nothing to check.
     for call in getattr(chunk, "tool_call_chunks", None) or []:
         raw = call.get("args") or ""
+        if not isinstance(raw, str):
+            # A provider that hands LangChain an already-parsed value has no raw string to inspect.
+            continue
         if raw.strip() in ("", "{}"):
             continue
         try:
