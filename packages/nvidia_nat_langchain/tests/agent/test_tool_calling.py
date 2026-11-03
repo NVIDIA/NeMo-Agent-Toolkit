@@ -602,7 +602,9 @@ async def test_validate_cut_off_tool_call_delegates_to_retry(error_mock_llm, moc
 @pytest.mark.parametrize(
     "response_metadata, reason",
     [
-        pytest.param({"model_provider": "openai", "model_name": "test-model"},
+        pytest.param({
+            "model_provider": "openai", "model_name": "test-model"
+        },
                      "stream ended without finish_reason",
                      id="chat_stream_ended_early"),
         pytest.param(
@@ -675,7 +677,9 @@ async def test_agent_node_raises_when_stream_ends_mid_tool_call(error_mock_llm, 
     agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
     agent.agent = _ChunkStream([
         AIMessageChunk(content=""),
-        AIMessageChunk(content="", response_metadata={"model_provider": "openai", "model_name": "test-model"}),
+        AIMessageChunk(content="", response_metadata={
+            "model_provider": "openai", "model_name": "test-model"
+        }),
         AIMessageChunk(content="",
                        tool_call_chunks=[{
                            "name": "T",
@@ -691,7 +695,6 @@ async def test_agent_node_raises_when_stream_ends_mid_tool_call(error_mock_llm, 
 
     # The reply never reached the state, so no tool call can be scheduled from it
     assert len(state.messages) == 1
-
 
 
 @pytest.mark.parametrize(
