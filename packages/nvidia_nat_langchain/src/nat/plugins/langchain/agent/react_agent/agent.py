@@ -135,6 +135,7 @@ class ReActAgentGraph(DualNodeAgent):
                  raise_on_parsing_failure: bool = True,
                  use_native_tool_calling: bool = False,
                  max_tool_calls: int | None = None):
+        """Build the ReAct agent around ``prompt | llm`` with tools bound to it."""
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
@@ -249,6 +250,7 @@ class ReActAgentGraph(DualNodeAgent):
         return tool_input_str, False
 
     async def agent_node(self, state: ReActGraphState, config: RunnableConfig | None = None):
+        """Run one ReAct step and append the reply or ``AgentAction`` to the state."""
         try:
             logger.debug("%s Starting the ReAct Agent Node", AGENT_LOG_PREFIX)
             # keeping a working state allows us to resolve parsing errors without polluting the agent scratchpad

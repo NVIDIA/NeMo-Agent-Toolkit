@@ -2544,7 +2544,8 @@ class _ChunkStream:
     def __init__(self, chunks: list[AIMessageChunk]):
         self._chunks = chunks
 
-    async def astream(self, inputs, config=None):
+    async def astream(self, inputs: typing.Any, config: typing.Any = None) -> typing.AsyncIterator[AIMessageChunk]:
+        """Replay the recorded chunks as an async stream."""
         for chunk in self._chunks:
             yield chunk
 
