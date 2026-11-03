@@ -36,6 +36,7 @@ from nat.data_models.api_server import ChoiceDeltaToolCallFunction
 from nat.plugins.langchain.agent.base import AgentDecision
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
+from nat.plugins.langchain.agent.tool_calling_agent.agent import _truncation_reason
 from nat.plugins.langchain.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
 from nat.plugins.langchain.agent.tool_calling_agent.agent import extract_token_usage
 from nat.plugins.langchain.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
@@ -1002,6 +1003,49 @@ async def test_retry_on_empty_exhausted(error_mock_llm, mock_tool):
     with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=still_empty):
         with pytest.raises(RuntimeError, match="empty responses after 2 retries"):
             await agent._retry_on_empty_response(state, first_meta)
+
+
+@pytest.mark.parametrize(
+    "response_metadata, reason",
+    [
+        pytest.param({
+            "model_provider": "openai", "model_name": "test-model"
+        },
+                     "stream ended without finish_reason",
+                     id="chat_stream_ended_early"),
+        pytest.param(
+            {
+                "model_name": "test-model",
+                "status": "incomplete",
+                "incomplete_details": {
+                    "reason": "max_output_tokens"
+                }
+            },
+            "status='incomplete', reason='max_output_tokens'",
+            id="responses_incomplete"),
+    ],
+)
+async def test_retry_on_empty_returns_a_truncated_reply(error_mock_llm, mock_tool, response_metadata, reason):
+    """A retry that comes back cut off is returned, not discarded as another empty reply.
+
+    A Responses reply with ``status="incomplete"`` has neither text nor tool calls, so the
+    empty-response loop would otherwise treat it as empty, exhaust its retries and report
+    "empty responses" while the truncation path never sees it.
+    """
+    agent = _make_agent(error_mock_llm, mock_tool, max_empty_response_retries=3)
+    first_meta: dict = {"finish_reason": "stop"}
+    cut_off = AIMessage(content="",
+                        tool_calls=[_CUT_TOOL_CALL] if response_metadata.get("model_provider") else [],
+                        response_metadata=response_metadata)
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=cut_off) as mock_invoke:
+        result = await agent._retry_on_empty_response(state, first_meta)
+
+    assert result is cut_off
+    # The first retry is enough: the reply is not retried until the budget is gone.
+    mock_invoke.assert_awaited_once()
+    assert reason in _truncation_reason(result, agent._expects_finish_reason)
 
 
 def test_extract_token_usage_carries_langchain_cached_tokens():
