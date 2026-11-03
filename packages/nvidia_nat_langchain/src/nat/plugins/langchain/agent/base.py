@@ -81,6 +81,41 @@ def _format_agent_thoughts_for_log(message: BaseMessage) -> str:
     return _extract_reasoning_content(message)
 
 
+def _incomplete_tool_call_args(chunk: BaseMessage) -> list[str]:
+    """Return the names of streamed tool calls whose raw argument string is not complete JSON.
+
+    LangChain assembles streamed tool calls with a partial-JSON parser, so a stream that stops in the middle of
+    the arguments still yields a usable ``args`` dict and an empty ``invalid_tool_calls``: the truncation is only
+    visible in the raw substring kept on ``tool_call_chunks``. An empty argument string or ``{}`` is complete for
+    a tool that takes no arguments.
+    """
+    incomplete: list[str] = []
+    # ``tool_call_chunks`` only exists on streamed chunks; a non-streamed reply has nothing to check.
+    for call in getattr(chunk, "tool_call_chunks", None) or []:
+        raw = call.get("args") or ""
+        if raw.strip() in ("", "{}"):
+            continue
+        try:
+            json.loads(raw)
+        except ValueError:
+            incomplete.append(call.get("name") or "<unnamed>")
+    return incomplete
+
+
+def _message_from_chunk(chunk: BaseMessage) -> AIMessage:
+    """Convert an accumulated reply to a message, recording incomplete tool-call arguments if any.
+
+    Only a streamed chunk keeps the raw argument string, so a plain ``AIMessage`` passes through untouched.
+    """
+    message = _chunk_to_message(chunk)
+    incomplete = _incomplete_tool_call_args(chunk)
+    if incomplete:
+        # Recorded rather than raised: ``_chunk_to_message`` stays a pure conversion and every caller of the
+        # agent's existing truncation handling picks this up through ``_truncation_reason``.
+        message.response_metadata = {**message.response_metadata, TRUNCATED_TOOL_CALL_ARGS: incomplete}
+    return message
+
+
 def _chunk_to_message(chunk: AIMessageChunk) -> AIMessage:
     """Convert an accumulated AIMessageChunk into an AIMessage, preserving tool_calls.
 
@@ -109,6 +144,10 @@ INPUT_SCHEMA_MESSAGE = ". Arguments must be provided as a valid JSON object foll
 NO_INPUT_ERROR_MESSAGE = "No human input received to the agent, Please ask a valid question."
 
 AGENT_LOG_PREFIX = "[AGENT]"
+
+# Set on a reply's ``response_metadata`` when the streamed tool-call arguments did not parse as complete JSON.
+# ``_stream_llm`` records it; ``_truncation_reason`` in the agents turns it into the usual truncation path.
+TRUNCATED_TOOL_CALL_ARGS = "nat_truncated_tool_call_args"
 AGENT_CALL_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
                                  AGENT_LOG_PREFIX + "\n" + \
                                  Fore.YELLOW + \
@@ -198,7 +237,7 @@ class BaseAgent(ABC):
         for c in chunks[1:]:
             accumulated = accumulated + c
 
-        return _chunk_to_message(accumulated)
+        return _message_from_chunk(accumulated)
 
     async def _call_llm(self, llm: Runnable, inputs: dict[str, Any]) -> AIMessage:
         """
