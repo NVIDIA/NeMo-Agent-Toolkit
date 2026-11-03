@@ -619,15 +619,22 @@ def register_anthropic_messages_v1() -> None:
 
 
 def _gemini_walk_parts_for_text(parts: Any) -> str:
+    """Extract and concatenate text from Gemini parts, strings, or text dicts."""
+    if isinstance(parts, str):
+        return parts
+    if isinstance(parts, dict):
+        text = parts.get("text")
+        return text if isinstance(text, str) else ""
     if not isinstance(parts, list):
         return ""
     chunks: list[str] = []
     for part in parts:
-        if not isinstance(part, dict):
-            continue
-        text = part.get("text")
-        if isinstance(text, str):
-            chunks.append(text)
+        if isinstance(part, str):
+            chunks.append(part)
+        elif isinstance(part, dict):
+            text = part.get("text")
+            if isinstance(text, str):
+                chunks.append(text)
     return "".join(chunks)
 
 
@@ -675,11 +682,16 @@ def _gemini_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
         return []
 
     out: list[dict[str, Any]] = []
-    system_instruction = data.get("systemInstruction")
-    if isinstance(system_instruction, dict):
-        system = _gemini_walk_parts_for_text(system_instruction.get("parts"))
+    system = ""
+    for key in ("systemInstruction", "system_instruction"):
+        candidate = data.get(key)
+        if isinstance(candidate, dict):
+            candidate = candidate.get("parts", candidate)
+        system = _gemini_walk_parts_for_text(candidate)
         if system:
-            out.append({"role": "system", "content": system})
+            break
+    if system:
+        out.append({"role": "system", "content": system})
 
     for turn in contents:
         if not isinstance(turn, dict):
