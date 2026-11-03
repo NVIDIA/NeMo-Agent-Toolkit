@@ -550,23 +550,27 @@ async def test_validate_truncation_raises_when_disabled(error_mock_llm, mock_too
     assert "partial output here" in msg
 
 
-# The two ways a reply can carry a truncation verdict, shared by every test that needs them (the repo requires a
-# fixture instead of repeating a parametrize block: see the `**/tests/**/*.py` rule).
-TRUNCATION_CASES = [
-    pytest.param({
+@pytest.fixture(params=[
+    pytest.param(({
         "model_name": "test-model", TRUNCATED_TOOL_CALL_ARGS: ["T"]
     },
-                 "tool call arguments are not complete JSON (T)",
+                  "tool call arguments are not complete JSON (T)"),
                  id="cut_off_tool_call_args"),
-    pytest.param(
-        {
-            "model_name": "test-model", "status": "incomplete", "incomplete_details": {
-                "reason": "max_output_tokens"
-            }
-        },
-        "status='incomplete', reason='max_output_tokens'",
-        id="responses_incomplete"),
-]
+    pytest.param(({
+        "model_name": "test-model", "status": "incomplete", "incomplete_details": {
+            "reason": "max_output_tokens"
+        }
+    },
+                  "status='incomplete', reason='max_output_tokens'"),
+                 id="responses_incomplete"),
+])
+def truncation_case(request):
+    """The two ways a reply can carry a truncation verdict, shared by the tests that need them.
+
+    The repo's tests take shared parameters from a fixture rather than repeating a ``parametrize`` block.
+    """
+    return request.param
+
 
 _CUT_TOOL_CALL = {
     "name": "T", "args": {
@@ -575,9 +579,9 @@ _CUT_TOOL_CALL = {
 }
 
 
-@pytest.mark.parametrize("response_metadata, reason", TRUNCATION_CASES)
-async def test_validate_cut_off_tool_call_raises(error_mock_llm, mock_tool, response_metadata, reason):
+async def test_validate_cut_off_tool_call_raises(error_mock_llm, mock_tool, truncation_case):
     """A tool call from a reply that did not end normally must not reach the tool node."""
+    response_metadata, reason = truncation_case
     agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
     response = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata=response_metadata)
     state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
@@ -602,9 +606,9 @@ async def test_validate_cut_off_tool_call_delegates_to_retry(error_mock_llm, moc
     assert result.content == "complete"
 
 
-@pytest.mark.parametrize("response_metadata, reason", TRUNCATION_CASES)
-async def test_empty_response_retry_is_checked_for_truncation(error_mock_llm, mock_tool, response_metadata, reason):
+async def test_empty_response_retry_is_checked_for_truncation(error_mock_llm, mock_tool, truncation_case):
     """A cut-off reply returned by the empty-response retry must not reach the tool node either."""
+    response_metadata, reason = truncation_case
     agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0, max_empty_response_retries=1)
     empty = AIMessage(content="", response_metadata={"finish_reason": "stop"})
     cut_off = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata=response_metadata)
@@ -1153,19 +1157,17 @@ async def test_retry_on_empty_exhausted(error_mock_llm, mock_tool):
             await agent._retry_on_empty_response(state, first_meta)
 
 
-@pytest.mark.parametrize("response_metadata, reason", TRUNCATION_CASES)
-async def test_retry_on_empty_returns_a_truncated_reply(error_mock_llm, mock_tool, response_metadata, reason):
+async def test_retry_on_empty_returns_a_truncated_reply(error_mock_llm, mock_tool, truncation_case):
     """A retry that comes back cut off is returned, not discarded as another empty reply.
 
     A Responses reply with ``status="incomplete"`` has neither text nor tool calls, so the
     empty-response loop would otherwise treat it as empty, exhaust its retries and report
     "empty responses" while the truncation path never sees it.
     """
+    response_metadata, reason = truncation_case
     agent = _make_agent(error_mock_llm, mock_tool, max_empty_response_retries=3)
     first_meta: dict = {"finish_reason": "stop"}
-    cut_off = AIMessage(content="",
-                        tool_calls=[_CUT_TOOL_CALL] if response_metadata.get("model_provider") else [],
-                        response_metadata=response_metadata)
+    cut_off = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata=response_metadata)
     state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
 
     with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=cut_off) as mock_invoke:
