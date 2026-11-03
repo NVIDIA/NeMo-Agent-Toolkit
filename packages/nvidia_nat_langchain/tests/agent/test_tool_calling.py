@@ -550,6 +550,24 @@ async def test_validate_truncation_raises_when_disabled(error_mock_llm, mock_too
     assert "partial output here" in msg
 
 
+# The two ways a reply can carry a truncation verdict, shared by every test that needs them (the repo requires a
+# fixture instead of repeating a parametrize block: see the `**/tests/**/*.py` rule).
+TRUNCATION_CASES = [
+    pytest.param({
+        "model_name": "test-model", TRUNCATED_TOOL_CALL_ARGS: ["T"]
+    },
+                 "tool call arguments are not complete JSON (T)",
+                 id="cut_off_tool_call_args"),
+    pytest.param(
+        {
+            "model_name": "test-model", "status": "incomplete", "incomplete_details": {
+                "reason": "max_output_tokens"
+            }
+        },
+        "status='incomplete', reason='max_output_tokens'",
+        id="responses_incomplete"),
+]
+
 _CUT_TOOL_CALL = {
     "name": "T", "args": {
         "path": "report.txt", "content": "line 01\nline"
@@ -557,26 +575,7 @@ _CUT_TOOL_CALL = {
 }
 
 
-@pytest.mark.parametrize(
-    "response_metadata, reason",
-    [
-        pytest.param({
-            "model_name": "test-model", TRUNCATED_TOOL_CALL_ARGS: ["T"]
-        },
-                     "tool call arguments are not complete JSON (T)",
-                     id="cut_off_tool_call_args"),
-        pytest.param(
-            {
-                "model_name": "test-model",
-                "status": "incomplete",
-                "incomplete_details": {
-                    "reason": "max_output_tokens"
-                }
-            },
-            "status='incomplete', reason='max_output_tokens'",
-            id="responses_incomplete"),
-    ],
-)
+@pytest.mark.parametrize("response_metadata, reason", TRUNCATION_CASES)
 async def test_validate_cut_off_tool_call_raises(error_mock_llm, mock_tool, response_metadata, reason):
     """A tool call from a reply that did not end normally must not reach the tool node."""
     agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
@@ -603,26 +602,7 @@ async def test_validate_cut_off_tool_call_delegates_to_retry(error_mock_llm, moc
     assert result.content == "complete"
 
 
-@pytest.mark.parametrize(
-    "response_metadata, reason",
-    [
-        pytest.param({
-            "model_name": "test-model", TRUNCATED_TOOL_CALL_ARGS: ["T"]
-        },
-                     "tool call arguments are not complete JSON (T)",
-                     id="cut_off_tool_call_args"),
-        pytest.param(
-            {
-                "model_name": "test-model",
-                "status": "incomplete",
-                "incomplete_details": {
-                    "reason": "max_output_tokens"
-                }
-            },
-            "status='incomplete', reason='max_output_tokens'",
-            id="responses_incomplete"),
-    ],
-)
+@pytest.mark.parametrize("response_metadata, reason", TRUNCATION_CASES)
 async def test_empty_response_retry_is_checked_for_truncation(error_mock_llm, mock_tool, response_metadata, reason):
     """A cut-off reply returned by the empty-response retry must not reach the tool node either."""
     agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0, max_empty_response_retries=1)
@@ -790,6 +770,44 @@ async def test_nim_stream_with_cut_off_arguments_raises(error_mock_llm, mock_too
 
     with pytest.raises(RuntimeError, match="tool call arguments are not complete JSON"):
         await agent.agent_node(state)
+
+
+def _cut_off_chunk(raw_args: str = '{"path": "report.txt", "content": "line 01') -> AIMessageChunk:
+    """The reply ``_invoke_llm`` really returns: an accumulated chunk, not a converted message."""
+    return AIMessageChunk(content="", tool_call_chunks=[{"name": "T", "args": raw_args, "id": "call_1", "index": 0}])
+
+
+async def test_empty_response_retry_is_converted_before_the_truncation_check(error_mock_llm, mock_tool):
+    """A cut-off tool call returned by the empty-response retry must still be caught.
+
+    ``_retry_on_empty_response`` hands back the accumulated chunk. The argument verdict lives on the converted
+    message, so without a conversion the check here sees only finish_reason and does nothing.
+    """
+    agent = _make_agent(error_mock_llm, mock_tool, max_empty_response_retries=1)
+    empty = AIMessage(content="", response_metadata={"finish_reason": "stop"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=_cut_off_chunk()):
+        with pytest.raises(RuntimeError, match="tool call arguments are not complete JSON"):
+            await agent._validate_llm_response(empty, state)
+
+
+async def test_empty_retry_then_truncation_retry_returning_empty_raises(error_mock_llm, mock_tool):
+    """empty reply → truncation retry → still empty: the empty reply must not reach the tool node."""
+    agent = _make_agent(error_mock_llm,
+                        mock_tool,
+                        max_empty_response_retries=1,
+                        max_truncation_retries=1,
+                        truncation_scaling_fn=lambda c: c + 512)
+    empty = AIMessage(content="", response_metadata={"finish_reason": "stop"})
+    cut_off = AIMessage(content="", tool_calls=[_CUT_TOOL_CALL], response_metadata={"finish_reason": "length"})
+    still_empty = AIMessage(content="", response_metadata={"finish_reason": "stop"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_retry_on_empty_response", new_callable=AsyncMock, return_value=cut_off):
+        with patch.object(agent, "_retry_on_truncation", new_callable=AsyncMock, return_value=still_empty):
+            with pytest.raises(RuntimeError, match="LLM returned an empty response"):
+                await agent._validate_llm_response(empty, state)
 
 
 async def test_truncation_retry_returning_an_empty_reply_raises(error_mock_llm, mock_tool):
@@ -1135,26 +1153,7 @@ async def test_retry_on_empty_exhausted(error_mock_llm, mock_tool):
             await agent._retry_on_empty_response(state, first_meta)
 
 
-@pytest.mark.parametrize(
-    "response_metadata, reason",
-    [
-        pytest.param({
-            "model_name": "test-model", TRUNCATED_TOOL_CALL_ARGS: ["T"]
-        },
-                     "tool call arguments are not complete JSON (T)",
-                     id="cut_off_tool_call_args"),
-        pytest.param(
-            {
-                "model_name": "test-model",
-                "status": "incomplete",
-                "incomplete_details": {
-                    "reason": "max_output_tokens"
-                }
-            },
-            "status='incomplete', reason='max_output_tokens'",
-            id="responses_incomplete"),
-    ],
-)
+@pytest.mark.parametrize("response_metadata, reason", TRUNCATION_CASES)
 async def test_retry_on_empty_returns_a_truncated_reply(error_mock_llm, mock_tool, response_metadata, reason):
     """A retry that comes back cut off is returned, not discarded as another empty reply.
 

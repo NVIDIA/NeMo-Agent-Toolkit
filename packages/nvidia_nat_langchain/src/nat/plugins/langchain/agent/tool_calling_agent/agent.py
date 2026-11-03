@@ -322,6 +322,11 @@ class ToolCallAgentGraph(DualNodeAgent):
                 truncation = _truncation_reason(response)
                 if truncation is not None:
                     response = await self._handle_truncation(response, state, truncation)
+                    # The truncation retry can come back empty too; that is the same dead end as an exhausted
+                    # empty-response retry, and an empty reply must not reach the tool node either way.
+                    if _is_empty_reply(response):
+                        retry_metadata: dict = getattr(response, "response_metadata", {}) or metadata
+                        raise _empty_response_error(retry_metadata)
             else:
                 raise _empty_response_error(metadata)
 
@@ -439,7 +444,13 @@ class ToolCallAgentGraph(DualNodeAgent):
             )
             response = await self._invoke_llm(state)
 
-            # A retry can come back cut off instead of empty: a Responses reply with
+            # ``_invoke_llm`` returns the accumulated stream. Convert it before anything reads it:
+            # ``_truncation_reason`` reads the argument verdict that ``_message_from_chunk`` records, and a
+            # chunk that was never converted does not carry it, so the check would silently do nothing here.
+            if isinstance(response, AIMessageChunk):
+                response = _message_from_chunk(response)
+
+            # A retry can come back cut off instead of empty
             # ``status="incomplete"`` carries neither text nor tool calls, so it would be
             # discarded here as another empty reply and the truncation path would never see it.
             # Hand it back so the caller can route it to the truncation handling.
