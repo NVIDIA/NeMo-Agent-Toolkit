@@ -17,6 +17,7 @@ import datetime
 import json
 import logging
 import typing
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
@@ -35,6 +36,7 @@ from nat.data_models.api_server import ChoiceDeltaToolCall
 from nat.data_models.api_server import ChoiceDeltaToolCallFunction
 from nat.plugins.langchain.agent.base import TRUNCATED_TOOL_CALL_ARGS
 from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.base import _incomplete_tool_call_args
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
 from nat.plugins.langchain.agent.tool_calling_agent.agent import _truncation_reason
@@ -738,6 +740,13 @@ async def test_stream_runs_a_complete_tool_call_whatever_the_finish_reason(error
 
     assert state.messages[-1].tool_calls[0]["name"] == "T"
     assert state.messages[-1].tool_calls[0]["args"]["content"].startswith("line 01")
+
+
+def test_incomplete_tool_call_args_skips_parsed_arguments():
+    """Arguments that arrive already parsed are not a raw string, so there is nothing to validate."""
+    chunk = SimpleNamespace(tool_call_chunks=[{"name": "T", "args": {"path": "r.txt"}}, {"name": "T", "args": None}])
+
+    assert _incomplete_tool_call_args(chunk) == []
 
 
 async def test_stream_with_cut_off_arguments_among_complete_calls_raises(error_mock_llm, mock_tool):
