@@ -682,15 +682,16 @@ def _gemini_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
         return []
 
     out: list[dict[str, Any]] = []
-    system_instruction = data.get("systemInstruction")
-    if system_instruction is None:
-        system_instruction = data.get("system_instruction")
-    if isinstance(system_instruction, dict):
-        system_instruction = system_instruction.get("parts", system_instruction)
-    if system_instruction:
-        system = _gemini_walk_parts_for_text(system_instruction)
+    system = ""
+    for key in ("systemInstruction", "system_instruction"):
+        candidate = data.get(key)
+        if isinstance(candidate, dict):
+            candidate = candidate.get("parts", candidate)
+        system = _gemini_walk_parts_for_text(candidate)
         if system:
-            out.append({"role": "system", "content": system})
+            break
+    if system:
+        out.append({"role": "system", "content": system})
 
     for turn in contents:
         if not isinstance(turn, dict):
