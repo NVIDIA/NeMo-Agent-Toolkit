@@ -350,6 +350,7 @@ async def test_prefix_span_analysis_chains_common_prefixes(tmp_path,
                                                            chain_with_common_prefixes: bool,
                                                            expected_token: str):
     """With chain_with_common_prefixes, prefix span analysis replaces the common prompt prefixes it is given."""
+
     def llm_step(event_type: WorkflowEventEnum, timestamp: float, uuid: str, data: StreamEventData) -> IntermediateStep:
         return IntermediateStep(parent_id="root",
                                 function_ancestry=InvocationNode(function_name="my_agent", function_id="agent-1"),
