@@ -104,6 +104,9 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                     setattr(token_usage, field, value)
 
             cached_tokens = first_nested_value(("prompt_tokens_details", "input_tokens_details"), "cached_tokens")
+            if cached_tokens is None:
+                # Anthropic reports prompt-cache reads directly on usage, without a *_details object
+                cached_tokens = first_value("cache_read_input_tokens")
             if cached_tokens is not None:
                 token_usage.cached_tokens = cached_tokens
 
