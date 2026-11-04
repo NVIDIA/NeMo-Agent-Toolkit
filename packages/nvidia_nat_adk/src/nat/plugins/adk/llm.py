@@ -203,6 +203,7 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
         config_dict["api_base"] = base_url
     if config.request_timeout is not None:
         config_dict["timeout"] = config.request_timeout
+    config_dict["max_retries"] = config.max_retries
 
     _handle_litellm_verify_ssl(config)
 
@@ -259,6 +260,7 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
             api_key=api_key,
             base_url=base_url,
             http_client=http_client,
+            max_retries=config.max_retries,
         )
         config_dict["client"] = openai_client
         yield _patch_llm_based_on_config(LiteLlm(config.model_name, **config_dict), config)
