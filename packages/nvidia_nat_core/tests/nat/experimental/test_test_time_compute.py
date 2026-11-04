@@ -167,9 +167,9 @@ async def test_llm_based_plan_selection_builds_with_the_given_builder():
 # ──────────────────────────────────────────────────────────────────────────────
 # Tests for the single_shot_multi_plan planner
 # ──────────────────────────────────────────────────────────────────────────────
-@pytest.mark.parametrize("num_plans, expected_temperatures", [(1, [0.5]), (3, [0.5, 0.75, 1.0])])
+@pytest.mark.parametrize("num_plans, expected_temperatures", [(1, [0.75]), (3, [0.5, 0.75, 1.0])])
 async def test_single_shot_multi_plan_temperatures(num_plans: int, expected_temperatures: list[float]):
-    """Each plan is sampled at its own temperature, and a single plan uses the minimum temperature."""
+    """Each plan is sampled at its own temperature, and a single plan uses the midpoint temperature."""
     from langchain_core.language_models import BaseChatModel
     from langchain_core.messages import AIMessage
 
