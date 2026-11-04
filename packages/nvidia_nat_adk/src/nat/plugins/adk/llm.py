@@ -250,6 +250,7 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
 
     if config.base_url:
         config_dict["api_base"] = config.base_url
+    config_dict["max_retries"] = config.max_retries
 
     async with _create_httpx_client_with_dynamo_hooks(config) as http_client:
 

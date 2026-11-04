@@ -255,6 +255,7 @@ class TestDynamoAdk:
             pass
 
         assert mock_async_openai.call_args.kwargs["max_retries"] == 4
+        assert mock_litellm_class.call_args.kwargs["max_retries"] == 4
 
     @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
     async def test_dynamo_verify_ssl(self, mock_httpx_async_client, verify_ssl):
