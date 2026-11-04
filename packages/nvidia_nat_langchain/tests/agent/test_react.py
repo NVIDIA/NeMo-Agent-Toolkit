@@ -21,12 +21,14 @@ from langchain_core.agents import AgentAction
 from langchain_core.agents import AgentFinish
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessageChunk
 from langchain_core.messages import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langchain_core.outputs import ChatGeneration
 from langchain_core.outputs import ChatResult
 from langgraph.graph.state import CompiledStateGraph
 
+from nat.plugins.langchain.agent.base import TRUNCATED_TOOL_CALL_ARGS
 from nat.plugins.langchain.agent.base import AgentDecision
 from nat.plugins.langchain.agent.react_agent.agent import NO_INPUT_ERROR_MESSAGE
 from nat.plugins.langchain.agent.react_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
@@ -2470,3 +2472,144 @@ async def test_agent_node_raises_on_truncated_output_in_agentic_cycle(mock_react
         with pytest.raises(RuntimeError, match="finish_reason='length'"):
             await mock_react_agent_no_raise.agent_node(state)
         assert "agent_scratchpad" in mock_stream_llm.call_args.args[1]
+
+
+_CUT_NATIVE_CALL = {"name": "Tool A", "args": {"query": "Lang"}, "id": "call_1", "type": "tool_call"}
+
+
+@pytest.mark.parametrize(
+    "response_metadata, reason",
+    [
+        pytest.param({TRUNCATED_TOOL_CALL_ARGS: ["Tool A"]},
+                     "tool call arguments are not complete JSON",
+                     id="cut_off_tool_call_args"),
+        pytest.param({
+            "status": "incomplete", "incomplete_details": {
+                "reason": "max_output_tokens"
+            }
+        },
+                     "status='incomplete'",
+                     id="responses_incomplete"),
+    ],
+)
+async def test_agent_node_raises_on_cut_off_native_tool_call(mock_react_agent_no_raise,
+                                                             monkeypatch,
+                                                             response_metadata,
+                                                             reason):
+    """A native tool call from a reply that did not end normally must not become an AgentAction."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", True)
+    cut = AIMessage(content="", tool_calls=[_CUT_NATIVE_CALL], response_metadata=response_metadata)
+    state = ReActGraphState(messages=[HumanMessage(content="hi")])
+    with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = cut
+        with pytest.raises(RuntimeError, match="truncated") as exc_info:
+            await mock_react_agent_no_raise.agent_node(state)
+    assert reason in str(exc_info.value)
+    assert state.agent_scratchpad == []
+
+
+@pytest.mark.parametrize(
+    "response_metadata",
+    [
+        pytest.param({
+            "finish_reason": "tool_calls", "model_provider": "openai"
+        }, id="chat_tool_calls"),
+        pytest.param({"status": "completed"}, id="responses_completed"),
+        pytest.param({}, id="no_metadata_mock_model"),
+    ],
+)
+async def test_agent_node_accepts_complete_native_tool_call(mock_react_agent_no_raise, monkeypatch, response_metadata):
+    """Complete native tool calls, and tool calls from models without metadata, still become an AgentAction."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", True)
+    complete = AIMessage(content="", tool_calls=[_CUT_NATIVE_CALL], response_metadata=response_metadata)
+    state = ReActGraphState(messages=[HumanMessage(content="hi")])
+    with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = complete
+        result = await mock_react_agent_no_raise.agent_node(state)
+    assert isinstance(result.agent_scratchpad[-1], AgentAction)
+    assert result.agent_scratchpad[-1].tool == "Tool A"
+
+
+async def test_agent_node_parses_a_text_action_without_finish_reason(mock_react_agent_no_raise, monkeypatch):
+    """A text reply is parsed on its own content, never on ``finish_reason``.
+
+    A provider that does not report ``finish_reason`` must not have every text ``Action`` rejected; only an
+    explicit truncation signal (``finish_reason="length"``) stops a text reply.
+    """
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", False)
+    reply = AIMessage(content='Action: Tool A\nAction Input: {"query": "Lang"}', response_metadata={})
+    state = ReActGraphState(messages=[HumanMessage(content="hi")])
+    with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = reply
+        result = await mock_react_agent_no_raise.agent_node(state)
+
+    assert isinstance(result.agent_scratchpad[-1], AgentAction)
+    assert result.agent_scratchpad[-1].tool_input == '{"query": "Lang"}'
+
+
+class _ChunkStream:
+    """Stand-in for the ``prompt | llm`` runnable: replays the chunks a provider stream would emit."""
+
+    def __init__(self, chunks: list[AIMessageChunk]):
+        self._chunks = chunks
+
+    async def astream(self, inputs: typing.Any, config: typing.Any = None) -> typing.AsyncIterator[AIMessageChunk]:
+        """Replay the recorded chunks as an async stream."""
+        for chunk in self._chunks:
+            yield chunk
+
+
+async def test_agent_node_raises_when_stream_ends_mid_native_tool_call(mock_react_agent_no_raise, monkeypatch):
+    """Accumulated chunks that stop mid tool arguments must not become an AgentAction."""
+    monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", True)
+    monkeypatch.setattr(
+        mock_react_agent_no_raise,
+        "agent",
+        _ChunkStream([
+            AIMessageChunk(content=""),
+            AIMessageChunk(content="", response_metadata={"model_provider": "openai"}),
+            AIMessageChunk(content="",
+                           tool_call_chunks=[{
+                               "name": "Tool A", "args": '{"query": "Lang', "id": "call_1", "index": 0
+                           }]),
+        ]))
+    state = ReActGraphState(messages=[HumanMessage(content="hi")])
+
+    with pytest.raises(RuntimeError, match="tool call arguments are not complete JSON"):
+        await mock_react_agent_no_raise.agent_node(state)
+
+    assert state.agent_scratchpad == []
+
+
+async def test_agent_node_runs_a_complete_tool_call_without_finish_reason(mock_react_agent_no_raise, monkeypatch):
+    """The same stream with complete arguments but no finish_reason becomes an AgentAction.
+
+    Paired with the test above: the check reads the argument string, not the provider's terminator, so a provider
+    that omits ``finish_reason`` keeps working.
+    """
+    monkeypatch.setattr(mock_react_agent_no_raise, "use_native_tool_calling", True)
+    monkeypatch.setattr(
+        mock_react_agent_no_raise,
+        "agent",
+        _ChunkStream([
+            AIMessageChunk(content=""),
+            AIMessageChunk(content="",
+                           tool_call_chunks=[{
+                               "name": "Tool A", "args": '{"query": "Lang"}', "id": "call_1", "index": 0
+                           }]),
+        ]))
+    state = ReActGraphState(messages=[HumanMessage(content="hi")])
+
+    result = await mock_react_agent_no_raise.agent_node(state)
+
+    assert isinstance(result.agent_scratchpad[-1], AgentAction)
+    assert result.agent_scratchpad[-1].tool == "Tool A"

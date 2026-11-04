@@ -38,7 +38,6 @@ from langgraph.errors import GraphRecursionError
 from pydantic import BaseModel
 from pydantic import Field
 
-from nat.llm.utils.constants import LLMFinishReason
 from nat.plugins.langchain.agent.base import AGENT_CALL_LOG_MESSAGE
 from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
 from nat.plugins.langchain.agent.base import INPUT_SCHEMA_MESSAGE
@@ -54,6 +53,7 @@ from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputPar
 from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParserException
 from nat.plugins.langchain.agent.react_agent.prompt import SYSTEM_PROMPT
 from nat.plugins.langchain.agent.react_agent.prompt import USER_PROMPT
+from nat.plugins.langchain.agent.tool_calling_agent.agent import _truncation_reason
 from nat.utils.io.model_processing import remove_r1_think_tags
 
 if typing.TYPE_CHECKING:
@@ -134,6 +134,7 @@ class ReActAgentGraph(DualNodeAgent):
                  raise_on_parsing_failure: bool = True,
                  use_native_tool_calling: bool = False,
                  max_tool_calls: int | None = None):
+        """Build the ReAct agent around ``prompt | llm`` with tools bound to it."""
         super().__init__(llm=llm,
                          tools=tools,
                          callbacks=callbacks,
@@ -247,6 +248,7 @@ class ReActAgentGraph(DualNodeAgent):
         return tool_input_str, False
 
     async def agent_node(self, state: ReActGraphState, config: RunnableConfig | None = None):
+        """Run one ReAct step and append the reply or ``AgentAction`` to the state."""
         try:
             logger.debug("%s Starting the ReAct Agent Node", AGENT_LOG_PREFIX)
             # keeping a working state allows us to resolve parsing errors without polluting the agent scratchpad
@@ -310,9 +312,11 @@ class ReActAgentGraph(DualNodeAgent):
                         logger.debug("%s The agent's scratchpad (with tool result) was:\n%s",
                                      AGENT_LOG_PREFIX,
                                      agent_scratchpad)
-                # A truncated reply would be parsed as a complete answer or tool input (#2518)
-                if getattr(output_message, "response_metadata", {}).get("finish_reason") == LLMFinishReason.LENGTH:
-                    raise RuntimeError("LLM output truncated (finish_reason='length'). "
+                # A truncated reply would be parsed as a complete answer or tool input (#2518), and a cut-off
+                # native tool call would run with partially parsed arguments
+                truncation: str | None = _truncation_reason(output_message)
+                if truncation is not None:
+                    raise RuntimeError(f"LLM output truncated ({truncation}). "
                                        f"Truncated output: {str(output_message.content)[:500]!r}")
                 try:
                     # check if the agent has the final answer yet
