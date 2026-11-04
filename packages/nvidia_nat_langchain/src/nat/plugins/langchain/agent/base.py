@@ -81,6 +81,30 @@ def _format_agent_thoughts_for_log(message: BaseMessage) -> str:
     return _extract_reasoning_content(message)
 
 
+def _incomplete_tool_call_args(chunk: BaseMessage) -> list[str]:
+    """Return the names of streamed tool calls whose raw argument string is not complete JSON.
+
+    LangChain assembles streamed tool calls with a partial-JSON parser, so a stream that stops in the middle of
+    the arguments still yields a usable ``args`` dict and an empty ``invalid_tool_calls``: the truncation is only
+    visible in the raw substring kept on ``tool_call_chunks``. An empty argument string or ``{}`` is complete for
+    a tool that takes no arguments.
+    """
+    incomplete: list[str] = []
+    # ``tool_call_chunks`` only exists on streamed chunks; a non-streamed reply has nothing to check.
+    for call in getattr(chunk, "tool_call_chunks", None) or []:
+        raw = call.get("args") or ""
+        if not isinstance(raw, str):
+            # A provider that hands LangChain an already-parsed value has no raw string to inspect.
+            continue
+        if raw.strip() in ("", "{}"):
+            continue
+        try:
+            json.loads(raw)
+        except ValueError:
+            incomplete.append(call.get("name") or "<unnamed>")
+    return incomplete
+
+
 def _chunk_to_message(chunk: AIMessageChunk) -> AIMessage:
     """Convert an accumulated AIMessageChunk into an AIMessage, preserving tool_calls.
 
@@ -95,13 +119,20 @@ def _chunk_to_message(chunk: AIMessageChunk) -> AIMessage:
         if "tool_calls" in openai_msg:
             additional_kwargs["tool_calls"] = openai_msg["tool_calls"]
 
-    return AIMessage(
+    message = AIMessage(
         content=chunk.content,
         additional_kwargs=additional_kwargs,
         response_metadata=chunk.response_metadata,
         id=chunk.id,
         usage_metadata=chunk.usage_metadata,
     )
+    # A tool call whose raw streamed arguments are not complete JSON is recorded here, not raised: every caller of
+    # the agents' truncation handling reads it from ``response_metadata`` through ``_truncation_reason``, and a
+    # reply that never streamed has no raw string to judge.
+    incomplete = _incomplete_tool_call_args(chunk)
+    if incomplete:
+        message.response_metadata = {**message.response_metadata, TRUNCATED_TOOL_CALL_ARGS: incomplete}
+    return message
 
 
 TOOL_NOT_FOUND_ERROR_MESSAGE = "There is no tool named {tool_name}. Tool must be one of {tools}."
@@ -109,6 +140,10 @@ INPUT_SCHEMA_MESSAGE = ". Arguments must be provided as a valid JSON object foll
 NO_INPUT_ERROR_MESSAGE = "No human input received to the agent, Please ask a valid question."
 
 AGENT_LOG_PREFIX = "[AGENT]"
+
+# Set on a reply's ``response_metadata`` when the streamed tool-call arguments did not parse as complete JSON.
+# ``_stream_llm`` records it; ``_truncation_reason`` in the agents turns it into the usual truncation path.
+TRUNCATED_TOOL_CALL_ARGS = "nat_truncated_tool_call_args"
 AGENT_CALL_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
                                  AGENT_LOG_PREFIX + "\n" + \
                                  Fore.YELLOW + \
