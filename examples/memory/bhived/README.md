@@ -112,6 +112,8 @@ The API key decides where a written lesson goes. A personal key saves it as a pu
 | `allow_writes` | `false` | Memory backend: save items that have explicit `memory` text, such as those from the `add_memory` tool, as lessons. |
 | `read_only` | `false` | Function group: expose only the query tool. |
 
+Shared lessons cannot be removed through the memory backend. `remove_items` raises `NotImplementedError`, because a lesson is shared across users and is not owned by any one of them.
+
 The plugin README lists every field.
 
 ## More Resources
