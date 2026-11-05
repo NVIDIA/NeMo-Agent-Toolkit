@@ -189,6 +189,7 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> As
             "api_key": api_key,
             "base_url": base_url,
             "http_client": http_client,
+            "max_retries": llm_config.max_retries,
         }
         if llm_config.request_timeout is not None:
             client_args["timeout"] = llm_config.request_timeout
