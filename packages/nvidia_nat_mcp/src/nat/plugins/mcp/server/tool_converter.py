@@ -144,14 +144,20 @@ def _validate_input_schema_for_context_injection(schema: type[BaseModel], name_m
             "MCP request context injection.", )
 
 
-def _http_request_from_ctx(ctx: Any) -> Any | None:
-    """Return the HTTP request carried by an MCP context, or None when absent."""
+def _request_context_from_ctx(ctx: Any) -> Any | None:
+    """Return an active MCP request context, including non-HTTP transports."""
     if ctx is None:
         return None
     try:
         request_context = ctx.request_context
     except (LookupError, ValueError):
         return None
+    return request_context
+
+
+def _http_request_from_ctx(ctx: Any) -> Any | None:
+    """Return the HTTP request carried by an MCP context, or None when absent."""
+    request_context = _request_context_from_ctx(ctx)
     if request_context is None:
         return None
     try:
@@ -226,10 +232,10 @@ async def _run_through_session_manager(session_manager: 'SessionManager',
                 if access_token is not None:
                     # A validated principal wins. Do not let nat-session override it.
                     user_id = UserManager.user_id_from_verified_access_token(http_connection, access_token)
-                elif user_id is None:
-                    user_info = UserManager.extract_user_from_connection(http_connection)
-                    if user_info is not None:
-                        user_id = user_info.get_user_id()
+
+            if not user_id:
+                raise ValueError("Authenticated user identity is required for per-user workflows. "
+                                 "Configure server_auth or supply a trusted runtime user_id.")
 
             async with session_manager.session(user_id=user_id, http_connection=http_connection) as session:
                 async with session.run(payload) as runner:
@@ -335,10 +341,10 @@ def create_function_wrapper(
             kwargs = {k: v for k, v in kwargs.items() if v is not _USE_PYDANTIC_DEFAULT}
 
             # Process the function call
-            if _nat_mcp_context:
-                _nat_mcp_context.info("Calling function %s with args: %s",
-                                      function_name,
-                                      json.dumps(kwargs, default=str))
+            has_request_context = _request_context_from_ctx(_nat_mcp_context) is not None
+            if has_request_context:
+                await _nat_mcp_context.info(
+                    f"Calling function {function_name} with args: {json.dumps(kwargs, default=str)}")
                 await _nat_mcp_context.report_progress(0, 100)
 
             try:
@@ -368,7 +374,7 @@ def create_function_wrapper(
                                                             memory_profiler=memory_profiler)
 
                 # Report completion
-                if _nat_mcp_context:
+                if has_request_context:
                     await _nat_mcp_context.report_progress(100, 100)
 
                 # Handle different result types for proper formatting
@@ -378,8 +384,8 @@ def create_function_wrapper(
                     return json.dumps(result, default=str)
                 return str(result)
             except Exception as e:
-                if _nat_mcp_context:
-                    _nat_mcp_context.error("Error calling function %s: %s", function_name, str(e))
+                if has_request_context:
+                    await _nat_mcp_context.error(f"Error calling function {function_name}: {e}")
 
                 raise
 

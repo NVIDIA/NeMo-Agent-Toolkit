@@ -154,7 +154,9 @@ With this configuration, the MCP server is accessible at `http://localhost:9902/
 
 A per-user workflow can be served over FastMCP. Each user gets their own workflow instance, built on first use. [MCP authentication](../components/auth/mcp-auth/index.md) prescribes pairing `per_user_mcp_client` with a per-user workflow, such as `per_user_react_agent`.
 
-The user is taken from the Bearer token on the MCP request when [`server_auth`](#authentication) is configured, or from runtime context when it is already set. Per-user workflows require authenticated streamable-http requests so the server can derive a user ID. Without that, tool calls fail with an error saying the user ID could not be determined.
+Per-user workflows require the `streamable-http` transport and [`server_auth`](#authentication); the default server rejects other configurations at startup. Tool calls use the verified Bearer token's identity claims. A custom integration may supply a trusted user ID through runtime context. Cookies and unverified credentials cannot establish a user identity; a conflicting `nat-session` cookie is rejected.
+
+With a per-user workflow, `tool_names` may be empty (the default) or contain only the workflow's tool name, which is its `workflow_alias` when set, otherwise its `_type`. Selecting other functions or function groups is unsupported and raises a configuration error.
 
 The `/debug/tools/list` route returns an empty tool list for a per-user workflow because no shared workflow instance exists at startup. Use `nat mcp client tool list` to inspect the registered MCP tool and its input schema.
 

@@ -1535,6 +1535,30 @@ class TestVerifiedAccessTokenIdentity:
         assert user_id == UserManager._user_info_from_jwt({"sub": "alice"}).get_user_id()
         assert UserManager.verified_access_token_from_connection(request) is access_token
 
+    @pytest.mark.parametrize("token", ["opaque.with.dots", "opaque-token"])
+    def test_verified_claims_precede_raw_token_decoding(self, token):
+        access_token = SimpleNamespace(token=token, claims={"sub": "alice"})
+        request = _request_with_access_token(token, access_token)
+        user_id = UserManager.user_id_from_verified_access_token(request, access_token)
+        assert user_id == UserManager._user_info_from_jwt({"sub": "alice"}).get_user_id()
+
+    def test_verified_claims_override_different_raw_jwt_subject(self):
+        token = _make_jwt({"sub": "untrusted-subject"})
+        access_token = SimpleNamespace(token=token, claims={"sub": "alice"})
+        request = _request_with_access_token(token, access_token)
+        assert UserManager.user_id_from_verified_access_token(request,
+                                                              access_token) == (UserManager._user_info_from_jwt({
+                                                                  "sub": "alice"
+                                                              }).get_user_id())
+
+    def test_verified_subject_without_claims_is_supported(self):
+        access_token = SimpleNamespace(token="opaque.with.dots", subject="alice")
+        request = _request_with_access_token(access_token.token, access_token)
+        assert UserManager.user_id_from_verified_access_token(request,
+                                                              access_token) == (UserManager._user_info_from_jwt({
+                                                                  "sub": "alice"
+                                                              }).get_user_id())
+
     def test_connection_without_auth_user_has_no_verified_token(self):
         request = _request_with_access_token("plain", SimpleNamespace(token="plain", claims={}))
         request.scope.pop("user")

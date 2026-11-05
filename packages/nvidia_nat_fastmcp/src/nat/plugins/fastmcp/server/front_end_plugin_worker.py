@@ -156,9 +156,14 @@ class FastMCPFrontEndPluginWorkerBase(ABC):
         self._setup_health_endpoint(mcp)
 
         if self._is_primary_workflow_per_user():
+            if self.front_end_config.server_auth is None or self.front_end_config.transport != "streamable-http":
+                raise ValueError("Per-user workflows require streamable-http transport with server_auth configured.")
+            tool_name = self._resolve_workflow_tool_name()
+            if self.front_end_config.tool_names and set(self.front_end_config.tool_names) != {tool_name}:
+                raise ValueError(f"Per-user workflows can only expose the workflow tool {tool_name!r}; "
+                                 "tool_names cannot select other functions or function groups.")
             session_manager = self._track_session_manager(await SessionManager.create(config=self.full_config,
                                                                                       shared_builder=builder))
-            tool_name = self._resolve_workflow_tool_name()
             register_function_with_mcp(mcp, tool_name, session_manager, function=None)
             self._setup_debug_endpoints(mcp, {})
             return

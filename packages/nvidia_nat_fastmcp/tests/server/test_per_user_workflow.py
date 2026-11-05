@@ -28,6 +28,7 @@ from pydantic import BaseModel
 from starlette.requests import Request
 from starlette.testclient import TestClient
 
+from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.builder.workflow_builder import WorkflowBuilder
@@ -55,6 +56,8 @@ class _Output(BaseModel):
 
 class PerUserFastMCPWorkflowConfig(FunctionBaseConfig, name="per_user_fastmcp_test_workflow"):
     """Per-user workflow config for FastMCP front-end tests."""
+
+    workflow_alias: str | None = None
 
 
 class SharedFastMCPWorkflowConfig(FunctionBaseConfig, name="shared_fastmcp_test_workflow"):
@@ -97,7 +100,10 @@ def _config(workflow) -> Config:
 
 @pytest.fixture(name="per_user_config")
 def fixture_per_user_config(registered_workflows) -> Config:
-    return _config(PerUserFastMCPWorkflowConfig())
+    config = _config(PerUserFastMCPWorkflowConfig())
+    config.general.front_end.server_auth = OAuth2ResourceServerConfig(issuer_url="https://issuer.example",
+                                                                      audience="test-api")
+    return config
 
 
 @pytest.fixture(name="shared_config")
@@ -234,20 +240,17 @@ class TestPerUserRequestIdentity:
         context = SimpleNamespace(user_id=None)
         monkeypatch.setattr("nat.builder.context.Context.get", lambda: context)
 
-        request = MagicMock()
+        request = _authenticated_request(_unsigned_jwt({"sub": "bob"}), cookie=None)
         ctx = SimpleNamespace(request_context=SimpleNamespace(request=request))
-        user_info = MagicMock()
-        user_info.get_user_id.return_value = "bob"
-        monkeypatch.setattr(
-            "nat.runtime.user_manager.UserManager.extract_user_from_connection",
-            MagicMock(return_value=user_info),
-        )
 
         payload = _Input(message="hello")
         result = await _run_through_session_manager(session_manager, payload, ctx=ctx)
 
         assert result == "ok"
-        session_manager.session.assert_called_once_with(user_id="bob", http_connection=request)
+        session_manager.session.assert_called_once_with(user_id=UserManager._user_info_from_jwt({
+            "sub": "bob"
+        }).get_user_id(),
+                                                        http_connection=request)
 
 
 class TestPerUserToolStreamableHttp:
@@ -281,27 +284,8 @@ class TestPerUserToolStreamableHttp:
 
             monkeypatch.setattr(session_manager, "session", _capture_session)
 
-            user_info = MagicMock()
-            user_info.get_user_id.return_value = "bob"
-            monkeypatch.setattr(
-                "nat.runtime.user_manager.UserManager.extract_user_from_connection",
-                MagicMock(return_value=user_info),
-            )
             monkeypatch.setattr("nat.builder.context.Context.get", lambda: SimpleNamespace(user_id=None))
-
-            request = Request({
-                "type": "http",
-                "http_version": "1.1",
-                "method": "POST",
-                "scheme": "http",
-                "path": "/mcp",
-                "raw_path": b"/mcp",
-                "query_string": b"",
-                "headers": [(b"authorization", b"Bearer test-token")],
-                "client": ("127.0.0.1", 1234),
-                "server": ("testserver", 80),
-                "root_path": "",
-            })
+            request = _authenticated_request(_unsigned_jwt({"sub": "bob"}), cookie=None)
 
             with TestClient(mcp.http_app(transport="streamable-http")):
                 token = request_ctx.set(SimpleNamespace(request=request, session=MagicMock()))
@@ -310,7 +294,7 @@ class TestPerUserToolStreamableHttp:
                 finally:
                     request_ctx.reset(token)
 
-            assert captured["user_id"] == "bob"
+            assert captured["user_id"] == UserManager._user_info_from_jwt({"sub": "bob"}).get_user_id()
             assert captured["http_connection"] is request
 
 
@@ -389,3 +373,150 @@ class TestVerifiedPrincipalIsolation:
         assert result == "ok"
         assert built == [alice_id]
         assert alice_id != UserManager._user_info_from_jwt({"sub": "bob"}).get_user_id()
+
+
+class TestPerUserSecurityPolicy:
+    """Reject unsupported exposure and unverified request identities before building a user workflow."""
+
+    @pytest.mark.parametrize("missing_auth,transport", [(True, "streamable-http"), (False, "sse")])
+    async def test_rejects_unauthenticated_transport(self, per_user_config, missing_auth, transport):
+        per_user_config.general.front_end.transport = transport
+        if missing_auth:
+            per_user_config.general.front_end.server_auth = None
+        worker = FastMCPFrontEndPluginWorker(per_user_config)
+        async with WorkflowBuilder.from_config(config=per_user_config) as builder:
+            mcp = await worker.create_mcp_server()
+            with pytest.raises(ValueError, match="require streamable-http transport with server_auth"):
+                await worker._default_add_routes(mcp, builder)
+            assert await mcp.list_tools() == []
+            assert worker._session_managers == []
+
+    @pytest.mark.parametrize("tool_names", [["unrelated"], ["per_user_fastmcp_test_workflow", "unrelated"]])
+    async def test_rejects_other_tool_selections(self, per_user_config, tool_names):
+        per_user_config.general.front_end.tool_names = tool_names
+        worker = FastMCPFrontEndPluginWorker(per_user_config)
+        async with WorkflowBuilder.from_config(config=per_user_config) as builder:
+            mcp = await worker.create_mcp_server()
+            with pytest.raises(ValueError, match="can only expose the workflow tool"):
+                await worker._default_add_routes(mcp, builder)
+            assert await mcp.list_tools() == []
+            assert worker._session_managers == []
+
+    @pytest.mark.parametrize("alias", [None, "custom_workflow"])
+    async def test_accepts_workflow_tool_selection(self, per_user_config, alias):
+        per_user_config.workflow.workflow_alias = alias
+        tool_name = alias or per_user_config.workflow.type
+        per_user_config.general.front_end.tool_names = [tool_name]
+        worker = FastMCPFrontEndPluginWorker(per_user_config)
+        async with WorkflowBuilder.from_config(config=per_user_config) as builder:
+            try:
+                mcp = await worker.create_mcp_server()
+                await worker._default_add_routes(mcp, builder)
+                assert [tool.name for tool in await mcp.list_tools()] == [tool_name]
+            finally:
+                await worker.cleanup()
+
+    @pytest.mark.parametrize("credential", ["cookie", "unsigned_jwt", "opaque_token", "missing"])
+    async def test_unverified_identity_never_creates_a_session(self, per_user_config, monkeypatch, credential):
+        from nat.plugins.fastmcp.server.tool_converter import _run_through_session_manager
+
+        request = _authenticated_request(_unsigned_jwt({"sub": "bob"}), cookie=None)
+        request.scope.pop("user")
+        headers = []
+        if credential == "cookie":
+            headers = [(b"cookie", b"nat-session=bob")]
+        elif credential == "unsigned_jwt":
+            headers = request.scope["headers"]
+        elif credential == "opaque_token":
+            headers = [(b"authorization", b"Bearer arbitrary-token")]
+        request.scope["headers"] = headers
+        ctx = SimpleNamespace(request_context=SimpleNamespace(request=request))
+        monkeypatch.setattr("nat.builder.context.Context.get", lambda: SimpleNamespace(user_id=None))
+        async with WorkflowBuilder.from_config(config=per_user_config) as builder:
+            manager = await SessionManager.create(config=per_user_config, shared_builder=builder)
+            try:
+                with pytest.raises(ValueError, match="Authenticated user identity is required"):
+                    await _run_through_session_manager(manager, _Input(message="hello"), ctx=ctx)
+                assert manager._per_user_builders == {}
+            finally:
+                await manager.shutdown()
+
+
+async def test_authenticated_http_tool_call_and_identity_isolation(per_user_config, monkeypatch):
+    """Use actual HTTP auth middleware and tool dispatch, including an introspected dotted token."""
+    from nat.authentication.credential_validator.bearer_token_validator import BearerTokenValidator
+    from nat.data_models.authentication import TokenValidationResult
+
+    async def verify(_self, token):
+        return TokenValidationResult(active=token == "opaque.with.dots",
+                                     client_id="test-client",
+                                     subject="alice",
+                                     issuer="https://issuer.example",
+                                     audience=["test-api"],
+                                     token_type="opaque",
+                                     scopes=[])
+
+    monkeypatch.setattr(BearerTokenValidator, "verify", verify)
+    worker = FastMCPFrontEndPluginWorker(per_user_config)
+    async with WorkflowBuilder.from_config(config=per_user_config) as builder:
+        try:
+            mcp = await worker.create_mcp_server()
+            await worker._default_add_routes(mcp, builder)
+            app = mcp.http_app(transport="streamable-http", path="/mcp", json_response=True)
+            with TestClient(app,
+                            base_url=f"http://{worker.front_end_config.host}:{worker.front_end_config.port}") as client:
+                client.headers.update({"accept": "application/json, text/event-stream"})
+                initialize = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-03-26",
+                        "capabilities": {},
+                        "clientInfo": {
+                            "name": "regression-test", "version": "1"
+                        }
+                    }
+                }
+                # A cookie or unsigned JWT cannot replace authentication at the HTTP boundary.
+                assert client.post("/mcp", json=initialize, headers={"cookie": "nat-session=bob"}).status_code == 401
+                assert client.post("/mcp",
+                                   json=initialize,
+                                   headers={
+                                       "authorization": f"Bearer {_unsigned_jwt({'sub': 'bob'})}"
+                                   }).status_code == 401
+                manager = worker._session_managers[0]
+                assert manager._per_user_builders == {}
+
+                client.headers.update({"authorization": "Bearer opaque.with.dots"})
+                response = client.post("/mcp", json=initialize)
+                assert response.status_code == 200
+                client.headers.update({
+                    "mcp-session-id": response.headers["mcp-session-id"], "mcp-protocol-version": "2025-03-26"
+                })
+                assert client.post("/mcp", json={
+                    "jsonrpc": "2.0", "method": "notifications/initialized"
+                }).status_code == 202
+                call = {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "per_user_fastmcp_test_workflow", "arguments": {
+                            "message": "hello"
+                        }
+                    }
+                }
+                result = client.post("/mcp", json=call).json()["result"]
+                assert not result.get("isError", False)
+                assert "per-user: hello" in result["content"][0]["text"]
+                alice_id = UserManager._user_info_from_jwt({"sub": "alice"}).get_user_id()
+                assert set(manager._per_user_builders) == {alice_id}
+
+                call["id"] = 3
+                result = client.post("/mcp", json=call, headers={"cookie": "nat-session=bob"}).json()["result"]
+                assert result["isError"]
+                assert "nat-session cookie does not match" in result["content"][0]["text"]
+                assert set(manager._per_user_builders) == {alice_id}
+        finally:
+            await worker.cleanup()

@@ -15,11 +15,13 @@
 
 import warnings
 from inspect import Parameter
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from mcp.server.fastmcp import Context
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 from pydantic import AliasChoices
@@ -1085,3 +1087,27 @@ class TestParameterNameSanitization:
         # The Pydantic model should have the original field names
         assert getattr(payload, "from") == "2024-01-01"
         assert getattr(payload, "cik-A") == "ABC"
+
+
+@pytest.mark.parametrize("fail", [False, True])
+async def test_wrapper_awaits_real_context_logging_and_preserves_errors(fail):
+    """Exercise the SDK's logging API with a real Context on both execution paths."""
+    session_manager = create_mock_session_manager(result_value="ok")
+    if fail:
+        session_manager.run.side_effect = RuntimeError("workflow failed")
+    server_session = SimpleNamespace(send_log_message=AsyncMock(), send_progress_notification=AsyncMock())
+    request_context = SimpleNamespace(session=server_session,
+                                      request_id=1,
+                                      meta=SimpleNamespace(progressToken="progress"))
+    context = Context(request_context=request_context)
+    wrapper = create_function_wrapper("echo", session_manager, MockRegularSchema)
+    if fail:
+        with pytest.raises(RuntimeError, match="workflow failed"):
+            await wrapper(name="test", _nat_mcp_context=context)
+        assert server_session.send_log_message.await_args.kwargs["level"] == "error"
+        assert "workflow failed" in server_session.send_log_message.await_args.kwargs["data"]
+    else:
+        assert await wrapper(name="test", _nat_mcp_context=context) == "ok"
+        assert server_session.send_log_message.await_args.kwargs["level"] == "info"
+        assert server_session.send_progress_notification.await_count == 2
+    assert server_session.send_log_message.await_count == (2 if fail else 1)

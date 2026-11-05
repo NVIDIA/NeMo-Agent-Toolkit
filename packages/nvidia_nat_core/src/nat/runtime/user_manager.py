@@ -136,15 +136,20 @@ class UserManager:
     @staticmethod
     def _claims_from_verified_access_token(access_token: object) -> dict[str, typing.Any] | None:
         """Read identity claims from a token the auth middleware already verified."""
+        claims = getattr(access_token, "claims", None)
+        if isinstance(claims, dict) and any(
+                isinstance(claims.get(key), str) and claims[key].strip()
+                for key in ("sub", "email", "preferred_username")):
+            return claims
+
+        subject = getattr(access_token, "subject", None)
+        if isinstance(subject, str) and subject.strip():
+            return {"sub": subject}
+
+        # Older JWT token adapters may omit verified identity metadata.
         token = getattr(access_token, "token", None)
         if isinstance(token, str) and token.count(".") == 2:
             return decode_jwt_claims_unverified(token)
-
-        claims = getattr(access_token, "claims", None)
-        if isinstance(claims, dict):
-            subject = claims.get("sub")
-            if isinstance(subject, str) and subject.strip():
-                return claims
         return None
 
     @classmethod

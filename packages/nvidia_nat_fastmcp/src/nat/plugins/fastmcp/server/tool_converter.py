@@ -273,10 +273,10 @@ async def _run_through_session_manager(session_manager: "SessionManager", payloa
             if access_token is not None:
                 # A validated principal wins. Do not let nat-session override it.
                 user_id = UserManager.user_id_from_verified_access_token(http_connection, access_token)
-            elif user_id is None:
-                user_info = UserManager.extract_user_from_connection(http_connection)
-                if user_info is not None:
-                    user_id = user_info.get_user_id()
+
+        if not user_id:
+            raise ValueError("Authenticated user identity is required for per-user workflows. "
+                             "Configure server_auth or supply a trusted runtime user_id.")
 
         async with session_manager.session(user_id=user_id, http_connection=http_connection) as session:
             async with session.run(payload) as runner:
