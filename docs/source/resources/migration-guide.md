@@ -17,17 +17,64 @@
 
 # Migration Guide
 
-NeMo Agent Toolkit is designed to be backwards compatible with the previous version of the toolkit except for changes documented on this page.
+## NeMo Agent Toolkit deprecation
 
-Additionally, all new contributions should rely on the most recent version of the toolkit and not rely on any deprecated functionality.
+:::{attention}
 
-## Migrating to a new version of NeMo Agent Toolkit
+⚠️ **Deprecation Notice:** NVIDIA NeMo Agent Toolkit has been deprecated as of October 2026 and will reach end of life (EOL) by end of year **2026**. Depending on your needs, migrate to: [NeMo Relay](<https://github.com/NVIDIA/NeMo-Relay>) for observability, middleware, and governance. [NeMo Helix](<https://github.com/NVIDIA-NeMo/nemo-helix>) for a unified CLI with evaluation, optimization, and hardening capabilities. [NeMo Fabric](<https://github.com/NVIDIA/NeMo-Fabric>) for a consistent interface to run agent harnesses and custom agents.
+We recommend completing your migration before the EOL date.
 
-It is strongly encouraged to migrate any existing code to the latest conventions and remove any deprecated functionality.
+:::
+
+## Alternatives
+
+Choose the projects that match the capabilities you use in NeMo Agent Toolkit. You can use them together when your application needs observability, agent execution, and evaluation or optimization.
+
+### NeMo Relay: Observability, Middleware, and Governance
+
+[NVIDIA NeMo Relay](https://github.com/NVIDIA/NeMo-Relay) provides visibility into and control over agent runs without requiring changes to the existing agent stack. It gives applications, coding agents, and framework integrations a shared runtime for scopes, policy, plugins, and lifecycle events.
+
+Use NeMo Relay to instrument LLM and tool calls, capture agent trajectories, and export traces, logs, and metrics to observability backends. Its plugin system supports reusable middleware and exporters. Start with the [NeMo Relay documentation](https://docs.nvidia.com/nemo/relay/about-nemo-relay/ecosystem).
+
+### NeMo Fabric: Agent Harness and Custom Agent Execution
+
+[NVIDIA NeMo Fabric](https://github.com/NVIDIA/NeMo-Fabric) gives applications, evaluation systems, and rollout platforms a consistent interface for running agent harnesses and custom agents. It separates the application integration from the execution target through adapters.
+
+Use NeMo Fabric to configure models, tools, skills, and MCP servers, validate supported configurations before execution, and collect normalized results, errors, artifacts, and telemetry references. Capabilities vary by adapter; consult the [adapter compatibility matrix](https://github.com/NVIDIA/NeMo-Fabric/blob/main/adapters/README.md#configuration-compatibility) when selecting a harness.
+
+### NeMo Helix: Evaluation, Optimization, and Hardening
+
+[NVIDIA NeMo Helix](https://github.com/NVIDIA-NeMo/nemo-helix) is an open-source control plane for improving and hardening production agents. It runs on your infrastructure and exposes repeatable workflows through a unified CLI, REST APIs, and a Python SDK.
+
+Use NeMo Helix to evaluate agent behavior, optimize prompts and configurations, and test agent safety with guardrails and red-teaming tools. Its modular plugins let you connect agent execution, sandboxing, storage, secrets, and other infrastructure to your platform. Start with the [NeMo Helix documentation](https://docs.nvidia.com/nemo-helix).
 
 ## Version Specific Changes
 
 ### v1.9.0
+
+#### Ragas Removal and Dependency Updates
+
+The `nvidia-nat-ragas` package and `nvidia-nat[ragas]` extra have been removed. Replace `_type: ragas` with
+`tunable_rag_evaluator`, replace `metric` with an explicit `judge_llm_prompt`, and install
+`nvidia-nat[eval,langchain]`. Enable `include_context` for groundedness and context relevance.
+The ATIF lane remains available through `enable_atif_evaluator`. Scores use different prompts and
+are not directly comparable with historical Ragas scores. Establish new evaluation and optimizer thresholds.
+See [Migrating from Ragas](../improve-workflows/evaluate.md#migrating-from-ragas).
+
+The dependency update also moves Mem0 to 2.x, Google ADK to 2.x, Datasets to 5.x, Cryptography to 50.x,
+and Starlette to 1.x. CrewAI and LlamaIndex use their latest available releases at the time of the update.
+
+CrewAI 1.15.33 supports MCP 1.30.x. The toolkit uses MCP 1.30.0 within CrewAI's declared range without a uv override.
+
+The `most` extra retains Google ADK and no longer includes CrewAI because their OpenTelemetry requirements conflict.
+Install `nvidia-nat[crewai]` in a separate environment from `nvidia-nat[adk]` or `nvidia-nat[most]`.
+
+Mem0 2.x resolves organization and project membership from the API key. Explicit `org_id` and
+`project_id` settings must match the key's membership. Memory searches now use nested entity filters;
+the toolkit adapter preserves the required user scope when combining additional filters.
+The adapter manages user-scoped memories. Mem0 stores agent memories in a separate entity scope,
+so `agent_id` search filters now raise an explicit error. To select a user's memories by agent,
+store the agent identifier in memory metadata and search with a metadata filter.
 
 #### Redis Package Migration
 

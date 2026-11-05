@@ -41,17 +41,21 @@ async def mem0_memory_client(config: Mem0MemoryClientConfig, builder: Builder):
     if mem0_api_key is None:
         raise RuntimeError("Mem0 API key is not set. Please specify it in the environment variable 'MEM0_API_KEY'.")
 
-    mem0_client = AsyncMemoryClient(api_key=mem0_api_key,
-                                    host=config.host,
-                                    org_id=config.org_id,
-                                    project_id=config.project_id)
+    async with AsyncMemoryClient(api_key=mem0_api_key, host=config.host) as mem0_client:
+        # Mem0 2.x derives tenant membership from the API key. Do not silently
+        # accept a configuration requesting a different organization or project.
+        for name in ("org_id", "project_id"):
+            requested = getattr(config, name)
+            if requested is not None and requested != getattr(mem0_client, name):
+                raise ValueError(f"Mem0 {name} does not match the API key's membership.")
 
-    memory_editor = Mem0Editor(mem0_client=mem0_client)
+        memory_editor = Mem0Editor(mem0_client=mem0_client)
 
-    if isinstance(config, RetryMixin) and config.do_auto_retry:
-        memory_editor = patch_with_retry(memory_editor,
-                                         retries=config.num_retries,
-                                         retry_codes=config.retry_on_status_codes,
-                                         retry_on_messages=config.retry_on_errors)
+        if isinstance(config, RetryMixin) and config.do_auto_retry:
+            memory_editor = patch_with_retry(memory_editor,
+                                             retries=config.num_retries,
+                                             max_wait=config.retry_max_wait,
+                                             retry_codes=config.retry_on_status_codes,
+                                             retry_on_messages=config.retry_on_errors)
 
-    yield memory_editor
+        yield memory_editor

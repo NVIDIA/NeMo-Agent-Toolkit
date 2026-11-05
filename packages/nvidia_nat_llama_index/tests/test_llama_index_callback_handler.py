@@ -45,6 +45,52 @@ def test_extract_token_usage_from_raw_openai_usage():
     assert usage.reasoning_tokens == 5
 
 
+def test_extract_token_usage_reads_anthropic_cache_read_tokens():
+    """Anthropic reports prompt-cache reads as usage.cache_read_input_tokens (no *_details object)."""
+    from llama_index.core.llms import ChatMessage
+    from llama_index.core.llms import ChatResponse
+
+    from nat.plugins.llama_index.callback_handler import LlamaIndexProfilerHandler
+
+    response = ChatResponse(
+        message=ChatMessage.from_str("done"),
+        raw=SimpleNamespace(usage=SimpleNamespace(
+            input_tokens=12,
+            output_tokens=8,
+            cache_read_input_tokens=100,
+            cache_creation_input_tokens=40,
+        )),
+    )
+
+    usage = LlamaIndexProfilerHandler._extract_token_usage(response)
+
+    assert usage.prompt_tokens == 12
+    assert usage.completion_tokens == 8
+    assert usage.cached_tokens == 100
+
+
+def test_extract_token_usage_prefers_details_cached_tokens_over_anthropic_field():
+    """OpenAI-style cached_tokens details keep priority when both are present."""
+    from llama_index.core.llms import ChatMessage
+    from llama_index.core.llms import ChatResponse
+
+    from nat.plugins.llama_index.callback_handler import LlamaIndexProfilerHandler
+
+    response = ChatResponse(
+        message=ChatMessage.from_str("done"),
+        raw=SimpleNamespace(usage=SimpleNamespace(
+            prompt_tokens=18,
+            completion_tokens=34,
+            prompt_tokens_details=SimpleNamespace(cached_tokens=3),
+            cache_read_input_tokens=99,
+        )),
+    )
+
+    usage = LlamaIndexProfilerHandler._extract_token_usage(response)
+
+    assert usage.cached_tokens == 3
+
+
 def test_extract_token_usage_falls_back_from_partial_raw_details():
     """Test detail counters can fall back independently from partial raw usage."""
     from llama_index.core.llms import ChatMessage

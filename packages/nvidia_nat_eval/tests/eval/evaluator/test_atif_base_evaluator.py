@@ -37,6 +37,14 @@ class _LengthRatioAtifEvaluator(AtifBaseEvaluator):
         return EvalOutputItem(id=sample.item_id, score=score, reasoning={"score": score})
 
 
+class _FailingAtifEvaluator(AtifBaseEvaluator):
+
+    async def evaluate_atif_item(self, sample: AtifEvalSample) -> EvalOutputItem:
+        if sample.item_id == "fail":
+            raise RuntimeError("Intentional failure")
+        return EvalOutputItem(id=sample.item_id, score=1.0, reasoning={"score": 1.0})
+
+
 class _ConcurrencyProbeAtifEvaluator(AtifBaseEvaluator):
 
     def __init__(self, max_concurrency: int):
@@ -88,3 +96,19 @@ async def test_atif_base_evaluator_processes_all_samples_when_remainder_exists()
     expected_ids = {str(sample.item_id) for sample in samples}
     assert returned_ids == expected_ids
     assert evaluator.peak_active <= 4
+
+
+async def test_atif_base_evaluator_marks_failed_items_with_error():
+    """A failing `evaluate_atif_item` yields score 0.0 and a populated `error`, so the failure is
+    distinguishable from a genuinely low score."""
+    evaluator = _FailingAtifEvaluator()
+    output = await evaluator.evaluate_atif_fn([_sample("ok", "abc", "abc"), _sample("fail", "abc", "abc")])
+
+    by_id = {item.id: item for item in output.eval_output_items}
+    assert by_id["ok"].score == 1.0
+    assert by_id["ok"].error is None
+    assert by_id["fail"].score == 0.0
+    assert by_id["fail"].error is not None
+    assert "Intentional failure" in by_id["fail"].error
+    assert by_id["fail"].reasoning["error"] == by_id["fail"].error
+    assert output.average_score == 0.5

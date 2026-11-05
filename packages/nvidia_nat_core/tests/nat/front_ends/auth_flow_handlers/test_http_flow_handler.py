@@ -18,9 +18,9 @@ import socket
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
-import httpx
+import httpx2
 import pytest
-from httpx import ASGITransport
+from httpx2 import ASGITransport
 from mock_oauth2_server import MockOAuth2Server
 
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
@@ -173,7 +173,7 @@ async def test_http_oauth2_flow_with_execution_context(monkeypatch, mock_server)
         flow_state = worker._outstanding_flows[state]
 
         # Simulate hitting the authorization URL and getting a code
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
             transport=ASGITransport(app=mock_server._app),
             base_url="http://testserver",
             follow_redirects=False,
@@ -258,7 +258,7 @@ async def test_http_oauth2_flow_publishes_stream_event(monkeypatch, mock_server)
         state = record.pending_oauth.oauth_state
         flow_state = worker._outstanding_flows[state]
 
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
                 transport=ASGITransport(app=mock_server._app),
                 base_url="http://testserver",
                 follow_redirects=False,

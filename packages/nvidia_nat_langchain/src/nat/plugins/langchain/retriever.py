@@ -37,18 +37,34 @@ async def nemo_langchain(retriever_config: NemoRetrieverConfig, builder: Builder
 
 @register_retriever_client(config_type=MilvusRetrieverConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def milvus_langchain(retriever_config: MilvusRetrieverConfig, builder: Builder):
+    """Build a LangChain retriever backed by a Milvus vector store.
+
+    Args:
+        retriever_config: The Milvus retriever configuration.
+        builder: The builder used to resolve the embedder.
+
+    Yields:
+        A LangChain ``VectorStoreRetriever`` that returns ``top_k`` documents per query, or LangChain's default
+        number of documents when ``top_k`` is not set.
+    """
     from langchain_milvus import Milvus
 
     retriever_config.connection_args.update({"uri": str(retriever_config.uri)})
     embedder = await builder.get_embedder(embedder_name=retriever_config.embedding_model,
                                           wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    yield Milvus(embedding_function=embedder,
-                 **retriever_config.model_dump(include={
-                     "connection_args",
-                     "collection_name",
-                     "content_field",
-                     "vector_field",
-                     "search_params",
-                     "description"
-                 },
-                                               by_alias=True)).as_retriever()
+    vector_store = Milvus(embedding_function=embedder,
+                          **retriever_config.model_dump(include={
+                              "connection_args",
+                              "collection_name",
+                              "content_field",
+                              "vector_field",
+                              "search_params",
+                              "description"
+                          },
+                                                        by_alias=True))
+
+    search_kwargs = {}
+    if retriever_config.top_k is not None:
+        search_kwargs["k"] = retriever_config.top_k
+
+    yield vector_store.as_retriever(search_kwargs=search_kwargs)

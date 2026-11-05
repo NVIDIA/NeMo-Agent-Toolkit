@@ -23,9 +23,13 @@ from nat.data_models.evaluate_config import EvalConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
+from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
+from nat.data_models.profiler import PrefixSpanConfig
 from nat.data_models.profiler import ProfilerConfig
+from nat.data_models.profiler import PromptCachingConfig
 from nat.plugins.profiler.data_frame_row import DataFrameRow
+from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 from nat.plugins.profiler.profile_runner import ProfilerRunner
 
 
@@ -255,6 +259,7 @@ async def test_average_llm_latency(minimal_eval_config):
                     event_type=WorkflowEventEnum.LLM_START,
                     event_timestamp=50.0,
                     framework=LLMFrameworkEnum.LANGCHAIN,
+                    UUID="llm-1",
                 ),
             ),
             IntermediateStep(
@@ -264,6 +269,7 @@ async def test_average_llm_latency(minimal_eval_config):
                     event_type=WorkflowEventEnum.LLM_END,
                     event_timestamp=55.5,
                     framework=LLMFrameworkEnum.LANGCHAIN,
+                    UUID="llm-1",
                 ),
             ),
         ],
@@ -275,6 +281,7 @@ async def test_average_llm_latency(minimal_eval_config):
                     event_type=WorkflowEventEnum.LLM_START,
                     event_timestamp=60.0,
                     framework=LLMFrameworkEnum.LLAMA_INDEX,
+                    UUID="llm-2",
                 ),
             ),
             IntermediateStep(
@@ -284,6 +291,7 @@ async def test_average_llm_latency(minimal_eval_config):
                     event_type=WorkflowEventEnum.LLM_END,
                     event_timestamp=66.0,
                     framework=LLMFrameworkEnum.LLAMA_INDEX,
+                    UUID="llm-2",
                 ),
             ),
         ],
@@ -304,3 +312,70 @@ async def test_average_llm_latency(minimal_eval_config):
     # We expect the average = (5.5 + 6.0) / 2 = 5.75
     computed_mean = llm_stats.get("mean", -1)
     assert (abs(computed_mean - 5.75) < 1e-6), f"Expected mean=5.75 for LLM latency, got {computed_mean}"
+
+
+def test_llm_latency_pairs_overlapping_calls_by_uuid(minimal_eval_config):
+    """Overlapping LLM calls in one request are each matched to their own LLM_START by UUID."""
+
+    def llm_step(event_type: WorkflowEventEnum, timestamp: float, uuid: str) -> IntermediatePropertyAdaptor:
+        return IntermediatePropertyAdaptor.from_intermediate_step(
+            IntermediateStep(parent_id="root",
+                             function_ancestry=InvocationNode(function_name="llama-3", function_id="u1"),
+                             payload=IntermediateStepPayload(event_type=event_type,
+                                                             event_timestamp=timestamp,
+                                                             UUID=uuid)))
+
+    # Two parallel 10 s calls: a runs 100 -> 110, b runs 101 -> 111.
+    runner = ProfilerRunner(minimal_eval_config.general.profiler,
+                            minimal_eval_config.general.output_dir,
+                            write_output=False)
+    runner.all_steps = [[
+        llm_step(WorkflowEventEnum.LLM_START, 100.0, "a"),
+        llm_step(WorkflowEventEnum.LLM_START, 101.0, "b"),
+        llm_step(WorkflowEventEnum.LLM_END, 110.0, "a"),
+        llm_step(WorkflowEventEnum.LLM_END, 111.0, "b"),
+    ]]
+
+    llm_stats = runner._compute_llm_latency_confidence_intervals()
+
+    assert llm_stats.n == 2
+    assert llm_stats.mean == pytest.approx(10.0)
+    assert llm_stats.p95 == pytest.approx(10.0)
+
+
+@pytest.mark.parametrize("chain_with_common_prefixes, expected_token",
+                         [(True, "LLM:llama-3|<common_prefix>"),
+                          (False, "LLM:llama-3|You are a helpful assistant. What is 2 + 2?")])
+async def test_prefix_span_analysis_chains_common_prefixes(tmp_path,
+                                                           chain_with_common_prefixes: bool,
+                                                           expected_token: str):
+    """With chain_with_common_prefixes, prefix span analysis replaces the common prompt prefixes it is given."""
+
+    def llm_step(event_type: WorkflowEventEnum, timestamp: float, uuid: str, data: StreamEventData) -> IntermediateStep:
+        return IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(function_name="my_agent", function_id="agent-1"),
+                                payload=IntermediateStepPayload(event_type=event_type,
+                                                                event_timestamp=timestamp,
+                                                                framework=LLMFrameworkEnum.LANGCHAIN,
+                                                                name="llama-3",
+                                                                UUID=uuid,
+                                                                data=data))
+
+    prompt = "You are a helpful assistant. What is 2 + 2?"
+    all_steps = [[
+        llm_step(WorkflowEventEnum.LLM_START, start, uuid, StreamEventData(input=prompt)),
+        llm_step(WorkflowEventEnum.LLM_END, start + 1.0, uuid, StreamEventData(output="4")),
+    ] for uuid, start in [("llm-1", 1.0), ("llm-2", 10.0)]]
+
+    profiler_config = ProfilerConfig(prompt_caching_prefixes=PromptCachingConfig(enable=True),
+                                     prefix_span_analysis=PrefixSpanConfig(
+                                         enable=True,
+                                         min_support=1,
+                                         chain_with_common_prefixes=chain_with_common_prefixes))
+    output_dir = tmp_path / "profiling_outputs"
+    await ProfilerRunner(profiler_config, output_dir, write_output=True).run(all_steps)
+
+    with open(output_dir / "workflow_profiling_metrics.json", encoding="utf-8") as f:
+        metrics = json.load(f)
+
+    assert [pattern["pattern"] for pattern in metrics["prefix_span_analysis"]["patterns"]] == [[expected_token]]

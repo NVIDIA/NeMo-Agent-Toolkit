@@ -16,9 +16,9 @@
 import json
 import logging
 from collections.abc import AsyncGenerator
+from typing import TYPE_CHECKING
 from typing import Any
 
-from langchain_core.documents import Document
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import ValidationError
@@ -27,6 +27,9 @@ from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
+
+if TYPE_CHECKING:
+    from langchain_core.documents import Document
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +48,11 @@ class BaseRagResult(BaseModel):
         """Override in subclass to return the document name field."""
         raise NotImplementedError
 
-    def to_document(self) -> Document:
+    def to_document(self) -> "Document":
+        # Imported here so that importing this module, and with it the rest of `nat.tool.register`, does not need
+        # langchain-core, which is not a dependency of nvidia-nat-core.
+        from langchain_core.documents import Document
+
         return Document(
             page_content=self.content,
             metadata={
@@ -76,7 +83,7 @@ class DocumentChunk(BaseRagResult):
         return self.filename
 
 
-def parse_rag_response(data: dict[str, Any]) -> list[Document]:
+def parse_rag_response(data: dict[str, Any]) -> list["Document"]:
     """Auto-detect RAG schema and return Documents."""
     if "results" in data:
         return [SourceResult.model_validate(r).to_document() for r in data["results"]]

@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import logging
 from collections import deque
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
 
@@ -400,24 +401,88 @@ def cycle_node_order(cycle: CycleInfo, edges: list[tuple[str, str]]) -> list[str
         Cycle nodes ordered from entry, following forward edges.
     """
     cycle_edges = [(s, t) for s, t in edges if s in cycle.nodes and t in cycle.nodes and (s, t) != cycle.back_edge]
-    adj, _ = _build_adj(cycle.nodes, cycle_edges)
+    adj, rev_adj = _build_adj(cycle.nodes, cycle_edges)
 
-    order: list[str] = []
+    preorder: list[str] = []
     visited: set[str] = set()
 
     def walk(node: str) -> None:
         if node in visited:
             return
         visited.add(node)
-        order.append(node)
+        preorder.append(node)
         for neighbor in adj.get(node, []):
             walk(neighbor)
 
     walk(cycle.entry_node)
-    for n in cycle.nodes:
-        if n not in visited:
-            order.append(n)
+    preorder.extend(sorted(n for n in cycle.nodes if n not in visited))
+
+    # A DFS preorder can put a fan-in node before one of its inputs, so emit the nodes in
+    # topological order and use the preorder only to break ties. An inner cycle leaves no
+    # node ready; then the next node comes from an inner cycle that no other pending node
+    # leads into, so nodes after that inner cycle still wait for it.
+    rank = {n: i for i, n in enumerate(preorder)}
+    pending = {n: len(rev_adj[n]) for n in cycle.nodes}
+    order: list[str] = []
+    while pending:
+        ready = [n for n, count in pending.items() if count == 0] or _source_component_nodes(pending, adj, rev_adj)
+        node = min(ready, key=rank.__getitem__)
+        order.append(node)
+        del pending[node]
+        for neighbor in adj[node]:
+            if neighbor in pending:
+                pending[neighbor] -= 1
     return order
+
+
+def _source_component_nodes(
+    pending: Mapping[str, int],
+    adj: dict[str, list[str]],
+    rev_adj: dict[str, list[str]],
+) -> list[str]:
+    """Pending nodes whose strongly connected component has no pending predecessor outside it."""
+    # Tarjan's SCC over the pending nodes (iterative), once per call
+    node_index: dict[str, int] = {}
+    node_lowlink: dict[str, int] = {}
+    component: dict[str, int] = {}
+    on_stack: set[str] = set()
+    stack: list[str] = []
+    for root in pending:
+        if root in node_index:
+            continue
+        node_index[root] = node_lowlink[root] = len(node_index)
+        stack.append(root)
+        on_stack.add(root)
+        work: list[tuple[str, int]] = [(root, 0)]
+        while work:
+            node, ni = work[-1]
+            if ni < len(adj[node]):
+                work[-1] = (node, ni + 1)
+                w = adj[node][ni]
+                if w not in pending:
+                    continue
+                if w not in node_index:
+                    node_index[w] = node_lowlink[w] = len(node_index)
+                    stack.append(w)
+                    on_stack.add(w)
+                    work.append((w, 0))
+                elif w in on_stack:
+                    node_lowlink[node] = min(node_lowlink[node], node_index[w])
+                continue
+            work.pop()
+            if work:
+                parent = work[-1][0]
+                node_lowlink[parent] = min(node_lowlink[parent], node_lowlink[node])
+            if node_lowlink[node] == node_index[node]:
+                while True:
+                    w = stack.pop()
+                    on_stack.discard(w)
+                    component[w] = node_index[node]
+                    if w == node:
+                        break
+
+    entered = {component[n] for n in pending for p in rev_adj[n] if p in pending and component[p] != component[n]}
+    return [n for n in pending if component[n] not in entered]
 
 
 def detect_routers(graph: Graph) -> list[RouterInfo]:

@@ -41,20 +41,20 @@ class MySQLObjectStoreClientConfig(ObjectStoreBaseConfig, name="mysql"):
     host: str = Field(
         default=os.environ.get(HOST_ENV, DEFAULT_HOST),
         description="The host of the MySQL server"
-        " (uses {HOST_ENV} if unspecified; falls back to {DEFAULT_HOST})",
+        f" (uses {HOST_ENV} if unspecified; falls back to {DEFAULT_HOST})",
     )
     port: int = Field(
         default=int(os.environ.get(PORT_ENV, DEFAULT_PORT)),
         description="The port of the MySQL server"
-        " (uses {PORT_ENV} if unspecified; falls back to {DEFAULT_PORT})",
+        f" (uses {PORT_ENV} if unspecified; falls back to {DEFAULT_PORT})",
     )
     username: str | None = Field(
         default=os.environ.get(USERNAME_ENV),
-        description=f"The username used to connect to the MySQL server (uses {USERNAME_ENV} if unspecifed)",
+        description=f"The username used to connect to the MySQL server (uses {USERNAME_ENV} if unspecified)",
     )
     password: OptionalSecretStr = Field(
         default=os.environ.get(PASSWORD_ENV),
-        description="The password used to connect to the MySQL server (uses {PASSWORD_ENV} if unspecifed)",
+        description=f"The password used to connect to the MySQL server (uses {PASSWORD_ENV} if unspecified)",
     )
 
 
@@ -63,5 +63,5 @@ async def mysql_object_store_client(config: MySQLObjectStoreClientConfig, _build
 
     from .mysql_object_store import MySQLObjectStore
 
-    async with MySQLObjectStore(**config.model_dump(exclude={"type"}, exclude_none=True)) as store:
+    async with MySQLObjectStore(**config.model_dump(exclude={"type"})) as store:
         yield store

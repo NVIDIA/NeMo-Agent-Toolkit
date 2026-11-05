@@ -15,9 +15,9 @@
 """OAuth 2.0 Token Introspection verifier implementation for MCP servers."""
 
 import logging
-from typing import Any
 
-from pydantic import Field
+from pydantic import AnyHttpUrl
+from pydantic import ValidationError
 
 from mcp.server.auth.provider import AccessToken
 from mcp.server.auth.provider import TokenVerifier
@@ -27,21 +27,18 @@ from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2Resour
 logger = logging.getLogger(__name__)
 
 
-class _AccessTokenWithClaims(AccessToken):
-    """SDK access token plus the identity claims the verifier already checked."""
-
-    claims: dict[str, Any] = Field(default_factory=dict)
-
-
 class IntrospectionTokenVerifier(TokenVerifier):
     """Token verifier that delegates token verification to BearerTokenValidator."""
 
-    def __init__(self, config: OAuth2ResourceServerConfig):
+    def __init__(self, config: OAuth2ResourceServerConfig, resource_server_url: str | None = None):
         """Create IntrospectionTokenVerifier from OAuth2ResourceServerConfig.
 
         Args:
             config: OAuth2ResourceServerConfig
+            resource_server_url: The exact resource identifier used by MCP AuthSettings.
         """
+        self._config = config
+        self._resource_server_url = resource_server_url
         issuer = config.issuer_url
         scopes = config.scopes or []
         audience = config.audience
@@ -74,6 +71,23 @@ class IntrospectionTokenVerifier(TokenVerifier):
         validation_result = await self._bearer_token_validator.verify(token)
 
         if validation_result.active:
+            audiences = validation_result.audience or []
+            resource = None
+            configured_audience = self._config.audience
+            if configured_audience and configured_audience in audiences:
+                resource = configured_audience
+            elif self._resource_server_url:
+                for audience in audiences:
+                    try:
+                        candidate = str(AnyHttpUrl(audience)).removesuffix("/")
+                        expected = str(AnyHttpUrl(self._resource_server_url)).removesuffix("/")
+                    except ValidationError:
+                        continue
+                    if candidate == expected:
+                        resource = audience
+                        break
+            if resource is None and len(audiences) == 1:
+                resource = audiences[0]
             claims = {
                 "aud": validation_result.audience,
                 "sub": validation_result.subject,
@@ -85,9 +99,11 @@ class IntrospectionTokenVerifier(TokenVerifier):
                 "nbf": validation_result.nbf,
             }
             claims = {key: value for key, value in claims.items() if value is not None}
-            return _AccessTokenWithClaims(token=token,
-                                          expires_at=validation_result.expires_at,
-                                          scopes=validation_result.scopes or [],
-                                          client_id=validation_result.client_id or "",
-                                          claims=claims)
+            return AccessToken(token=token,
+                               expires_at=validation_result.expires_at,
+                               scopes=validation_result.scopes or [],
+                               client_id=validation_result.client_id or "",
+                               resource=resource,
+                               subject=validation_result.subject,
+                               claims=claims)
         return None

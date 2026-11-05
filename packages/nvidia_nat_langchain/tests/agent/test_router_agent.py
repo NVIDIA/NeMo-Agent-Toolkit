@@ -170,6 +170,24 @@ class TestRouterAgentGraph:
         mock_call_llm.assert_called_once()
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("branch_names", [["search", "web_search"], ["web_search", "search"]])
+    @pytest.mark.parametrize("response,expected_branch", [("web_search", "web_search"), ("Web_Search.", "web_search"),
+                                                          ("search", "search")])
+    async def test_agent_node_picks_branch_named_in_response_when_one_name_contains_another(
+            self, mock_llm, mock_prompt, branch_names, response, expected_branch):
+        """The prompt asks for the exact branch name, so `web_search` must not route to `search`."""
+        router_agent = RouterAgentGraph(llm=mock_llm,
+                                        branches=[MockTool(name) for name in branch_names],
+                                        prompt=mock_prompt)
+        state = RouterAgentGraphState(forward_message=HumanMessage(content="find news online"))
+
+        with patch.object(router_agent, '_get_chat_history', return_value=""):
+            with patch.object(router_agent, '_call_llm', return_value=AIMessage(content=response)):
+                result_state = await router_agent.agent_node(state)
+
+        assert result_state.chosen_branch == expected_branch
+
+    @pytest.mark.asyncio
     async def test_agent_node_retry_on_no_branch_selected(self, router_agent):
         """Test agent_node retries when no branch is selected."""
         # First two calls return responses without branch names

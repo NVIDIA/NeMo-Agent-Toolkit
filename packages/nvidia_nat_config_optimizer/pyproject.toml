@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -56,11 +56,15 @@ dependencies = [
   "pandas~=2.2",
   "pydantic~=2.11",
   "PyYAML~=6.0",
+  # Security minimum for mako, pulled in by optuna (GHSA-2h4p-vjrc-8xpq).
+  "mako>=1.4.2",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 visualization = [
   "matplotlib~=3.9",
+  # Pillow <13 has image-decoder memory-safety vulnerabilities.
+  "pillow>=13.0.0,<14.0.0",
 ]
 test = [
   "nvidia-nat-test == {version}",
@@ -70,7 +74,7 @@ test = [
 optimize = "nat.plugins.config_optimizer.cli.commands:optimizer_command"
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=84.1.0", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 

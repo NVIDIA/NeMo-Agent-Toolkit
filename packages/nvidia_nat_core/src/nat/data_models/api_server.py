@@ -765,7 +765,7 @@ class WebSocketUserMessage(BaseModel):
     user: User = User()
     error: Error = Error()
     schema_version: str = "1.0.0"
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 class WebSocketUserInteractionResponseMessage(BaseModel):
@@ -783,7 +783,7 @@ class WebSocketUserInteractionResponseMessage(BaseModel):
     user: User = User()
     error: Error = Error()
     schema_version: str = "1.0.0"
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 class AuthMethod(StrEnum):
@@ -907,7 +907,7 @@ class WebSocketSystemIntermediateStepMessage(BaseModel):
     conversation_id: str | None = None
     content: SystemIntermediateStepContent
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 class SystemResponseContent(BaseModel):
@@ -932,7 +932,7 @@ class WebSocketSystemResponseTokenMessage(BaseModel):
     conversation_id: str | None = None
     content: SystemResponseContent | Error | GenerateResponse
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
     @field_validator("content")
     @classmethod
@@ -964,7 +964,7 @@ class WebSocketSystemInteractionMessage(BaseModel):
     conversation_id: str | None = None
     content: HumanPrompt
     status: WebSocketMessageStatus
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 class ObservabilityTraceContent(BaseModel):
@@ -987,7 +987,7 @@ class WebSocketObservabilityTraceMessage(BaseModel):
     parent_id: str = "default"
     conversation_id: str | None = None
     content: ObservabilityTraceContent
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 # ======== GenerateResponse Converters ========
@@ -1017,13 +1017,16 @@ GlobalTypeConverter.register_converter(_generate_response_to_chat_response)
 
 
 # ======== ChatRequest Converters ========
-def _nat_chat_request_to_string(data: ChatRequest) -> str:
-    content = data.messages[-1].content
+def _message_content_to_string(content: str | list[UserContent] | None) -> str:
     if content is None:
         return ""
     if isinstance(content, str):
         return content
-    return str(content)
+    return "\n".join(part.text for part in content if isinstance(part, TextContent))
+
+
+def _nat_chat_request_to_string(data: ChatRequest) -> str:
+    return _message_content_to_string(data.messages[-1].content)
 
 
 GlobalTypeConverter.register_converter(_nat_chat_request_to_string)
@@ -1058,12 +1061,7 @@ def _chat_request_or_message_to_string(data: ChatRequestOrMessage) -> str:
     # Extract content from last message in conversation
     if data.messages is None:
         return ""
-    content = data.messages[-1].content
-    if content is None:
-        return ""
-    if isinstance(content, str):
-        return content
-    return str(content)
+    return _message_content_to_string(data.messages[-1].content)
 
 
 GlobalTypeConverter.register_converter(_chat_request_or_message_to_string)

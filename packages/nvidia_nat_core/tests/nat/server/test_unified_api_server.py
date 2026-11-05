@@ -507,6 +507,40 @@ async def test_chat_stream_endpoint_observability_trace_id_integration(client: h
         context_state.observability_trace_id.reset(token)
 
 
+async def test_generate_full_sends_observability_trace_as_its_own_event(restore_environ):
+    """``/generate/full`` sends the trace ID as an ``observability_trace:`` event, not as a ``data:`` answer line.
+
+    The remote eval client joins the ``value`` of every ``data:`` line into the answer, so a trace ID
+    wrapped in ``{"value": ...}`` would be appended to every evaluated output.
+    """
+    from nat.builder.context import ContextState
+    from nat.data_models.config import Config as AppConfig
+
+    os.environ["NAT_CONFIG_FILE"] = __file__.replace("test_unified_api_server.py", "legacy_server_config.yml")
+    fastapi_app = FastApiFrontEndPluginWorker(AppConfig(workflow=EchoFunctionConfig())).build_app()
+
+    context_state = ContextState()
+    token = context_state.observability_trace_id.set("full-stream-observability-id")
+    try:
+        async with LifespanManager(fastapi_app) as manager:
+            client = httpx.AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://localhost:8000")
+            async with client:
+                response = await client.post("/generate/full", json={"message": "hello"})
+    finally:
+        context_state.observability_trace_id.reset(token)
+
+    assert response.status_code == 200
+
+    trace_match = re.search(r'^observability_trace:\s*(.+)$', response.text, re.MULTILINE)
+    assert trace_match is not None, "Expected observability_trace SSE event not found in stream"
+    assert json.loads(trace_match.group(1)) == {"observability_trace_id": "full-stream-observability-id"}
+
+    values = [
+        json.loads(line[len("data: "):])["value"] for line in response.text.splitlines() if line.startswith("data: ")
+    ]
+    assert "".join(values) == "hello"
+
+
 @pytest.mark.integration
 async def test_metadata_from_http_request_populates_all_request_attributes(client: httpx.AsyncClient,
                                                                            config: Config) -> None:

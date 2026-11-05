@@ -68,7 +68,7 @@ To install these first-party plugin libraries, you can use the full distribution
 
 - `nvidia-nat[async_endpoints]` - Support for asynchronous endpoints when launching `nat serve`
 - `nvidia-nat[gunicorn]` - Support for launching `nat serve` with an alternative server; requires additional configuration file changes
-- `nvidia-nat[most]` - Extra containing all Framework integrations except for: `nvidia-nat-openpipe-art`, `nvidia-nat-a365`
+- `nvidia-nat[most]` - Extra containing most framework integrations, including Google ADK. CrewAI requires a separate environment because its OpenTelemetry requirements conflict with Google ADK.
 
 ## Supported Platforms
 

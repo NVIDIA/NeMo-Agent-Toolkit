@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from datetime import timedelta
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -403,6 +404,22 @@ class TestMCPServiceAccountIntegration:
 
             # Verify token expiry is set
             assert result.token_expires_at is not None
+
+    async def test_auth_result_expiry_is_timezone_aware(self, minimal_config, mock_token_response):
+        """AuthResult.is_expired() compares against an aware UTC time, so the expiry must be aware too."""
+        provider = MCPServiceAccountProvider(minimal_config)
+
+        with patch("httpx.AsyncClient") as mock_http:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = mock_token_response
+            mock_http.return_value.__aenter__.return_value.post.return_value = mock_resp
+
+            result = await provider.authenticate(user_id="test_user")
+
+        assert result.token_expires_at is not None
+        assert result.token_expires_at.utcoffset() == timedelta(0)
+        assert result.is_expired() is False
 
     async def test_auth_flow_with_token_refresh(self, minimal_config, mock_token_response):
         """Test that expired tokens are automatically refreshed."""

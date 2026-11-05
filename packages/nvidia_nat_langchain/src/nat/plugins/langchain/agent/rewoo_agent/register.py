@@ -80,6 +80,7 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     from nat.plugins.langchain.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
     from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_SYSTEM_PROMPT
     from nat.plugins.langchain.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.plugins.langchain.agent.token_usage import TokenUsageCollector
 
     from .agent import ReWOOAgentGraph
     from .agent import ReWOOGraphState
@@ -150,7 +151,8 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
             state = ReWOOGraphState(messages=messages, task=task)
 
             # run the ReWOO Agent Graph
-            state = await graph.ainvoke(state)
+            token_usage = TokenUsageCollector()
+            state = await graph.ainvoke(state, config={"callbacks": [token_usage]})
 
             # get and return the output from the state
             state = ReWOOGraphState(**state)
@@ -159,11 +161,14 @@ async def rewoo_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
             if isinstance(output_message, list | dict):
                 output_message = str(output_message)
 
-            # Create usage statistics for the response
-            prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
-            completion_tokens = len(output_message.split()) if output_message else 0
-            total_tokens = prompt_tokens + completion_tokens
-            usage = Usage(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, total_tokens=total_tokens)
+            usage = token_usage.usage()
+            if usage is None:
+                # the model reported no usage, so fall back to a word count
+                prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
+                completion_tokens = len(output_message.split()) if output_message else 0
+                usage = Usage(prompt_tokens=prompt_tokens,
+                              completion_tokens=completion_tokens,
+                              total_tokens=prompt_tokens + completion_tokens)
             response = ChatResponse.from_string(output_message, usage=usage)
             if chat_request_or_message.is_string:
                 return GlobalTypeConverter.get().convert(response, to_type=str)

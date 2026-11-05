@@ -117,3 +117,25 @@ def test_choice_with_none_content():
     """None content is handled gracefully without raising."""
     end_payload = _run_wrapped_call([_NewStyleChoice(None)])
     assert end_payload.data.output == ""
+
+
+def test_streaming_response_does_not_break_call():
+    """stream=True returns a CustomStreamWrapper without choices/model_extra; the call must still work."""
+    import litellm
+
+    handler = CrewAIProfilerHandler()
+    handler._original_llm_call = litellm.completion
+    handler.step_manager = MagicMock()
+
+    result = handler._llm_call_monkey_patch()(model="gpt-4o",
+                                              messages=[{
+                                                  "role": "user", "content": "prompt"
+                                              }],
+                                              mock_response="hi",
+                                              stream=True)
+    assert not hasattr(result, "choices")
+
+    payloads = [call.args[0] for call in handler.step_manager.push_intermediate_step.call_args_list]
+    llm_end = [p for p in payloads if p.event_type == IntermediateStepType.LLM_END]
+    assert len(llm_end) == 1
+    assert llm_end[0].usage_info.token_usage.total_tokens == 0

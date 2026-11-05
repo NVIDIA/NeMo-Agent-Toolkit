@@ -126,10 +126,12 @@ class ReActOutputParser(AgentOutputParser):
         # More lenient regex patterns (case-insensitive):
         # 1. Primary pattern: "Action: X Action Input: Y" or "Action: X Input: Y"
         # 2. Accepts variations in whitespace and optional "Action" prefix before "Input"
+        # 3. The input ends at an "Observation" marker: the word followed by ":" or the end of the text. The word
+        #    inside the input ("weather observation stations", or a line starting "Observation bias") is kept.
         regex_primary = (
             r"action\s*\d*\s*:\s*(.*?)\s*"  # "Action:" (case-insensitive)
             r"(?:action\s*\d*\s*)?input\s*\d*\s*:\s*"  # "Action Input:" or just "Input:"
-            r"(.*?)(?=\s*[\n|\s]\s*observation\b|$)"  # Until "Observation" or end
+            r"(.*?)(?=\s+observation\s*(?::|$)|$)"  # Until the "Observation" marker or end
         )
         action_match = re.search(regex_primary, text, re.DOTALL | re.IGNORECASE)
         if action_match:

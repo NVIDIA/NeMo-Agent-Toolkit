@@ -14,6 +14,8 @@
 # limitations under the License.
 # pylint: disable=not-async-context-manager,unused-argument
 
+import typing
+
 import pytest
 
 from nat.data_models.openai_mcp import OpenAIMCPSchemaTool
@@ -130,3 +132,59 @@ async def test_binds_tools_and_runs(mock_llm, nat_tool):
         result = await function_info.single_fn("please, mock tool call!")
         assert isinstance(result, str)
         assert result == "mock query"
+
+
+@pytest.mark.parametrize("max_iterations", [1, 2, 5])
+async def test_never_exceeds_max_iterations(max_iterations):
+    """`max_iterations` is the maximum number of tool invocations the agent may perform."""
+    from langchain_core.language_models import BaseChatModel
+    from langchain_core.messages import AIMessage
+    from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import ChatResult
+    from langchain_core.tools import tool
+
+    calls = []
+
+    @tool
+    def counter(q: str) -> str:
+        """Counts its calls."""
+        calls.append(q)
+        return f"call {len(calls)}"
+
+    class AlwaysToolCallLLM(BaseChatModel):
+        use_responses_api: bool = True
+        model_name: str = "mock-openai"
+        turns: int = 0
+
+        @property
+        def _llm_type(self) -> str:
+            return "always-tool-call"
+
+        def bind_tools(self, tools: typing.Any, **kwargs: typing.Any) -> "AlwaysToolCallLLM":
+            return self
+
+        def _generate(self,
+                      messages: typing.Any,
+                      stop: typing.Any = None,
+                      run_manager: typing.Any = None,
+                      **kwargs: typing.Any) -> ChatResult:
+            self.turns += 1
+            message = AIMessage(content="",
+                                tool_calls=[{
+                                    "name": "counter", "args": {
+                                        "q": "x"
+                                    }, "id": f"call-{self.turns}"
+                                }])
+            return ChatResult(generations=[ChatGeneration(message=message)])
+
+    builder = _MockBuilder(llm=AlwaysToolCallLLM(), tools=[counter])
+    config = ResponsesAPIAgentWorkflowConfig(
+        llm_name="openai_llm",
+        nat_tools=["counter"],  # type: ignore[list-item]
+        max_iterations=max_iterations,
+        verbose=True)  # verbose returns the error text instead of a generic message
+
+    async with responses_api_agent_workflow(config, builder) as function_info:
+        result = await function_info.single_fn("hi")
+    assert len(calls) == max_iterations
+    assert f"max_iterations ({max_iterations})" in result

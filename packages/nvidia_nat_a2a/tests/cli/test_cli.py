@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import click
+import pytest
+from click.testing import CliRunner
 
 
 def test_a2a_plugin_discovered():
@@ -26,3 +28,50 @@ def test_a2a_plugin_discovered():
 
     # A2A should be discovered and loaded
     assert "a2a" in cli_group.commands
+
+
+@pytest.mark.parametrize("command", ["discover", "get_info", "get_skills", "call"])
+def test_client_commands_exit_nonzero_when_agent_unreachable(command, monkeypatch):
+    """A failed client command must exit non-zero so shell callers can detect it."""
+    from nat.plugins.a2a.cli import commands
+
+    async def _unreachable(url, *args, **kwargs):
+        raise RuntimeError(f"Failed to fetch agent card from {url}")
+
+    monkeypatch.setattr(commands, "discover_agent", _unreachable)
+    monkeypatch.setattr(commands, "get_a2a_function_group", _unreachable)
+
+    args = ["client", command, "--url", "http://localhost:1"]
+    if command == "call":
+        args += ["--message", "hi"]
+
+    result = CliRunner().invoke(commands.a2a_command, args)
+
+    assert result.exit_code == 1
+    assert "Error: Failed to fetch agent card from http://localhost:1" in result.output
+
+
+@pytest.mark.parametrize("extra_args, expected",
+                         [(["--bearer-token", "x", "--auth-json", "{}"], "Error: Use only one authentication method"),
+                          (["--auth-provider", "p"], "Error: --auth-provider requires --auth-config")])
+def test_call_exits_nonzero_on_invalid_auth_options(extra_args, expected):
+    from nat.plugins.a2a.cli import commands
+
+    args = ["client", "call", "--url", "http://localhost:1", "--message", "hi", *extra_args]
+    result = CliRunner().invoke(commands.a2a_command, args)
+
+    assert result.exit_code == 1
+    assert expected in result.output
+
+
+def test_call_exits_nonzero_on_auth_config_without_auth_provider(tmp_path):
+    from nat.plugins.a2a.cli import commands
+
+    auth_config = tmp_path / "auth.yml"
+    auth_config.write_text("authentication: {}\n")
+
+    args = ["client", "call", "--url", "http://localhost:1", "--message", "hi", "--auth-config", str(auth_config)]
+    result = CliRunner().invoke(commands.a2a_command, args)
+
+    assert result.exit_code == 1
+    assert "Error: --auth-provider is required with --auth-config" in result.output

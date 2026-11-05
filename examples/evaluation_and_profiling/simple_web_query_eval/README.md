@@ -171,6 +171,8 @@ nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/c
 
 ### Understanding Results
 
+The configurable judges replace the retired Ragas integration. Scores use new prompts and require new baselines; they are not directly comparable with historical Ragas results.
+
 After running evaluation, you'll find output files in `./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/eval/` (or your configured output directory). The evaluation generates comprehensive metrics including:
 
 - **Response Quality**: Measures how well the agent answers LangSmith-related questions
@@ -188,9 +190,9 @@ Running `nat eval` generates several artifacts in the output directory:
 
 **Evaluator outputs (when configured)**
 - `trajectory_accuracy_output.json`: Trajectory evaluator scores and reasoning
-- `accuracy_output.json`: Ragas AnswerAccuracy scores
-- `groundedness_output.json`: Ragas ResponseGroundedness scores
-- `relevance_output.json`: Ragas ContextRelevance scores
+- `accuracy_output.json`: Configured accuracy scores
+- `groundedness_output.json`: Configured groundedness scores
+- `relevance_output.json`: Configured context relevance scores
 
 **Profiler outputs (when enabled)**
 - `standardized_data_all.csv`: Per-request profiler metrics

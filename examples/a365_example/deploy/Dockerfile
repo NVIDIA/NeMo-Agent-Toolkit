@@ -33,7 +33,7 @@ RUN apt-get update \
         git \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=ghcr.io/astral-sh/uv:0.9.28 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.33 /uv /usr/local/bin/uv
 
 ENV UV_NO_CACHE=1 \
     PYTHONUNBUFFERED=1 \

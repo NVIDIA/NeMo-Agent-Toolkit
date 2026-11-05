@@ -18,10 +18,10 @@ import string
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
-import httpx
+import httpx2
 import pytest
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from httpx import ASGITransport
+from httpx2 import ASGITransport
 from mock_oauth2_server import MockOAuth2Server
 
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
@@ -80,7 +80,7 @@ class TestOAuth2RedirectURIValidation:
         )
 
         # Make request to authorization URL
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
             transport=transport,
             base_url="http://testserver",
             follow_redirects=False,
@@ -119,7 +119,7 @@ class TestOAuth2RedirectURIValidation:
         )
 
         # Make request to authorization URL
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
             transport=transport,
             base_url="http://testserver",
             follow_redirects=False,
@@ -213,7 +213,7 @@ class TestOAuth2RedirectURIValidation:
         )
 
         # Make request to authorization URL
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
             transport=transport,
             base_url="http://testserver",
             follow_redirects=False,
@@ -374,7 +374,7 @@ class TestOAuth2AuthorizationRequest:
         )
 
         # Simulate the authorization flow by making the authorization request
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
             transport=transport,
             base_url="http://testserver",
             follow_redirects=False,
@@ -445,7 +445,7 @@ class TestOAuth2ErrorHandlingAndRecovery:
                 scope=fake_scope if fake_scope else None
             )
 
-            async with httpx.AsyncClient(
+            async with httpx2.AsyncClient(
                     transport=transport,
                     base_url="http://testserver",
                     follow_redirects=False,
@@ -535,7 +535,7 @@ async def test_authorization_code_security_handling(mock_server,
             state=secrets.token_urlsafe(16)
         )
 
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
                 transport=transport,
                 base_url="http://testserver",
                 follow_redirects=False,
@@ -609,7 +609,7 @@ async def test_authorization_code_security_handling(mock_server,
             state=secrets.token_urlsafe(16)
         )
 
-        async with httpx.AsyncClient(
+        async with httpx2.AsyncClient(
                 transport=transport,
                 base_url="http://testserver",
                 follow_redirects=False,

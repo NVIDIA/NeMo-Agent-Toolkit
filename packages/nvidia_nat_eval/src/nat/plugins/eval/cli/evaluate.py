@@ -32,6 +32,7 @@ def _raise_full_eval_dependency_error(error: Exception):
 try:
     from nat.data_models.evaluate_runtime import EvaluationRunConfig
     from nat.data_models.evaluate_runtime import EvaluationRunOutput
+    from nat.plugins.eval.data_models.evaluator_io import count_evaluator_errors
     from nat.plugins.eval.runtime.evaluate import EvaluationRun
 except ImportError as import_error:  # pragma: no cover - guarded runtime path
     _raise_full_eval_dependency_error(import_error)
@@ -82,6 +83,12 @@ def _get_missing_eval_callback_install_hint(exporter_config) -> str | None:
     is_flag=True,
     default=False,
     help="Skip the dataset entries that have a generated answer.",
+)
+@click.option(
+    "--resume",
+    is_flag=True,
+    default=False,
+    help="Continue an interrupted run: keep the output directory and run only the items that did not finish.",
 )
 @click.option(
     "--endpoint",
@@ -166,6 +173,10 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
         else:
             row.append(str(eval_output.average_score))
 
+        # Errors as "failed/total" so a judge outage is visible next to the average it is counted in
+        num_items = len(getattr(eval_output, "eval_output_items", None) or [])
+        row.append(f"{count_evaluator_errors(eval_output)}/{num_items}")
+
         # Add output file if available
         output_file = None
         for file_path in eval_run_output.evaluator_output_files:
@@ -177,7 +188,7 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
         table.append(row)
 
     # Build headers
-    headers = ["Evaluator", "Avg Score", "Output File"]
+    headers = ["Evaluator", "Avg Score", "Errors", "Output File"]
 
     click.echo(tabulate(table, headers=headers, tablefmt="github"))
     click.echo("")
@@ -254,6 +265,7 @@ def process_nat_eval(
     result_json_path: str,
     skip_workflow: bool,
     skip_completed_entries: bool,
+    resume: bool,
     endpoint: str,
     endpoint_timeout: int,
     reps: int,
@@ -269,6 +281,10 @@ def process_nat_eval(
         raise click.UsageError("The options '--skip_workflow' and '--endpoint' are mutually exclusive. "
                                "Please use only one of them.")
 
+    if resume and skip_workflow:
+        raise click.UsageError("The options '--resume' and '--skip_workflow' are mutually exclusive. "
+                               "'--resume' continues an interrupted workflow run.")
+
     # You cannot run multiple repetitions if you are skipping the workflow or skipping completed entries
     if reps > 1 and (skip_workflow or skip_completed_entries):
         raise click.UsageError("The options '--reps' and '--skip_workflow' or '--skip_completed_entries' are mutually "
@@ -283,6 +299,8 @@ def process_nat_eval(
         "result_json_path": result_json_path,
         "skip_workflow": skip_workflow,
         "skip_completed_entries": skip_completed_entries,
+        "resume": resume,
+        "write_checkpoint": True,
         "endpoint": endpoint,
         "endpoint_timeout": endpoint_timeout,
         "reps": reps,

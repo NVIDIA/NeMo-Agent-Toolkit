@@ -47,7 +47,7 @@ class PluginTypes(IntFlag):
     """
     EVALUATOR = auto()
     """
-    A plugin that is an evaluator for the workflow. This includes evaluators like RAGAS, SWE-bench, etc.
+    A plugin that is an evaluator for the workflow. This includes evaluators like SWE-bench, etc.
     """
     AUTHENTICATION = auto()
     """

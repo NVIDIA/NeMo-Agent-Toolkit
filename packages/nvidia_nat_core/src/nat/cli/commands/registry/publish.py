@@ -38,7 +38,11 @@ async def publish_artifact(registry_handler_config: RegistryHandlerBaseConfig, p
         registry_handler_info = registry.get_registry_handler(type(registry_handler_config))
         registry_handler = await stack.enter_async_context(registry_handler_info.build_fn(registry_handler_config))
         try:
-            artifact = build_artifact(package_root=package_root)
+            # build_artifact() shells out to `uv build --wheel`, which is slow and
+            # can hit the network. It is synchronous, so calling it directly
+            # would block the event loop for the whole build; run it in a worker
+            # thread so the loop stays free.
+            artifact = await asyncio.to_thread(build_artifact, package_root=package_root)
         except Exception as e:
             logger.exception("Error building artifact: %s", e)
             return

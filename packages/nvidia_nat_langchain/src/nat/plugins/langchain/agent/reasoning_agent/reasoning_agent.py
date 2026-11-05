@@ -37,7 +37,9 @@ class ReasoningFunctionConfig(AgentBaseConfig, name="reasoning_agent"):
 
     Designed to be used with an InterceptingFunction.
     """
-    description: str = Field(default="Reasoning Agent", description="The description of this function's use.")
+    description: str = Field(
+        default="Reasoning function that generates a detailed execution plan for a system based on the input.",
+        description="The description of this function's use.")
     augmented_fn: FunctionRef = Field(description="The name of the function to reason on.")
     reasoning_prompt_template: str = Field(
         default=("You are an expert reasoning model task with creating a detailed execution plan"
@@ -224,8 +226,7 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
 
         single_inner_fn = single_inner
 
-    yield FunctionInfo.create(
-        single_fn=single_inner_fn,
-        stream_fn=streaming_inner_fn,
-        description=("Reasoning function that generates a detailed execution plan for a system based on the input."),
-        converters=augmented_function.converter_list)
+    yield FunctionInfo.create(single_fn=single_inner_fn,
+                              stream_fn=streaming_inner_fn,
+                              description=config.description,
+                              converters=augmented_function.converter_list)

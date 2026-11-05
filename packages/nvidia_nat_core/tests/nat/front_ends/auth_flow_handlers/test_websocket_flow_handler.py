@@ -19,9 +19,9 @@ from unittest.mock import MagicMock
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
-import httpx
+import httpx2
 import pytest
-from httpx import ASGITransport
+from httpx2 import ASGITransport
 from mock_oauth2_server import MockOAuth2Server
 
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
@@ -140,7 +140,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
             received_messages.append(msg)
 
             # 1) ── Hit /oauth/authorize on the mock server ─────────── #
-            async with httpx.AsyncClient(
+            async with httpx2.AsyncClient(
                 transport=ASGITransport(app=mock_server._app),
                 base_url="http://testserver",
                 follow_redirects=False,
@@ -229,7 +229,7 @@ async def test_websocket_oauth2_flow_no_popup(monkeypatch, mock_server, tmp_path
         async def create_websocket_message(self, msg):
             received_messages.append(msg)
 
-            async with httpx.AsyncClient(
+            async with httpx2.AsyncClient(
                     transport=ASGITransport(app=mock_server._app),
                     base_url="http://testserver",
                     follow_redirects=False,

@@ -32,9 +32,8 @@ llms:
 
   bedrock_llm:
     _type: aws_bedrock
-    model_name: anthropic.claude-3-5-sonnet-20240620-v1:0
+    model_name: us.anthropic.claude-sonnet-5-5
     region_name: us-east-1
-    temperature: 0.0
     max_tokens: 4096
 
   openai_llm:

@@ -16,6 +16,7 @@
 # flake8: noqa
 # isort:skip_file
 
+from . import instrumentation
 from . import llm
 from . import tool_wrapper
 from .tools import register

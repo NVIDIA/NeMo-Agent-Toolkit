@@ -271,19 +271,28 @@ class Context:
                                     metadata=metadata))
 
         manager = ActiveFunctionContextManager()
+        error_type: str | None = None
 
         try:
             yield manager  # run the function body
+        except GeneratorExit:
+            raise  # the caller stopped consuming a stream; not a failure
+        except BaseException as e:
+            error_type = type(e).__name__
+            raise
         finally:
-            # 3) Record function end
+            # 3) Record function end. A function that raised gets an `error` entry with the exception type (not
+            # its message, which can carry user input), so exporters can mark its span as failed.
 
             data = StreamEventData(input=input_data, output=manager.output)
+            end_metadata = TraceMetadata(error={"type": error_type}) if error_type is not None else None
 
             step_manager.push_intermediate_step(
                 IntermediateStepPayload(UUID=current_function_id,
                                         event_type=IntermediateStepType.FUNCTION_END,
                                         name=function_name,
-                                        data=data))
+                                        data=data,
+                                        metadata=end_metadata))
 
             # 4a) Pop function name from path stack
             self._context_state.function_path_stack.reset(path_token)

@@ -102,8 +102,12 @@ class MemMachineEditor(MemoryEditor):
             # Fallback: assume it's already a memory instance or try to use it directly
             return self._memmachine
 
-        # Create memory instance from project
-        return project.memory(user_id=user_id, agent_id=agent_id, session_id=session_id)
+        # Create memory instance from project. The SDK scopes add() and search() only by
+        # the ids passed in `metadata`; other keyword arguments are stored and never read.
+        # Leave out ids that are None and pass the rest as strings, since the SDK requires
+        # string metadata values.
+        metadata = {"user_id": user_id, "agent_id": agent_id, "session_id": session_id}
+        return project.memory(metadata={key: str(value) for key, value in metadata.items() if value is not None})
 
     async def add_items(self, items: list[MemoryItem]) -> None:
         """
@@ -131,6 +135,9 @@ class MemMachineEditor(MemoryEditor):
             agent_id = item_meta.pop("agent_id", "default_agent")
             project_id = item_meta.pop("project_id", None)
             org_id = item_meta.pop("org_id", None)
+            # The SDK lets per-message metadata override the memory's own, so a user_id here
+            # would store the item under another user.
+            item_meta.pop("user_id", None)
 
             # Get memory instance using MemMachine SDK
             memory = self._get_memory_instance(user_id, session_id, agent_id, project_id, org_id)

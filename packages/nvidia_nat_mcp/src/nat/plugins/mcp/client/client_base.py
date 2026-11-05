@@ -36,7 +36,9 @@ from mcp.client.streamable_http import streamable_http_client
 from mcp.shared._httpx_utils import MCP_DEFAULT_SSE_READ_TIMEOUT
 from mcp.shared._httpx_utils import MCP_DEFAULT_TIMEOUT
 from mcp.shared._httpx_utils import create_mcp_http_client
+from mcp.types import EmbeddedResource
 from mcp.types import TextContent
+from mcp.types import TextResourceContents
 from nat.authentication.interfaces import AuthenticatedContext
 from nat.authentication.interfaces import AuthFlowType
 from nat.authentication.interfaces import AuthProviderBase
@@ -870,6 +872,9 @@ class MCPToolClient:
             for res in result.content:
                 if isinstance(res, TextContent):
                     output.append(res.text)
+                elif isinstance(res, EmbeddedResource) and isinstance(res.resource, TextResourceContents):
+                    # Tools return file contents and other documents as embedded text resources
+                    output.append(res.resource.text)
                 else:
                     # Log non-text content for now
                     logger.warning("Got not-text output from %s of type %s", self.name, type(res))

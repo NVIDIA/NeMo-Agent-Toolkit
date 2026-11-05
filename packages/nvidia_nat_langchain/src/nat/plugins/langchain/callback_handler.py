@@ -199,12 +199,10 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
 
     @staticmethod
     def _workflow_profiler() -> LangchainProfilerHandler | None:
-        """Return the active configure-hook profiler, when that plugin is installed."""
-        try:
-            from nat.plugins.profiler.decorators.framework_wrapper import _library_instrumented
-            from nat.plugins.profiler.decorators.framework_wrapper import callback_handler_var
-        except ImportError:
-            return None
+        """Return the handler the workflow's framework instrumentation attached, if any."""
+        from nat.builder.framework_instrumentation import _library_instrumented
+        from nat.builder.framework_instrumentation import callback_handler_var
+
         handler = callback_handler_var.get()
         return handler if _library_instrumented["langchain"] and isinstance(handler, LangchainProfilerHandler) else None
 

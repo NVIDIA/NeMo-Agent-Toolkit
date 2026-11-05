@@ -415,3 +415,28 @@ async def test_build_reasoning_function_handles_empty_tool_list(fake_builder):
     output = await fn.ainvoke("No tools scenario")
     # All good if we got a normal result
     assert "AugmentedResult:" in output
+
+
+@pytest.mark.parametrize("description", [None, "Plans the steps for the billing agent"])
+async def test_build_reasoning_function_uses_the_configured_description(fake_builder, description):
+    """The description other agents see for this tool is the one in the config."""
+
+    async def mock_get_function(name: str):
+        return MockAugmentedFunction(config=DummyConfig(), description="I am described!")
+
+    fake_builder.get_function.side_effect = mock_get_function
+    fake_builder.get_llm.side_effect = lambda name, wrapper_type: _async_value(MagicMock())
+
+    kwargs = {"description": description} if description else {}
+    config = ReasoningFunctionConfig(llm_name="test_llm", augmented_fn="my_augmented_fn", **kwargs)
+    reasoning_info = await AsyncExitStack().enter_async_context(build_reasoning_function(config, fake_builder))
+    fn = LambdaFunction.from_info(config=config, info=reasoning_info)
+
+    assert fn.description == config.description
+    if description is None:
+        # the default still tells another agent what the tool is for
+        assert "execution plan" in fn.description
+
+
+async def _async_value(value):
+    return value

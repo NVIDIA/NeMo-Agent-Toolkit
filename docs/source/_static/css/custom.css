@@ -40,3 +40,14 @@
     max-width: 100% !important;
     width: 100%;
 }
+
+/* Keep the notice readable against its fixed background in both theme modes. */
+.bd-header-announcement {
+    background-color: #3a3a3a;
+    color: #fff;
+}
+
+.bd-header-announcement a {
+    color: #fff;
+    text-decoration: underline;
+}

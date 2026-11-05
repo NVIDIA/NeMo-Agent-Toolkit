@@ -14,10 +14,13 @@
 # limitations under the License.
 
 import asyncio
+from unittest.mock import AsyncMock
 
+import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport
 from httpx import AsyncClient
+from httpx2 import ConnectError
 
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from nat.data_models.api_server import OAuthMode
@@ -174,3 +177,19 @@ async def test_success_redirect_returns_success_html():
     assert "oauth_auth_completed" in response.text
     assert flow_state.future.done()
     assert flow_state.future.result() == {"access_token": "token", "token_type": "Bearer"}
+
+
+@pytest.mark.parametrize("oauth_mode", [OAuthMode.POPUP, OAuthMode.REDIRECT])
+async def test_token_fetch_network_error_resolves_future(oauth_mode):
+    """HTTPX2 errors from Authlib must complete the flow rather than leave callers waiting."""
+    flow_state = FlowState(config=_CONFIG, return_url=_RETURN_URL, oauth_mode=oauth_mode)
+    flow_state.client = AsyncMock()
+    flow_state.client.fetch_token.side_effect = ConnectError("token endpoint unavailable")
+    worker = _make_worker(flow_state)
+
+    response = await _get(worker, {"state": "teststate", "code": "authcode"})
+
+    assert response.status_code == 200
+    assert flow_state.future.done()
+    with pytest.raises(RuntimeError, match="Network error during token fetch: token endpoint unavailable"):
+        await flow_state.future

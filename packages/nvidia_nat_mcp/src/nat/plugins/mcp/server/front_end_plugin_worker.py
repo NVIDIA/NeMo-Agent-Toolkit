@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
 from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.builder.function_base import FunctionBase
 from nat.builder.workflow import Workflow
 from nat.builder.workflow_builder import WorkflowBuilder
@@ -201,11 +202,14 @@ class MCPFrontEndPluginWorkerBase(ABC):
         if self.front_end_config.tool_names:
             logger.info("Filtering functions based on tool_names: %s", self.front_end_config.tool_names)
             filtered_functions: dict[str, Function] = {}
+            # An exact function name is not also a group prefix, otherwise `group__fn` would pull in `group__fn__x`
+            group_prefixes = tuple(f"{name}{FunctionGroup.SEPARATOR}" for name in self.front_end_config.tool_names
+                                   if name not in functions)
             for function_name, function in functions.items():
                 if function_name in self.front_end_config.tool_names:
                     # Treat current tool_names as function names, so check if the function name is in the list
                     filtered_functions[function_name] = function
-                elif any(function_name.startswith(f"{group_name}.") for group_name in self.front_end_config.tool_names):
+                elif function_name.startswith(group_prefixes):
                     # Treat tool_names as function group names, so check if the function name starts with the group name
                     filtered_functions[function_name] = function
                 else:
@@ -431,14 +435,24 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
             from mcp.server.auth.settings import AuthSettings
 
             server_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}"
-            auth_settings = AuthSettings(issuer_url=AnyHttpUrl(self.front_end_config.server_auth.issuer_url),
-                                         required_scopes=self.front_end_config.server_auth.scopes,
-                                         resource_server_url=AnyHttpUrl(server_url))
+            resource_server_url = str(AnyHttpUrl(server_url))
+            configured_audience = self.front_end_config.server_auth.audience
+            auth_settings = AuthSettings(
+                issuer_url=AnyHttpUrl(self.front_end_config.server_auth.issuer_url),
+                required_scopes=self.front_end_config.server_auth.scopes,
+                resource_server_url=AnyHttpUrl(resource_server_url),
+                # NAT's verifier enforces a nonempty configured audience itself. Otherwise
+                # delegate the unset-audience resource check to the patched MCP SDK 1.30.
+                validate_token_resource=not bool(configured_audience),
+            )
 
-            # Create token verifier
+            # Create token verifier; return the matching audience as AccessToken.resource for mcp>=1.30.
             from nat.plugins.mcp.server.introspection_token_verifier import IntrospectionTokenVerifier
 
-            token_verifier = IntrospectionTokenVerifier(self.front_end_config.server_auth)
+            token_verifier = IntrospectionTokenVerifier(
+                self.front_end_config.server_auth,
+                resource_server_url=resource_server_url,
+            )
 
         return FastMCP(name=self.front_end_config.name,
                        host=self.front_end_config.host,

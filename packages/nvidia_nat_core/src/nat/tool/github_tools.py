@@ -106,20 +106,25 @@ class GithubGetIssueModel(BaseModel):
     mentioned: str | None = Field(default=None, description="Name of person mentioned in issue")
     labels: list[str] | None = Field(default=None, description="A list of labels that are assigned to the issue")
     since: str | None = Field(default=None,
-                              description="Only show results that were last updated after the given time.")
+                              description=("Only show results that were last updated after the given time, "
+                                           "as an ISO 8601 timestamp in the form YYYY-MM-DDTHH:MM:SSZ."))
 
-    @classmethod
     @field_validator('since', mode='before')
+    @classmethod
     def validate_since(cls, v):
-        if v is None:
+        if not isinstance(v, str):
+            # None passes, and other types get the field's own string type error.
             return v
         try:
             # Parse the string to a datetime object
             parsed_date = datetime.strptime(v, "%Y-%m-%dT%H:%M:%SZ")
-            # Return the formatted string
-            return parsed_date.isoformat() + 'Z'
         except ValueError as e:
             raise ValueError("since must be in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ") from e
+        # strptime also accepts missing leading zeros, such as 2026-1-1T0:0:0Z, so require the exact form
+        if parsed_date.strftime("%Y-%m-%dT%H:%M:%SZ") != v:
+            raise ValueError("since must be in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ")
+        # Return the formatted string
+        return parsed_date.isoformat() + 'Z'
 
 
 class GithubGetIssueModelList(BaseModel):
@@ -256,6 +261,10 @@ async def github_tool(config: GithubGroupConfig, _builder: Builder):
             results = []
             for issue in issues_list.filter_parameters:
                 params = issue.model_dump(exclude_unset=True, exclude_none=True)
+                # GitHub reads `labels` as one comma-separated value. Passing the list would repeat the query
+                # parameter, and GitHub would then filter by the last label only.
+                if "labels" in params:
+                    params["labels"] = ",".join(params["labels"])
                 response = await client.get(url, params=params)
                 response.raise_for_status()
                 results.append(response.json())
@@ -474,7 +483,7 @@ async def github_files_tool(config: GithubFilesGroupConfig, _builder: Builder):
             - https://github.com/org/repo/blob/main/README.md#L409-L417 -> Returns lines 409-417 of the README.md file
             """
 
-            pattern = r"https://github\.com/(?P<repo_path>[^/]*/[^/]*)/blob/(?P<file_path>[^?#]*)(?:#L(?P<start>\d+)(?:-L(?P<end>\d+))?)?"
+            pattern = r"https://github\.com/(?P<repo_path>[^/]*/[^/]*)/blob/(?P<file_path>[^?#]*)(?:\?[^#]*)?(?:#L(?P<start>\d+)(?:-L(?P<end>\d+))?)?"
             match = re.match(pattern, url_text)
             if not match:
                 return ("Invalid github url. Please provide a valid github url. "
@@ -484,8 +493,9 @@ async def github_files_tool(config: GithubFilesGroupConfig, _builder: Builder):
 
             file_metadata = FileMetadata(**match.groupdict())
 
-            # The following URL is the raw URL of the file. refs/heads/ always points to the top commit of the branch
-            raw_url = f"https://raw.githubusercontent.com/{file_metadata.repo_path}/refs/heads/{file_metadata.file_path}"
+            # The following URL is the raw URL of the file. Without a refs/heads/ prefix, raw.githubusercontent.com
+            # accepts any ref from the link, so branch, tag and commit links all work.
+            raw_url = f"https://raw.githubusercontent.com/{file_metadata.repo_path}/{file_metadata.file_path}"
             try:
                 response = await client.get(raw_url)
                 response.raise_for_status()
@@ -497,7 +507,7 @@ async def github_files_tool(config: GithubFilesGroupConfig, _builder: Builder):
 
             lines = response.text.splitlines()
 
-            if file_metadata.start_line > len(lines):
+            if file_metadata.start_line < 1 or file_metadata.start_line > len(lines):
                 return f"Error: Line {file_metadata.start_line} is out of range for the file {file_metadata.file_path}"
 
             if file_metadata.end_line is None:
@@ -505,6 +515,9 @@ async def github_files_tool(config: GithubFilesGroupConfig, _builder: Builder):
 
             if file_metadata.end_line > len(lines):
                 return f"Error: Line {file_metadata.end_line} is out of range for the file {file_metadata.file_path}"
+
+            if file_metadata.end_line < file_metadata.start_line:
+                return f"Error: Line range {file_metadata.start_line}-{file_metadata.end_line} is reversed"
 
             selected_lines = lines[file_metadata.start_line - 1:file_metadata.end_line]
             response_text = "\n".join(selected_lines)

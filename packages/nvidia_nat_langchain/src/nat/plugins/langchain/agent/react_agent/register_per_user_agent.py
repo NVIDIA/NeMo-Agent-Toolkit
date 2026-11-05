@@ -24,6 +24,7 @@ from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import ChatResponse
 from nat.plugins.langchain.agent.react_agent.register import ReActAgentWorkflowConfig
 from nat.plugins.langchain.agent.react_agent.register import _build_lc_config
+from nat.plugins.langchain.agent.react_agent.register import _token_usage_collector
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,8 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
         llm=llm,
         prompt=prompt,
         tools=tools,
+        raise_on_parsing_failure=config.raise_on_parsing_failure,
+        use_native_tool_calling=config.use_native_tool_calling,
         use_tool_schema=config.include_tool_input_schema_in_tool_description,
         detailed_logs=config.verbose,
         log_response_max_chars=config.log_response_max_chars,
@@ -73,7 +76,8 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
         parse_agent_response_max_retries=config.parse_agent_response_max_retries,
         tool_call_max_retries=config.tool_call_max_retries,
         pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent,
-        normalize_tool_input_quotes=config.normalize_tool_input_quotes).build_graph()
+        normalize_tool_input_quotes=config.normalize_tool_input_quotes,
+        max_tool_calls=config.max_tool_calls).build_graph()
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         try:
@@ -85,19 +89,23 @@ async def per_user_react_agent_workflow(config: PerUserReActAgentWorkflowConfig,
                                                         start_on="human",
                                                         include_system=True)
             state = ReActGraphState(messages=messages)
-            state = await graph.ainvoke(state,
-                                        config=_build_lc_config(config.max_tool_calls,
-                                                                message.model,
-                                                                supports_override=_supports_model_override))
+            lc_config = _build_lc_config(config.max_tool_calls,
+                                         message.model,
+                                         supports_override=_supports_model_override)
+            token_usage = _token_usage_collector(lc_config)
+            state = await graph.ainvoke(state, config=lc_config)
             state = ReActGraphState(**state)
             output_message = state.messages[-1]
             content = str(output_message.content)
 
-            prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
-            completion_tokens = len(content.split()) if content else 0
-            usage = Usage(prompt_tokens=prompt_tokens,
-                          completion_tokens=completion_tokens,
-                          total_tokens=prompt_tokens + completion_tokens)
+            usage = token_usage.usage()
+            if usage is None:
+                # the model reported no usage, so fall back to a word count
+                prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
+                completion_tokens = len(content.split()) if content else 0
+                usage = Usage(prompt_tokens=prompt_tokens,
+                              completion_tokens=completion_tokens,
+                              total_tokens=prompt_tokens + completion_tokens)
             response = ChatResponse.from_string(content, usage=usage)
 
             if chat_request_or_message.is_string:

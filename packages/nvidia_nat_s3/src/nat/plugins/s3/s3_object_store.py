@@ -15,7 +15,7 @@
 
 import logging
 
-import aioboto3
+from aiobotocore.session import get_session
 from botocore.client import BaseClient
 from botocore.exceptions import ClientError
 
@@ -39,11 +39,11 @@ class S3ObjectStore(ObjectStore):
                  access_key: str | None,
                  secret_key: str | None,
                  region: str | None):
-
+        """Configure the bucket and asynchronous S3 client session."""
         super().__init__()
 
         self.bucket_name = bucket_name
-        self.session = aioboto3.Session()
+        self.session = get_session()
         self._client: BaseClient | None = None
         self._client_context = None
 
@@ -57,11 +57,12 @@ class S3ObjectStore(ObjectStore):
             self._client_args["endpoint_url"] = endpoint_url
 
     async def __aenter__(self) -> "S3ObjectStore":
+        """Open the S3 client and create a missing bucket in its resolved region."""
 
         if self._client_context is not None:
             raise RuntimeError("Connection already established")
 
-        self._client_context = self.session.client("s3", **self._client_args)
+        self._client_context = self.session.create_client("s3", **self._client_args)
         if self._client_context is None:
             raise RuntimeError("Connection unable to be established")
         self._client = await self._client_context.__aenter__()
@@ -73,7 +74,11 @@ class S3ObjectStore(ObjectStore):
             await self._client.head_bucket(Bucket=self.bucket_name)
         except ClientError as e:
             if e.response['Error']['Code'] == '404':
-                await self._client.create_bucket(Bucket=self.bucket_name)
+                create_args: dict = {"Bucket": self.bucket_name}
+                region = self._client.meta.region_name
+                if region not in ("us-east-1", "aws-global"):
+                    create_args["CreateBucketConfiguration"] = {"LocationConstraint": region}
+                await self._client.create_bucket(**create_args)
                 logger.info("Created bucket %s", self.bucket_name)
 
         return self
@@ -160,7 +165,5 @@ class S3ObjectStore(ObjectStore):
                 raise NoSuchKeyError(key=key, additional_message=str(e)) from e
             raise
 
-        results = await self._client.delete_object(Bucket=self.bucket_name, Key=key)
-
-        if results.get('DeleteMarker', False):
-            raise NoSuchKeyError(key=key, additional_message="Object was a delete marker")
+        # On a versioned bucket a successful delete adds a delete marker, so DeleteMarker=True is not an error
+        await self._client.delete_object(Bucket=self.bucket_name, Key=key)

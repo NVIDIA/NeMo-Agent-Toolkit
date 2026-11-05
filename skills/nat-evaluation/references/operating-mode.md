@@ -27,6 +27,5 @@ When you need API-level detail beyond what's in the code patterns (exact config 
 - **NeMo Agent Toolkit Evaluation docs** — Fetch from `https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/evaluate.html` via WebFetch. Covers `eval_config.yml` schema, built-in evaluator types, profiler configuration, and `nat eval` CLI options.
 - **NeMo Agent Toolkit Custom Evaluators** — Fetch from `https://docs.nvidia.com/nemo/agent-toolkit/latest/improve-workflows/custom-evaluators.html` via WebFetch. Covers `BaseEvaluator`, `EvaluatorBaseConfig`, `@register_evaluator` pattern.
 - **NeMo Agent Toolkit GitHub** — `github.com/NVIDIA/NeMo-Agent-Toolkit`. Check `examples/` directory for working evaluation examples.
-- **RAGAS** — `docs.ragas.io`. Check for available metrics beyond AnswerAccuracy, ResponseGroundedness, ContextRelevance.
 
 Only fetch docs when the code patterns reference file doesn't have what you need — don't load docs speculatively.

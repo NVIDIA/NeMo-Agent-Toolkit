@@ -121,7 +121,7 @@ class RedactionManager(Generic[RedactionDataT]):
         and caches the result atomically. Since data is static per request,
         subsequent calls within the same context return the cached result.
 
-        Supports sync/async functions, generators, and async generators.
+        Supports sync/async functions, callbacks returning awaitables, generators, and async generators.
 
         Args:
             callback (Callable[..., Any]): The callback to execute (sync/async function, generator, etc.).

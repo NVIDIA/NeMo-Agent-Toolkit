@@ -17,6 +17,7 @@ import base64
 import json
 import typing
 from contextlib import AsyncExitStack
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -31,6 +32,7 @@ from nat.registry_handlers.schemas.publish import Artifact
 from nat.registry_handlers.schemas.publish import BuiltArtifact
 from nat.registry_handlers.schemas.pull import PullRequestPackages
 from nat.registry_handlers.schemas.search import SearchQuery
+from nat.registry_handlers.schemas.status import StatusEnum
 from nat.settings.global_settings import Settings
 
 
@@ -85,7 +87,7 @@ async def test_rest_handler_publish(rest_registry_channel: dict,
     assert publish_response.status.status == expected
 
 
-@patch("nat.registry_handlers.rest.rest_handler.subprocess.run")
+@patch("nat.registry_handlers.rest.rest_handler.run_command", new_callable=AsyncMock)
 @pytest.mark.parametrize("url, route, return_value, expected",
                          [
                              (None, "/pull", 0, "success"),
@@ -150,6 +152,34 @@ async def test_rest_handler_pull(mock_run: MagicMock,
         pull_response = await stack.enter_async_context(registry_handler.pull(packages=pull_request_pkgs))
 
     assert pull_response.status.status == expected
+
+
+@pytest.mark.usefixtures("httpserver_listen_address")
+@pytest.mark.asyncio
+async def test_rest_handler_pull_reports_staging_failure_as_error(rest_registry_channel: dict,
+                                                                  registry: TypeRegistry,
+                                                                  global_settings: Settings):
+    """A staging directory that cannot be created is a pull failure, not a crash.
+
+    `pull()` is an async generator whose contract is to yield a PullResponse on
+    every path. If `mkdtemp` raises (no writable temp dir) before the try block,
+    the exception escapes the generator and the caller sees a raised error instead
+    of a normal ERROR response.
+    """
+    rest_registry_channel["channels"]["rest_channel"]["endpoint"] = "http://localhost:1234/none"
+    registry_config = global_settings.model_validate(rest_registry_channel)
+    rest_registry_config = registry_config.channels.get("rest_channel", None)
+
+    pull_request_pkgs = PullRequestPackages(packages=[{"name": "package_name", "version": "package_version"}])
+
+    with patch("nat.registry_handlers.rest.rest_handler.tempfile.mkdtemp", side_effect=OSError("no writable temp dir")):
+        async with AsyncExitStack() as stack:
+            registry_handler_info = registry.get_registry_handler(type(rest_registry_config))
+            registry_handler = await stack.enter_async_context(registry_handler_info.build_fn(rest_registry_config))
+            pull_response = await stack.enter_async_context(registry_handler.pull(packages=pull_request_pkgs))
+
+    assert pull_response.status.status == StatusEnum.ERROR
+    assert "no writable temp dir" in pull_response.status.message
 
 
 @pytest.mark.parametrize("url, route, field_name, component_type, top_k, expected",

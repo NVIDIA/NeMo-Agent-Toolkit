@@ -13,13 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+
 import pytest
 
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.experimental.test_time_compute.models.search_config import SingleShotMultiPlanConfig
+from nat.experimental.test_time_compute.models.selection_config import LLMBasedPlanSelectionConfig
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
 from nat.experimental.test_time_compute.models.ttc_item import TTCItem
+from nat.experimental.test_time_compute.search.single_shot_multi_plan_planner import SingleShotMultiPlanPlanner
+from nat.experimental.test_time_compute.selection.llm_based_plan_selector import LLMBasedPlanSelector
+from nat.experimental.test_time_compute.selection.llm_based_plan_selector import register_llm_based_plan_selection
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -135,3 +145,45 @@ async def test_build_components_and_ainvoke_roundtrip():
     for new, old in zip(new_items, original_items):
         assert new.input == old.input
         assert new.metadata == {"invoked": True}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tests for the llm_based_plan_selection registration
+# ──────────────────────────────────────────────────────────────────────────────
+async def test_llm_based_plan_selection_builds_with_the_given_builder():
+    """The registered strategy resolves its selection LLM through the builder it is given."""
+    config = LLMBasedPlanSelectionConfig(selection_llm="selector_llm")
+    llm = MagicMock()
+    builder = MagicMock(spec=Builder)
+    builder.get_llm = AsyncMock(return_value=llm)
+
+    async with register_llm_based_plan_selection(config, builder) as selector:
+        assert isinstance(selector, LLMBasedPlanSelector)
+        assert selector.llm_bound is llm
+
+    builder.get_llm.assert_awaited_once_with("selector_llm", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tests for the single_shot_multi_plan planner
+# ──────────────────────────────────────────────────────────────────────────────
+@pytest.mark.parametrize("num_plans, expected_temperatures", [(1, [0.75]), (3, [0.5, 0.75, 1.0])])
+async def test_single_shot_multi_plan_temperatures(num_plans: int, expected_temperatures: list[float]):
+    """Each plan is sampled at its own temperature, and a single plan uses the midpoint temperature."""
+    from langchain_core.language_models import BaseChatModel
+    from langchain_core.messages import AIMessage
+
+    llm = MagicMock(spec=BaseChatModel)
+    llm.bind.return_value.ainvoke = AsyncMock(return_value=AIMessage(content="PLAN: call the tool"))
+
+    planner = SingleShotMultiPlanPlanner(
+        SingleShotMultiPlanConfig(planning_llm="planner_llm",
+                                  num_plans=num_plans,
+                                  min_temperature=0.5,
+                                  max_temperature=1.0))
+    planner.llm_bound = llm
+
+    plans = await planner.ainvoke([], original_prompt="What is 2 + 2?", agent_context="A calculator tool")
+
+    assert [plan.plan for plan in plans] == ["call the tool"] * num_plans
+    assert [call.kwargs["temperature"] for call in llm.bind.call_args_list] == pytest.approx(expected_temperatures)

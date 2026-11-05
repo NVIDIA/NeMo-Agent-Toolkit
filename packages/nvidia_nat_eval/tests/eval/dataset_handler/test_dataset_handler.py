@@ -22,7 +22,10 @@ import pytest
 
 from nat.data_models.dataset_handler import EvalDatasetCustomConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
+from nat.data_models.dataset_handler import EvalDatasetJsonlConfig
 from nat.data_models.dataset_handler import EvalDatasetStructureConfig
+from nat.data_models.dataset_handler import EvalFilterConfig
+from nat.data_models.dataset_handler import EvalFilterEntryConfig
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.intermediate_step import IntermediateStep
@@ -251,6 +254,11 @@ def sample_custom_parser(file_path: Path, difficulty: str = "") -> EvalInput:
     return EvalInput(eval_input_items=eval_items)
 
 
+def sample_empty_custom_parser(file_path: Path) -> EvalInput:
+    """Test implementation of a custom dataset parser that returns no items."""
+    return EvalInput(eval_input_items=[])
+
+
 @pytest.fixture
 def custom_dataset_config():
     """Fixture for dataset configuration."""
@@ -397,6 +405,35 @@ def test_setup_reps(dataset_handler, mock_input_df, dataset_id_key):
     assert all("_rep" in str(i) for i in replicated_df[dataset_id_key]), "IDs should be suffixed with `_repX`"
 
 
+@pytest.mark.parametrize("num_passes", [0, 1])
+def test_adjust_dataset_rejects_empty_input(num_passes: int):
+    """Reject empty input for automatic and fixed pass counts."""
+    dataset_handler = DatasetHandler(EvalDatasetJsonConfig(),
+                                     reps=1,
+                                     concurrency=2,
+                                     num_passes=num_passes,
+                                     adjust_dataset_size=True)
+
+    with pytest.raises(ValueError, match="Input dataset is empty"):
+        dataset_handler.adjust_dataset(pd.DataFrame(columns=["id", "question"]))
+
+
+@pytest.mark.parametrize("num_passes", [0, 1])
+def test_preprocess_dataframe_rejects_dataset_emptied_by_filter(num_passes: int):
+    """Reject datasets emptied by filtering for both pass-count modes."""
+    dataset_config = EvalDatasetJsonConfig(filter=EvalFilterConfig(allowlist=EvalFilterEntryConfig(
+        field={"id": ["not-present"]})))
+    dataset_handler = DatasetHandler(dataset_config,
+                                     reps=1,
+                                     concurrency=2,
+                                     num_passes=num_passes,
+                                     adjust_dataset_size=True)
+    input_df = pd.DataFrame({"id": ["1"], "question": ["What is AI?"]})
+
+    with pytest.raises(ValueError, match="Input dataset is empty"):
+        dataset_handler._preprocess_dataframe(input_df)
+
+
 @pytest.fixture
 def mock_intermediate_steps():
     """Create a list of mock intermediate steps with different event types."""
@@ -524,6 +561,19 @@ def test_json_dataset_keeps_values_as_written(tmp_path: Path):
     assert [item.full_dataset_entry for item in items] == records
 
 
+@pytest.mark.parametrize("separator, trailer", [("\n", "\n\n"), ("\n\n", "\n"), ("\n  \t\n", "\n")],
+                         ids=["trailing_blank_line", "blank_line_between_records", "whitespace_only_line"])
+def test_jsonl_dataset_skips_blank_lines(tmp_path: Path, separator: str, trailer: str):
+    records = [{"id": "1", "question": "q1", "answer": "a1"}, {"id": "2", "question": "q2", "answer": "a2"}]
+    dataset_path = tmp_path / "dataset.jsonl"
+    dataset_path.write_text(separator.join(json.dumps(record) for record in records) + trailer)
+    dataset_handler = DatasetHandler(EvalDatasetJsonlConfig(file_path=dataset_path), reps=1, concurrency=1)
+
+    items = dataset_handler.get_eval_input_from_dataset("").eval_input_items
+
+    assert [item.full_dataset_entry for item in items] == records
+
+
 def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
     dataset_handler = DatasetHandler(custom_dataset_config, reps=1, concurrency=1)
 
@@ -532,6 +582,28 @@ def test_custom_dataset_config(custom_dataset_config, temp_nested_json_file):
     # check that there are two medium entries in the eval_input
     assert len(eval_input.eval_input_items) == 2
     assert all(item.full_dataset_entry['difficulty'] == 'medium' for item in eval_input.eval_input_items)
+
+
+@pytest.mark.parametrize("adjust_dataset_size", [False, True])
+@pytest.mark.parametrize("num_passes", [0, 1])
+def test_custom_empty_dataset_respects_size_adjustment(temp_nested_json_file: Path,
+                                                       adjust_dataset_size: bool,
+                                                       num_passes: int):
+    """Handle empty custom datasets consistently for both pass-count modes."""
+    dataset_config = EvalDatasetCustomConfig(function=f"{__name__}.sample_empty_custom_parser",
+                                             file_path=temp_nested_json_file)
+    dataset_handler = DatasetHandler(dataset_config,
+                                     reps=1,
+                                     concurrency=2,
+                                     num_passes=num_passes,
+                                     adjust_dataset_size=adjust_dataset_size)
+
+    if adjust_dataset_size:
+        with pytest.raises(ValueError, match="Input dataset is empty"):
+            dataset_handler.get_eval_input_from_dataset("")
+    else:
+        eval_input = dataset_handler.get_eval_input_from_dataset("")
+        assert eval_input.eval_input_items == []
 
 
 def test_custom_pre_eval_process_function():
@@ -644,3 +716,85 @@ def test_eval_input_item_copy_with_updates():
     # Verify the original item is unchanged
     assert test_item.output_obj == "The result is 3.333333333"
     assert test_item.expected_output_obj == "3.33"
+
+
+def test_get_eval_input_from_df_missing_question_key(dataset_handler):
+    """Test that get_eval_input_from_df raises a descriptive ValueError when question column is missing."""
+    df_missing_question = pd.DataFrame({
+        "id": ["1", "2"],
+        "answer": ["A1", "A2"],
+    })
+    with pytest.raises(ValueError, match="Question column 'question' not found in dataset"):
+        dataset_handler.get_eval_input_from_df(df_missing_question)
+
+
+def test_get_eval_input_from_df_numeric_and_non_string_questions(dataset_handler):
+    """Test that get_eval_input_from_df supports integer and numeric questions without error."""
+    df = pd.DataFrame({
+        "id": ["1", "2", "3"],
+        "question": [101, 3.14, "Valid question"],
+        "answer": ["Ans1", "Ans2", "Ans3"],
+    })
+    eval_input = dataset_handler.get_eval_input_from_df(df)
+    assert len(eval_input.eval_input_items) == 3
+    assert eval_input.eval_input_items[0].input_obj == 101
+    assert eval_input.eval_input_items[1].input_obj == 3.14
+    assert eval_input.eval_input_items[2].input_obj == "Valid question"
+
+
+def test_get_eval_input_from_df_filters_whitespace_and_null_questions(dataset_handler):
+    """Test that get_eval_input_from_df filters out rows with null, empty, or whitespace questions."""
+    df = pd.DataFrame({
+        "id": ["1", "2", "3", "4", "5"],
+        "question": ["Valid question", None, "", "   ", "Another valid question"],
+        "answer": ["A1", "A2", "A3", "A4", "A5"],
+    })
+    eval_input = dataset_handler.get_eval_input_from_df(df)
+    assert len(eval_input.eval_input_items) == 2
+    assert [item.id for item in eval_input.eval_input_items] == ["1", "5"]
+
+
+def test_get_eval_input_from_df_all_rows_filtered(dataset_handler):
+    """Test that get_eval_input_from_df returns empty EvalInput when all rows have invalid questions."""
+    df = pd.DataFrame({
+        "id": ["1", "2"],
+        "question": ["", "  \t  "],
+        "answer": ["A1", "A2"],
+    })
+    eval_input = dataset_handler.get_eval_input_from_df(df)
+    assert len(eval_input.eval_input_items) == 0
+
+
+def test_get_eval_input_from_df_custom_question_key():
+    """Test that get_eval_input_from_df respects custom question_key configuration."""
+    custom_structure = EvalDatasetStructureConfig(question_key="custom_query", answer_key="custom_ans")
+    config = EvalDatasetJsonConfig(structure=custom_structure)
+    handler = DatasetHandler(config, reps=1, concurrency=1)
+
+    df_valid = pd.DataFrame({
+        "id": ["1"],
+        "custom_query": ["What is deep learning?"],
+        "custom_ans": ["DL"],
+    })
+    eval_input = handler.get_eval_input_from_df(df_valid)
+    assert len(eval_input.eval_input_items) == 1
+    assert eval_input.eval_input_items[0].input_obj == "What is deep learning?"
+
+    df_missing_custom = pd.DataFrame({"id": ["1"], "question": ["wrong key"]})
+    with pytest.raises(ValueError, match="Question column 'custom_query' not found in dataset"):
+        handler.get_eval_input_from_df(df_missing_custom)
+
+
+def test_get_eval_input_from_df_duplicate_index_labels(dataset_handler):
+    """Test that get_eval_input_from_df handles DataFrames with duplicate index labels without error."""
+    df = pd.DataFrame(
+        {
+            "id": ["1", "2", "3"],
+            "question": ["Valid 1", "Valid 2", None],
+            "answer": ["A1", "A2", "A3"],
+        },
+        index=[0, 0, 0],
+    )
+    eval_input = dataset_handler.get_eval_input_from_df(df)
+    assert len(eval_input.eval_input_items) == 2
+    assert [item.id for item in eval_input.eval_input_items] == ["1", "2"]

@@ -1068,6 +1068,39 @@ async def test_run_and_evaluate_total_runtime_ignores_items_without_steps(evalua
     assert output.usage_stats.total_runtime == pytest.approx(2.5)
 
 
+@pytest.mark.parametrize("evaluator_failing", [False, True], ids=["no_evaluators", "only_evaluator_raised"])
+async def test_workflow_output_written_when_no_evaluator_results(evaluation_run,
+                                                                 default_eval_config,
+                                                                 tmp_path,
+                                                                 evaluator_failing):
+    """Workflow output is written even when no evaluator produced a result.
+
+    This covers a run with no evaluators configured and a run whose only evaluator raised, so the workflow
+    results are not lost and `--skip_workflow` can re-run the evaluation later.
+    """
+    from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
+
+    class LegacyFailingEvaluatorDouble:
+
+        def __init__(self):
+            self.evaluate_fn = AsyncMock(side_effect=RuntimeError("judge endpoint down"))
+            self.evaluate_atif_fn = None
+
+    default_eval_config.general.output_dir = tmp_path
+    evaluation_run.eval_input.eval_input_items[0].output_obj = "Generated answer"
+    dataset_handler = DatasetHandler(dataset_config=default_eval_config.general.dataset, reps=1, concurrency=1)
+
+    evaluators = {"failing": LegacyFailingEvaluatorDouble()} if evaluator_failing else {}
+    await evaluation_run.run_evaluators(evaluators)
+    assert evaluation_run.evaluation_results == []
+
+    evaluation_run._on_eval_complete(dataset_handler)
+
+    workflow_output = json.loads((tmp_path / "workflow_output.json").read_text(encoding="utf-8"))
+    assert workflow_output[0]["generated_answer"] == "Generated answer"
+    assert (tmp_path / "config_metadata.json").exists()
+
+
 def test_append_job_id_to_output_dir(default_eval_config):
     """Test that append_job_id_to_output_dir generates UUID when enabled."""
     # Test case 1: Feature enabled, no job_id provided

@@ -89,7 +89,8 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
         llm=llm,
         tools=nat_tools,  # MCP and built-in tools are already bound to the LLM and need not be handled by graph
         detailed_logs=config.verbose,
-        handle_tool_errors=config.handle_tool_errors)
+        handle_tool_errors=config.handle_tool_errors,
+        max_iterations=config.max_iterations)
 
     graph = await agent.build_graph()
 
@@ -101,9 +102,8 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
 
             # run the Tool Calling Agent Graph
             state = await graph.ainvoke(state, config={'recursion_limit': (config.max_iterations + 1) * 2})
-            # setting recursion_limit: 4 allows 1 tool call
-            #   - allows the Tool Calling Agent to perform 1 cycle / call 1 single tool,
-            #   - but stops the agent when it tries to call a tool a second time
+            # setting recursion_limit: 4 leaves room for 1 tool call and the final answer;
+            #   the Tool Calling Agent graph itself stops before a second tool call
 
             # get and return the output from the state
             state = ToolCallAgentGraphState(**state)

@@ -110,7 +110,13 @@ class DatasetHandler:
         structured = self.is_structured_input()
         if structured:
             # For structured input, question is mandatory. Ignore rows with missing or empty questions
-            input_df = input_df[input_df[self.question_key].notnull() & input_df[self.question_key].str.strip().ne("")]
+            if self.question_key not in input_df.columns:
+                available_cols = list(input_df.columns)
+                raise ValueError(f"Question column '{self.question_key}' not found in dataset. "
+                                 f"Available columns: {available_cols}")
+            not_null = input_df[self.question_key].notnull()
+            non_empty = input_df[self.question_key].astype(str).str.strip().ne("")
+            input_df = input_df[not_null & non_empty]
         eval_input_items = [create_eval_item(row, structured) for _, row in input_df.iterrows()]
 
         return EvalInput(eval_input_items=eval_input_items)
@@ -145,6 +151,9 @@ class DatasetHandler:
             raise ValueError("num_passes must be >= 0")
 
         original_size = input_df.shape[0]
+
+        if original_size == 0:
+            raise ValueError("Input dataset is empty and cannot be adjusted to the requested size.")
 
         # Calculate target size
         if self.num_passes > 0:
@@ -257,7 +266,7 @@ class DatasetHandler:
         Returns:
             Preprocessed EvalInput object
         """
-        if not eval_input.eval_input_items:
+        if not eval_input.eval_input_items and not self.adjust_dataset_size:
             return eval_input
 
         input_df = self._eval_input_to_dataframe(eval_input)

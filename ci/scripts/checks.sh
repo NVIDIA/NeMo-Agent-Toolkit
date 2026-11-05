@@ -19,6 +19,9 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source ${SCRIPT_DIR}/common.sh
 
+# The lockfile hook covers projects with different supported Python ranges.
+install_python_versions
+
 set +e
 if [[ "${IS_PULL_REQUEST}" == "true" ]]; then
    pre-commit run --from-ref "${BASE_SHA}" --to-ref "${COMMIT_SHA}" --show-diff-on-failure

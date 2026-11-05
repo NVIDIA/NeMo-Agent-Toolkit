@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import PlainSerializer
 from pydantic import SecretStr
+from pydantic import SerializationInfo
 from pydantic.json_schema import GenerateJsonSchema
 from pydantic.json_schema import JsonSchemaMode
 
@@ -223,8 +224,20 @@ def set_secret_from_env(model: BaseModel, field_name: str, env_var: str):
         setattr(model, field_name, SecretStr(env_value))
 
 
+def _serialize_secret(v: SecretStr | None, info: SerializationInfo) -> str | None:
+    """
+    Serialize a SecretStr to its plain value, or to its masked form when the dump is called with
+    ``context={"mask_secrets": True}``.
+    """
+    if v is None:
+        return None
+    if info.context and info.context.get("mask_secrets"):
+        return str(v)
+    return v.get_secret_value()
+
+
 # A SecretStr that serializes to plain string
-SerializableSecretStr = typing.Annotated[SecretStr, PlainSerializer(get_secret_value)]
+SerializableSecretStr = typing.Annotated[SecretStr, PlainSerializer(_serialize_secret)]
 
 # A SecretStr or None that serializes to plain string
-OptionalSecretStr = typing.Annotated[SecretStr | None, PlainSerializer(get_secret_value)]
+OptionalSecretStr = typing.Annotated[SecretStr | None, PlainSerializer(_serialize_secret)]

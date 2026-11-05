@@ -209,6 +209,27 @@ class TestBedrockLlamaIndex:
         async with aws_bedrock_llama_index(br_cfg, mock_builder):
             assert "profile_name" not in mock_bedrock.call_args.kwargs
 
+    @pytest.mark.parametrize("round_trip", [False, True], ids=["as_loaded", "after_round_trip"])
+    @patch("llama_index.llms.bedrock.Bedrock")
+    async def test_default_region_not_forwarded(self,
+                                                mock_bedrock: MagicMock,
+                                                br_cfg: AWSBedrockModelConfig,
+                                                mock_builder: MagicMock,
+                                                round_trip: bool):
+        """The "None" default must not reach boto3, even after the round trip that `nat serve` does."""
+        if round_trip:
+            br_cfg = AWSBedrockModelConfig.model_validate(br_cfg.model_dump(mode="json", by_alias=True,
+                                                                            round_trip=True))
+            assert "region_name" in br_cfg.model_fields_set
+        async with aws_bedrock_llama_index(br_cfg, mock_builder):
+            assert "region_name" not in mock_bedrock.call_args.kwargs
+
+    @patch("llama_index.llms.bedrock.Bedrock")
+    async def test_region_forwarded(self, mock_bedrock: MagicMock, mock_builder: MagicMock):
+        cfg = AWSBedrockModelConfig(model_name="ai21.j2-ultra", region_name="us-west-2")
+        async with aws_bedrock_llama_index(cfg, mock_builder):
+            assert mock_bedrock.call_args.kwargs["region_name"] == "us-west-2"
+
 
 # ---------------------------------------------------------------------------
 # Registration decorator sanity check

@@ -31,7 +31,7 @@ You can view the list of existing evaluators by running the following command:
 ```bash
 nat info components -t evaluator
 ```
-`ragas` is an example of an existing evaluator. The `ragas` evaluator is used to evaluate the accuracy of a workflow output.
+`tunable_rag_evaluator` is an example of an existing evaluator. The `tunable_rag_evaluator` evaluator is used to evaluate the accuracy of a workflow output.
 
 ## Extending NeMo Agent Toolkit with Custom Evaluators
 To extend NeMo Agent Toolkit with custom evaluators, you need to create an evaluator function and register it with NeMo Agent Toolkit by using the `register_evaluator` decorator.

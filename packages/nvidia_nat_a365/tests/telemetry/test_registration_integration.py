@@ -15,6 +15,7 @@
 # limitations under the License.
 """End-to-end integration tests for A365 telemetry exporter registration."""
 
+import logging
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
 from unittest.mock import patch
@@ -132,6 +133,21 @@ class TestRegistrationIntegration:
                     # Batch config (batch_size, flush_interval) is passed to parent class
                     # and used in processors - not stored as instance attributes
                     # The fact that exporter was created successfully verifies config was valid
+
+    @pytest.mark.parametrize("batch_size, warned", [(None, False), (1, False), (200, True)],
+                             ids=["default", "one", "explicit"])
+    async def test_registration_warns_that_batch_size_is_ignored(self, config, mock_builder, caplog, batch_size,
+                                                                 warned):
+        """Spans are exported one at a time, so an explicit batch_size above 1 has no effect."""
+        if batch_size is not None:
+            config.batch_size = batch_size
+
+        with patch("nat.plugins.a365.telemetry.a365_exporter.Agent365Exporter"):
+            with caplog.at_level(logging.WARNING, logger="nat.plugins.a365.telemetry.register"):
+                async with a365_telemetry_exporter(config, mock_builder):
+                    pass
+
+        assert any("batch_size" in record.getMessage() for record in caplog.records) is warned
 
     async def test_registration_handles_auth_provider_resolution_failure(self, config, mock_builder):
         """Test that auth provider resolution failure is raised on first export (lazy)."""

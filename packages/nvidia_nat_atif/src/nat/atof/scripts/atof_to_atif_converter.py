@@ -60,6 +60,7 @@ except ImportError as _jsonschema_import_err:  # pragma: no cover
                       "    uv pip install nvidia-nat-atif[full]") from _jsonschema_import_err
 
 from nat.atif.agent import Agent
+from nat.atif.content import normalize_content_parts
 from nat.atif.step import Step
 from nat.atif.tool_call import ToolCall
 from nat.atif.trajectory import Trajectory
@@ -486,8 +487,9 @@ def _events_to_step_dicts(
                     dedup_key = content
                     emit_content = content
                 elif isinstance(content, list):
-                    dedup_key = json.dumps(content, sort_keys=True, separators=(",", ":"))
-                    emit_content = content
+                    normalized_parts = normalize_content_parts(content)
+                    dedup_key = json.dumps(normalized_parts, sort_keys=True, separators=(",", ":"))
+                    emit_content = normalized_parts
                 else:
                     continue
 

@@ -35,6 +35,7 @@ from nat.data_models.optimizer import OptimizerRunConfig
 from nat.data_models.optimizer import PromptOptimizerInputSchema
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.plugins.config_optimizer.eval_runtime_loader import load_evaluation_run
+from nat.plugins.config_optimizer.eval_runtime_loader import warn_on_evaluator_errors
 from nat.plugins.config_optimizer.prompts.base import BasePromptOptimizer
 from nat.plugins.config_optimizer.prompts.ga_individual import Individual
 from nat.plugins.config_optimizer.prompts.oracle_feedback import build_oracle_feedback
@@ -118,7 +119,8 @@ def _on_prompt_study_end(
                 for k, v in prompt_format_map.items() if v
             },
         ),
-        total_trials=trial_number_offset + generations * pop_size,
+        # Every generation plus the final population is evaluated, and each candidate is numbered.
+        total_trials=trial_number_offset + (generations + 1) * pop_size,
     )
 
 
@@ -175,6 +177,8 @@ class GAPromptOptimizer(BasePromptOptimizer):
         all_eval_outputs: list[Any] = []
         for _ in range(reps):
             eval_output = await EvaluationRun(config=eval_cfg).run_and_evaluate()
+            warn_on_evaluator_errors(eval_output.evaluation_results,
+                                     context=f"prompt candidate trial {ind.trial_number}")
             res = eval_output.evaluation_results
             all_results.append(res)
             all_eval_outputs.append(eval_output)
@@ -665,6 +669,10 @@ class GAPromptOptimizer(BasePromptOptimizer):
                     offspring.append(child)
                 population = next_population + offspring
 
+            # Number the final offspring like every other candidate so their evaluation is attributable
+            for idx, ind in enumerate(population):
+                if ind.trial_number is None:
+                    ind.trial_number = trial_number_offset + generations * pop_size + idx
             await self._evaluate_population(
                 population,
                 base_cfg,

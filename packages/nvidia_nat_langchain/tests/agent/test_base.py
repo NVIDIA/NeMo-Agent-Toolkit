@@ -372,6 +372,22 @@ class TestCallTool:
         assert "provided an empty response" in result.content
         assert result.name == tool.name
 
+    async def test_tool_call_chat_response_from_a_nested_agent(self, base_agent: MockBaseAgent):
+        """An agent used as a tool can return a ChatResponse; its text becomes the tool message content."""
+        from nat.data_models.api_server import ChatResponse
+        from nat.data_models.api_server import Usage
+
+        tool = base_agent.tools[0]  # Tool A
+        tool_input = {"messages": [{"role": "user", "content": "hi"}]}
+        tool.ainvoke = AsyncMock(
+            return_value=ChatResponse.from_string("nested answer", usage=Usage(prompt_tokens=1, completion_tokens=2)))
+
+        result = await base_agent._call_tool(tool, tool_input, max_retries=1)
+
+        assert isinstance(result, ToolMessage)
+        assert result.content == "nested answer"
+        assert result.status != "error"
+
     async def test_tool_call_zero_retries(self, base_agent):
         """Test behavior with zero retries."""
         tool = base_agent.tools[0]  # Tool A

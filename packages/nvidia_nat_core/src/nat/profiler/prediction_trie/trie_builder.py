@@ -21,6 +21,7 @@ from dataclasses import field
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.invocation_node import InvocationNode
 from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 from nat.profiler.prediction_trie.data_models import PredictionTrieNode
 from nat.profiler.prediction_trie.metrics_accumulator import MetricsAccumulator
@@ -117,13 +118,15 @@ class PredictionTrieBuilder:
         if self._sensitivity_config is not None and self._sensitivity_config.w_parallel > 0:
             sibling_map = self._build_sibling_map(steps)
 
+        functions = {s.function_ancestry.function_id: s.function_ancestry for s in sorted_steps}
+
         # Track call index per parent function
         call_counts: dict[str, int] = defaultdict(int)
         contexts: list[LLMCallContext] = []
 
         for i, end_step in enumerate(llm_ends):
             # Build path from function ancestry
-            path = self._build_path(end_step)
+            path = self._build_path(end_step, functions)
 
             # Determine call index within parent
             parent_key = end_step.function_ancestry.function_id
@@ -389,15 +392,22 @@ class PredictionTrieBuilder:
 
         return max(0.0, 1.0 - llm_duration / max_sibling_duration)
 
-    def _build_path(self, step: IntermediateStep) -> list[str]:
-        """Build the function path from ancestry."""
-        path: list[str] = []
+    def _build_path(self, step: IntermediateStep, functions: dict[str, InvocationNode]) -> list[str]:
+        """Build the function path from the workflow down, as ``Context.function_path`` reports it at call time."""
         ancestry = step.function_ancestry
+        path = [ancestry.function_name]
+        seen = {ancestry.function_id}
 
-        # Walk up the ancestry chain
-        if ancestry.parent_name:
-            path.append(ancestry.parent_name)
-        path.append(ancestry.function_name)
+        # The runner's "root" node never appears in Context.function_path
+        while ancestry.parent_id is not None and ancestry.parent_id != "root":
+            parent = functions.get(ancestry.parent_id)
+            if parent is None or parent.function_id in seen:
+                if ancestry.parent_name:
+                    path.insert(0, ancestry.parent_name)
+                break
+            seen.add(parent.function_id)
+            path.insert(0, parent.function_name)
+            ancestry = parent
 
         return path
 

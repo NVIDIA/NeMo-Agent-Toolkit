@@ -13,8 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextvars
+
 import pytest
 
+from nat.builder.context import Context
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -24,6 +27,7 @@ from nat.data_models.token_usage import TokenUsageBaseModel
 from nat.profiler.prediction_trie.trie_builder import LLMCallContext
 from nat.profiler.prediction_trie.trie_builder import PredictionTrieBuilder
 from nat.profiler.prediction_trie.trie_builder import SensitivityConfig
+from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 
 @pytest.fixture(name="simple_trace")
@@ -622,3 +626,44 @@ def test_logical_positions_single():
     """Single context gets position 0."""
     positions = PredictionTrieBuilder._compute_logical_positions([_make_ctx(0, 1)])
     assert positions == [0]
+
+
+def _record_runtime_trace() -> tuple[list[IntermediateStep], dict[str, list[str]]]:
+    """Run nested functions through the real Context and record the steps and each LLM call's function path."""
+    ctx = Context.get()
+    step_manager = ctx.intermediate_step_manager
+    steps: list[IntermediateStep] = []
+    paths: dict[str, list[str]] = {}
+
+    def llm_call(uuid: str, completion_tokens: int) -> None:
+        paths[uuid] = ctx.function_path
+        step_manager.push_intermediate_step(
+            IntermediateStepPayload(UUID=uuid, event_type=IntermediateStepType.LLM_START, name="model"))
+        step_manager.push_intermediate_step(
+            IntermediateStepPayload(
+                UUID=uuid,
+                event_type=IntermediateStepType.LLM_END,
+                name="model",
+                usage_info=UsageInfo(token_usage=TokenUsageBaseModel(completion_tokens=completion_tokens)),
+            ))
+
+    subscription = step_manager.subscribe(steps.append)
+    with ctx.push_active_function("my_workflow", input_data=None):
+        llm_call("workflow-llm", 100)
+        with ctx.push_active_function("research_agent", input_data=None):
+            llm_call("agent-llm", 300)
+            with ctx.push_active_function("web_search", input_data=None):
+                llm_call("search-llm", 900)
+    subscription.unsubscribe()
+    return steps, paths
+
+
+def test_lookup_with_runtime_function_path_finds_the_calling_function():
+    steps, paths = contextvars.copy_context().run(_record_runtime_trace)
+
+    builder = PredictionTrieBuilder()
+    builder.add_trace(steps)
+    lookup = PredictionTrieLookup(builder.build())
+
+    assert paths["search-llm"] == ["my_workflow", "research_agent", "web_search"]
+    assert lookup.find(paths["search-llm"], 1).output_tokens.mean == pytest.approx(900.0)

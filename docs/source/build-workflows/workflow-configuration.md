@@ -151,6 +151,11 @@ The environment variable interpolation process follows the rules below.
 
 Bare `$VAR` (without braces) is not supported. Use `${VAR}` instead.
 
+If YAML parsing fails, the error reports the parser error type and, when available,
+the line and column in the parser input. Configuration contents and
+parser source snippets are omitted from logs and rendered exception output because they
+can contain credentials from environment variables.
+
 ### Configuration Inheritance
 
 NeMo Agent Toolkit supports configuration inheritance to reduce duplication across similar configuration files. Use the `base` key to reference a base configuration and selectively override specific values. For example, given a base configuration:

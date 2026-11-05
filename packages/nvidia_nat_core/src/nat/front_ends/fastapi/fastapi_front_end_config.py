@@ -238,6 +238,14 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     port: int = Field(default=8000, description="Port to bind the server to", ge=0, le=65535)
     reload: bool = Field(default=False, description="Enable auto-reload for development")
     workers: int = Field(default=1, description="Number of workers to run", ge=1)
+    max_concurrency: int = Field(
+        default=8,
+        description=("Maximum number of concurrent workflow executions per session manager in each server worker. "
+                     "The default workflow and each custom endpoint have separate session managers. "
+                     "For per-user workflows, the limit applies separately to each user. "
+                     "Set to 0 or -1 for unlimited concurrency."),
+        ge=-1,
+    )
     scheduler_address: str | None = Field(
         default=None,
         description=("Address of the Dask scheduler to use for async jobs. If None, a Dask local cluster is created. "

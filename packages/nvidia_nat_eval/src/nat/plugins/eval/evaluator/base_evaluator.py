@@ -84,9 +84,14 @@ class BaseEvaluator(ABC):
                         pbar.update(1)
                         return output_item
                     except Exception as e:
-                        # If the evaluator fails, return an error item with a score of 0.0
+                        # If the evaluator fails, return an error item with a score of 0.0 and the error set,
+                        # so consumers can tell an evaluation failure from a genuinely low score.
                         pbar.update(1)
-                        return EvalOutputItem(id=item.id, score=0.0, reasoning={"error": f"Evaluator error: {str(e)}"})
+                        error_message = f"Evaluator error: {str(e)}"
+                        return EvalOutputItem(id=item.id,
+                                              score=0.0,
+                                              reasoning={"error": error_message},
+                                              error=error_message)
 
             output_items = await asyncio.gather(*[wrapped(item) for item in eval_input.eval_input_items])
         finally:

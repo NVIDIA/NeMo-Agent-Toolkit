@@ -292,7 +292,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                       entry_function: str | None = None) -> SessionManager:
         """Create and register a SessionManager."""
 
-        sm = await SessionManager.create(config=self._config, shared_builder=builder, entry_function=entry_function)
+        sm = await SessionManager.create(config=self._config,
+                                         shared_builder=builder,
+                                         entry_function=entry_function,
+                                         max_concurrency=self.front_end_config.max_concurrency)
         self._session_managers.append(sm)
 
         return sm

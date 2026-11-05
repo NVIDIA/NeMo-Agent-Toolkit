@@ -25,6 +25,8 @@ from dataclasses import dataclass
 from typing import Any
 from typing import TypeVar
 
+from nat.utils.exception_handlers.automatic_retries import _method_to_wrap
+
 ModelType = TypeVar("ModelType")
 MessagesType = TypeVar("MessagesType")
 
@@ -186,7 +188,7 @@ def patch_with_thinking(obj: ModelType, injector: BaseThinkingInjector) -> Model
             continue
 
         descriptor = inspect.getattr_static(cls, name)
-        original = descriptor.__func__ if isinstance(descriptor, types.MethodType) else descriptor
+        original = _method_to_wrap(obj, cls, name, descriptor)
         wrapped = decorator(original)
 
         try:  # instance‑level first

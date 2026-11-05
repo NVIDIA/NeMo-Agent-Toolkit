@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+
 import pytest
 
 from nat.utils.callable_utils import ainvoke_any
@@ -122,3 +124,27 @@ def test_is_async_callable():
     assert is_async_callable(coro)
     assert is_async_callable(agen)
     assert not is_async_callable(sync)
+
+
+async def test_ainvoke_any_propagates_future_failure():
+    """A deferred callback failure is not returned as a successful result object."""
+    future = asyncio.get_running_loop().create_future()
+    future.set_exception(ValueError("deferred failure"))
+    try:
+        with pytest.raises(ValueError, match="deferred failure"):
+            await ainvoke_any(lambda: future)
+    finally:
+        future.exception()
+
+
+async def test_ainvoke_any_custom_awaitable():
+    """Callbacks may implement the awaitable protocol without returning a coroutine."""
+
+    class Decision:
+
+        def __await__(self):
+            future = asyncio.get_running_loop().create_future()
+            future.set_result(False)
+            return future.__await__()
+
+    assert await ainvoke_any(Decision) is False

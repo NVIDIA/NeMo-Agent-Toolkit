@@ -402,14 +402,17 @@ This is useful for health checks and monitoring.
 ## Security Considerations
 
 ### Authentication
+The NVIDIA NeMo Agent Toolkit MCP server supports bearer-token authentication for `streamable-http` through `general.front_end.server_auth` with the `oauth2_resource_server` configuration type. Configure the authorization-server issuer, required scopes, and token audience for your API.
 
-MCP servers using the **streamable-http** transport can validate OAuth2 bearer tokens when `server_auth` is configured in the front-end config. Validation uses JWKS or OIDC discovery for JWT access tokens, or token introspection for opaque access tokens. Refer to [MCP Authentication](../components/auth/mcp-auth/index.md) and the protected examples under `examples/MCP/`.
+With a nonempty `server_auth.audience`, the NeMo Agent Toolkit authentication component enforces that audience. Otherwise, the MCP SDK checks the validated token audience against the advertised resource identifier, `http://<host>:<port>/`. An empty audience setting has the same behavior as an omitted setting. Tokens without an audience for this server are rejected.
+
+When upgrading from a deployment that omitted audience validation, configure the authorization server to issue tokens for the advertised resource, or set the API-specific `server_auth.audience`. Existing configurations with a valid explicit audience retain their audience policy.
+
+NeMo Agent Toolkit workflows can also connect to protected third-party MCP servers through the MCP client auth provider. Refer to [MCP Authentication](../components/auth/mcp-auth/index.md) for more information.
 
 The **SSE** transport does not apply `server_auth`. Use streamable-http when the MCP server must authenticate callers.
 
 Per-user workflows require authenticated requests so the server can derive a user ID from the Bearer token. See [Per-User Workflows](#per-user-workflows).
-
-NeMo Agent Toolkit workflows can still connect to protected third-party MCP servers through the MCP client auth provider.
 
 ### Local Development
 For local development, you can use `localhost` or `127.0.0.1` as the host (default). This limits access to your local machine only.

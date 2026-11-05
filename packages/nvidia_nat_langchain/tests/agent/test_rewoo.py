@@ -1150,3 +1150,82 @@ async def test_parallel_execution_flow(mock_rewoo_agent):
     # Check conditional edge - should be END now
     decision = await mock_rewoo_agent.conditional_edge(state)
     assert decision == AgentDecision.END
+
+
+async def test_rewoo_workflow_reports_the_token_usage_the_model_reported():
+    """`usage` on the response is the sum of what the planner and solver calls reported, not a word count."""
+    import json
+    import typing
+    from unittest.mock import AsyncMock
+
+    from langchain_core.language_models import BaseChatModel
+    from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import ChatResult
+    from langchain_core.tools import tool
+
+    from nat.data_models.api_server import ChatRequestOrMessage
+    from nat.plugins.langchain.agent.rewoo_agent.register import rewoo_agent_workflow
+
+    @tool
+    def counter(q: str) -> str:
+        """Counts its calls."""
+        return "counted"
+
+    plan = json.dumps([{
+        "plan": "count", "evidence": {
+            "placeholder": "#E1", "tool": "counter", "tool_input": {
+                "q": "x"
+            }
+        }
+    }])
+
+    class UsageReportingLLM(BaseChatModel):
+        replies: list[tuple[str, int, int]]
+        turns: int = 0
+
+        @property
+        def _llm_type(self) -> str:
+            return "usage-reporting"
+
+        def _generate(self,
+                      messages: typing.Any,
+                      stop: typing.Any = None,
+                      run_manager: typing.Any = None,
+                      **kwargs: typing.Any) -> ChatResult:
+            text, input_tokens, output_tokens = self.replies[self.turns]
+            self.turns += 1
+            message = AIMessage(content=text,
+                                usage_metadata={
+                                    "input_tokens": input_tokens,
+                                    "output_tokens": output_tokens,
+                                    "total_tokens": input_tokens + output_tokens,
+                                })
+            return ChatResult(generations=[ChatGeneration(message=message)])
+
+    builder = AsyncMock()
+    builder.get_llm = AsyncMock(return_value=UsageReportingLLM(replies=[(plan, 100, 20), ("all done", 150, 30)]))
+    builder.get_tools = AsyncMock(return_value=[counter])
+    config = ReWOOAgentWorkflowConfig(tool_names=["counter"], llm_name="llm")
+    request = ChatRequestOrMessage(messages=[{"role": "user", "content": "hi"}])
+    async with rewoo_agent_workflow(config, builder) as function_info:
+        response = await function_info.single_fn(request)
+    assert response.choices[0].message.content == "all done"
+    assert (response.usage.prompt_tokens, response.usage.completion_tokens,
+            response.usage.total_tokens) == (250, 50, 300)
+
+    # Run inside a parent runnable: the parent's callbacks still see the model calls, and usage is still summed.
+    from langchain_core.callbacks import AsyncCallbackHandler
+    from langchain_core.runnables import RunnableLambda
+
+    class CountLLMEnds(AsyncCallbackHandler):
+        calls: int = 0
+
+        async def on_llm_end(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+            type(self).calls += 1
+
+    builder.get_llm = AsyncMock(return_value=UsageReportingLLM(replies=[(plan, 100, 20), ("all done", 150, 30)]))
+    async with rewoo_agent_workflow(config, builder) as function_info:
+        response = await RunnableLambda(function_info.single_fn).ainvoke(request,
+                                                                         config={"callbacks": [CountLLMEnds()]})
+    assert CountLLMEnds.calls == 2
+    assert response.usage.total_tokens == 300

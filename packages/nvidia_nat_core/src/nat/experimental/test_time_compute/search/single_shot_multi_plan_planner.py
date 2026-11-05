@@ -98,10 +98,14 @@ class SingleShotMultiPlanPlanner(StrategyBase):
             return TTCItem(plan=cleaned)
 
         # Define a list of temperatures based on min and max temperature in the config and number of plans to generate
-        temperatures = [
-            self.config.min_temperature + (i / (self.config.num_plans - 1)) *
-            (self.config.max_temperature - self.config.min_temperature) for i in range(self.config.num_plans)
-        ]
+        if self.config.num_plans == 1:
+            # A single plan has no range to spread over, so sample it at the midpoint of the configured range.
+            temperatures = [(self.config.min_temperature + self.config.max_temperature) / 2]
+        else:
+            temperatures = [
+                self.config.min_temperature + (i / (self.config.num_plans - 1)) *
+                (self.config.max_temperature - self.config.min_temperature) for i in range(self.config.num_plans)
+            ]
 
         # Generate plans using the defined temperatures in parallel using asyncio
         tasks = [generate_plan(model, prompt, temperature) for temperature in temperatures]

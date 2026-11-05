@@ -18,12 +18,16 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from types import ModuleType
 
+import pytest
+
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.plugins.profiler.decorators import framework_wrapper
 
 
 async def test_crewai_profiler_loads_handler_from_real_module(monkeypatch):
     """The CrewAI branch must load the profiler handler from crewai_callback_handler, not callback_handler."""
+    # The CrewAI package registers its own instrumentation; core no longer imports CrewAI.
+    pytest.importorskip("nat.plugins.crewai.instrumentation")
     instrument_calls = []
 
     class _StubHandler:
@@ -46,3 +50,34 @@ async def test_crewai_profiler_loads_handler_from_real_module(monkeypatch):
 
     assert instrument_calls == [True]
     assert framework_wrapper._library_instrumented["crewai"] is True
+
+
+def test_framework_wrapper_re_exports_the_core_hook():
+    """The profiler module re-exports the hook that lives in core, so both paths share one set of state."""
+    from nat.builder import framework_instrumentation
+    from nat.plugins.profiler import utils
+
+    assert framework_wrapper._library_instrumented is framework_instrumentation._library_instrumented
+    assert framework_wrapper.callback_handler_var is framework_instrumentation.callback_handler_var
+    assert framework_wrapper.chain_wrapped_build_fn is framework_instrumentation.chain_wrapped_build_fn
+    assert framework_wrapper.set_framework_profiler_handler is framework_instrumentation.set_framework_profiler_handler
+    assert utils.detect_llm_frameworks_in_build_fn is framework_instrumentation.detect_llm_frameworks_in_build_fn
+
+
+async def test_missing_agno_handler_warning_names_agno(monkeypatch, caplog):
+    from nat.builder import framework_instrumentation
+
+    # Agno is used but its package is not installed: nothing registered and no plugin entry point to load.
+    monkeypatch.delitem(framework_instrumentation._framework_instrumentation, LLMFrameworkEnum.AGNO, raising=False)
+    monkeypatch.setattr(framework_instrumentation.importlib.metadata, "entry_points", lambda **_: [])
+
+    @asynccontextmanager
+    async def build_fn(config, builder) -> AsyncIterator[str]:
+        yield "workflow"
+
+    wrapped = framework_wrapper.set_framework_profiler_handler(None, [LLMFrameworkEnum.AGNO])(build_fn)
+    async with wrapped(None, None):
+        pass
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any(message.startswith("Agno profiler not available") for message in messages), messages

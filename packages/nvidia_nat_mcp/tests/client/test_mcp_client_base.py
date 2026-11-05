@@ -26,7 +26,11 @@ import pytest
 import uvicorn
 from mcp.client.session import ClientSession
 from mcp.server.fastmcp.server import FastMCP
+from mcp.types import BlobResourceContents
+from mcp.types import CallToolResult
+from mcp.types import EmbeddedResource
 from mcp.types import TextContent
+from mcp.types import TextResourceContents
 
 from nat.plugins.mcp.client.client_base import MCPBaseClient
 from nat.plugins.mcp.client.client_base import MCPSSEClient
@@ -842,6 +846,48 @@ class TestMCPToolClient:
         # Should raise RuntimeError when parent_client is None
         with pytest.raises(RuntimeError, match="MCPToolClient initialized without a parent client"):
             MCPToolClient(session=mock_session, parent_client=None, tool_name="test_tool", tool_description="Test tool")
+
+    @staticmethod
+    def _tool_returning(result: CallToolResult):
+        from nat.plugins.mcp.client.client_base import MCPToolClient
+
+        mock_parent_client = MagicMock()
+        mock_parent_client.call_tool = AsyncMock(return_value=result)
+        return MCPToolClient(session=MagicMock(),
+                             parent_client=mock_parent_client,
+                             tool_name="get_file_contents",
+                             tool_description="Get the contents of a file")
+
+    async def test_acall_returns_the_text_of_embedded_text_resources(self):
+        """A file returned as an embedded text resource reaches the caller with the text blocks."""
+        tool_client = self._tool_returning(
+            CallToolResult(content=[
+                TextContent(type="text", text="successfully downloaded text file (SHA: 3f78685)"),
+                EmbeddedResource(type="resource",
+                                 resource=TextResourceContents(uri="repo://octo/demo/contents/README.md",
+                                                               mimeType="text/markdown",
+                                                               text="# Demo\n\nThe deploy key rotates every 30 days.")),
+            ]))
+
+        result = await tool_client.acall({"path": "README.md"})
+
+        assert result == ("successfully downloaded text file (SHA: 3f78685)\n"
+                          "# Demo\n\nThe deploy key rotates every 30 days."), "the file text must not be dropped"
+
+    async def test_acall_skips_embedded_binary_resources(self):
+        """A binary resource has no text to return, so only the text blocks are returned."""
+        tool_client = self._tool_returning(
+            CallToolResult(content=[
+                TextContent(type="text", text="successfully downloaded binary file (SHA: 3f78685)"),
+                EmbeddedResource(type="resource",
+                                 resource=BlobResourceContents(uri="repo://octo/demo/contents/logo.png",
+                                                               mimeType="image/png",
+                                                               blob="iVBORw0KGgo=")),
+            ]))
+
+        result = await tool_client.acall({"path": "logo.png"})
+
+        assert result == "successfully downloaded binary file (SHA: 3f78685)"
 
 
 class TestMCPStreamableHTTPClientSessionIdAndHeaders:
