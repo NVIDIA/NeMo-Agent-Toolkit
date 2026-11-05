@@ -251,6 +251,6 @@ In addition, we would like to thank the following open source projects that made
 - [Phoenix](https://github.com/arize-ai/phoenix)
 - [Redis](https://github.com/redis/redis-py)
 - [Semantic Kernel](https://github.com/microsoft/semantic-kernel)
-- [Strands](https://github.com/strands-agents/sdk-python)
+- [Strands](https://github.com/strands-agents/harness-sdk)
 - [uv](https://github.com/astral-sh/uv)
 - [Weave](https://github.com/wandb/weave)

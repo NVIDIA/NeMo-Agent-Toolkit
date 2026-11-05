@@ -57,7 +57,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[defense]` or `nvidia-nat-security[defense]` - Built-in defense middleware (`pii_defense`, `content_safety_guard`, etc.)
 - `nvidia-nat[guardrails]` or `nvidia-nat-security[guardrails]` - NeMo Guardrails policy middleware
 - `nvidia-nat[semantic-kernel]` or `nvidia-nat-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
-- `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python).
+- `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/harness-sdk).
 - `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent Toolkit testing package
 - `nvidia-nat[profiler]` or `nvidia-nat-profiler` - Profiling and performance analysis components used by evaluation and sizing workflows
 - `nvidia-nat[weave]` or `nvidia-nat-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai)
