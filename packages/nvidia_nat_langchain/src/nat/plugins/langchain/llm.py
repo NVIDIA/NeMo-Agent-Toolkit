@@ -185,6 +185,7 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
         client = AzureChatOpenAI(
             http_async_client=http_async_client,  # type: ignore[call-arg]
+            stream_usage=True,
             api_version=llm_config.api_version,  # type: ignore[call-arg]
             **llm_config.model_dump(
                 exclude={"type", "thinking", "api_type", "api_version", "verify_ssl"},
