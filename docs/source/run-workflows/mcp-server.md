@@ -412,7 +412,7 @@ When upgrading from a deployment that omitted audience validation, configure the
 
 NeMo Agent Toolkit workflows can also connect to protected third-party MCP servers through the MCP client auth provider. Refer to [MCP Authentication](../components/auth/mcp-auth/index.md) for more information.
 
-The **SSE** transport does not apply `server_auth`. Use streamable-http when the MCP server must authenticate callers.
+For shared workflows, both the **SSE** and **streamable-http** transports apply `server_auth` through the MCP SDK. Per-user workflows in this front end require **streamable-http**.
 
 Per-user workflows require authenticated requests so the server can derive a user ID from the Bearer token. See [Per-User Workflows](#per-user-workflows).
 

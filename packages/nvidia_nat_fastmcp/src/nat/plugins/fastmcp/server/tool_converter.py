@@ -34,7 +34,7 @@ from nat.runtime.session import SessionManager  # type: ignore[reportMissingImpo
 
 logger = logging.getLogger(__name__)
 
-# Reserved wrapper parameter for FastMCP request Context injection.
+# Preferred context keyword; disambiguated against workflow fields and aliases.
 INJECTED_CONTEXT_PARAM = "_nat_mcp_context"
 
 # Sentinel: marks "optional; let Pydantic supply default/factory"
@@ -190,28 +190,21 @@ def _is_chat_request_schema(schema: Any) -> bool:
     return schema_name == "ChatRequest" or "ChatRequest" in schema_qualname
 
 
-def _schema_wrapper_parameter_names(input_schema: Any) -> set[str]:
-    """Return collision-safe wrapper parameter names derived from the input schema."""
-    if _is_chat_request_schema(input_schema):
-        return {"query"}
-    if not hasattr(input_schema, "model_fields"):
-        return set()
-
-    name_map = _build_name_mapping(list(input_schema.model_fields.keys()))
-    return set(name_map.values())
-
-
-def _validate_input_schema_for_context_injection(input_schema: Any) -> None:
-    """Reject schemas whose fields collide with the injected `Context` parameter."""
-    schema_params = _schema_wrapper_parameter_names(input_schema)
-    if INJECTED_CONTEXT_PARAM in schema_params:
-        raise ValueError(
-            f"Workflow input schema cannot declare a field that maps to reserved MCP parameter "
-            f"{INJECTED_CONTEXT_PARAM!r}.", )
-    if "ctx" in getattr(input_schema, "model_fields", {}):
-        raise ValueError(
-            "Workflow input schema cannot declare a field named 'ctx'; that name is reserved for "
-            "MCP request context injection.", )
+def _get_context_parameter_name(schema: Any, parameter_names: set[str]) -> str:
+    """Choose a context keyword distinct from workflow parameters and Pydantic aliases."""
+    occupied = set(parameter_names)
+    for name, field in getattr(schema, "model_fields", {}).items():
+        occupied.add(name)
+        if isinstance(field.alias, str):
+            occupied.add(field.alias)
+        if isinstance(field.validation_alias, str):
+            occupied.add(field.validation_alias)
+    candidate = INJECTED_CONTEXT_PARAM
+    suffix = 2
+    while candidate in occupied:
+        candidate = f"{INJECTED_CONTEXT_PARAM}_{suffix}"
+        suffix += 1
+    return candidate
 
 
 def _http_request_from_ctx(ctx: Any) -> Any | None:
@@ -243,16 +236,10 @@ def _verified_access_token(request: Any) -> Any | None:
     return get_access_token()
 
 
-def _append_context_parameter(signature: Signature) -> Signature:
+def _append_context_parameter(signature: Signature, context_parameter_name: str) -> Signature:
     """Append the FastMCP `Context` parameter used for request injection."""
-    param_names = {param.name for param in signature.parameters.values()}
-    if INJECTED_CONTEXT_PARAM in param_names:
-        raise ValueError(
-            f"Workflow input schema cannot declare a field that maps to reserved MCP parameter "
-            f"{INJECTED_CONTEXT_PARAM!r}.", )
-
     ctx_param = Parameter(
-        INJECTED_CONTEXT_PARAM,
+        context_parameter_name,
         Parameter.KEYWORD_ONLY,
         default=None,
         annotation=Context | None,
@@ -299,9 +286,10 @@ def create_function_wrapper(
         input_schema: Input schema for the workflow/function.
     """
     signature, alias_map = _build_signature_from_schema(input_schema)
-    _validate_input_schema_for_context_injection(input_schema)
+    context_parameter_name = _get_context_parameter_name(input_schema, set(signature.parameters))
 
-    async def wrapper_func(_nat_mcp_context: Context | None = None, **kwargs: Any) -> Any:
+    async def wrapper_func(**kwargs: Any) -> Any:
+        _nat_mcp_context = kwargs.pop(context_parameter_name, None)
         if _is_chat_request_schema(input_schema):
             from nat.data_models.api_server import ChatRequest  # type: ignore[reportMissingImports]
 
@@ -323,9 +311,10 @@ def create_function_wrapper(
             return json.dumps(result, default=str)
         return str(result)
 
-    wrapper_func.__signature__ = _append_context_parameter(signature)  # type: ignore[attr-defined]
+    wrapper_func.__signature__ = _append_context_parameter(signature,
+                                                           context_parameter_name)  # type: ignore[attr-defined]
     annotations = _build_annotations_from_schema(input_schema)
-    annotations[INJECTED_CONTEXT_PARAM] = Context | None
+    annotations[context_parameter_name] = Context | None
     annotations["return"] = Any
     wrapper_func.__annotations__ = annotations
     wrapper_func.__name__ = function_name

@@ -176,3 +176,24 @@ async def test_configured_audience_is_enforced_by_worker_verifier(
         assert token.subject == "alice"
         assert token.claims is not None
         assert token.claims["aud"] == [token_audience]
+
+
+async def test_sse_app_enforces_server_auth(monkeypatch):
+    """SSE rejects anonymous callers and uses the configured token verifier."""
+    from starlette.testclient import TestClient
+
+    config = OAuth2ResourceServerConfig(issuer_url="https://issuer.example", audience="service-id")
+    worker = MCPFrontEndPluginWorker.__new__(MCPFrontEndPluginWorker)
+    worker.front_end_config = SimpleNamespace(server_auth=config,
+                                              host="127.0.0.1",
+                                              port=9901,
+                                              name="sse-auth-check",
+                                              debug=False)
+    server = await worker.create_mcp_server()
+    verify = AsyncMock(return_value=TokenValidationResult(active=False, client_id="", token_type="opaque"))
+    monkeypatch.setattr(server._token_verifier._bearer_token_validator, "verify", verify)
+    with TestClient(server.sse_app(), base_url="http://127.0.0.1:9901") as client:
+        assert client.get("/sse").status_code == 401
+        verify.assert_not_awaited()
+        assert client.get("/sse", headers={"authorization": "Bearer invalid-token"}).status_code == 401
+    verify.assert_awaited_once_with("invalid-token")

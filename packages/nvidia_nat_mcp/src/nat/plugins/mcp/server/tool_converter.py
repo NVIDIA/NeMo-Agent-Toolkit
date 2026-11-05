@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Reserved wrapper parameter for MCP request Context injection.
+# Preferred context keyword; disambiguated against workflow fields and aliases.
 INJECTED_CONTEXT_PARAM = "_nat_mcp_context"
 
 _USE_PYDANTIC_DEFAULT = object()
@@ -132,16 +132,21 @@ def _build_name_mapping(field_names: list[str]) -> dict[str, str]:
     return name_map
 
 
-def _validate_input_schema_for_context_injection(schema: type[BaseModel], name_map: dict[str, str]) -> None:
-    """Reject schemas whose fields collide with the injected `Context` parameter."""
-    if INJECTED_CONTEXT_PARAM in name_map.values():
-        raise ValueError(
-            f"Workflow input schema cannot declare a field that maps to reserved MCP parameter "
-            f"{INJECTED_CONTEXT_PARAM!r}.", )
-    if "ctx" in schema.model_fields:
-        raise ValueError(
-            "Workflow input schema cannot declare a field named 'ctx'; that name is reserved for "
-            "MCP request context injection.", )
+def _get_context_parameter_name(schema: Any, parameter_names: set[str]) -> str:
+    """Choose a context keyword distinct from workflow parameters and Pydantic aliases."""
+    occupied = set(parameter_names)
+    for name, field in getattr(schema, "model_fields", {}).items():
+        occupied.add(name)
+        if isinstance(field.alias, str):
+            occupied.add(field.alias)
+        if isinstance(field.validation_alias, str):
+            occupied.add(field.validation_alias)
+    candidate = INJECTED_CONTEXT_PARAM
+    suffix = 2
+    while candidate in occupied:
+        candidate = f"{INJECTED_CONTEXT_PARAM}_{suffix}"
+        suffix += 1
+    return candidate
 
 
 def _request_context_from_ctx(ctx: Any) -> Any | None:
@@ -292,7 +297,6 @@ def create_function_wrapper(
         # emit for each declared schema field.
         name_map = _build_name_mapping(list(param_fields.keys()))
         argument_name_map = {safe: orig for orig, safe in name_map.items() if orig != safe}
-        _validate_input_schema_for_context_injection(schema, name_map)
 
         parameters = []
         for name, field in param_fields.items():
@@ -326,15 +330,17 @@ def create_function_wrapper(
     # Context is declared on the wrapper for FastMCP injection but omitted from __signature__
     # so it is excluded from the client-facing tool schema.
     sig = Signature(parameters=parameters, return_annotation=str)
+    context_parameter_name = _get_context_parameter_name(schema, set(sig.parameters))
 
     # Define the actual wrapper function that accepts injected context but doesn't expose it
     def create_wrapper():
 
-        async def wrapper_with_ctx(_nat_mcp_context: Context | None = None, **kwargs):
+        async def wrapper_with_ctx(**kwargs):
             """Internal wrapper that will be called by MCP.
 
             Uses SessionManager.run() which creates a Runner that automatically handles observability.
             """
+            _nat_mcp_context = kwargs.pop(context_parameter_name, None)
             # FastMCP applies the wrapper field's factory to omitted arguments.
             # Remove its marker so the declared schema can apply the original
             # default factory and preserve model_fields_set semantics.
@@ -396,6 +402,7 @@ def create_function_wrapper(
 
     # Set the signature on the wrapper function (WITHOUT injected context)
     wrapper.__signature__ = sig  # type: ignore
+    wrapper.__annotations__ = {context_parameter_name: Context | None}
     wrapper.__name__ = function_name
 
     # Return the wrapper with proper signature

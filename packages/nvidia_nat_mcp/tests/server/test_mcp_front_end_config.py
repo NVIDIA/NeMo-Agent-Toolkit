@@ -109,26 +109,25 @@ def test_no_security_warning_with_auth(caplog):
     assert not any("without authentication" in record.message for record in caplog.records)
 
 
-def test_security_warning_sse_with_auth(caplog):
-    """Test that a warning is logged when SSE transport is used with authentication configured."""
+def test_no_security_warning_sse_with_auth(caplog):
+    """SSE applies server_auth and should not warn that it is ignored."""
     auth_config = OAuth2ResourceServerConfig(issuer_url="https://example.com/oauth2")
-    config = MCPFrontEndConfig(transport="sse", server_auth=auth_config)  # noqa: F841
-    # Check that a warning was logged about SSE not supporting auth
-    assert any("SSE transport does not support authentication" in record.message for record in caplog.records)
-    assert any("server_auth will be ignored" in record.message for record in caplog.records)
+    MCPFrontEndConfig(transport="sse", host="192.168.1.100", server_auth=auth_config)
+    assert not any(record.levelname == "WARNING" for record in caplog.records)
 
 
 def test_security_warning_sse_non_localhost(caplog):
     """Test that a warning is logged when SSE transport is used on non-localhost without auth."""
     config = MCPFrontEndConfig(transport="sse", host="192.168.1.100")  # noqa: F841
     # Check that a warning was logged about SSE lacking authentication
-    assert any("SSE transport does not support authentication" in record.message for record in caplog.records)
+    assert any("without server_auth configured" in record.message for record in caplog.records)
     assert any("not recommended for production" in record.message for record in caplog.records)
 
 
 def test_no_security_warning_sse_localhost(caplog):
     """Test that minimal warnings are logged when SSE transport is used on localhost."""
 
+    MCPFrontEndConfig(transport="sse", host="localhost")
     # Check that no critical security warnings were logged (SSE on localhost is acceptable for dev)
     assert not any("not recommended for production" in record.message for record in caplog.records)
 

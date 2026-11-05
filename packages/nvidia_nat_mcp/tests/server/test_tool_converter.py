@@ -306,14 +306,19 @@ class TestCreateFunctionWrapper:
         assert sig is not None
         assert INJECTED_CONTEXT_PARAM not in sig.parameters
 
-    def test_create_wrapper_rejects_schema_field_named_ctx(self):
-        """A workflow field named `ctx` collides with MCP context injection."""
+    async def test_registered_tool_preserves_input_field_named_ctx(self):
+        """A user field named ctx is independent of the injected Context."""
         from pydantic import create_model
 
-        schema = create_model("CtxSchema", **{"ctx": (str, ...)})  # type: ignore[call-overload]
-
-        with pytest.raises(ValueError, match="cannot declare a field named 'ctx'"):
-            create_function_wrapper("tool", create_mock_session_manager(), schema)
+        schema = create_model("CtxSchema", ctx=(str, ...))
+        manager = create_mock_session_manager()
+        wrapper = create_function_wrapper("tool", manager, schema)
+        server = FastMCP("test-server")
+        server.tool(name="tool")(wrapper)
+        tools = await server.list_tools()
+        assert set(tools[0].inputSchema["properties"]) == {"ctx"}
+        await server.call_tool("tool", {"ctx": "caller value"})
+        assert manager.run.call_args.args[0].ctx == "caller value"
 
     def test_create_wrapper_for_workflow(self):
         """Test creating wrapper for workflow function."""
@@ -1111,3 +1116,32 @@ async def test_wrapper_awaits_real_context_logging_and_preserves_errors(fail):
         assert server_session.send_log_message.await_args.kwargs["level"] == "info"
         assert server_session.send_progress_notification.await_count == 2
     assert server_session.send_log_message.await_count == (2 if fail else 1)
+
+
+@pytest.mark.parametrize("collision_count", [1, 2])
+async def test_registered_tool_preserves_context_aliases(collision_count, monkeypatch):
+    """Keep all advertised aliased arguments and inject Context under a distinct name."""
+    from mcp.server.fastmcp.utilities.context_injection import find_context_parameter
+    from pydantic import create_model
+
+    from nat.plugins.mcp.server import tool_converter
+
+    aliases = [INJECTED_CONTEXT_PARAM]
+    if collision_count == 2:
+        aliases.append(f"{INJECTED_CONTEXT_PARAM}_2")
+    fields = {f"message_{index}": (str, Field(alias=alias)) for index, alias in enumerate(aliases)}
+    schema = create_model("AliasedContextInput", **fields)
+    manager = create_mock_session_manager()
+    wrapper = create_function_wrapper("tool", manager, schema)
+    context_name = find_context_parameter(wrapper)
+    assert context_name not in aliases
+    execute = AsyncMock(return_value="ok")
+    monkeypatch.setattr(tool_converter, "_run_through_session_manager", execute)
+    server = FastMCP("test-server")
+    server.tool(name="tool")(wrapper)
+    tools = await server.list_tools()
+    assert set(tools[0].inputSchema["properties"]) == set(aliases)
+    await server.call_tool("tool", {alias: f"value {index}" for index, alias in enumerate(aliases)})
+    payload = execute.await_args.args[1]
+    assert payload.model_dump() == {f"message_{index}": f"value {index}" for index in range(collision_count)}
+    assert isinstance(execute.await_args.kwargs["ctx"], Context)
