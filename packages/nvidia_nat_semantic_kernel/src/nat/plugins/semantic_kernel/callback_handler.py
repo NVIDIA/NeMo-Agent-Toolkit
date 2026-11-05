@@ -14,10 +14,14 @@
 # limitations under the License.
 
 import copy
+import inspect
 import logging
+import operator
 import threading
 import time
+from collections.abc import AsyncGenerator
 from collections.abc import Callable
+from functools import reduce
 from typing import Any
 from uuid import uuid4
 
@@ -107,70 +111,130 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
         logger.debug("SemanticKernelProfilerHandler instrumentation applied successfully.")
 
     def _build_llm_call_patch(self, original_func: Callable[..., Any]) -> Callable[..., Any]:
+        """Build a monkey-patch that records usage statistics around a Semantic Kernel chat-completion method.
+
+        Semantic Kernel's streaming method is an async generator, so it gets a wrapper that is an async
+        generator too; the non-streaming method gets a coroutine wrapper.
+
+        Args:
+            original_func: The Semantic Kernel chat-completion method to wrap.
+
+        Returns:
+            A wrapper with the same calling convention as ``original_func`` that pushes ``LLM_START`` and
+            ``LLM_END`` intermediate steps.
         """
-        Returns an async monkey-patch that wraps the original chat-completion method.
-        Replicates the usage collection from _llm_call_wrapper.
-        """
+
+        if inspect.isasyncgenfunction(original_func):
+
+            async def patched_streaming_llm_call(sk_self, *args, **kwargs) -> AsyncGenerator[Any, None]:
+                uuid, model_name, model_input = self._push_llm_start(sk_self, args, kwargs)
+
+                # Semantic Kernel yields a list of chunks (one per choice) at a time; profile the first choice.
+                chunks = []
+                async for messages in original_func(sk_self, *args, **kwargs):
+                    chunks.extend(message for message in messages if message.choice_index == 0)
+                    yield messages
+
+                response = reduce(operator.add, chunks) if chunks else None
+                usage = next((chunk.metadata["usage"] for chunk in reversed(chunks) if chunk.metadata.get("usage")),
+                             None)
+                self._push_llm_end(uuid, model_name, model_input, response, usage)
+
+            return patched_streaming_llm_call
 
         async def patched_llm_call(sk_self, *args, **kwargs) -> Any:
-            now = time.time()
-            seconds_between_calls = int(now - self.last_call_ts)
-            uuid = str(uuid4())
-
-            # Build the input stats
-            if args:
-                chat_input = [copy.deepcopy(args[0].model_dump())]
-            else:
-                # if no args, fallback on kwargs["chat_history"]
-                chat_input = [kwargs["chat_history"].model_dump()]
-
-            model_name = sk_self.ai_model_id
-
-            model_input = ""
-            try:
-                for message in chat_input[0]["messages"]:
-                    for item in message["items"]:
-                        if "text" in item:
-                            model_input += item["text"]
-            except Exception as e:
-                logger.exception("Error in getting model input: %s", e)
-
-            input_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
-                                                  framework=LLMFrameworkEnum.SEMANTIC_KERNEL,
-                                                  name=model_name,
-                                                  UUID=uuid,
-                                                  data=StreamEventData(input=model_input),
-                                                  metadata=TraceMetadata(chat_inputs=copy.deepcopy(chat_input)),
-                                                  usage_info=UsageInfo(token_usage=TokenUsageBaseModel(),
-                                                                       num_llm_calls=1,
-                                                                       seconds_between_calls=seconds_between_calls))
-
-            self.step_manager.push_intermediate_step(input_stats)
+            uuid, model_name, model_input = self._push_llm_start(sk_self, args, kwargs)
 
             # Call the original method
             output = await original_func(sk_self, *args, **kwargs)
 
-            model_output = output[0].content
-            now = time.time()
-            # Build the output stats
-            output_stats = IntermediateStepPayload(
-                event_type=IntermediateStepType.LLM_END,
-                span_event_timestamp=now,
-                framework=LLMFrameworkEnum.SEMANTIC_KERNEL,
-                name=model_name,
-                UUID=uuid,
-                data=StreamEventData(input=model_input, output=model_output),
-                metadata=TraceMetadata(chat_responses=output[0].model_dump()),
-                usage_info=UsageInfo(token_usage=TokenUsageBaseModel(**output[0].metadata["usage"].model_dump())))
-
-            self.step_manager.push_intermediate_step(output_stats)
-
-            # Update last_call_ts
-            self.last_call_ts = time.time()
+            response = output[0] if output else None
+            usage = response.metadata.get("usage") if response is not None else None
+            self._push_llm_end(uuid, model_name, model_input, response, usage)
 
             return output
 
         return patched_llm_call
+
+    def _push_llm_start(self, sk_self: Any, args: tuple, kwargs: dict) -> tuple[str, str, str]:
+        """Push the ``LLM_START`` intermediate step for a Semantic Kernel chat-completion call.
+
+        Args:
+            sk_self: The Semantic Kernel chat-completion service being called.
+            args: Positional arguments of the call; the first one is the chat history when present.
+            kwargs: Keyword arguments of the call.
+
+        Returns:
+            The step UUID, the model name and the text of the model input.
+        """
+        now = time.time()
+        seconds_between_calls = int(now - self.last_call_ts)
+        uuid = str(uuid4())
+
+        # Build the input stats
+        if args:
+            chat_input = [copy.deepcopy(args[0].model_dump())]
+        else:
+            # if no args, fallback on kwargs["chat_history"]
+            chat_input = [kwargs["chat_history"].model_dump()]
+
+        model_name = sk_self.ai_model_id
+
+        model_input = ""
+        try:
+            for message in chat_input[0]["messages"]:
+                for item in message["items"]:
+                    if "text" in item:
+                        model_input += item["text"]
+        except Exception as e:
+            logger.exception("Error in getting model input: %s", e)
+
+        input_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
+                                              framework=LLMFrameworkEnum.SEMANTIC_KERNEL,
+                                              name=model_name,
+                                              UUID=uuid,
+                                              data=StreamEventData(input=model_input),
+                                              metadata=TraceMetadata(chat_inputs=copy.deepcopy(chat_input)),
+                                              usage_info=UsageInfo(token_usage=TokenUsageBaseModel(),
+                                                                   num_llm_calls=1,
+                                                                   seconds_between_calls=seconds_between_calls))
+
+        self.step_manager.push_intermediate_step(input_stats)
+        return uuid, model_name, model_input
+
+    def _push_llm_end(self, uuid: str, model_name: str, model_input: str, response: Any, usage: Any) -> None:
+        """Push the ``LLM_END`` intermediate step for a Semantic Kernel chat-completion call.
+
+        Args:
+            uuid: The UUID of the matching ``LLM_START`` step.
+            model_name: The name of the model that was called.
+            model_input: The text of the model input.
+            response: The (combined) chat message content of the first choice, or ``None`` if there is none.
+            usage: The Semantic Kernel ``CompletionUsage`` of the call, or ``None`` if the provider sent none.
+        """
+        if usage is not None:
+            usage_data = {key: value for key, value in usage.model_dump().items() if value is not None}
+            usage_data.setdefault("total_tokens",
+                                  usage_data.get("prompt_tokens", 0) + usage_data.get("completion_tokens", 0))
+            token_usage = TokenUsageBaseModel(**usage_data)
+        else:
+            token_usage = TokenUsageBaseModel()
+
+        # Build the output stats
+        output_stats = IntermediateStepPayload(
+            event_type=IntermediateStepType.LLM_END,
+            span_event_timestamp=time.time(),
+            framework=LLMFrameworkEnum.SEMANTIC_KERNEL,
+            name=model_name,
+            UUID=uuid,
+            data=StreamEventData(input=model_input, output=response.content if response is not None else None),
+            metadata=TraceMetadata(chat_responses=response.model_dump() if response is not None else None),
+            usage_info=UsageInfo(token_usage=token_usage))
+
+        self.step_manager.push_intermediate_step(output_stats)
+
+        # Update last_call_ts
+        self.last_call_ts = time.time()
 
     def _build_tool_call_patch(self, original_func: Callable[..., Any]) -> Callable[..., Any]:
         """

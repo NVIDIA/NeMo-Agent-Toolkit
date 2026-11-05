@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+from collections.abc import Callable
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import httpx
 import pytest
 
 from nat.utils.reactive.subject import Subject
@@ -80,3 +83,136 @@ async def test_semantic_kernel_handler_tool_call(reactive_stream: Subject):
     assert all_[0].event_type == IntermediateStepType.TOOL_START
     assert all_[1].event_type == IntermediateStepType.TOOL_END
     assert all_[1].payload.metadata.tool_outputs == {"result": "some result"}
+
+
+def _openai_chat_service(handler_body: Callable[[httpx.Request], httpx.Response]):
+    """Build a real Semantic Kernel OpenAI chat service whose HTTP calls are answered by ``handler_body``."""
+    from openai import AsyncOpenAI
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+    client = AsyncOpenAI(api_key="test-key",
+                         base_url="http://test/v1",
+                         http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler_body)))
+    return OpenAIChatCompletion(ai_model_id="test-model", async_client=client)
+
+
+def _streaming_response(request: httpx.Request) -> httpx.Response:
+    """Answer a streaming chat completion with two content chunks and a final usage chunk."""
+    chunks = [
+        {
+            "choices": [{
+                "index": 0, "delta": {
+                    "role": "assistant", "content": "Hello"
+                }, "finish_reason": None
+            }]
+        },
+        {
+            "choices": [{
+                "index": 0, "delta": {
+                    "content": " world"
+                }, "finish_reason": "stop"
+            }]
+        },
+        {
+            "choices": [], "usage": {
+                "prompt_tokens": 7, "completion_tokens": 2, "total_tokens": 9
+            }
+        },
+    ]
+    header = {"id": "c1", "object": "chat.completion.chunk", "created": 0, "model": "test-model"}
+    body = "".join(f"data: {json.dumps({**header, **chunk})}\n\n" for chunk in chunks) + "data: [DONE]\n\n"
+    return httpx.Response(200, headers={"content-type": "text/event-stream"}, content=body.encode())
+
+
+@pytest.fixture(name="restore_sk_patch_targets")
+def restore_sk_patch_targets_fixture(monkeypatch: pytest.MonkeyPatch):
+    """Undo the class-level patches that ``SemanticKernelProfilerHandler.instrument`` applies."""
+    import semantic_kernel
+    from semantic_kernel.connectors.ai.open_ai.services.open_ai_chat_completion_base import OpenAIChatCompletionBase
+
+    for name in ("_inner_get_chat_message_contents", "_inner_get_streaming_chat_message_contents"):
+        monkeypatch.setattr(OpenAIChatCompletionBase, name, getattr(OpenAIChatCompletionBase, name))
+    monkeypatch.setattr(semantic_kernel.Kernel, "invoke_function_call", semantic_kernel.Kernel.invoke_function_call)
+
+
+@pytest.mark.usefixtures("restore_sk_patch_targets")
+async def test_semantic_kernel_handler_streaming_chat_completion(reactive_stream: Subject):
+    """Streaming chat completions keep working and are recorded once the profiler patches Semantic Kernel."""
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+    from semantic_kernel.contents import ChatHistory
+
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
+
+    events = []
+    _ = reactive_stream.subscribe(events.append)
+    SemanticKernelProfilerHandler(workflow_llms={"llm": SimpleNamespace(provider_type="openai")}).instrument()
+
+    service = _openai_chat_service(_streaming_response)
+    chat_history = ChatHistory()
+    chat_history.add_user_message("Say hello")
+
+    text = ""
+    async for messages in service.get_streaming_chat_message_contents(chat_history,
+                                                                      OpenAIChatPromptExecutionSettings()):
+        text += "".join(str(message) for message in messages)
+
+    assert text == "Hello world"
+    assert [event.event_type for event in events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert events[0].payload.data.input == "Say hello"
+    assert events[1].payload.data.output == "Hello world"
+    token_usage = events[1].payload.usage_info.token_usage
+    assert (token_usage.prompt_tokens, token_usage.completion_tokens, token_usage.total_tokens) == (7, 2, 9)
+
+
+@pytest.mark.usefixtures("restore_sk_patch_targets")
+async def test_semantic_kernel_handler_chat_completion_token_usage(reactive_stream: Subject):
+    """Non-streaming chat completions record the provider's token usage, including the total."""
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+    from semantic_kernel.contents import ChatHistory
+
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
+
+    def chat_response(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200,
+                              json={
+                                  "id": "c1",
+                                  "object": "chat.completion",
+                                  "created": 0,
+                                  "model": "test-model",
+                                  "choices": [{
+                                      "index": 0,
+                                      "message": {
+                                          "role": "assistant", "content": "Hello world"
+                                      },
+                                      "finish_reason": "stop"
+                                  }],
+                                  "usage": {
+                                      "prompt_tokens": 7,
+                                      "completion_tokens": 2,
+                                      "total_tokens": 9,
+                                      "prompt_tokens_details": {
+                                          "cached_tokens": 3
+                                      }
+                                  },
+                              })
+
+    events = []
+    _ = reactive_stream.subscribe(events.append)
+    SemanticKernelProfilerHandler(workflow_llms={"llm": SimpleNamespace(provider_type="openai")}).instrument()
+
+    service = _openai_chat_service(chat_response)
+    chat_history = ChatHistory()
+    chat_history.add_user_message("Say hello")
+
+    messages = await service.get_chat_message_contents(chat_history, OpenAIChatPromptExecutionSettings())
+
+    assert str(messages[0]) == "Hello world"
+    assert [event.event_type for event in events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert events[1].payload.data.output == "Hello world"
+    token_usage = events[1].payload.usage_info.token_usage
+    assert (token_usage.prompt_tokens,
+            token_usage.completion_tokens,
+            token_usage.cached_tokens,
+            token_usage.total_tokens) == (7, 2, 3, 9)
