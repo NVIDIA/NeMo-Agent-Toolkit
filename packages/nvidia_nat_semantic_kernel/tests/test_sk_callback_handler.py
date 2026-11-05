@@ -216,3 +216,65 @@ async def test_semantic_kernel_handler_chat_completion_token_usage(reactive_stre
             token_usage.completion_tokens,
             token_usage.cached_tokens,
             token_usage.total_tokens) == (7, 2, 3, 9)
+
+
+def _bad_request(request: httpx.Request) -> httpx.Response:
+    """Answer every chat completion with an error the OpenAI client does not retry."""
+    return httpx.Response(400, json={"error": {"message": "boom", "type": "invalid_request_error"}})
+
+
+@pytest.mark.usefixtures("restore_sk_patch_targets")
+@pytest.mark.parametrize("streaming", [False, True], ids=["non_streaming", "streaming"])
+async def test_semantic_kernel_handler_failed_chat_completion_ends_llm_step(reactive_stream: Subject, streaming: bool):
+    """A chat completion that raises still pushes LLM_END, and the error reaches the caller."""
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+    from semantic_kernel.contents import ChatHistory
+    from semantic_kernel.exceptions import ServiceResponseException
+
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
+
+    events = []
+    _ = reactive_stream.subscribe(events.append)
+    SemanticKernelProfilerHandler(workflow_llms={"llm": SimpleNamespace(provider_type="openai")}).instrument()
+
+    service = _openai_chat_service(_bad_request)
+    chat_history = ChatHistory()
+    chat_history.add_user_message("Say hello")
+    settings = OpenAIChatPromptExecutionSettings()
+
+    with pytest.raises(ServiceResponseException):
+        if streaming:
+            async for _ in service.get_streaming_chat_message_contents(chat_history, settings):
+                pass
+        else:
+            await service.get_chat_message_contents(chat_history, settings)
+
+    assert [event.event_type for event in events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert events[1].payload.data.output is None
+
+
+@pytest.mark.usefixtures("restore_sk_patch_targets")
+async def test_semantic_kernel_handler_closed_stream_ends_llm_step(reactive_stream: Subject):
+    """A stream the consumer closes early pushes LLM_END with the chunks received so far."""
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+    from semantic_kernel.contents import ChatHistory
+
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
+
+    events = []
+    _ = reactive_stream.subscribe(events.append)
+    SemanticKernelProfilerHandler(workflow_llms={"llm": SimpleNamespace(provider_type="openai")}).instrument()
+
+    service = _openai_chat_service(_streaming_response)
+    chat_history = ChatHistory()
+    chat_history.add_user_message("Say hello")
+
+    stream = service._inner_get_streaming_chat_message_contents(chat_history, OpenAIChatPromptExecutionSettings())
+    first = await anext(stream)
+    await stream.aclose()
+
+    assert "".join(str(message) for message in first) == "Hello"
+    assert [event.event_type for event in events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert events[1].payload.data.output == "Hello"

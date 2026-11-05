@@ -131,26 +131,33 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
 
                 # Semantic Kernel yields a list of chunks (one per choice) at a time; profile the first choice.
                 chunks = []
-                async for messages in original_func(sk_self, *args, **kwargs):
-                    chunks.extend(message for message in messages if message.choice_index == 0)
-                    yield messages
-
-                response = reduce(operator.add, chunks) if chunks else None
-                usage = next((chunk.metadata["usage"] for chunk in reversed(chunks) if chunk.metadata.get("usage")),
-                             None)
-                self._push_llm_end(uuid, model_name, model_input, response, usage)
+                try:
+                    async for messages in original_func(sk_self, *args, **kwargs):
+                        chunks.extend(message for message in messages if message.choice_index == 0)
+                        yield messages
+                finally:
+                    # Also runs when the stream raises or the consumer stops early, so LLM_START is always closed.
+                    try:
+                        response = reduce(operator.add, chunks) if chunks else None
+                        usage = next(
+                            (chunk.metadata["usage"] for chunk in reversed(chunks) if chunk.metadata.get("usage")),
+                            None)
+                        self._push_llm_end(uuid, model_name, model_input, response, usage)
+                    except Exception:
+                        logger.exception("Error recording a streaming Semantic Kernel LLM call")
 
             return patched_streaming_llm_call
 
         async def patched_llm_call(sk_self, *args, **kwargs) -> Any:
             uuid, model_name, model_input = self._push_llm_start(sk_self, args, kwargs)
 
-            # Call the original method
-            output = await original_func(sk_self, *args, **kwargs)
-
-            response = output[0] if output else None
-            usage = response.metadata.get("usage") if response is not None else None
-            self._push_llm_end(uuid, model_name, model_input, response, usage)
+            output = None
+            try:
+                output = await original_func(sk_self, *args, **kwargs)
+            finally:
+                response = output[0] if output else None
+                usage = response.metadata.get("usage") if response is not None else None
+                self._push_llm_end(uuid, model_name, model_input, response, usage)
 
             return output
 
