@@ -197,19 +197,29 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
 
             model_output = "".join(model_output)
 
+            chat_response = None
+            token_usage = TokenUsageBaseModel()
+            try:
+                if output.choices:
+                    chat_response = output.choices[0].model_dump()
+                model_extra = getattr(output, 'model_extra', None) or {}
+                if 'usage' in model_extra:
+                    token_usage = TokenUsageBaseModel(**model_extra['usage'].model_dump())
+            except Exception as e:
+                logger.exception("Error getting model usage: %s", e)
+
             now = time.time()
             # Record the end event
-            output_stats = IntermediateStepPayload(
-                event_type=IntermediateStepType.LLM_END,
-                UUID=input_stats.UUID,
-                span_event_timestamp=now,
-                framework=LLMFrameworkEnum.CREWAI,
-                name=model_name,
-                data=StreamEventData(input=model_input, output=model_output),
-                metadata=TraceMetadata(chat_responses=output.choices[0].model_dump()),
-                usage_info=UsageInfo(token_usage=TokenUsageBaseModel(**output.model_extra['usage'].model_dump()),
-                                     num_llm_calls=1,
-                                     seconds_between_calls=seconds_between_calls))
+            output_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
+                                                   UUID=input_stats.UUID,
+                                                   span_event_timestamp=now,
+                                                   framework=LLMFrameworkEnum.CREWAI,
+                                                   name=model_name,
+                                                   data=StreamEventData(input=model_input, output=model_output),
+                                                   metadata=TraceMetadata(chat_responses=chat_response),
+                                                   usage_info=UsageInfo(token_usage=token_usage,
+                                                                        num_llm_calls=1,
+                                                                        seconds_between_calls=seconds_between_calls))
 
             self.step_manager.push_intermediate_step(output_stats)
 
