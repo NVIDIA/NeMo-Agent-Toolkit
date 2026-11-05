@@ -21,6 +21,9 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+from autogen_core.models import CreateResult
+from autogen_core.models import RequestUsage
+from autogen_core.models import UserMessage
 
 from nat.plugins.autogen.callback_handler import AutoGenProfilerHandler
 from nat.plugins.autogen.callback_handler import ClientPatchInfo
@@ -318,6 +321,26 @@ class TestHelperMethods:
         result = handler._extract_usage(output)
         assert result == {"total_tokens": 75}
 
+    def test_extract_usage_with_autogen_request_usage(self):
+        """Test _extract_usage converts AutoGen's RequestUsage dataclass and fills in total_tokens."""
+        handler = AutoGenProfilerHandler()
+        output = CreateResult(finish_reason="stop",
+                              content="4",
+                              usage=RequestUsage(prompt_tokens=12, completion_tokens=3),
+                              cached=False)
+
+        result = handler._extract_usage(output)
+        assert result == {"prompt_tokens": 12, "completion_tokens": 3, "total_tokens": 15}
+
+    def test_extract_messages_keyword_and_positional(self):
+        """Test _extract_messages reads messages passed as a keyword or positionally."""
+        client = Mock()
+        messages = [UserMessage(content="Hello", source="user")]
+
+        assert AutoGenProfilerHandler._extract_messages((client, ), {"messages": messages}) is messages
+        assert AutoGenProfilerHandler._extract_messages((client, messages), {}) is messages
+        assert AutoGenProfilerHandler._extract_messages((client, ), {}) == []
+
     def test_extract_chat_response(self):
         """Test _extract_chat_response extracts first choice."""
         handler = AutoGenProfilerHandler()
@@ -426,6 +449,35 @@ class TestLLMWrapper:
         assert end_call.usage_info.token_usage.prompt_tokens == 10
         assert end_call.usage_info.token_usage.completion_tokens == 20
 
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_llm_wrapper_records_autogen_call(self, mock_get):
+        """Test LLM wrapper records the input and token usage of a call made the way AutoGen agents make it."""
+        mock_context = Mock()
+        mock_step_manager = Mock()
+        mock_context.intermediate_step_manager = mock_step_manager
+        mock_get.return_value = mock_context
+
+        handler = AutoGenProfilerHandler()
+
+        output = CreateResult(finish_reason="stop",
+                              content="4",
+                              usage=RequestUsage(prompt_tokens=12, completion_tokens=3),
+                              cached=False)
+        original_func = AsyncMock(return_value=output)
+        wrapped = handler._create_llm_wrapper(original_func)
+
+        client = Mock()
+        client._raw_config = {"model": "test-model"}
+        # AssistantAgent calls model_client.create(llm_messages, tools=..., ...) with positional messages
+        await wrapped(client, [UserMessage(content="What is 2 + 2?", source="user")], tools=[])
+
+        start_call = mock_step_manager.push_intermediate_step.call_args_list[0][0][0]
+        end_call = mock_step_manager.push_intermediate_step.call_args_list[1][0][0]
+        assert start_call.data.input == "What is 2 + 2?"
+        assert end_call.usage_info.token_usage.prompt_tokens == 12
+        assert end_call.usage_info.token_usage.completion_tokens == 3
+        assert end_call.usage_info.token_usage.total_tokens == 15
+
 
 class TestStreamWrapper:
     """Test _create_stream_wrapper functionality."""
@@ -480,6 +532,38 @@ class TestStreamWrapper:
 
         # Should have START and END
         assert mock_step_manager.push_intermediate_step.call_count == 2
+
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_stream_wrapper_records_autogen_call(self, mock_get):
+        """Test stream wrapper records the input and the usage of AutoGen's final CreateResult chunk."""
+        mock_context = Mock()
+        mock_step_manager = Mock()
+        mock_context.intermediate_step_manager = mock_step_manager
+        mock_get.return_value = mock_context
+
+        handler = AutoGenProfilerHandler()
+
+        async def mock_stream(*args, **kwargs):
+            yield "4"
+            yield CreateResult(finish_reason="stop",
+                               content="4",
+                               usage=RequestUsage(prompt_tokens=12, completion_tokens=3),
+                               cached=False)
+
+        wrapped = handler._create_stream_wrapper(mock_stream)
+
+        client = Mock()
+        client._raw_config = {"model": "test-model"}
+
+        async for _ in wrapped(client, [UserMessage(content="What is 2 + 2?", source="user")]):
+            pass
+
+        start_call = mock_step_manager.push_intermediate_step.call_args_list[0][0][0]
+        end_call = mock_step_manager.push_intermediate_step.call_args_list[1][0][0]
+        assert start_call.data.input == "What is 2 + 2?"
+        assert end_call.usage_info.token_usage.prompt_tokens == 12
+        assert end_call.usage_info.token_usage.completion_tokens == 3
+        assert end_call.usage_info.token_usage.total_tokens == 15
 
     @patch('nat.plugins.autogen.callback_handler.Context.get')
     async def test_stream_wrapper_handles_error(self, mock_get):
