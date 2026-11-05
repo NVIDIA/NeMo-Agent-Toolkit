@@ -31,6 +31,7 @@ Supported Methods
 """
 
 import copy
+import dataclasses
 import logging
 import threading
 import time
@@ -305,6 +306,55 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
             logger.debug("Error extracting output text from response")
         return model_output
 
+    @staticmethod
+    def _extract_messages(args: tuple[Any, ...], kwargs: dict[str, Any]) -> Any:
+        """Extract the messages argument from a ``create`` or ``create_stream`` call.
+
+        AutoGen agents pass the messages positionally (``model_client.create(llm_messages, ...)``),
+        so fall back to the first argument after the client when ``messages`` is not a keyword.
+
+        Args:
+            args: Positional arguments of the wrapped call, starting with the client instance
+            kwargs: Keyword arguments of the wrapped call
+
+        Returns:
+            The messages passed to the call, or an empty list if there are none
+        """
+        if "messages" in kwargs:
+            return kwargs["messages"]
+        if len(args) > 1:
+            return args[1]
+        return []
+
+    @staticmethod
+    def _usage_to_dict(usage_obj: Any) -> dict[str, Any]:
+        """Convert a usage object to a token usage dictionary.
+
+        Handles pydantic models, dataclasses such as AutoGen's ``RequestUsage``, and dicts. Fills in
+        ``total_tokens`` from the prompt and completion counts when the provider does not report it.
+
+        Args:
+            usage_obj: Usage object reported by the LLM client
+
+        Returns:
+            dict: Token usage dictionary, empty if the usage type is not supported
+        """
+        if hasattr(usage_obj, "model_dump"):
+            usage = usage_obj.model_dump()
+        elif dataclasses.is_dataclass(usage_obj) and not isinstance(usage_obj, type):
+            usage = dataclasses.asdict(usage_obj)
+        elif isinstance(usage_obj, dict):
+            usage = dict(usage_obj)
+        else:
+            return {}
+
+        if not usage.get("total_tokens"):
+            prompt_tokens = usage.get("prompt_tokens") or 0
+            completion_tokens = usage.get("completion_tokens") or 0
+            if prompt_tokens or completion_tokens:
+                usage["total_tokens"] = prompt_tokens + completion_tokens
+        return usage
+
     def _extract_usage(self, output: Any) -> dict[str, Any]:
         """Extract token usage from LLM response.
 
@@ -319,10 +369,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
             if not usage_obj:
                 usage_obj = (getattr(output, "model_extra", {}) or {}).get("usage")
             if usage_obj:
-                if hasattr(usage_obj, "model_dump"):
-                    return usage_obj.model_dump()
-                elif isinstance(usage_obj, dict):
-                    return usage_obj
+                return self._usage_to_dict(usage_obj)
         except Exception:
             logger.debug("Error extracting usage from response")
         return {}
@@ -366,7 +413,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
             # Extract model info
             client = args[0] if args else None
             model_name = handler._extract_model_name(client) if client else "unknown_model"
-            messages = kwargs.get("messages", [])
+            messages = handler._extract_messages(args, kwargs)
             model_input = handler._extract_input_text(messages)
 
             # Push LLM_START event
@@ -454,7 +501,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
             # Extract model info
             client = args[0] if args else None
             model_name = handler._extract_model_name(client) if client else "unknown_model"
-            messages = kwargs.get("messages", [])
+            messages = handler._extract_messages(args, kwargs)
             model_input = handler._extract_input_text(messages)
 
             # Push LLM_START event
@@ -485,10 +532,7 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                             output_chunks.append(str(chunk.content))
                         # Check for usage in final chunk
                         if hasattr(chunk, "usage") and chunk.usage:
-                            if hasattr(chunk.usage, "model_dump"):
-                                usage_payload = chunk.usage.model_dump()
-                            elif isinstance(chunk.usage, dict):
-                                usage_payload = chunk.usage
+                            usage_payload = handler._usage_to_dict(chunk.usage)
                     except Exception:
                         pass
                     yield chunk
