@@ -334,6 +334,97 @@ async def test_opaque_accepts_response_object(validator_opaque):
     assert set(res.scopes or []) == set(SCOPES)
 
 
+@pytest.mark.parametrize("second_active", [False, True])
+@pytest.mark.parametrize("prefix", ["SHARED1234", "SHARED1234.with.dots"])
+async def test_introspection_cache_isolates_tokens_with_shared_prefix(validator_opaque,
+                                                                      monkeypatch,
+                                                                      second_active,
+                                                                      prefix):
+    """A token must never reuse another token's authorization or identity."""
+    tokens = [f"{prefix}-A", f"{prefix}-B", "DIFFERENT0-C"]
+    responses = {
+        tokens[0]: {
+            "active": True,
+            "client_id": "client-A",
+            "sub": "actor-A",
+            "exp": int(time.time()) + 600,
+            "aud": [AUDIENCE],
+            "iss": ISSUER,
+            "scope": "read write admin",
+        },
+        tokens[1]: {
+            "active": second_active,
+            "client_id": "client-B",
+            "sub": "actor-B",
+            "exp": int(time.time()) + 600,
+            "aud": [AUDIENCE],
+            "iss": ISSUER,
+            "scope": "read write",
+        },
+        tokens[2]: {
+            "active": False
+        },
+    }
+    calls = []
+
+    async def introspect_token(self, endpoint, token, token_type_hint="access_token"):
+        calls.append(token)
+        return responses[token]
+
+    monkeypatch.setattr(_MockAsyncOAuth2Client, "introspect_token", introspect_token)
+
+    first = await validator_opaque.verify(tokens[0])
+    second = await validator_opaque.verify(tokens[1])
+    unrelated = await validator_opaque.verify(tokens[2])
+
+    assert first.active is True
+    assert first.subject == "actor-A"
+    assert second.active is second_active
+    assert unrelated.active is False
+    assert calls == tokens
+    if second_active:
+        assert second.client_id == "client-B"
+        assert second.subject == "actor-B"
+        assert second.scopes == ["read", "write"]
+    else:
+        assert second.subject is None
+
+    # Repeated requests for the same active token still use the cache.
+    assert await validator_opaque.verify(tokens[0]) == first
+    assert calls == tokens
+    if second_active:
+        assert await validator_opaque.verify(tokens[1]) == second
+        assert calls == tokens
+    else:
+        assert (await validator_opaque.verify(tokens[1])).active is False
+        assert calls == [*tokens, tokens[1]]
+
+
+@pytest.mark.parametrize("expires_in", [60, 600])
+async def test_introspection_cache_expires_at_token_expiration_or_ttl(validator_opaque, monkeypatch, expires_in):
+    now = 2_000_000_000
+    monkeypatch.setattr("nat.authentication.credential_validator.bearer_token_validator.time.time", lambda: now)
+    _MockAsyncOAuth2Client.response = {
+        "active": True,
+        "client_id": "client-abc",
+        "exp": now + expires_in,
+        "aud": [AUDIENCE],
+        "iss": ISSUER,
+        "scope": "read write",
+    }
+    token = "opaque-cache-expiration"
+    assert (await validator_opaque.verify(token)).active is True
+    _MockAsyncOAuth2Client.response = {"active": False}
+
+    now += min(expires_in, 300) - 1
+    assert (await validator_opaque.verify(token)).active is True
+    assert _MockAsyncOAuth2Client.call_count == 1
+
+    now += 1
+    assert (await validator_opaque.verify(token)).active is False
+    assert _MockAsyncOAuth2Client.call_count == 2
+
+
 async def test_opaque_passes_client_auth_method():
     validator = BearerTokenValidator(
         issuer=ISSUER,
