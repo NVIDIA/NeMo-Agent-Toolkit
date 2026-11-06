@@ -677,7 +677,9 @@ class ValidationMiddleware(FunctionMiddleware):
 
 ### Chaining Multiple Middleware
 
-Middleware execute in the order specified:
+When multiple dynamic middleware target a component method, they share a chain on each client instance. They execute in middleware construction order, which follows the top-level `middleware` configuration order. Unregistering one middleware removes only that middleware from the method's chain. Invalid final-middleware ordering raises `ValueError` during client retrieval.
+
+Middleware on workflow functions execute in the order specified in the function's `middleware` list:
 
 ```yaml
 middleware:
@@ -1006,7 +1008,7 @@ Each client instance has its own component-method registration. The first client
 ### Behavior
 
 - **Workflow Functions**: Removes the `DynamicFunctionMiddleware` from the function's middleware chain
-- **Component Methods**: Restores the original unwrapped method on the component instance
+- **Component Methods**: Removes this middleware from the method's chain while preserving other middleware. Restores the original unwrapped method when the last middleware is removed.
 
 ### Registered Callable Models
 

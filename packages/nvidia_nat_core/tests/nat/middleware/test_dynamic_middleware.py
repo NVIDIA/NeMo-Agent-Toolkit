@@ -869,7 +869,14 @@ def shared_llm_configs():
     async def deny(config, builder):
         yield DenyMiddleware(config=config, builder=builder)
 
-    return SharedLLMConfig, DenyConfig
+    class ObserveConfig(DynamicMiddlewareConfig, name="_middleware_observe_client_test"):
+        pass
+
+    @register_middleware(config_type=ObserveConfig)
+    async def observe(config, builder):
+        yield _CountingDynamicMiddleware(config=config, builder=builder)
+
+    return SharedLLMConfig, DenyConfig, ObserveConfig
 
 
 @pytest.mark.parametrize("target", ["auto", "explicit"])
@@ -879,7 +886,7 @@ async def test_workflow_builder_middleware_protects_every_llm_client(shared_llm_
     from nat.builder.workflow_builder import WorkflowBuilder
     from nat.middleware.timeout.timeout_middleware_config import TimeoutMiddlewareConfig
 
-    llm_config, deny_config = shared_llm_configs
+    llm_config, deny_config, _ = shared_llm_configs
     flags = {"register_llms": True} if target == "auto" else {"llms": ["shared"]}
     config = deny_config(**flags) if policy == "deny" else TimeoutMiddlewareConfig(timeout=0.01, **flags)
     expected_error = PermissionError if policy == "deny" else TimeoutError
@@ -954,3 +961,174 @@ async def test_stale_registration_cannot_unregister_a_new_client(llm_client):
     middleware.unregister(current)
     assert await second.ainvoke("hi") == "response"
     assert len(middleware.pre_invoke_calls) == 1
+
+
+@pytest.mark.parametrize("group,getter,method,args",
+                         [
+                             ("llms", "get_llm", "ainvoke", ("shared", "test")),
+                             ("embedders", "get_embedder", "aembed_query", ("shared", "test")),
+                             ("retrievers", "get_retriever", "search", ("shared", "test")),
+                             ("memory", "get_memory_client", "search", ("shared", )),
+                             ("object_stores", "get_object_store_client", "get_object", ("shared", )),
+                             ("auth_providers", "get_auth_provider", "authenticate", ("shared", )),
+                         ])
+@pytest.mark.parametrize("target", ["auto", "explicit"])
+@pytest.mark.parametrize("removal_order", [(0, 1), (1, 0)])
+async def test_component_middleware_composes_and_unregisters_independently(group,
+                                                                           getter,
+                                                                           method,
+                                                                           args,
+                                                                           target,
+                                                                           removal_order):
+    """Every policy runs in order on every client, including after partial removal."""
+    events = []
+
+    class RecordingMiddleware(DynamicFunctionMiddleware):
+
+        def __init__(self, config, builder, label):
+            self.label = label
+            super().__init__(config, builder)
+
+        async def pre_invoke(self, context):
+            events.append(f"pre:{self.label}")
+
+        async def post_invoke(self, context):
+            events.append(f"post:{self.label}")
+
+    async def operation(self, value):
+        events.append("target")
+        return value
+
+    client_type = type("Client", (), {method: operation})
+    clients = [client_type(), client_type()]
+    builder = Mock(spec=Builder, _functions={})
+    setattr(builder, getter, AsyncMock(side_effect=clients * 2))
+    config = {f"register_{group}": True} if target == "auto" else {group: ["shared"]}
+    middleware = [RecordingMiddleware(DynamicMiddlewareConfig(**config), builder, label) for label in ("A", "B")]
+
+    for expected in clients * 2:
+        client = await getattr(builder, getter)(*args)
+        assert client is expected
+        events.clear()
+        assert await getattr(client, method)("value") == "value"
+        assert events == ["pre:A", "pre:B", "target", "post:B", "post:A"]
+
+    first_originals = [
+        middleware[0].get_registered(key).original_callable for key in middleware[0].get_registered_keys()
+    ]
+    for index in removal_order:
+        for key in middleware[index].get_registered_keys():
+            middleware[index].unregister(middleware[index].get_registered(key))
+        remaining = [mw.label for mw in middleware if mw.get_registered_keys()]
+        for client in clients:
+            events.clear()
+            assert await getattr(client, method)("value") == "value"
+            assert events == ([f"pre:{label}" for label in remaining] + ["target"] +
+                              [f"post:{label}" for label in reversed(remaining)])
+    for client, original in zip(clients, first_originals):
+        assert getattr(client, method) is original
+
+
+@pytest.mark.parametrize("removal_order", [(0, 1), (1, 0)])
+async def test_streaming_component_middleware_composes_and_closes(removal_order):
+    """Streaming preserves both policies, early-close cleanup, and independent removal."""
+    events = []
+
+    class Client:
+
+        async def astream(self, value):
+            try:
+                yield value
+                yield "second"
+            finally:
+                events.append("closed")
+
+    class RecordingMiddleware(DynamicFunctionMiddleware):
+
+        def __init__(self, builder, label):
+            self.label = label
+            super().__init__(DynamicMiddlewareConfig(register_llms=True), builder)
+
+        async def pre_invoke(self, context):
+            events.append(self.label)
+
+    client = Client()
+    builder = Mock(spec=Builder, _functions={})
+    builder.get_llm = AsyncMock(return_value=client)
+    middleware = [RecordingMiddleware(builder, label) for label in ("A", "B")]
+    await builder.get_llm("shared", "test")
+    original = middleware[0].get_registered("shared.astream").original_callable
+
+    stream = client.astream("first")
+    assert await anext(stream) == "first"
+    assert events == ["A", "B"]
+    await stream.aclose()
+    assert events == ["A", "B", "closed"]
+
+    for index in removal_order:
+        middleware[index].unregister(middleware[index].get_registered("shared.astream"))
+        events.clear()
+        assert [chunk async for chunk in client.astream("first")] == ["first", "second"]
+        remaining = [mw.label for mw in middleware if mw.get_registered_keys()]
+        assert events == remaining + ["closed"]
+    assert client.astream is original
+
+
+@pytest.mark.parametrize("disabled_index", [0, 1])
+async def test_disabled_component_middleware_does_not_remove_active_policy(llm_client, disabled_index):
+    builder = Mock(spec=Builder, _functions={})
+    builder.get_llm = AsyncMock(return_value=llm_client)
+    middleware = [
+        _CountingDynamicMiddleware(DynamicMiddlewareConfig(register_llms=True, enabled=index != disabled_index),
+                                   builder) for index in range(2)
+    ]
+    await builder.get_llm("shared", "test")
+    disabled, active = middleware[disabled_index], middleware[1 - disabled_index]
+    await llm_client.ainvoke("hi")
+    assert len(disabled.pre_invoke_calls) == 0
+    assert len(active.pre_invoke_calls) == 1
+    disabled.unregister(disabled.get_registered("shared.ainvoke"))
+    await llm_client.ainvoke("hi")
+    assert len(active.pre_invoke_calls) == 2
+
+
+@pytest.mark.parametrize("first_is_final", [False, True])
+async def test_component_middleware_rejects_invalid_final_order(llm_client, first_is_final):
+    """Invalid terminal-policy configuration must fail rather than skip a policy."""
+    builder = Mock(spec=Builder, _functions={})
+    builder.get_llm = AsyncMock(return_value=llm_client)
+    config = DynamicMiddlewareConfig(register_llms=True)
+    DynamicFunctionMiddleware(config, builder, is_final=first_is_final)
+    DynamicFunctionMiddleware(config, builder, is_final=True)
+    if first_is_final:
+        expected_error = "Only one final middleware"
+    else:
+        # A non-final middleware cannot be appended after the terminal boundary.
+        DynamicFunctionMiddleware(config, builder)
+        expected_error = "not the last middleware"
+    for _ in range(2):
+        with pytest.raises(ValueError, match=expected_error):
+            await builder.get_llm("shared", "test")
+
+
+@pytest.mark.parametrize("target", ["auto", "explicit"])
+@pytest.mark.parametrize("policy", ["deny", "timeout"])
+async def test_workflow_builder_composes_observation_and_policy(shared_llm_configs, target, policy):
+    """An earlier observer must not hide clients from a later enforcement middleware."""
+    from nat.builder.workflow_builder import WorkflowBuilder
+    from nat.middleware.timeout.timeout_middleware_config import TimeoutMiddlewareConfig
+
+    llm_config, deny_config, observe_config = shared_llm_configs
+    flags = {"register_llms": True} if target == "auto" else {"llms": ["shared"]}
+    config = deny_config(**flags) if policy == "deny" else TimeoutMiddlewareConfig(timeout=0.01, **flags)
+    expected_error = PermissionError if policy == "deny" else TimeoutError
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("shared", llm_config())
+        observer = await builder.add_middleware("observer", observe_config(**flags))
+        enforcement = await builder.add_middleware("policy", config)
+        for _ in range(3):
+            client = await builder.get_llm("shared", "_middleware_shared_client_test")
+            with pytest.raises(expected_error):
+                await client.ainvoke("hi")
+        assert len(observer.pre_invoke_calls) == 3
+        assert len(enforcement.get_registered_keys()) == 3

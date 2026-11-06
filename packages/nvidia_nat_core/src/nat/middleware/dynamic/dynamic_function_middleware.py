@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import inspect
 import logging
+from collections.abc import AsyncIterator
 from collections.abc import Callable
+from functools import wraps
 from typing import Any
 
 from nat.builder.builder import Builder
@@ -27,6 +29,7 @@ from nat.data_models.component_ref import FunctionRef
 from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
 from nat.middleware.function_middleware import FunctionMiddleware
 from nat.middleware.function_middleware import FunctionMiddlewareChain
+from nat.middleware.function_middleware import validate_middleware
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 from nat.middleware.utils.workflow_inventory import COMPONENT_FUNCTION_ALLOWLISTS
@@ -37,6 +40,57 @@ from nat.middleware.utils.workflow_inventory import RegisteredFunction
 from nat.middleware.utils.workflow_inventory import WorkflowInventory
 
 logger = logging.getLogger(__name__)
+
+
+class _ComponentMethodMiddleware:
+    """Shared, mutable dispatch for the middleware on one component method."""
+
+    def __init__(self, component: Any, original_callable: Callable, context: FunctionMiddlewareContext):
+        self.component = component
+        self.original_callable = original_callable
+        self.context = context
+        self.middleware: tuple[FunctionMiddleware, ...] = ()
+        self.call = original_callable
+        self.is_stream = inspect.isasyncgenfunction(original_callable)
+
+        if self.is_stream:
+
+            async def wrapped_stream(*args: Any, **kwargs: Any) -> AsyncIterator[Any]:
+                stream = self.call(*args, **kwargs)
+                try:
+                    async for chunk in stream:
+                        yield chunk
+                finally:
+                    close = getattr(stream, 'aclose', None)
+                    if close is not None:
+                        await close()
+
+            self.wrapper = wraps(original_callable)(wrapped_stream)
+        else:
+
+            async def wrapped_single(*args: Any, **kwargs: Any) -> Any:
+                return await self.call(*args, **kwargs)
+
+            self.wrapper = wraps(original_callable)(wrapped_single)
+
+        setattr(self.wrapper, '_nat_component_method_middleware', self)
+
+    @staticmethod
+    def from_callable(method: Any, component: Any) -> _ComponentMethodMiddleware | None:
+        """Recognize only our own dispatcher, belonging to this exact instance."""
+        state = getattr(method, '_nat_component_method_middleware', None)
+        if isinstance(state, _ComponentMethodMiddleware) and state.wrapper is method and state.component is component:
+            return state
+        return None
+
+    def configure(self, middleware: list[FunctionMiddleware]) -> None:
+        """Rebuild dispatch atomically, preserving order and terminal-policy validation."""
+        validated = validate_middleware(middleware)
+        chain = FunctionMiddlewareChain(middleware=validated, context=self.context)
+        call = (chain.build_stream(self.original_callable)
+                if self.is_stream else chain.build_single(self.original_callable))
+        self.call = call
+        self.middleware = validated
 
 
 class DynamicFunctionMiddleware(FunctionMiddleware):
@@ -154,16 +208,19 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
                                                    instance=llm_client,
                                                    config=None,
                                                    callable_functions=all_functions)
-        self._workflow_inventory.llms.append(discovered_component)
-
         for function_name in all_functions:
             try:
                 self._register_component_function(discovered_component, function_name)
+            except ValueError:
+                # Invalid policy chains must fail instead of silently skipping a middleware.
+                raise
             except Exception:
                 logger.debug("Failed to register component function '%s' on LLM '%s'",
                              function_name,
                              llm_name,
                              exc_info=True)
+
+        self._workflow_inventory.llms.append(discovered_component)
 
         return llm_client
 
@@ -194,16 +251,19 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
                                                    instance=embedder_client,
                                                    config=embedder_config,
                                                    callable_functions=all_functions)
-        self._workflow_inventory.embedders.append(discovered_component)
-
         for function_name in all_functions:
             try:
                 self._register_component_function(discovered_component, function_name)
+            except ValueError:
+                # Invalid policy chains must fail instead of silently skipping a middleware.
+                raise
             except Exception:
                 logger.debug("Failed to register component function '%s' on embedder '%s'",
                              function_name,
                              embedder_name,
                              exc_info=True)
+
+        self._workflow_inventory.embedders.append(discovered_component)
 
         return embedder_client
 
@@ -233,16 +293,19 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
                                                    instance=retriever_client,
                                                    config=retriever_config,
                                                    callable_functions=all_functions)
-        self._workflow_inventory.retrievers.append(discovered_component)
-
         for function_name in all_functions:
             try:
                 self._register_component_function(discovered_component, function_name)
+            except ValueError:
+                # Invalid policy chains must fail instead of silently skipping a middleware.
+                raise
             except Exception:
                 logger.debug("Failed to register component function '%s' on retriever '%s'",
                              function_name,
                              retriever_name,
                              exc_info=True)
+
+        self._workflow_inventory.retrievers.append(discovered_component)
 
         return retriever_client
 
@@ -271,16 +334,19 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
                                                    instance=memory_client,
                                                    config=memory_config,
                                                    callable_functions=all_functions)
-        self._workflow_inventory.memory.append(discovered_component)
-
         for function_name in all_functions:
             try:
                 self._register_component_function(discovered_component, function_name)
+            except ValueError:
+                # Invalid policy chains must fail instead of silently skipping a middleware.
+                raise
             except Exception:
                 logger.debug("Failed to register component function '%s' on memory '%s'",
                              function_name,
                              memory_name,
                              exc_info=True)
+
+        self._workflow_inventory.memory.append(discovered_component)
 
         return memory_client
 
@@ -310,17 +376,20 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
                                                    instance=store_client,
                                                    config=store_config,
                                                    callable_functions=all_functions)
-        self._workflow_inventory.object_stores.append(discovered_component)
-
         # Register all functions - filtering happens in _register_component_function
         for function_name in all_functions:
             try:
                 self._register_component_function(discovered_component, function_name)
+            except ValueError:
+                # Invalid policy chains must fail instead of silently skipping a middleware.
+                raise
             except Exception:
                 logger.debug("Failed to register component function '%s' on object store '%s'",
                              function_name,
                              object_store_name,
                              exc_info=True)
+
+        self._workflow_inventory.object_stores.append(discovered_component)
 
         return store_client
 
@@ -350,17 +419,20 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
                                                    instance=auth_client,
                                                    config=auth_config,
                                                    callable_functions=all_functions)
-        self._workflow_inventory.auth_providers.append(discovered_component)
-
         # Register all functions - filtering happens in _register_component_function
         for function_name in all_functions:
             try:
                 self._register_component_function(discovered_component, function_name)
+            except ValueError:
+                # Invalid policy chains must fail instead of silently skipping a middleware.
+                raise
             except Exception:
                 logger.debug("Failed to register component function '%s' on auth provider '%s'",
                              function_name,
                              auth_provider_name,
                              exc_info=True)
+
+        self._workflow_inventory.auth_providers.append(discovered_component)
 
         return auth_client
 
@@ -610,11 +682,13 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
             logger.debug("Component function '%s' already registered, skipping", registration_key)
             return
 
-        # Store original callable before wrapping
+        # Every middleware registration retains the same underlying component method.
         original_callable = getattr(component, function_name)
-
         # Wrap it with middleware
         wrapped_function = self._configure_component_function_middleware(discovered, function_name)
+        state = _ComponentMethodMiddleware.from_callable(wrapped_function, component)
+        if state is not None:
+            original_callable = state.original_callable
 
         # Replace the function on the component instance
         object.__setattr__(component, function_name, wrapped_function)
@@ -666,8 +740,15 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
             logger.debug("Unregistered workflow function '%s' from middleware interception", registered.key)
 
         elif isinstance(registered, RegisteredComponentMethod):
-            # Restore original callable on the component instance
-            object.__setattr__(registered.component_instance, registered.function_name, registered.original_callable)
+            component = registered.component_instance
+            method = getattr(component, registered.function_name)
+            state = _ComponentMethodMiddleware.from_callable(method, component)
+            if state is not None:
+                state.configure([mw for mw in state.middleware if mw is not self])
+                if not state.middleware:
+                    object.__setattr__(component, registered.function_name, state.original_callable)
+            else:
+                object.__setattr__(component, registered.function_name, registered.original_callable)
             logger.debug("Unregistered component method '%s.%s' from middleware interception",
                          type(registered.component_instance).__name__,
                          registered.function_name)
@@ -699,6 +780,15 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
         if registration_key in self._registered_callables:
             return original_function
 
+        # A disabled policy must not alter an otherwise unwrapped method.
+        if not self.enabled:
+            return original_function
+
+        existing = _ComponentMethodMiddleware.from_callable(original_function, component_instance)
+        if existing is not None:
+            existing.configure([*existing.middleware, self])
+            return existing.wrapper
+
         # Extract metadata safely - defaults to None for missing/inaccessible attributes
         component_config = self._extract_component_attributes(discovered, 'config')
         description = self._extract_component_attributes(discovered, 'description')
@@ -714,14 +804,9 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
                                             single_output_schema=single_output_schema,
                                             stream_output_schema=stream_output_schema)
 
-        chain = FunctionMiddlewareChain(middleware=[self], context=context)
-
-        if inspect.isasyncgenfunction(original_function):
-            wrapped_function = chain.build_stream(original_function)
-        else:
-            wrapped_function = chain.build_single(original_function)
-
-        return wrapped_function
+        state = _ComponentMethodMiddleware(component_instance, original_function, context)
+        state.configure([self])
+        return state.wrapper
 
     # ==================== Helper Methods ====================
 
@@ -839,6 +924,10 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
             attr = getattr(instance, function_name, None)
             if attr is None or not callable(attr):
                 return False
+
+            # Previously intercepted methods are still valid component boundaries.
+            if _ComponentMethodMiddleware.from_callable(attr, instance) is not None:
+                return True
 
             # Must be a bound method (component function)
             if not inspect.ismethod(attr):
