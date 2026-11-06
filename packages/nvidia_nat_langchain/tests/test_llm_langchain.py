@@ -217,6 +217,23 @@ class TestAzureOpenAILangChain:
             pass
         assert mock_chat.call_args.kwargs["stream_usage"] is True
 
+    @patch("langchain_openai.AzureChatOpenAI")
+    async def test_stream_usage_in_config_does_not_duplicate_keyword(self,
+                                                                     mock_chat,
+                                                                     azure_cfg,
+                                                                     mock_builder,
+                                                                     mock_httpx_async_client):
+        """An extra ``stream_usage`` key in the config must not be passed twice to the client."""
+        mock_httpx_async_client.aclose = AsyncMock()
+        azure_cfg = AzureOpenAIModelConfig(azure_deployment="gpt-4",
+                                           api_key="test-key",
+                                           azure_endpoint="https://test.openai.azure.com",
+                                           api_version="2024-02-01",
+                                           stream_usage=False)
+        async with azure_openai_langchain(azure_cfg, mock_builder):
+            pass
+        assert mock_chat.call_args.kwargs["stream_usage"] is True
+
 
 class TestOCILangChain:
     """Tests for the oci_langchain wrapper."""

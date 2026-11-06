@@ -183,16 +183,17 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     async with _create_metadata_injection_client(llm_config) as http_async_client:
 
+        client_kwargs = llm_config.model_dump(
+            exclude={"type", "thinking", "api_type", "api_version", "verify_ssl"},
+            by_alias=True,
+            exclude_none=True,
+            exclude_unset=True,
+        )
+        client_kwargs["stream_usage"] = True
         client = AzureChatOpenAI(
             http_async_client=http_async_client,  # type: ignore[call-arg]
-            stream_usage=True,
             api_version=llm_config.api_version,  # type: ignore[call-arg]
-            **llm_config.model_dump(
-                exclude={"type", "thinking", "api_type", "api_version", "verify_ssl"},
-                by_alias=True,
-                exclude_none=True,
-                exclude_unset=True,
-            ),
+            **client_kwargs,
         )
         if "http_async_client" in client.model_kwargs:
             del client.model_kwargs["http_async_client"]
