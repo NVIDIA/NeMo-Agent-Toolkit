@@ -1001,6 +1001,8 @@ if registered:
 all_keys = middleware.get_registered_keys()
 ```
 
+Each client instance has its own component-method registration. The first client uses a key such as `my_llm.invoke`; later clients with the same component name use keys that also include the component group and instance identity. Retrieve these keys with `get_registered_keys()` rather than constructing them. Unregistering one client method leaves other clients intercepted.
+
 ### Behavior
 
 - **Workflow Functions**: Removes the `DynamicFunctionMiddleware` from the function's middleware chain
