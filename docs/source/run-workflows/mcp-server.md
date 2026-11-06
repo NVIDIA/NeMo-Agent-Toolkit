@@ -93,6 +93,16 @@ The `base_path` must start with a forward slash (`/`) and must not end with a fo
 The `base_path` feature requires the `streamable-http` transport. SSE transport does not support custom base paths.
 :::
 
+### Per-User Workflows
+
+A per-user workflow can be served over MCP. Each user gets their own workflow instance, built on first use. [MCP authentication](../components/auth/mcp-auth/index.md) prescribes pairing `per_user_mcp_client` with a per-user workflow, such as `per_user_react_agent`.
+
+Per-user workflows require the `streamable-http` transport and [`server_auth`](#authentication); the default server rejects other configurations at startup. Tool calls use the verified Bearer token's identity claims. A custom integration may supply a trusted user ID through runtime context. Cookies and unverified credentials cannot establish a user identity; a conflicting `nat-session` cookie is rejected.
+
+With a per-user workflow, `tool_names` may be empty (the default) or contain only the workflow's tool name, which is its `workflow_alias` when set, otherwise its `_type`. Selecting other functions or function groups is unsupported and raises a configuration error.
+
+The `/debug/tools/list` route returns an empty tool list for a per-user workflow because no shared workflow instance exists at startup. Use `nat mcp client tool list` to inspect the registered MCP tool and its input schema.
+
 ## Displaying MCP Tools published by an MCP server
 
 To list the tools published by the MCP server you can use the `nat mcp client tool list` command. This command acts as an MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/mcp` for streamable-http, with backwards compatibility for `http://localhost:9901/sse`).
@@ -393,7 +403,7 @@ This is useful for health checks and monitoring.
 
 ## Security Considerations
 
-### Authentication Limitations
+### Authentication
 The NVIDIA NeMo Agent Toolkit MCP server supports bearer-token authentication for `streamable-http` through `general.front_end.server_auth` with the `oauth2_resource_server` configuration type. Configure the authorization-server issuer, required scopes, and token audience for your API.
 
 With a nonempty `server_auth.audience`, the NeMo Agent Toolkit authentication component enforces that audience. Otherwise, the MCP SDK checks the validated token audience against the advertised resource identifier, `http://<host>:<port>/`. An empty audience setting has the same behavior as an omitted setting. Tokens without an audience for this server are rejected.
@@ -401,6 +411,10 @@ With a nonempty `server_auth.audience`, the NeMo Agent Toolkit authentication co
 When upgrading from a deployment that omitted audience validation, configure the authorization server to issue tokens for the advertised resource, or set the API-specific `server_auth.audience`. Existing configurations with a valid explicit audience retain their audience policy.
 
 NeMo Agent Toolkit workflows can also connect to protected third-party MCP servers through the MCP client auth provider. Refer to [MCP Authentication](../components/auth/mcp-auth/index.md) for more information.
+
+For shared workflows, both the **SSE** and **streamable-http** transports apply `server_auth` through the MCP SDK. Per-user workflows in this front end require **streamable-http**.
+
+Per-user workflows require authenticated requests so the server can derive a user ID from the Bearer token. See [Per-User Workflows](#per-user-workflows).
 
 ### Local Development
 For local development, you can use `localhost` or `127.0.0.1` as the host (default). This limits access to your local machine only.

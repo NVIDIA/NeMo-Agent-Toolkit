@@ -114,6 +114,62 @@ class UserManager:
 
         return None
 
+    @staticmethod
+    def verified_access_token_from_connection(connection: Request | WebSocket) -> object | None:
+        """Return the access token auth middleware stored on this connection, if any."""
+        scope = getattr(connection, "scope", None)
+        if not isinstance(scope, dict):
+            return None
+        access_token = getattr(scope.get("user"), "access_token", None)
+        token = getattr(access_token, "token", None)
+        if isinstance(token, str) and token:
+            return access_token
+        return None
+
+    @classmethod
+    def user_id_from_verified_access_token(cls, connection: Request | WebSocket, access_token: object) -> str:
+        """Return the user id for a token server auth has already accepted.
+
+        The id uses the same claim mapping as an unverified Bearer JWT. A
+        ``nat-session`` cookie that maps to that same user is ignored. A cookie
+        that maps to a different user is rejected, so the client cannot select
+        another per-user workflow while presenting its own valid token.
+
+        Raises:
+            ValueError: The token has no usable identity claim, or ``nat-session``
+                names a different user.
+        """
+        claims = cls._claims_from_verified_access_token(access_token)
+        if claims is None:
+            raise ValueError("Authenticated token has no usable identity claim")
+
+        user_id = cls._user_info_from_jwt(claims).get_user_id()
+        cookie = cls._get_session_cookie(connection)
+        if cookie:
+            cookie_user_id = UserInfo._from_session_cookie(cookie).get_user_id()
+            if cookie_user_id != user_id:
+                raise ValueError("nat-session cookie does not match the authenticated user")
+        return user_id
+
+    @staticmethod
+    def _claims_from_verified_access_token(access_token: object) -> dict[str, typing.Any] | None:
+        """Read identity claims from a token the auth middleware already verified."""
+        claims = getattr(access_token, "claims", None)
+        if isinstance(claims, dict) and any(
+                isinstance(claims.get(key), str) and claims[key].strip()
+                for key in ("sub", "email", "preferred_username")):
+            return claims
+
+        subject = getattr(access_token, "subject", None)
+        if isinstance(subject, str) and subject.strip():
+            return {"sub": subject}
+
+        # Older JWT token adapters may omit verified identity metadata.
+        token = getattr(access_token, "token", None)
+        if isinstance(token, str) and token.count(".") == 2:
+            return decode_jwt_claims_unverified(token)
+        return None
+
     @classmethod
     async def extract_user_from_connection_with_verification(
         cls,

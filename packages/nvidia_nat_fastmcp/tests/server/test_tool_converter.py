@@ -17,8 +17,13 @@
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
+from fastmcp import FastMCP
+from fastmcp.server.context import Context
+from pydantic import ConfigDict
+from pydantic import Field
 from pydantic import create_model
 
+from nat.plugins.fastmcp.server.tool_converter import INJECTED_CONTEXT_PARAM
 from nat.plugins.fastmcp.server.tool_converter import _build_name_mapping
 from nat.plugins.fastmcp.server.tool_converter import _sanitize_parameter_name
 from nat.plugins.fastmcp.server.tool_converter import create_function_wrapper
@@ -28,6 +33,7 @@ from nat.runtime.session import SessionManager
 def _mock_session_manager(result_value="result"):
     """Create a mock SessionManager for testing."""
     mock_sm = MagicMock(spec=SessionManager)
+    mock_sm.is_workflow_per_user = False
     mock_runner = MagicMock()
     mock_runner.__aenter__ = AsyncMock(return_value=mock_runner)
     mock_runner.__aexit__ = AsyncMock(return_value=None)
@@ -160,3 +166,70 @@ class TestParameterNameSanitization:
         wrapper = create_function_wrapper("tool", _mock_session_manager(), schema)
 
         assert "from_" in wrapper.__annotations__
+
+    def test_wrapper_declares_context_for_injection(self):
+        """FastMCP injects request context only when a Context parameter is annotated."""
+        from fastmcp.server.dependencies import find_kwarg_by_type
+
+        schema = create_model("Schema", **{"query": (str, ...)})  # type: ignore[call-overload]
+        wrapper = create_function_wrapper("tool", _mock_session_manager(), schema)
+
+        assert find_kwarg_by_type(wrapper, Context) == INJECTED_CONTEXT_PARAM
+
+    async def test_registered_tool_preserves_input_field_named_ctx(self):
+        """A user field named ctx is independent of the injected Context."""
+        schema = create_model("CtxSchema", ctx=(str, ...))
+        manager = _mock_session_manager()
+        wrapper = create_function_wrapper("tool", manager, schema)
+        server = FastMCP("test-server")
+        server.tool(name="tool")(wrapper)
+        tools = await server.list_tools()
+        assert set(tools[0].parameters["properties"]) == {"ctx"}
+        await server.call_tool("tool", {"ctx": "caller value"})
+        assert manager.run.call_args.args[0].ctx == "caller value"
+
+    async def test_registered_per_user_tool_excludes_ctx_from_client_schema(self):
+        """Registered tools expose workflow args but not the injected Context param."""
+        from fastmcp.server.dependencies import find_kwarg_by_type
+
+        schema = create_model("ToolSchema", **{"message": (str, ...)})  # type: ignore[call-overload]
+        mock_sm = _mock_session_manager()
+        mock_sm.is_workflow_per_user = True
+        mock_sm.get_workflow_input_schema = MagicMock(return_value=schema)
+        mock_sm.config = MagicMock(workflow=MagicMock(description="Per-user workflow"))
+
+        mcp = FastMCP("test-server")
+        from nat.plugins.fastmcp.server.tool_converter import register_function_with_mcp
+
+        register_function_with_mcp(mcp, "per_user_tool", mock_sm)
+        tools = await mcp.list_tools()
+
+        assert len(tools) == 1
+        assert set(tools[0].parameters["properties"]) == {"message"}
+        tool = await mcp.get_tool("per_user_tool")
+        assert find_kwarg_by_type(tool.fn, Context) == INJECTED_CONTEXT_PARAM
+
+
+async def test_registered_tool_disambiguates_context_from_aliases(monkeypatch):
+    """Preserve the advertised field names when aliases occupy context keyword candidates."""
+    from fastmcp.server.dependencies import find_kwarg_by_type
+
+    from nat.plugins.fastmcp.server import tool_converter
+
+    aliases = [INJECTED_CONTEXT_PARAM, f"{INJECTED_CONTEXT_PARAM}_2"]
+    fields = {f"message_{index}": (str, Field(alias=alias)) for index, alias in enumerate(aliases)}
+    schema = create_model("AliasedContextInput", __config__=ConfigDict(populate_by_name=True), **fields)
+    manager = _mock_session_manager()
+    wrapper = create_function_wrapper("tool", manager, schema)
+    context_name = find_kwarg_by_type(wrapper, Context)
+    assert context_name not in aliases
+    execute = AsyncMock(return_value="ok")
+    monkeypatch.setattr(tool_converter, "_run_through_session_manager", execute)
+    server = FastMCP("test-server")
+    server.tool(name="tool")(wrapper)
+    arguments = {f"message_{index}": f"value {index}" for index in range(len(aliases))}
+    tools = await server.list_tools()
+    assert set(tools[0].parameters["properties"]) == set(arguments)
+    await server.call_tool("tool", arguments)
+    assert execute.await_args.args[1].model_dump() == arguments
+    assert isinstance(execute.await_args.kwargs["ctx"], Context)

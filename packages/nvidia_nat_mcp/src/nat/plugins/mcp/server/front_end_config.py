@@ -93,17 +93,11 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
                 "or (2) configuring server_auth for production deployments on public interfaces.",
                 self.host)
 
-        # Check if SSE transport is used (which doesn't support authentication)
-        if self.transport == "sse":
-            if self.server_auth is not None:
-                logger.warning("SSE transport does not support authentication. "
-                               "The configured server_auth will be ignored. "
-                               "For production use with authentication, use 'streamable-http' transport instead.")
-            elif self.host not in localhost_hosts:
-                logger.warning(
-                    "SSE transport does not support authentication and is bound to '%s'. "
-                    "This configuration is not recommended for production use. "
-                    "For production deployments, use 'streamable-http' transport with server_auth configured.",
-                    self.host)
+        if self.transport == "sse" and self.server_auth is None and self.host not in localhost_hosts:
+            logger.warning(
+                "SSE transport is bound to '%s' without server_auth configured. "
+                "This configuration is not recommended for production use. "
+                "Configure server_auth to authenticate callers.",
+                self.host)
 
         return self

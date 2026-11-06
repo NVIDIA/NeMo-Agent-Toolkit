@@ -329,5 +329,8 @@ async def test_fastmcp_tool_names_accepts_function_group_name(monkeypatch: pytes
 
     await worker._default_add_routes(FastMCP("Test Server"), SimpleNamespace(build=AsyncMock()))
 
-    published = {call.kwargs["entry_function"] for call in session_create.call_args_list}
+    published = {
+        call.kwargs["entry_function"]
+        for call in session_create.call_args_list if call.kwargs.get("entry_function") is not None
+    }
     assert published == expected

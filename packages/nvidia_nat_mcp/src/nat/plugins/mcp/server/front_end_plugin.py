@@ -66,43 +66,46 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
             # Get the worker instance
             worker = self._get_worker_instance()
 
-            # Let the worker create the MCP server (allows plugins to customize)
-            mcp = await worker.create_mcp_server()
-
-            # Add routes through the worker (includes health endpoint and function registration)
-            await worker.add_routes(mcp, builder)
-
-            # Start the MCP server with configurable transport
-            # streamable-http is the default, but users can choose sse if preferred
             try:
-                # If base_path is configured, mount server at sub-path using FastAPI wrapper
-                if self.front_end_config.base_path:
-                    if self.front_end_config.transport == "sse":
-                        logger.warning(
-                            "base_path is configured but SSE transport does not support mounting at sub-paths. "
-                            "Use streamable-http transport for base_path support.")
+                # Let the worker create the MCP server (allows plugins to customize)
+                mcp = await worker.create_mcp_server()
+
+                # Add routes through the worker (includes health endpoint and function registration)
+                await worker.add_routes(mcp, builder)
+
+                # Start the MCP server with configurable transport
+                # streamable-http is the default, but users can choose sse if preferred
+                try:
+                    # If base_path is configured, mount server at sub-path using FastAPI wrapper
+                    if self.front_end_config.base_path:
+                        if self.front_end_config.transport == "sse":
+                            logger.warning(
+                                "base_path is configured but SSE transport does not support mounting at sub-paths. "
+                                "Use streamable-http transport for base_path support.")
+                            logger.info("Starting MCP server with SSE endpoint at /sse")
+                            await mcp.run_sse_async()
+                        else:
+                            full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}{self.front_end_config.base_path}/mcp"
+                            logger.info(
+                                "Mounting MCP server at %s/mcp on %s:%s",
+                                self.front_end_config.base_path,
+                                self.front_end_config.host,
+                                self.front_end_config.port,
+                            )
+                            logger.info("MCP server URL: %s", full_url)
+                            await self._run_with_mount(mcp)
+                    # Standard behavior - run at root path
+                    elif self.front_end_config.transport == "sse":
                         logger.info("Starting MCP server with SSE endpoint at /sse")
                         await mcp.run_sse_async()
-                    else:
-                        full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}{self.front_end_config.base_path}/mcp"
-                        logger.info(
-                            "Mounting MCP server at %s/mcp on %s:%s",
-                            self.front_end_config.base_path,
-                            self.front_end_config.host,
-                            self.front_end_config.port,
-                        )
+                    else:  # streamable-http
+                        full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}/mcp"
                         logger.info("MCP server URL: %s", full_url)
-                        await self._run_with_mount(mcp)
-                # Standard behavior - run at root path
-                elif self.front_end_config.transport == "sse":
-                    logger.info("Starting MCP server with SSE endpoint at /sse")
-                    await mcp.run_sse_async()
-                else:  # streamable-http
-                    full_url = f"http://{self.front_end_config.host}:{self.front_end_config.port}/mcp"
-                    logger.info("MCP server URL: %s", full_url)
-                    await mcp.run_streamable_http_async()
-            except KeyboardInterrupt:
-                logger.info("MCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
+                        await mcp.run_streamable_http_async()
+                except KeyboardInterrupt:
+                    logger.info("MCP server shutdown requested (Ctrl+C). Shutting down gracefully.")
+            finally:
+                await worker.cleanup()
 
     async def _run_with_mount(self, mcp: "FastMCP") -> None:
         """Run MCP server mounted at configured base_path using FastAPI wrapper.

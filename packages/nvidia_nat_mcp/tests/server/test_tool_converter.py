@@ -15,11 +15,13 @@
 
 import warnings
 from inspect import Parameter
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from mcp.server.fastmcp import Context
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.exceptions import ToolError
 from pydantic import AliasChoices
@@ -30,6 +32,7 @@ from pydantic.json_schema import PydanticJsonSchemaWarning
 
 from nat.builder.function import Function
 from nat.builder.workflow import Workflow
+from nat.plugins.mcp.server.tool_converter import INJECTED_CONTEXT_PARAM
 from nat.plugins.mcp.server.tool_converter import _build_name_mapping
 from nat.plugins.mcp.server.tool_converter import _sanitize_parameter_name
 from nat.plugins.mcp.server.tool_converter import create_function_wrapper
@@ -120,6 +123,7 @@ def create_mock_session_manager(workflow=None, result_value="result"):
         result_value: The value to return from runner.result()
     """
     mock_session_manager = MagicMock(spec=SessionManager)
+    mock_session_manager.is_workflow_per_user = False
 
     if workflow is None:
         workflow = create_mock_workflow_with_observability()
@@ -290,6 +294,32 @@ class TestCreateFunctionWrapper:
         assert "name" in sig.parameters
         assert "age" in sig.parameters
 
+    def test_create_wrapper_declares_context_for_injection(self):
+        """FastMCP injects request context only when a Context parameter is annotated."""
+        from mcp.server.fastmcp.utilities.context_injection import find_context_parameter
+
+        mock_session_manager = create_mock_session_manager()
+        wrapper = create_function_wrapper("regular_function", mock_session_manager, MockRegularSchema)
+
+        assert find_context_parameter(wrapper) == INJECTED_CONTEXT_PARAM
+        sig = getattr(wrapper, "__signature__", None)
+        assert sig is not None
+        assert INJECTED_CONTEXT_PARAM not in sig.parameters
+
+    async def test_registered_tool_preserves_input_field_named_ctx(self):
+        """A user field named ctx is independent of the injected Context."""
+        from pydantic import create_model
+
+        schema = create_model("CtxSchema", ctx=(str, ...))
+        manager = create_mock_session_manager()
+        wrapper = create_function_wrapper("tool", manager, schema)
+        server = FastMCP("test-server")
+        server.tool(name="tool")(wrapper)
+        tools = await server.list_tools()
+        assert set(tools[0].inputSchema["properties"]) == {"ctx"}
+        await server.call_tool("tool", {"ctx": "caller value"})
+        assert manager.run.call_args.args[0].ctx == "caller value"
+
     def test_create_wrapper_for_workflow(self):
         """Test creating wrapper for workflow function."""
         # Arrange
@@ -407,6 +437,7 @@ class TestRegisterFunctionWithMcp:
         mock_function = MagicMock(spec=Function)
         mock_function.input_schema = "function_schema"
         mock_session_manager = MagicMock(spec=SessionManager)
+        mock_session_manager.is_workflow_per_user = False
         mock_session_manager.workflow = mock_workflow
         function_name = "test_function"
 
@@ -436,6 +467,7 @@ class TestRegisterFunctionWithMcp:
         mock_workflow = MagicMock(spec=Workflow)
         mock_workflow.input_schema = "workflow_schema"
         mock_session_manager = MagicMock(spec=SessionManager)
+        mock_session_manager.is_workflow_per_user = False
         mock_session_manager.workflow = mock_workflow
         function_name = "test_workflow"
 
@@ -699,6 +731,7 @@ class TestIntegrationScenarios:
         # Arrange
         mock_workflow = create_mock_workflow_with_observability()
         mock_session_manager = MagicMock(spec=SessionManager)
+        mock_session_manager.is_workflow_per_user = False
         mock_session_manager.workflow = mock_workflow
 
         # Create mock runner that raises an error
@@ -1059,3 +1092,56 @@ class TestParameterNameSanitization:
         # The Pydantic model should have the original field names
         assert getattr(payload, "from") == "2024-01-01"
         assert getattr(payload, "cik-A") == "ABC"
+
+
+@pytest.mark.parametrize("fail", [False, True])
+async def test_wrapper_awaits_real_context_logging_and_preserves_errors(fail):
+    """Exercise the SDK's logging API with a real Context on both execution paths."""
+    session_manager = create_mock_session_manager(result_value="ok")
+    if fail:
+        session_manager.run.side_effect = RuntimeError("workflow failed")
+    server_session = SimpleNamespace(send_log_message=AsyncMock(), send_progress_notification=AsyncMock())
+    request_context = SimpleNamespace(session=server_session,
+                                      request_id=1,
+                                      meta=SimpleNamespace(progressToken="progress"))
+    context = Context(request_context=request_context)
+    wrapper = create_function_wrapper("echo", session_manager, MockRegularSchema)
+    if fail:
+        with pytest.raises(RuntimeError, match="workflow failed"):
+            await wrapper(name="test", _nat_mcp_context=context)
+        assert server_session.send_log_message.await_args.kwargs["level"] == "error"
+        assert "workflow failed" in server_session.send_log_message.await_args.kwargs["data"]
+    else:
+        assert await wrapper(name="test", _nat_mcp_context=context) == "ok"
+        assert server_session.send_log_message.await_args.kwargs["level"] == "info"
+        assert server_session.send_progress_notification.await_count == 2
+    assert server_session.send_log_message.await_count == (2 if fail else 1)
+
+
+@pytest.mark.parametrize("collision_count", [1, 2])
+async def test_registered_tool_preserves_context_aliases(collision_count, monkeypatch):
+    """Keep all advertised aliased arguments and inject Context under a distinct name."""
+    from mcp.server.fastmcp.utilities.context_injection import find_context_parameter
+    from pydantic import create_model
+
+    from nat.plugins.mcp.server import tool_converter
+
+    aliases = [INJECTED_CONTEXT_PARAM]
+    if collision_count == 2:
+        aliases.append(f"{INJECTED_CONTEXT_PARAM}_2")
+    fields = {f"message_{index}": (str, Field(alias=alias)) for index, alias in enumerate(aliases)}
+    schema = create_model("AliasedContextInput", **fields)
+    manager = create_mock_session_manager()
+    wrapper = create_function_wrapper("tool", manager, schema)
+    context_name = find_context_parameter(wrapper)
+    assert context_name not in aliases
+    execute = AsyncMock(return_value="ok")
+    monkeypatch.setattr(tool_converter, "_run_through_session_manager", execute)
+    server = FastMCP("test-server")
+    server.tool(name="tool")(wrapper)
+    tools = await server.list_tools()
+    assert set(tools[0].inputSchema["properties"]) == set(aliases)
+    await server.call_tool("tool", {alias: f"value {index}" for index, alias in enumerate(aliases)})
+    payload = execute.await_args.args[1]
+    assert payload.model_dump() == {f"message_{index}": f"value {index}" for index in range(collision_count)}
+    assert isinstance(execute.await_args.kwargs["ctx"], Context)
