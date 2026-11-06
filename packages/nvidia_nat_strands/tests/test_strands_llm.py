@@ -63,8 +63,10 @@ class TestOpenAIStrands:
             mock_model.assert_called_once()
 
     @pytest.mark.parametrize("max_retries", [0, 3, 10], ids=["zero", "custom", "default"])
-    @pytest.mark.asyncio
-    async def test_openai_strands_passes_max_retries(self, mock_async_openai, mock_builder, max_retries):
+    async def test_openai_strands_passes_max_retries(self,
+                                                     mock_async_openai: MagicMock,
+                                                     mock_builder: MagicMock,
+                                                     max_retries: int):
         """max_retries from the config must reach the AsyncOpenAI client instead of being dropped."""
         config = OpenAIModelConfig(model_name="gpt-4", max_retries=max_retries)
 
