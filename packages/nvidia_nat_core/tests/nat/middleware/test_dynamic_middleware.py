@@ -929,3 +929,28 @@ async def test_component_registration_keys_remain_stable_after_unregister():
     for component in components:
         assert await component.instance.search("query") == "query"
     assert len(middleware.pre_invoke_calls) == 2
+
+
+async def test_stale_registration_cannot_unregister_a_new_client(llm_client):
+    """A reused legacy key must not make an old registration handle valid again."""
+    first, second = llm_client, type(llm_client)()
+    builder = Mock(spec=Builder, _functions={})
+    builder.get_llm = AsyncMock(side_effect=[first, second])
+    middleware = _CountingDynamicMiddleware(DynamicMiddlewareConfig(register_llms=True), builder)
+
+    await builder.get_llm("shared", "test")
+    stale = middleware.get_registered("shared.ainvoke")
+    middleware.unregister(stale)
+    await builder.get_llm("shared", "test")
+    current = middleware.get_registered("shared.ainvoke")
+    assert current.component_instance is second
+
+    with pytest.raises(ValueError, match="'shared.ainvoke' is not registered"):
+        middleware.unregister(stale)
+    assert middleware.get_registered("shared.ainvoke") is current
+    assert await second.ainvoke("hi") == "response"
+    assert len(middleware.pre_invoke_calls) == 1
+
+    middleware.unregister(current)
+    assert await second.ainvoke("hi") == "response"
+    assert len(middleware.pre_invoke_calls) == 1

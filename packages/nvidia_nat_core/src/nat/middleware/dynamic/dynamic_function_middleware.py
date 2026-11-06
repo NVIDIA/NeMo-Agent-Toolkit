@@ -655,7 +655,8 @@ class DynamicFunctionMiddleware(FunctionMiddleware):
         Raises:
             ValueError: If not currently registered
         """
-        if registered.key not in self._registered_callables:
+        # A removed registration's key may have been reused by another client.
+        if self._registered_callables.get(registered.key) is not registered:
             raise ValueError(f"'{registered.key}' is not registered")
 
         if isinstance(registered, RegisteredFunction):
