@@ -73,6 +73,10 @@ _DEFAULT_OBJ = "state"
 _DYNAMIC_EXEC_NAMES = frozenset({"exec", "eval", "compile"})
 _KNOWN_SAFE_ATTR_READS = frozenset({"get", "keys", "values", "items", "copy"})
 
+# Methods that return a view of (or a copy of) the whole state, so calling them
+# depends on every key.  The keys are not statically known at the call site.
+_WHOLE_STATE_READ_METHODS = frozenset({"keys", "values", "items", "copy", "__iter__", "__len__"})
+
 
 @dataclass
 class StaticAnalysisResult:
@@ -340,9 +344,30 @@ class _NodeASTVisitor(ast.NodeVisitor):
                 self.mutations.add(alias_info[0], alias_info[1])
                 self.reads.add(alias_info[0], alias_info[1])
 
+        # Reading the whole state (len(), .keys(), .values(), .items(), .copy()) depends on
+        # every key, and the keys are not statically known here (#2531).
+        if isinstance(node.func, ast.Name) and node.func.id == "len" and node.args:
+            obj = self._get_obj_for_node(node.args[0])
+            if obj is not None:
+                self._mark_whole_state_read(obj, "len()")
+        if isinstance(node.func, ast.Attribute) and node.func.attr in _WHOLE_STATE_READ_METHODS:
+            obj = self._get_obj_for_node(node.func.value)
+            if obj is not None:
+                self._mark_whole_state_read(obj, f"{node.func.attr}()")
+
         self._check_special_calls(node)
         self._check_state_passed_to_call(node)
         self.generic_visit(node)
+
+    def _mark_whole_state_read(self, obj: str, reason: str) -> None:
+        """Flag a read that depends on every key of the state object.
+
+        ``len(state)``, ``state.items()``, iteration over the state and ``{**state}``
+        all depend on whichever keys happen to be there, but the keys are not
+        statically known at the call site, so the analysis is partial.
+        """
+        self.has_dynamic_keys = True
+        self.warnings.append(f"{reason} reads the whole state; keys are not statically known")
 
     def _record_state_method_call(self, node: ast.Call, obj: str, method: str) -> None:
         """Record a mutating method called on the state object itself, e.g. ``state.update({...})``
@@ -424,17 +449,33 @@ class _NodeASTVisitor(ast.NodeVisitor):
         # ``"key" in state`` depends on whether an earlier node set the key, so it reads it.
         operands = [node.left, *node.comparators]
         for i, op in enumerate(node.ops):
-            if not isinstance(op, (ast.In, ast.NotIn)):
-                continue
-            obj = self._get_obj_for_node(node.comparators[i])
-            if obj is None:
-                continue
-            key = self._extract_string_key(operands[i])
-            if key:
-                self.reads.add(obj, key)
-            else:
-                self.has_dynamic_keys = True
-                self.warnings.append("Dynamic key in a membership test on state")
+            if isinstance(op, (ast.In, ast.NotIn)):
+                obj = self._get_obj_for_node(node.comparators[i])
+                if obj is None:
+                    continue
+                key = self._extract_string_key(operands[i])
+                if key:
+                    self.reads.add(obj, key)
+                else:
+                    self.has_dynamic_keys = True
+                    self.warnings.append("Dynamic key in a membership test on state")
+            elif isinstance(op, (ast.Eq, ast.NotEq)):
+                # ``state == {...}`` reads the keys of the literal it is compared with.
+                left, right = operands[i], node.comparators[i]
+                obj = self._get_obj_for_node(right)
+                literal = left
+                if obj is None:
+                    obj = self._get_obj_for_node(left)
+                    literal = right
+                if obj is None:
+                    continue
+                if isinstance(literal, ast.Dict) and all(
+                        isinstance(k, ast.Constant) and isinstance(k.value, str) for k in literal.keys):
+                    for key_node in literal.keys:
+                        if isinstance(key_node, ast.Constant) and isinstance(key_node.value, str):
+                            self.reads.add(obj, key_node.value)
+                else:
+                    self._mark_whole_state_read(obj, "comparison")
         self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign):  # pylint: disable=invalid-name
@@ -482,6 +523,21 @@ class _NodeASTVisitor(ast.NodeVisitor):
                             self.has_closure_write = True
                         elif base_name not in param_names:
                             self.has_global_write = True
+        self.generic_visit(node)
+
+    def visit_For(self, node: ast.For):  # pylint: disable=invalid-name
+        # ``for key in state`` and ``for key in state.items()`` depend on every key.
+        obj = self._get_obj_for_node(node.iter)
+        if obj is not None:
+            self._mark_whole_state_read(obj, "iteration")
+        self.generic_visit(node)
+
+    def visit_Dict(self, node: ast.Dict):  # pylint: disable=invalid-name
+        for key, value in zip(node.keys, node.values):
+            if key is None:  # ``{**state}`` unpacks every key
+                obj = self._get_obj_for_node(value)
+                if obj is not None:
+                    self._mark_whole_state_read(obj, "dict unpacking")
         self.generic_visit(node)
 
     # -- assignment helpers -------------------------------------------------

@@ -579,3 +579,68 @@ class TestChainedSubscript:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+class TestWholeStateReads:
+    """Reads that depend on every key must mark the analysis partial (#2531)."""
+
+    def test_len_of_state_is_dynamic(self):
+
+        def fn(state):
+            return {"n": len(state)}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+        assert any("len()" in w for w in r.warnings)
+
+    def test_iteration_over_state_items_is_dynamic(self):
+
+        def fn(state):
+            for _key, _value in state.items():
+                pass
+            return {}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+        assert any("items()" in w for w in r.warnings)
+
+    def test_iteration_over_state_is_dynamic(self):
+
+        def fn(state):
+            total = 0
+            for _key in state:
+                total += 1
+            return {"n": total}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+        assert any("iteration" in w for w in r.warnings)
+
+    def test_dict_unpacking_state_is_dynamic(self):
+
+        def fn(state):
+            snapshot = {**state}
+            return {"snapshot": snapshot}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+        assert any("dict unpacking" in w for w in r.warnings)
+
+    def test_comparison_with_dict_literal_reads_its_keys(self):
+
+        def fn(state):
+            return {"same": state == {"a": 1, "b": 2}}
+
+        r = analyze_function_ast(fn)
+        assert r.reads.all_fields_flat == {"a", "b"}
+        assert not r.has_dynamic_keys
+
+    def test_comparison_with_a_variable_is_dynamic(self):
+
+        def fn(state):
+            other = {"a": 1}
+            return {"same": state == other}
+
+        r = analyze_function_ast(fn)
+        assert r.has_dynamic_keys
+        assert any("comparison" in w for w in r.warnings)
