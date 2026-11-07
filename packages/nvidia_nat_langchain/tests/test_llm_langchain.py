@@ -209,6 +209,31 @@ class TestAzureOpenAILangChain:
         mock_httpx_async_client.assert_called_once()
         assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
 
+    @patch("langchain_openai.AzureChatOpenAI")
+    async def test_stream_usage_enabled(self, mock_chat, azure_cfg, mock_builder, mock_httpx_async_client):
+        """Streaming token usage must be requested; AzureChatOpenAI leaves it unset with a custom http client."""
+        mock_httpx_async_client.aclose = AsyncMock()
+        async with azure_openai_langchain(azure_cfg, mock_builder):
+            pass
+        assert mock_chat.call_args.kwargs["stream_usage"] is True
+
+    @patch("langchain_openai.AzureChatOpenAI")
+    async def test_stream_usage_in_config_does_not_duplicate_keyword(self,
+                                                                     mock_chat,
+                                                                     azure_cfg,
+                                                                     mock_builder,
+                                                                     mock_httpx_async_client):
+        """An explicit ``stream_usage`` in the config is preserved and not passed twice."""
+        mock_httpx_async_client.aclose = AsyncMock()
+        azure_cfg = AzureOpenAIModelConfig(azure_deployment="gpt-4",
+                                           api_key="test-key",
+                                           azure_endpoint="https://test.openai.azure.com",
+                                           api_version="2024-02-01",
+                                           stream_usage=False)
+        async with azure_openai_langchain(azure_cfg, mock_builder):
+            pass
+        assert mock_chat.call_args.kwargs["stream_usage"] is False
+
 
 class TestOCILangChain:
     """Tests for the oci_langchain wrapper."""
