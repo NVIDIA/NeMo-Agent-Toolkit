@@ -42,25 +42,6 @@ from nat.data_models.token_usage import TokenUsageBaseModel
 logger = logging.getLogger(__name__)
 
 
-def _combine_chunks(chunks: list[Any]) -> Any:
-    """Combine streamed Semantic Kernel message chunks into one message with Semantic Kernel's ``+``.
-
-    Each ``+`` copies the text and inner content accumulated so far, so adding the chunks one at a time is quadratic
-    in the number of chunks. ``+`` concatenates text and function-call arguments and merges metadata, so it is
-    associative: adding neighbouring pairs, level by level, gives the same message while copying each chunk only
-    O(log n) times.
-
-    Args:
-        chunks: The chunks of one choice, in stream order. Must not be empty.
-
-    Returns:
-        The combined message, equal to ``reduce(operator.add, chunks)``.
-    """
-    while len(chunks) > 1:
-        chunks = [reduce(operator.add, chunks[i:i + 2]) for i in range(0, len(chunks), 2)]
-    return chunks[0]
-
-
 class SemanticKernelPatchMethod(BaseModel):
     """
     Stores the module and function to patch in Semantic Kernel.
@@ -161,7 +142,10 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
                 finally:
                     # Also runs when the stream raises or the consumer stops early, so LLM_START is always closed.
                     try:
-                        response = _combine_chunks(chunks) if chunks else None
+                        # Add the chunks left to right, as Semantic Kernel does: its ``+`` is not associative (an
+                        # argument fragment that adds up to "{}" counts as empty), so a different grouping can change
+                        # the tool-call arguments.
+                        response = reduce(operator.add, chunks) if chunks else None
                         usage = next(
                             (chunk.metadata["usage"] for chunk in reversed(chunks) if chunk.metadata.get("usage")),
                             None)
@@ -178,9 +162,13 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
             try:
                 output = await original_func(sk_self, *args, **kwargs)
             finally:
-                response = output[0] if output else None
-                usage = response.metadata.get("usage") if response is not None else None
-                self._push_llm_end(uuid, model_name, model_input, response, usage)
+                # A recording error is logged, so it never replaces the service's exception or result.
+                try:
+                    response = output[0] if output else None
+                    usage = response.metadata.get("usage") if response is not None else None
+                    self._push_llm_end(uuid, model_name, model_input, response, usage)
+                except Exception:
+                    logger.exception("Error recording a Semantic Kernel LLM call")
 
             return output
 

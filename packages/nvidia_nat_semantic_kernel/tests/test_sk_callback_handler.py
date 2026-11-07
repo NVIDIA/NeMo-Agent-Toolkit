@@ -167,6 +167,32 @@ async def test_semantic_kernel_handler_streaming_chat_completion(reactive_stream
     assert (token_usage.prompt_tokens, token_usage.completion_tokens, token_usage.total_tokens) == (7, 2, 9)
 
 
+def _chat_response(request: httpx.Request) -> httpx.Response:
+    """Answer a chat completion with "Hello world" and its token usage."""
+    return httpx.Response(200,
+                          json={
+                              "id": "c1",
+                              "object": "chat.completion",
+                              "created": 0,
+                              "model": "test-model",
+                              "choices": [{
+                                  "index": 0,
+                                  "message": {
+                                      "role": "assistant", "content": "Hello world"
+                                  },
+                                  "finish_reason": "stop"
+                              }],
+                              "usage": {
+                                  "prompt_tokens": 7,
+                                  "completion_tokens": 2,
+                                  "total_tokens": 9,
+                                  "prompt_tokens_details": {
+                                      "cached_tokens": 3
+                                  }
+                              },
+                          })
+
+
 @pytest.mark.usefixtures("restore_sk_patch_targets")
 async def test_semantic_kernel_handler_chat_completion_token_usage(reactive_stream: Subject):
     """Non-streaming chat completions record the provider's token usage, including the total."""
@@ -176,35 +202,11 @@ async def test_semantic_kernel_handler_chat_completion_token_usage(reactive_stre
     from nat.data_models.intermediate_step import IntermediateStepType
     from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
 
-    def chat_response(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200,
-                              json={
-                                  "id": "c1",
-                                  "object": "chat.completion",
-                                  "created": 0,
-                                  "model": "test-model",
-                                  "choices": [{
-                                      "index": 0,
-                                      "message": {
-                                          "role": "assistant", "content": "Hello world"
-                                      },
-                                      "finish_reason": "stop"
-                                  }],
-                                  "usage": {
-                                      "prompt_tokens": 7,
-                                      "completion_tokens": 2,
-                                      "total_tokens": 9,
-                                      "prompt_tokens_details": {
-                                          "cached_tokens": 3
-                                      }
-                                  },
-                              })
-
     events = []
     _ = reactive_stream.subscribe(events.append)
     SemanticKernelProfilerHandler(workflow_llms={"llm": SimpleNamespace(provider_type="openai")}).instrument()
 
-    service = _openai_chat_service(chat_response)
+    service = _openai_chat_service(_chat_response)
     chat_history = ChatHistory()
     chat_history.add_user_message("Say hello")
 
@@ -401,3 +403,108 @@ async def test_semantic_kernel_handler_closing_stream_closes_inner_stream(reacti
 
     assert str(first[0]) == "Hello"
     assert order == [IntermediateStepType.LLM_START, "inner closed", IntermediateStepType.LLM_END]
+
+
+def _split_arguments_streaming_response(request: httpx.Request) -> httpx.Response:
+    """Answer a streaming chat completion with one tool call whose arguments arrive as ``{"a":{}}`` in five pieces.
+
+    Semantic Kernel's ``+`` treats arguments of ``"{}"`` as empty, so adding the pieces pairwise instead of left to
+    right gives ``{"a":}``.
+    """
+    fragments = ['', '{"a":', '{', '}', '}']
+    first_call = {"index": 0, "id": "call_a", "type": "function", "function": {"name": "tool", "arguments": ""}}
+    deltas = [{"role": "assistant", "tool_calls": [first_call]}]
+    deltas.extend({"tool_calls": [{"index": 0, "function": {"arguments": fragment}}]} for fragment in fragments[1:])
+    chunks = [{"choices": [{"index": 0, "delta": delta, "finish_reason": None}]} for delta in deltas]
+    chunks.append({"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]})
+    header = {"id": "c1", "object": "chat.completion.chunk", "created": 0, "model": "test-model"}
+    body = "".join(f"data: {json.dumps({**header, **chunk})}\n\n" for chunk in chunks) + "data: [DONE]\n\n"
+    return httpx.Response(200, headers={"content-type": "text/event-stream"}, content=body.encode())
+
+
+@pytest.mark.usefixtures("restore_sk_patch_targets")
+async def test_semantic_kernel_handler_streaming_adds_chunks_left_to_right(reactive_stream: Subject):
+    """LLM_END records the left-to-right sum of the chunks, which keeps tool-call arguments that contain ``{}``."""
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+    from semantic_kernel.contents import ChatHistory
+    from semantic_kernel.contents import FunctionCallContent
+
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
+
+    events = []
+    _ = reactive_stream.subscribe(events.append)
+    SemanticKernelProfilerHandler(workflow_llms={"llm": SimpleNamespace(provider_type="openai")}).instrument()
+
+    service = _openai_chat_service(_split_arguments_streaming_response)
+    chat_history = ChatHistory()
+    chat_history.add_user_message("Call the tool")
+
+    chunks = []
+    async for messages in service.get_streaming_chat_message_contents(chat_history,
+                                                                      OpenAIChatPromptExecutionSettings()):
+        chunks.extend(message for message in messages if message.choice_index == 0)
+
+    expected = reduce(operator.add, chunks)
+    assert [item.arguments for item in expected.items if isinstance(item, FunctionCallContent)] == ['{"a":{}}']
+
+    assert [event.event_type for event in events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert events[1].payload.metadata.chat_responses == expected.model_dump()
+
+
+@pytest.mark.usefixtures("restore_sk_patch_targets")
+@pytest.mark.parametrize("streaming", [False, True], ids=["non_streaming", "streaming"])
+@pytest.mark.parametrize("service_fails", [False, True], ids=["service_succeeds", "service_fails"])
+async def test_semantic_kernel_handler_llm_end_observer_error_is_not_raised(reactive_stream: Subject,
+                                                                            streaming: bool,
+                                                                            service_fails: bool):
+    """An observer that raises on LLM_END changes neither the service's result nor the exception it raises."""
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+    from semantic_kernel.contents import ChatHistory
+    from semantic_kernel.exceptions import ServiceResponseException
+
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
+    from nat.utils.reactive.base.observer_base import ObserverBase
+
+    class FailingOnLLMEnd(ObserverBase):
+
+        def on_next(self, value) -> None:
+            if value.event_type == IntermediateStepType.LLM_END:
+                raise RuntimeError("observer failed")
+
+        def on_error(self, exc: Exception) -> None:
+            pass
+
+        def on_complete(self) -> None:
+            pass
+
+    events = []
+    _ = reactive_stream.subscribe(events.append)
+    _ = reactive_stream.subscribe(FailingOnLLMEnd())
+    SemanticKernelProfilerHandler(workflow_llms={"llm": SimpleNamespace(provider_type="openai")}).instrument()
+
+    if streaming:
+        service = _openai_chat_service(_bad_request if service_fails else _streaming_response)
+    else:
+        service = _openai_chat_service(_bad_request if service_fails else _chat_response)
+    chat_history = ChatHistory()
+    chat_history.add_user_message("Say hello")
+    settings = OpenAIChatPromptExecutionSettings()
+
+    async def call() -> str:
+        if streaming:
+            text = ""
+            async for messages in service.get_streaming_chat_message_contents(chat_history, settings):
+                text += "".join(str(message) for message in messages)
+            return text
+        messages = await service.get_chat_message_contents(chat_history, settings)
+        return str(messages[0])
+
+    if service_fails:
+        with pytest.raises(ServiceResponseException):
+            await call()
+    else:
+        assert await call() == "Hello world"
+
+    assert [event.event_type for event in events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
