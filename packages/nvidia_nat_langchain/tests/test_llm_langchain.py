@@ -223,7 +223,7 @@ class TestAzureOpenAILangChain:
                                                                      azure_cfg,
                                                                      mock_builder,
                                                                      mock_httpx_async_client):
-        """An extra ``stream_usage`` key in the config must not be passed twice to the client."""
+        """An explicit ``stream_usage`` in the config is preserved and not passed twice."""
         mock_httpx_async_client.aclose = AsyncMock()
         azure_cfg = AzureOpenAIModelConfig(azure_deployment="gpt-4",
                                            api_key="test-key",
@@ -232,7 +232,7 @@ class TestAzureOpenAILangChain:
                                            stream_usage=False)
         async with azure_openai_langchain(azure_cfg, mock_builder):
             pass
-        assert mock_chat.call_args.kwargs["stream_usage"] is True
+        assert mock_chat.call_args.kwargs["stream_usage"] is False
 
 
 class TestOCILangChain:
