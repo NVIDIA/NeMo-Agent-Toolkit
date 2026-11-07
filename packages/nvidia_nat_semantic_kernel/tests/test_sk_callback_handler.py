@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import json
+import operator
 from collections.abc import Callable
+from functools import reduce
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -278,3 +280,124 @@ async def test_semantic_kernel_handler_closed_stream_ends_llm_step(reactive_stre
     assert "".join(str(message) for message in first) == "Hello"
     assert [event.event_type for event in events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
     assert events[1].payload.data.output == "Hello"
+
+
+def _tool_call_streaming_response(request: httpx.Request) -> httpx.Response:
+    """Answer a streaming chat completion with text, two parallel tool calls split over several chunks, and usage."""
+    deltas = [
+        {
+            "role": "assistant", "content": "Checking"
+        },
+        {
+            "content": " the weather."
+        },
+        {
+            "tool_calls": [{
+                "index": 0, "id": "call_a", "type": "function", "function": {
+                    "name": "weather-get", "arguments": ""
+                }
+            }]
+        },
+        {
+            "tool_calls": [{
+                "index": 0, "function": {
+                    "arguments": '{"city": '
+                }
+            }]
+        },
+        {
+            "tool_calls": [{
+                "index": 0, "function": {
+                    "arguments": '"Paris"}'
+                }
+            }]
+        },
+        {
+            "tool_calls": [{
+                "index": 1,
+                "id": "call_b",
+                "type": "function",
+                "function": {
+                    "name": "weather-get", "arguments": '{"city": '
+                }
+            }]
+        },
+        {
+            "tool_calls": [{
+                "index": 1, "function": {
+                    "arguments": '"Rome"}'
+                }
+            }]
+        },
+    ]
+    chunks = [{"choices": [{"index": 0, "delta": delta, "finish_reason": None}]} for delta in deltas]
+    chunks.append({"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]})
+    chunks.append({"choices": [], "usage": {"prompt_tokens": 7, "completion_tokens": 12, "total_tokens": 19}})
+    header = {"id": "c1", "object": "chat.completion.chunk", "created": 0, "model": "test-model"}
+    body = "".join(f"data: {json.dumps({**header, **chunk})}\n\n" for chunk in chunks) + "data: [DONE]\n\n"
+    return httpx.Response(200, headers={"content-type": "text/event-stream"}, content=body.encode())
+
+
+@pytest.mark.usefixtures("restore_sk_patch_targets")
+async def test_semantic_kernel_handler_streaming_records_combined_message(reactive_stream: Subject):
+    """LLM_END records the same message as adding the streamed chunks one by one, tool calls included."""
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+    from semantic_kernel.contents import ChatHistory
+    from semantic_kernel.contents import FunctionCallContent
+
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
+
+    events = []
+    _ = reactive_stream.subscribe(events.append)
+    SemanticKernelProfilerHandler(workflow_llms={"llm": SimpleNamespace(provider_type="openai")}).instrument()
+
+    service = _openai_chat_service(_tool_call_streaming_response)
+    chat_history = ChatHistory()
+    chat_history.add_user_message("Weather in Paris and Rome?")
+
+    chunks = []
+    async for messages in service.get_streaming_chat_message_contents(chat_history,
+                                                                      OpenAIChatPromptExecutionSettings()):
+        chunks.extend(message for message in messages if message.choice_index == 0)
+
+    expected = reduce(operator.add, chunks)
+    function_calls = [item for item in expected.items if isinstance(item, FunctionCallContent)]
+    assert [(call.id, call.arguments) for call in function_calls] == [("call_a", '{"city": "Paris"}'),
+                                                                      ("call_b", '{"city": "Rome"}')]
+
+    assert [event.event_type for event in events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert events[1].payload.data.output == "Checking the weather."
+    assert events[1].payload.metadata.chat_responses == expected.model_dump()
+    assert events[1].payload.usage_info.token_usage.total_tokens == 19
+
+
+async def test_semantic_kernel_handler_closing_stream_closes_inner_stream(reactive_stream: Subject):
+    """Closing the profiled stream early closes Semantic Kernel's stream before LLM_END is pushed."""
+    from semantic_kernel.contents import AuthorRole
+    from semantic_kernel.contents import ChatHistory
+    from semantic_kernel.contents import StreamingChatMessageContent
+
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.plugins.semantic_kernel.callback_handler import SemanticKernelProfilerHandler
+
+    order = []
+    _ = reactive_stream.subscribe(lambda event: order.append(event.event_type))
+
+    async def inner_stream(sk_self, chat_history):
+        try:
+            for text in ("Hello", " world"):
+                yield [StreamingChatMessageContent(role=AuthorRole.ASSISTANT, choice_index=0, content=text)]
+        finally:
+            order.append("inner closed")
+
+    patched = SemanticKernelProfilerHandler(workflow_llms={})._build_llm_call_patch(inner_stream)
+    chat_history = ChatHistory()
+    chat_history.add_user_message("Say hello")
+
+    stream = patched(SimpleNamespace(ai_model_id="test-model"), chat_history)
+    first = await anext(stream)
+    await stream.aclose()
+
+    assert str(first[0]) == "Hello"
+    assert order == [IntermediateStepType.LLM_START, "inner closed", IntermediateStepType.LLM_END]
