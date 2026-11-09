@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import json
 import logging
 import time
@@ -96,7 +97,7 @@ class BearerTokenValidator:
         self._jwks_cache: dict[str, dict[str, Any]] = {}
         # OIDC config cache: url -> {config, cache_expires_at}
         self._oidc_config_cache: dict[str, dict[str, Any]] = {}
-        # Positive introspection result cache: token_prefix -> {result, cache_expires_at}
+        # Positive introspection result cache: SHA-256 token digest -> {result, cache_expires_at}
         self._introspection_cache: dict[str, dict[str, Any]] = {}
 
         # Cache TTL settings
@@ -243,7 +244,8 @@ class BearerTokenValidator:
             TokenValidationResult
         """
 
-        cache_key = token[:10] if len(token) >= 10 else token
+        # Bind cached authorization to the entire token without retaining raw credentials as keys.
+        cache_key = hashlib.sha256(token.encode("utf-8")).hexdigest()
 
         # Check cache first
         cache_entry = self._introspection_cache.get(cache_key)
