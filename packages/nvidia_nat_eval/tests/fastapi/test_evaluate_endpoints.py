@@ -482,6 +482,82 @@ def test_evaluate_item_evaluation_error(evaluate_item_client_with_error: TestCli
     assert "Evaluation failed" in data["error"]
 
 
+@pytest_asyncio.fixture(name="evaluate_item_client_atif_only")
+async def evaluate_item_client_atif_only_fixture(restore_environ: typing.MutableMapping[str, str]) -> TestClient:
+    """Test client whose evaluator, like the documented ATIF-only example, only has `evaluate_atif_fn`."""
+    from nat.builder.evaluator import EvaluatorInfo
+    from nat.data_models.evaluator import EvaluatorBaseConfig
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
+    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
+
+    config = Config()
+    config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(
+        path="/evaluate/item", method="POST", description="Test evaluate item endpoint"))
+
+    # Ensure this fixture runs in non-Dask mode regardless of ambient test env.
+    os.environ.pop("NAT_DASK_SCHEDULER_ADDRESS", None)
+    os.environ.pop("NAT_JOB_STORE_DB_URL", None)
+
+    worker = FastApiFrontEndPluginWorker(config)
+    app = FastAPI()
+
+    async def evaluate_atif_fn(atif_samples: AtifEvalSampleList) -> EvalOutput:
+        sample = atif_samples[0]
+        messages = [step.message for step in sample.trajectory.steps]
+        return EvalOutput(eval_output_items=[EvalOutputItem(id=sample.item_id, score=1.0, reasoning=messages)],
+                          average_score=1.0)
+
+    evaluator = EvaluatorInfo(config=EvaluatorBaseConfig(), description="ATIF-only evaluator")
+    evaluator.evaluate_atif_fn = evaluate_atif_fn
+    worker._evaluators = {"atif_only": evaluator}
+
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
+        mock_session = MagicMock()
+        MockSessionManager.return_value = mock_session
+        await add_evaluate_item_route(worker, app, session_manager=mock_session)
+
+    return TestClient(app)
+
+
+def test_evaluate_item_atif_only_evaluator(evaluate_item_client_atif_only: TestClient) -> None:
+    """An evaluator registered with only `evaluate_atif_fn` scores the item from its ATIF trajectory."""
+    llm_end = {
+        "parent_id": "root",
+        "function_ancestry": {
+            "function_name": "workflow", "function_id": "workflow"
+        },
+        "payload": {
+            "event_type": "LLM_END",
+            "name": "llm",
+            "data": {
+                "input": "What is AI?", "output": "AI is artificial intelligence"
+            }
+        },
+    }
+    payload = {
+        "evaluator_name": "atif_only",
+        "item": {
+            "id": "test_1",
+            "input_obj": "What is AI?",
+            "expected_output_obj": "Artificial Intelligence",
+            "output_obj": "AI is artificial intelligence",
+            "trajectory": [llm_end],
+            "expected_trajectory": [],
+            "full_dataset_entry": {}
+        }
+    }
+
+    response = evaluate_item_client_atif_only.post("/evaluate/item", json=payload)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["error"] is None
+    assert data["success"] is True
+    assert data["result"]["id"] == "test_1"
+    assert data["result"]["reasoning"] == ["AI is artificial intelligence"]
+
+
 def test_evaluate_item_invalid_payload(evaluate_item_client: TestClient):
     """Test with invalid request payload."""
     # Missing required 'item' field

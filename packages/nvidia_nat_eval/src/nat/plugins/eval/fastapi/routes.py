@@ -34,6 +34,7 @@ from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
 from nat.front_ends.fastapi.routes.common_utils import RESPONSE_500
 from nat.front_ends.fastapi.routes.common_utils import _serialize_request
+from nat.plugins.eval.runtime.atif_adapter import EvalAtifAdapter
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.runtime.loader import load_workflow
 from nat.runtime.session import SessionManager
@@ -221,7 +222,12 @@ async def _add_evaluate_item_route(worker: Any, app: FastAPI, session_manager: S
 
             try:
                 evaluator = worker._evaluators[request.evaluator_name]
-                result = await evaluator.evaluate_fn(EvalInput(eval_input_items=[request.item]))
+                eval_input = EvalInput(eval_input_items=[request.item])
+                if callable(evaluator.evaluate_fn):
+                    result = await evaluator.evaluate_fn(eval_input)
+                else:
+                    # An ATIF-only evaluator has no `evaluate_fn`; give it the item as an ATIF sample.
+                    result = await evaluator.evaluate_atif_fn(EvalAtifAdapter().build_samples(eval_input))
 
                 if result.eval_output_items:
                     output_item = result.eval_output_items[0]
