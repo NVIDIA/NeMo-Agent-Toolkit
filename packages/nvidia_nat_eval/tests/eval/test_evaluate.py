@@ -250,6 +250,33 @@ async def test_run_workflow_local_success(evaluation_run, session_manager, gener
     assert not evaluation_run.workflow_interrupted
 
 
+@pytest.mark.parametrize("per_input_user_id", [False, True])
+async def test_run_workflow_local_uses_configured_user_id(evaluation_run, session_manager, per_input_user_id):
+    """`nat eval --user_id` sets the user id of every workflow session, with a per-item suffix when enabled."""
+    session_user_ids = []
+    run_session = session_manager.session
+
+    @asynccontextmanager
+    async def recording_session(http_connection=None, user_id=None):
+        session_user_ids.append(user_id)
+        async with run_session(http_connection=http_connection, user_id=user_id) as session:
+            yield session
+
+    session_manager.session = recording_session
+    evaluation_run.config.user_id = "alice"
+    evaluation_run.eval_config.general.per_input_user_id = per_input_user_id
+
+    await evaluation_run.run_workflow_local(session_manager)
+
+    assert len(session_user_ids) == 1
+    if per_input_user_id:
+        prefix, _, suffix = session_user_ids[0].partition("-")
+        assert prefix == "alice"
+        UUID(suffix)
+    else:
+        assert session_user_ids == ["alice"]
+
+
 async def test_run_workflow_local_errors(evaluation_run, session_manager):
     """Test workflow with no 'single output' fails gracefully."""
 
