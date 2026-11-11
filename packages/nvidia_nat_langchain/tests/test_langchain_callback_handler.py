@@ -23,6 +23,8 @@ from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration
 from langchain_core.outputs import Generation
 from langchain_core.outputs import LLMResult
+from langchain_core.runnables import RunnableLambda
+from langchain_core.tools import tool
 
 from nat.builder.context import Context
 from nat.data_models.intermediate_step import IntermediateStep
@@ -425,24 +427,98 @@ async def test_langchain_handler_tracks_chain_events_with_default_metadata(chain
     assert str(run_id) not in handler._run_id_to_start_time
 
 
-async def test_langchain_handler_clears_chain_state_on_error(chain_handler_fixture):
-    """Test that failed LangChain Runnable/chain callbacks do not leak run state."""
+async def test_langchain_handler_closes_chain_span_on_error(chain_handler_fixture):
+    """Test that a failed LangChain Runnable/chain closes its span and does not leak run state."""
 
     handler, all_stats = chain_handler_fixture
+    context = Context.get()
+    initial_span = context.active_span_id
 
     run_id = uuid4()
     await handler.on_chain_start(
         serialized={"name": "FailingRunnable"},
         inputs={"question": "boom?"},
         run_id=run_id,
+        tags=["chain-test"],
     )
-    await handler.on_chain_error(RuntimeError("boom"), run_id=run_id)
+    await handler.on_chain_error(RuntimeError("boom"), run_id=run_id, tags=["chain-test"])
+    await handler.on_chain_error(RuntimeError("boom"), run_id=run_id, tags=["chain-test"])
 
-    assert len(all_stats) == 1
-    assert all_stats[0].event_type == IntermediateStepType.FUNCTION_START
+    event_types = [step.event_type for step in all_stats]
+    assert event_types == [IntermediateStepType.FUNCTION_START, IntermediateStepType.FUNCTION_END]
+    assert all_stats[1].UUID == str(run_id)
+    assert all_stats[1].payload.name == "FailingRunnable"
+    assert all_stats[1].payload.tags == ["chain-test"]
+    assert all_stats[1].payload.data.input == {"question": "boom?"}
+    assert all_stats[1].payload.metadata == {"status": "RuntimeError"}
+    assert all_stats[1].span_event_timestamp <= all_stats[1].event_timestamp
+    assert context.active_span_id == initial_span
     assert str(run_id) not in handler._run_id_to_chain_input
     assert str(run_id) not in handler._run_id_to_chain_name
     assert str(run_id) not in handler._run_id_to_start_time
+
+
+async def test_langchain_handler_closes_failed_runnable_span(chain_handler_fixture):
+    """A Runnable that raises closes the span LangChain opened for it."""
+
+    handler, all_stats = chain_handler_fixture
+    context = Context.get()
+    initial_span = context.active_span_id
+
+    def failing_step(_value: int) -> int:
+        raise RuntimeError("step failed")
+
+    with pytest.raises(RuntimeError, match="step failed"):
+        await RunnableLambda(failing_step).ainvoke(1, config={"callbacks": [handler]})
+
+    event_types = [step.event_type for step in all_stats]
+    assert event_types == [IntermediateStepType.FUNCTION_START, IntermediateStepType.FUNCTION_END]
+    assert all_stats[0].UUID == all_stats[1].UUID
+    assert all_stats[1].payload.name == "failing_step"
+    assert all_stats[1].payload.metadata == {"status": "RuntimeError"}
+    assert context.active_span_id == initial_span
+    assert not handler._run_id_to_chain_name
+    assert not handler._run_id_to_start_time
+
+
+async def test_langchain_handler_closes_failed_tool_span(chain_handler_fixture):
+    """A tool call that raises closes its span, and the next tool call is not nested under it."""
+
+    handler, all_stats = chain_handler_fixture
+    context = Context.get()
+    initial_span = context.active_span_id
+
+    @tool
+    async def lookup(query: str) -> str:
+        """Look up a value."""
+        if query == "fail":
+            raise ValueError("lookup service is down")
+        return f"found {query}"
+
+    with pytest.raises(ValueError, match="lookup service is down"):
+        await lookup.ainvoke({"query": "fail"}, config={"callbacks": [handler]})
+
+    assert [step.event_type for step in all_stats] == [IntermediateStepType.TOOL_START, IntermediateStepType.TOOL_END]
+    assert all_stats[0].UUID == all_stats[1].UUID
+    assert all_stats[1].payload.name == "lookup"
+    assert all_stats[1].payload.data.input == "{'query': 'fail'}"
+    assert all_stats[1].payload.metadata == {"status": "ValueError"}
+    assert all_stats[0].event_timestamp <= all_stats[1].span_event_timestamp <= all_stats[1].event_timestamp
+    assert context.active_span_id == initial_span
+    assert not handler._run_id_to_tool_input
+    assert not handler._run_id_to_tool_name
+    assert not handler._run_id_to_start_time
+
+    assert await lookup.ainvoke({"query": "x"}, config={"callbacks": [handler]}) == "found x"
+
+    event_types = [step.event_type for step in all_stats[2:]]
+    assert event_types == [IntermediateStepType.TOOL_START, IntermediateStepType.TOOL_END]
+    assert all_stats[2].parent_id == initial_span
+    assert all_stats[3].payload.data.output == "found x"
+    assert context.active_span_id == initial_span
+    assert not handler._run_id_to_tool_input
+    assert not handler._run_id_to_tool_name
+    assert not handler._run_id_to_start_time
 
 
 def test_extract_tools_schema_openai_format():
