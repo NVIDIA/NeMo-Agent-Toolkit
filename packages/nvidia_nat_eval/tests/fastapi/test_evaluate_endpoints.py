@@ -483,12 +483,13 @@ def test_evaluate_item_evaluation_error(evaluate_item_client_with_error: TestCli
 
 
 @pytest_asyncio.fixture(name="evaluate_item_client_atif_only")
-async def evaluate_item_client_atif_only_fixture(restore_environ) -> TestClient:
+async def evaluate_item_client_atif_only_fixture(restore_environ: typing.MutableMapping[str, str]) -> TestClient:
     """Test client whose evaluator, like the documented ATIF-only example, only has `evaluate_atif_fn`."""
     from nat.builder.evaluator import EvaluatorInfo
     from nat.data_models.evaluator import EvaluatorBaseConfig
     from nat.plugins.eval.data_models.evaluator_io import EvalOutput
     from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
+    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(
@@ -501,7 +502,7 @@ async def evaluate_item_client_atif_only_fixture(restore_environ) -> TestClient:
     worker = FastApiFrontEndPluginWorker(config)
     app = FastAPI()
 
-    async def evaluate_atif_fn(atif_samples) -> EvalOutput:
+    async def evaluate_atif_fn(atif_samples: AtifEvalSampleList) -> EvalOutput:
         sample = atif_samples[0]
         messages = [step.message for step in sample.trajectory.steps]
         return EvalOutput(eval_output_items=[EvalOutputItem(id=sample.item_id, score=1.0, reasoning=messages)],
@@ -519,7 +520,7 @@ async def evaluate_item_client_atif_only_fixture(restore_environ) -> TestClient:
     return TestClient(app)
 
 
-def test_evaluate_item_atif_only_evaluator(evaluate_item_client_atif_only: TestClient):
+def test_evaluate_item_atif_only_evaluator(evaluate_item_client_atif_only: TestClient) -> None:
     """An evaluator registered with only `evaluate_atif_fn` scores the item from its ATIF trajectory."""
     llm_end = {
         "parent_id": "root",
