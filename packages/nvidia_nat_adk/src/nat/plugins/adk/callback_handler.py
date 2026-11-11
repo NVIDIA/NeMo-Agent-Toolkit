@@ -33,6 +33,66 @@ from nat.data_models.token_usage import TokenUsageBaseModel
 logger = logging.getLogger(__name__)
 
 
+def _record_end_safely(push_end: Callable[[], None]) -> None:
+    """Record the end event of a failed call without letting a recording error replace the call's own error."""
+    try:
+        push_end()
+    except Exception as _e:
+        logger.exception("Error recording the end of a failed call")
+
+
+class _ProfiledStream:
+    """
+    Passes a streamed ``litellm.acompletion`` response through to the caller and collects its chunks.
+
+    ``on_end`` is called once with the chunks received so far, when the stream is exhausted, raises or is closed.
+    Other attributes are read from the wrapped stream.
+    """
+
+    def __init__(self, stream: Any, on_end: Callable[[list[Any]], None]):
+        """Wrap ``stream`` and call ``on_end`` with its chunks once it ends."""
+        self._stream = stream
+        self._on_end = on_end
+        self._chunks: list[Any] = []
+        self._ended = False
+
+    def __getattr__(self, name: str) -> Any:
+        """Read any other attribute from the wrapped stream."""
+        return getattr(self._stream, name)
+
+    def __aiter__(self) -> "_ProfiledStream":
+        """Return this wrapper as the async iterator."""
+        return self
+
+    async def __anext__(self) -> Any:
+        """Return the next chunk of the wrapped stream, recording the end of the stream when it stops."""
+        try:
+            chunk = await self._stream.__anext__()
+        except BaseException:
+            # StopAsyncIteration when the stream is exhausted, or the error that ended it
+            self._end()
+            raise
+        self._chunks.append(chunk)
+        return chunk
+
+    async def aclose(self) -> None:
+        """Close the wrapped stream, then record the end of a stream the caller stopped reading early."""
+        try:
+            await self._stream.aclose()
+        finally:
+            self._end()
+
+    def _end(self) -> None:
+        """Call ``on_end`` once with the chunks received so far."""
+        if self._ended:
+            return
+        self._ended = True
+        try:
+            self._on_end(self._chunks)
+        except Exception as _e:
+            logger.exception("Error recording the end of a streamed LLM call")
+
+
 class ADKProfilerHandler(BaseProfilerCallback):
     """
     A callback manager/handler for Google ADK that intercepts calls to:
@@ -151,35 +211,28 @@ class ADKProfilerHandler(BaseProfilerCallback):
                 logger.exception("Error getting tool name")
                 tool_name = ""
 
-            try:
-                # Pre-call usage event - safely extract kwargs args if present
-                kwargs_args = (kwargs.get("args", {}) if isinstance(kwargs.get("args"), dict) else {})
-                stats = IntermediateStepPayload(
-                    event_type=IntermediateStepType.TOOL_START,
-                    framework=LLMFrameworkEnum.ADK,
-                    name=tool_name,
-                    data=StreamEventData(),
-                    metadata=TraceMetadata(tool_inputs={
-                        "args": args, "kwargs": dict(kwargs_args)
-                    }),
-                    usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
-                )
+            # Pre-call usage event - safely extract kwargs args if present
+            kwargs_args = (kwargs.get("args", {}) if isinstance(kwargs.get("args"), dict) else {})
+            stats = IntermediateStepPayload(
+                event_type=IntermediateStepType.TOOL_START,
+                framework=LLMFrameworkEnum.ADK,
+                name=tool_name,
+                data=StreamEventData(),
+                metadata=TraceMetadata(tool_inputs={
+                    "args": args, "kwargs": dict(kwargs_args)
+                }),
+                usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
+            )
 
-                # Store the UUID to ensure the END event uses the same ID
-                step_uuid = stats.UUID
-                self.step_manager.push_intermediate_step(stats)
+            # Store the UUID to ensure the END event uses the same ID
+            step_uuid = stats.UUID
+            self.step_manager.push_intermediate_step(stats)
 
-                with self._lock:
-                    self.last_call_ts = now
+            with self._lock:
+                self.last_call_ts = now
 
-                # Call the original _use(...)
-                if original_func is None:
-                    raise RuntimeError(
-                        "Original tool function is None - instrumentation may not have been set up correctly")
-                result = await original_func(base_tool_instance, *args, **kwargs)
-                now = time.time()
-                # Post-call usage stats - safely extract kwargs args if present
-                kwargs_args = (kwargs.get("args", {}) if isinstance(kwargs.get("args"), dict) else {})
+            def push_tool_end(output: str = "") -> None:
+                """Record the end event that closes this call's TOOL_START."""
                 usage_stat = IntermediateStepPayload(
                     event_type=IntermediateStepType.TOOL_END,
                     span_event_timestamp=now,
@@ -189,20 +242,31 @@ class ADKProfilerHandler(BaseProfilerCallback):
                         input={
                             "args": args, "kwargs": dict(kwargs_args)
                         },
-                        output=str(result),
+                        output=output,
                     ),
-                    metadata=TraceMetadata(tool_outputs={"result": str(result)}),
+                    metadata=TraceMetadata(tool_outputs={"result": output}),
                     usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
                     UUID=step_uuid,  # Use the same UUID as the START event
                 )
 
                 self.step_manager.push_intermediate_step(usage_stat)
 
-                return result
-
-            except Exception as _e:
-                logger.exception("BaseTool error occured")
+            try:
+                # Call the original _use(...)
+                if original_func is None:
+                    raise RuntimeError(
+                        "Original tool function is None - instrumentation may not have been set up correctly")
+                result = await original_func(base_tool_instance, *args, **kwargs)
+            except BaseException as e:
+                # Close the tool step (also when the call is cancelled), then let ADK see the tool's error
+                if isinstance(e, Exception):
+                    logger.error("BaseTool error occurred: %s", e)
+                _record_end_safely(push_tool_end)
                 raise
+
+            push_tool_end(str(result))
+
+            return result
 
         return wrapped_tool_use
 
@@ -274,67 +338,95 @@ class ADKProfilerHandler(BaseProfilerCallback):
             step_uuid = input_stats.UUID
             self.step_manager.push_intermediate_step(input_stats)
 
-            # Call the original litellm.acompletion(...)
-            if original_func is None:
-                raise RuntimeError("Original LLM function is None - instrumentation may not have been set up correctly")
-            output = await original_func(*args, **kwargs)
+            def push_llm_end(output: Any = None) -> None:
+                """Record the end event that closes this call's LLM_START (``output`` is None when the call failed)."""
+                choice_dump = None
+                model_output = []
+                try:
+                    for choice in getattr(output, "choices", None) or []:
+                        if not choice_dump:
+                            choice_dump = choice.model_dump() if hasattr(
+                                choice, "model_dump") else getattr(choice, "__dict__", {}) or {}
+                        msg = choice.message
+                        model_output.append(msg.content or "")
+                except Exception as _e:
+                    logger.exception("Error getting model output")
 
-            choice_dump = None
-            model_output = []
+                model_output = "".join(model_output)
+
+                # Prepare safe metadata and usage
+                chat_resp: dict[str, Any] = {}
+                try:
+                    if getattr(output, "choices", []):
+                        first_choice = output.choices[0]
+                        chat_resp = first_choice.model_dump() if hasattr(
+                            first_choice, "model_dump") else getattr(first_choice, "__dict__", {}) or {}
+                except Exception as _e:
+                    logger.exception("Error preparing chat_responses")
+
+                usage_payload: dict[str, Any] = {}
+                try:
+                    usage_obj = getattr(output, "usage", None) or (getattr(output, "model_extra", {})
+                                                                   or {}).get("usage")
+                    if usage_obj:
+                        if hasattr(usage_obj, "model_dump"):
+                            usage_payload = usage_obj.model_dump()
+                        elif isinstance(usage_obj, dict):
+                            usage_payload = usage_obj
+                except Exception as _e:
+                    logger.exception("Error preparing token usage")
+
+                output_stats = IntermediateStepPayload(
+                    event_type=IntermediateStepType.LLM_END,
+                    span_event_timestamp=now,
+                    framework=LLMFrameworkEnum.ADK,
+                    name=model_name,
+                    data=StreamEventData(input=model_input, output=model_output, payload=choice_dump),
+                    metadata=TraceMetadata(chat_responses=chat_resp),
+                    usage_info=UsageInfo(
+                        token_usage=TokenUsageBaseModel(**usage_payload),
+                        num_llm_calls=1,
+                        seconds_between_calls=seconds_between_calls,
+                    ),
+                    UUID=step_uuid,  # Use the same UUID as the START event
+                )
+
+                self.step_manager.push_intermediate_step(output_stats)
+
+                with self._lock:
+                    self.last_call_ts = time.time()
+
+            def push_stream_end(chunks: list[Any]) -> None:
+                """Record the end event for a streamed call from the chunks it yielded."""
+                response = None
+                if chunks:
+                    try:
+                        import litellm
+                        response = litellm.stream_chunk_builder(chunks, messages=kwargs.get("messages"))
+                    except Exception as _e:
+                        logger.exception("Error combining the streamed chunks")
+                push_llm_end(response)
+
             try:
-                for choice in output.choices:
-                    if not choice_dump:
-                        choice_dump = choice.model_dump() if hasattr(
-                            choice, "model_dump") else getattr(choice, "__dict__", {}) or {}
-                    msg = choice.message
-                    model_output.append(msg.content or "")
-            except Exception as _e:
-                logger.exception("Error getting model output")
+                # Call the original litellm.acompletion(...)
+                if original_func is None:
+                    raise RuntimeError(
+                        "Original LLM function is None - instrumentation may not have been set up correctly")
+                output = await original_func(*args, **kwargs)
+            except BaseException as e:
+                # Close the LLM step (also when the call is cancelled), then let the caller (and any retry logic) see
+                # the provider's error
+                if isinstance(e, Exception):
+                    logger.error("Error calling original litellm.acompletion: %s", e)
+                _record_end_safely(push_llm_end)
+                raise
 
-            model_output = "".join(model_output)
+            if kwargs.get("stream"):
+                # With stream=True LiteLLM returns a stream that the caller consumes later. Record the end event once
+                # the stream is exhausted or fails, with the output and usage combined from its chunks.
+                return _ProfiledStream(output, push_stream_end)
 
-            now = time.time()
-            # Record the end event
-            # Prepare safe metadata and usage
-            chat_resp: dict[str, Any] = {}
-            try:
-                if getattr(output, "choices", []):
-                    first_choice = output.choices[0]
-                    chat_resp = first_choice.model_dump() if hasattr(
-                        first_choice, "model_dump") else getattr(first_choice, "__dict__", {}) or {}
-            except Exception as _e:
-                logger.exception("Error preparing chat_responses")
-
-            usage_payload: dict[str, Any] = {}
-            try:
-                usage_obj = getattr(output, "usage", None) or (getattr(output, "model_extra", {}) or {}).get("usage")
-                if usage_obj:
-                    if hasattr(usage_obj, "model_dump"):
-                        usage_payload = usage_obj.model_dump()
-                    elif isinstance(usage_obj, dict):
-                        usage_payload = usage_obj
-            except Exception as _e:
-                logger.exception("Error preparing token usage")
-
-            output_stats = IntermediateStepPayload(
-                event_type=IntermediateStepType.LLM_END,
-                span_event_timestamp=now,
-                framework=LLMFrameworkEnum.ADK,
-                name=model_name,
-                data=StreamEventData(input=model_input, output=model_output, payload=choice_dump),
-                metadata=TraceMetadata(chat_responses=chat_resp),
-                usage_info=UsageInfo(
-                    token_usage=TokenUsageBaseModel(**usage_payload),
-                    num_llm_calls=1,
-                    seconds_between_calls=seconds_between_calls,
-                ),
-                UUID=step_uuid,  # Use the same UUID as the START event
-            )
-
-            self.step_manager.push_intermediate_step(output_stats)
-
-            with self._lock:
-                self.last_call_ts = now
+            push_llm_end(output)
 
             return output
 
