@@ -174,6 +174,84 @@ async def test_llm_call_monkey_patch(mock_acompletion, handler, mock_context):
 
 
 @pytest.mark.asyncio
+async def test_adk_handler_failed_llm_call_ends_llm_step(handler, mock_context):
+    """A failed litellm.acompletion call is closed with LLM_END and its error reaches the caller."""
+    import litellm
+
+    handler.instrument()
+
+    with pytest.raises(litellm.RateLimitError):
+        await litellm.acompletion(model="openai/gpt-4o-mini",
+                                  messages=[{
+                                      "role": "user", "content": "hi"
+                                  }],
+                                  api_key="x",
+                                  mock_response="litellm.RateLimitError")
+
+    steps = [c[0][0] for c in mock_context.push_intermediate_step.call_args_list]
+    assert [s.event_type for s in steps] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    start, end = steps
+    assert end.UUID == start.UUID
+    assert end.name == "openai/gpt-4o-mini"
+    assert end.data.output == ""
+    assert end.usage_info.token_usage.total_tokens == 0
+    # The end event carries the time the call started
+    assert end.span_event_timestamp <= start.event_timestamp
+
+
+@pytest.mark.asyncio
+async def test_adk_handler_streamed_llm_call_records_output(handler, mock_context):
+    """A streamed litellm.acompletion call records LLM_END with its output and usage once the stream ends."""
+    import litellm
+
+    handler.instrument()
+
+    stream = await litellm.acompletion(model="openai/gpt-4o-mini",
+                                       messages=[{
+                                           "role": "user", "content": "hi"
+                                       }],
+                                       api_key="x",
+                                       mock_response="Hi there",
+                                       stream=True,
+                                       stream_options={"include_usage": True})
+
+    # The end event is recorded only after the caller has consumed the stream
+    assert mock_context.push_intermediate_step.call_count == 1
+    text = "".join([chunk.choices[0].delta.content or "" async for chunk in stream if chunk.choices])
+    assert text == "Hi there"
+
+    steps = [c[0][0] for c in mock_context.push_intermediate_step.call_args_list]
+    assert [s.event_type for s in steps] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    start, end = steps
+    assert end.UUID == start.UUID
+    assert end.data.output == "Hi there"
+    assert end.usage_info.token_usage.completion_tokens > 0
+    assert end.span_event_timestamp <= start.event_timestamp
+
+
+@pytest.mark.asyncio
+async def test_adk_handler_closed_stream_ends_llm_step(handler, mock_context):
+    """Closing a streamed call before it is exhausted records LLM_END with the chunks received so far."""
+    import litellm
+
+    handler.instrument()
+
+    stream = await litellm.acompletion(model="openai/gpt-4o-mini",
+                                       messages=[{
+                                           "role": "user", "content": "hi"
+                                       }],
+                                       api_key="x",
+                                       mock_response="Hi there",
+                                       stream=True)
+    first = await stream.__anext__()
+    await stream.aclose()
+
+    steps = [c[0][0] for c in mock_context.push_intermediate_step.call_args_list]
+    assert [s.event_type for s in steps] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert steps[1].data.output == first.choices[0].delta.content
+
+
+@pytest.mark.asyncio
 async def test_tool_use_monkey_patch_functionality(handler, mock_context):
     """Test the tool use monkey patch functionality."""
     # Create a mock tool instance
@@ -238,10 +316,14 @@ async def test_tool_use_monkey_patch_with_exception(handler, mock_context):
     # Verify original function was called
     mock_original_func.assert_called_once()
 
-    # Verify start event was still pushed
-    assert mock_context.push_intermediate_step.call_count >= 1
+    # Verify the start event was pushed and closed by an end event with the same UUID
+    assert mock_context.push_intermediate_step.call_count == 2
     start_call = mock_context.push_intermediate_step.call_args_list[0][0][0]
     assert start_call.event_type == IntermediateStepType.TOOL_START
+    end_call = mock_context.push_intermediate_step.call_args_list[1][0][0]
+    assert end_call.event_type == IntermediateStepType.TOOL_END
+    assert end_call.UUID == start_call.UUID
+    assert end_call.name == "test_tool"
 
 
 @pytest.mark.asyncio
