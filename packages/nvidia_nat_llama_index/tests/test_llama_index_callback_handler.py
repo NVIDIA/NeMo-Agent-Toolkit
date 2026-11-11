@@ -305,3 +305,63 @@ async def test_llama_index_handler_records_completion_call(reactive_stream: Subj
     assert end.payload.data.output == "Hi"
     usage = end.payload.usage_info.token_usage
     assert (usage.prompt_tokens, usage.completion_tokens, usage.total_tokens) == (7, 1, 8)
+
+
+_REASONING_MESSAGE = {"role": "assistant", "reasoning_content": "The user greets me.", "content": "Hello!"}
+_TOOL_CALL_MESSAGE = {
+    "role":
+        "assistant",
+    "content":
+        "Let me check.",
+    "tool_calls": [{
+        "id": "call_1", "type": "function", "function": {
+            "name": "get_weather", "arguments": '{"city": "Paris"}'
+        }
+    }],
+}
+
+
+@pytest.mark.parametrize("message, expected_output",
+                         [
+                             pytest.param(_REASONING_MESSAGE, "Hello!", id="reasoning"),
+                             pytest.param(_TOOL_CALL_MESSAGE, "Let me check.", id="tool_call"),
+                         ])
+async def test_llama_index_handler_records_text_of_mixed_block_response(reactive_stream: Subject,
+                                                                        caplog: pytest.LogCaptureFixture,
+                                                                        message: dict,
+                                                                        expected_output: str):
+    """A chat response whose message also holds reasoning or tool-call blocks records the text of its text blocks."""
+    from llama_index.core.llms import ChatMessage
+    from llama_index.core.llms import TextBlock
+
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.plugins.llama_index.callback_handler import LlamaIndexProfilerHandler
+
+    handler = LlamaIndexProfilerHandler()
+    stats_list = []
+    _ = reactive_stream.subscribe(stats_list.append)
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200,
+                              json={
+                                  "id": "chatcmpl-1",
+                                  "object": "chat.completion",
+                                  "created": 0,
+                                  "model": "gpt-4o-mini",
+                                  "choices": [{
+                                      "index": 0, "message": message, "finish_reason": "stop"
+                                  }],
+                                  "usage": {
+                                      "prompt_tokens": 5, "completion_tokens": 3, "total_tokens": 8
+                                  },
+                              })
+
+    llm = _openai_llm(handler, respond)
+    with caplog.at_level(logging.WARNING, logger="nat.plugins.llama_index"):
+        response = await llm.achat([ChatMessage(role="user", content="Hello")])
+    # The message holds a reasoning or tool-call block next to its text block
+    assert not all(isinstance(block, TextBlock) for block in response.message.blocks)
+    assert not caplog.records
+
+    assert [stat.event_type for stat in stats_list] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert stats_list[1].payload.data.output == expected_output
