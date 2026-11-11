@@ -13,7 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+import logging
 from types import SimpleNamespace
+
+import httpx
+import pytest
 
 from nat.utils.reactive.subject import Subject
 
@@ -210,3 +215,93 @@ async def test_llama_index_handler_order(reactive_stream: Subject):
     assert stats_list[1].payload.event_type == IntermediateStepType.LLM_END
     assert stats_list[0].payload.usage_info.num_llm_calls == 1
     # chat_responses is a bit short in this test, but we confirm at least we get something
+
+
+def _openai_llm(handler, respond):
+    """Build a LlamaIndex ``OpenAI`` LLM whose requests are answered by ``respond`` and traced by ``handler``."""
+    from llama_index.core.callbacks import CallbackManager
+    from llama_index.llms.openai import OpenAI
+
+    return OpenAI(model="gpt-4o-mini",
+                  api_key="test-key",
+                  api_base="http://test/v1",
+                  max_retries=0,
+                  async_http_client=httpx.AsyncClient(transport=httpx.MockTransport(respond)),
+                  callback_manager=CallbackManager([handler]))
+
+
+async def test_llama_index_handler_closes_failed_llm_call(reactive_stream: Subject):
+    """A failed LLM call still pushes an LLM_END that closes its LLM_START."""
+    from llama_index.core.llms import ChatMessage
+    from openai import BadRequestError
+
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.plugins.llama_index.callback_handler import LlamaIndexProfilerHandler
+
+    handler = LlamaIndexProfilerHandler()
+    stats_list = []
+    _ = reactive_stream.subscribe(stats_list.append)
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json={"error": {"message": "bad request", "type": "invalid_request_error"}})
+
+    llm = _openai_llm(handler, respond)
+    with pytest.raises(BadRequestError):
+        await llm.achat([ChatMessage(role="user", content="Hello")])
+
+    assert [stat.event_type for stat in stats_list] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert stats_list[0].payload.name == "gpt-4o-mini"
+    assert stats_list[1].UUID == stats_list[0].UUID
+    assert stats_list[1].payload.name == "gpt-4o-mini"
+    assert stats_list[1].payload.data.input == "user: Hello"
+    assert stats_list[1].payload.data.output == ""
+    assert stats_list[1].payload.span_event_timestamp is not None
+    assert not handler._run_id_to_llm_input
+    assert not handler._run_id_to_model_name
+    assert not handler._run_id_to_timestamp
+
+
+async def test_llama_index_handler_records_completion_call(reactive_stream: Subject, caplog: pytest.LogCaptureFixture):
+    """A completion-API call (``acomplete``) records its output and token usage on LLM_END."""
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.plugins.llama_index.callback_handler import LlamaIndexProfilerHandler
+
+    handler = LlamaIndexProfilerHandler()
+    stats_list = []
+    _ = reactive_stream.subscribe(stats_list.append)
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        assert json.loads(request.content)["messages"] == [{"role": "user", "content": "Say hi"}]
+        return httpx.Response(200,
+                              json={
+                                  "id": "chatcmpl-1",
+                                  "object": "chat.completion",
+                                  "created": 0,
+                                  "model": "gpt-4o-mini",
+                                  "choices": [{
+                                      "index": 0,
+                                      "message": {
+                                          "role": "assistant", "content": "Hi"
+                                      },
+                                      "finish_reason": "stop",
+                                  }],
+                                  "usage": {
+                                      "prompt_tokens": 7, "completion_tokens": 1, "total_tokens": 8
+                                  },
+                              })
+
+    llm = _openai_llm(handler, respond)
+    with caplog.at_level(logging.WARNING, logger="nat.plugins.llama_index"):
+        response = await llm.acomplete("Say hi")
+    assert response.text == "Hi"
+    assert not caplog.records
+
+    assert [stat.event_type for stat in stats_list] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert stats_list[0].payload.name == "gpt-4o-mini"
+    end = stats_list[1]
+    assert end.UUID == stats_list[0].UUID
+    assert end.payload.name == "gpt-4o-mini"
+    assert end.payload.data.input == "Say hi"
+    assert end.payload.data.output == "Hi"
+    usage = end.payload.usage_info.token_usage
+    assert (usage.prompt_tokens, usage.completion_tokens, usage.total_tokens) == (7, 1, 8)

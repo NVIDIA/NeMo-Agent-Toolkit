@@ -25,6 +25,7 @@ from llama_index.core.callbacks import CBEventType
 from llama_index.core.callbacks import EventPayload
 from llama_index.core.callbacks.base_handler import BaseCallbackHandler
 from llama_index.core.llms import ChatResponse
+from llama_index.core.llms import CompletionResponse
 
 from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -62,6 +63,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
         self.step_manager = Context.get().intermediate_step_manager
 
         self._run_id_to_llm_input = {}
+        self._run_id_to_model_name = {}
         self._run_id_to_tool_input = {}
         self._run_id_to_timestamp = {}
 
@@ -146,11 +148,12 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
             elif EventPayload.MESSAGES in payload:
                 prompts_or_messages = [str(msg) for msg in payload[EventPayload.MESSAGES]]
 
+            # LlamaIndex serializes the LLM with `to_payload()`, which holds the LLM metadata (`model_name`);
+            # older releases used `to_dict()`, which holds the `model` field.
+            serialized = payload.get(EventPayload.SERIALIZED)
             model_name = ""
-            try:
-                model_name = payload.get(EventPayload.SERIALIZED)['model']
-            except Exception as e:
-                logger.exception("Error getting model name: %s", e)
+            if isinstance(serialized, dict):
+                model_name = serialized.get("model_name") or serialized.get("model") or ""
 
             llm_text_input = " ".join(prompts_or_messages) if prompts_or_messages else ""
 
@@ -167,6 +170,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
 
                 self.step_manager.push_intermediate_step(stats)
                 self._run_id_to_llm_input[event_id] = llm_text_input
+                self._run_id_to_model_name[event_id] = model_name
                 self.last_call_ts = now
                 self._run_id_to_timestamp[event_id] = time.time()
 
@@ -205,28 +209,43 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
         We collect token usage (if available) and the returned response text.
         """
 
-        if payload and event_type == CBEventType.LLM:
+        if event_type == CBEventType.LLM:
+            # LlamaIndex ends every LLM event, including failed calls (EXCEPTION payload) and completion-API calls
+            # (COMPLETION payload). Close each LLM_START recorded in on_event_start, whatever the payload holds.
+            if event_id not in self._run_id_to_llm_input:
+                return
+
+            payload = payload or {}
             # Often, token usage is embedded in e.g. payload["RESPONSE"].raw["usage"] for OpenAI-based calls
             response = payload.get(EventPayload.RESPONSE)
-            if isinstance(response, ChatResponse):
-                llm_text_output = ""
+            if response is None:
+                response = payload.get(EventPayload.COMPLETION)
 
-                try:
-                    for block in response.message.blocks:
-                        llm_text_output += block.text
-                except Exception as e:
-                    logger.exception("Error getting LLM text output: %s", e)
+            llm_text_output = ""
+            # A failed call has no response, so fall back to the model name recorded on LLM_START
+            model_name = self._run_id_to_model_name.pop(event_id, "")
+            chat_responses = None
+            tool_outputs_list = []
+            token_usage = TokenUsageBaseModel()
 
-                model_name = ""
+            if isinstance(response, ChatResponse | CompletionResponse):
+                if isinstance(response, ChatResponse):
+                    try:
+                        for block in response.message.blocks:
+                            llm_text_output += block.text
+                    except Exception as e:
+                        logger.exception("Error getting LLM text output: %s", e)
+                    chat_responses = response.message if response.message else None
+                else:
+                    llm_text_output = response.text or ""
+
                 try:
                     model_name = response.raw.model
                 except Exception as e:
                     logger.exception("Error getting model name: %s", e)
 
-                # Append usage data to NAT usage stats
-                tool_outputs_list = []
                 # Check if message.additional_kwargs as tool_outputs indicative of server side tool calling
-                if response and response.additional_kwargs and "built_in_tool_calls" in response.additional_kwargs:
+                if response.additional_kwargs and "built_in_tool_calls" in response.additional_kwargs:
                     tools_outputs = response.additional_kwargs["built_in_tool_calls"]
                     if isinstance(tools_outputs, list):
                         for tool in tools_outputs:
@@ -235,27 +254,29 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                             except Exception:
                                 pass
 
-                # Append usage data to NAT usage stats
-                with self._lock:
-                    stats = IntermediateStepPayload(
-                        event_type=IntermediateStepType.LLM_END,
-                        span_event_timestamp=self._run_id_to_timestamp.get(event_id),
-                        framework=LLMFrameworkEnum.LLAMA_INDEX,
-                        name=model_name,
-                        UUID=event_id,
-                        data=StreamEventData(input=self._run_id_to_llm_input.get(event_id),
-                                             output=llm_text_output,
-                                             payload=response),
-                        metadata=TraceMetadata(chat_responses=response.message if response.message else None,
-                                               tool_outputs=tool_outputs_list if tool_outputs_list else []),
-                        usage_info=UsageInfo(token_usage=self._extract_token_usage(response)))
-                    self.step_manager.push_intermediate_step(stats)
+                token_usage = self._extract_token_usage(response)
+
+            # Append usage data to NAT usage stats
+            with self._lock:
+                stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
+                                                span_event_timestamp=self._run_id_to_timestamp.pop(event_id, None),
+                                                framework=LLMFrameworkEnum.LLAMA_INDEX,
+                                                name=model_name,
+                                                UUID=event_id,
+                                                data=StreamEventData(input=self._run_id_to_llm_input.pop(event_id),
+                                                                     output=llm_text_output,
+                                                                     payload=response),
+                                                metadata=TraceMetadata(chat_responses=chat_responses,
+                                                                       tool_outputs=tool_outputs_list),
+                                                usage_info=UsageInfo(token_usage=token_usage))
+                self.step_manager.push_intermediate_step(stats)
 
         elif event_type == CBEventType.FUNCTION_CALL and payload:
+            self._run_id_to_tool_input.pop(event_id, None)
             stats = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
-                                            span_event_timestamp=self._run_id_to_timestamp.get(event_id),
+                                            span_event_timestamp=self._run_id_to_timestamp.pop(event_id, None),
                                             framework=LLMFrameworkEnum.LLAMA_INDEX,
-                                            name=self._last_tool_map.get(event_id),
+                                            name=self._last_tool_map.pop(event_id, None),
                                             UUID=event_id,
                                             data=StreamEventData(
                                                 output=copy.deepcopy(payload.get(EventPayload.FUNCTION_OUTPUT)),
