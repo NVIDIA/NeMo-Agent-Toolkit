@@ -252,7 +252,7 @@ async def test_run_workflow_local_success(evaluation_run, session_manager, gener
 
 @pytest.mark.parametrize("per_input_user_id", [False, True])
 async def test_run_workflow_local_uses_configured_user_id(evaluation_run, session_manager, per_input_user_id):
-    """`nat eval --user_id` sets the user id of every workflow session, with a per-item suffix when enabled."""
+    """`nat eval --user_id` sets the user id of every workflow session, with a distinct per-item suffix when enabled."""
     session_user_ids = []
     run_session = session_manager.session
 
@@ -263,18 +263,22 @@ async def test_run_workflow_local_uses_configured_user_id(evaluation_run, sessio
             yield session
 
     session_manager.session = recording_session
+    first_item = evaluation_run.eval_input.eval_input_items[0]
+    evaluation_run.eval_input = EvalInput(eval_input_items=[first_item, first_item.model_copy(update={"id": 2})])
     evaluation_run.config.user_id = "alice"
     evaluation_run.eval_config.general.per_input_user_id = per_input_user_id
 
     await evaluation_run.run_workflow_local(session_manager)
 
-    assert len(session_user_ids) == 1
+    assert len(session_user_ids) == 2
     if per_input_user_id:
-        prefix, _, suffix = session_user_ids[0].partition("-")
-        assert prefix == "alice"
-        UUID(suffix)
+        for user_id in session_user_ids:
+            prefix, _, suffix = user_id.partition("-")
+            assert prefix == "alice"
+            UUID(suffix)
+        assert session_user_ids[0] != session_user_ids[1]
     else:
-        assert session_user_ids == ["alice"]
+        assert session_user_ids == ["alice", "alice"]
 
 
 async def test_run_workflow_local_errors(evaluation_run, session_manager):
