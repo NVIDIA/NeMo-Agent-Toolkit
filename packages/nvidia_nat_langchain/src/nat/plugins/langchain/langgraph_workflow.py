@@ -183,9 +183,14 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, LanggraphWrapperO
             if messages is None:
                 return None
 
-            # The add_messages reducer accepts a single message as well as a list
-            if not isinstance(messages, list):
-                node_output = {**node_output, "messages": [messages]}
+            try:
+                return LanggraphWrapperOutput.model_validate(node_output)
+            except ValueError:
+                if isinstance(messages, list):
+                    raise
+
+            # The add_messages reducer accepts a single message as well as a collection of messages
+            node_output = {**node_output, "messages": [messages]}
 
         return LanggraphWrapperOutput.model_validate(node_output)
 

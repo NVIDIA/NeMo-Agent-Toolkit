@@ -22,6 +22,7 @@ from unittest.mock import patch
 import pytest
 from langchain.agents import create_agent
 from langchain.agents.middleware import AgentMiddleware
+from langchain.agents.middleware import AgentState
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
 from langchain_core.messages import AnyMessage
@@ -32,6 +33,7 @@ from langgraph.graph import START
 from langgraph.graph import StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.runtime import Runtime
 
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -259,6 +261,21 @@ class TestParseStreamOutput:
         assert isinstance(result, LanggraphWrapperOutput)
         assert [message.content for message in result.messages] == ["hi"]
 
+    def test_tuple_of_messages_update(self):
+        """A node may return its messages as a tuple, which is parsed as a collection and not as one message."""
+        raw = {"answer": {"messages": (AIMessage(content="hi"), AIMessage(content="there"))}}
+        result = LanggraphWrapperFunction._parse_stream_output(raw)
+
+        assert isinstance(result, LanggraphWrapperOutput)
+        assert [message.content for message in result.messages] == ["hi", "there"]
+
+    def test_invalid_message_in_list_raises(self):
+        """A list that holds something other than a message is still rejected."""
+        raw = {"answer": {"messages": [object()]}}
+
+        with pytest.raises(ValueError, match="messages.0"):
+            LanggraphWrapperFunction._parse_stream_output(raw)
+
 
 class _GraphState(TypedDict, total=False):
     """State with a messages channel and one unrelated key."""
@@ -289,7 +306,7 @@ def _wrap(graph: CompiledStateGraph) -> LanggraphWrapperFunction:
 class _NoOpMiddleware(AgentMiddleware):
     """Agent middleware whose hook leaves the state unchanged."""
 
-    def before_model(self, state, runtime):
+    def before_model(self, state: AgentState, runtime: Runtime) -> None:
         return None
 
 
@@ -303,7 +320,7 @@ class TestStreamCompiledGraph:
             pytest.param(lambda _state: None, id="returns_none"),
         ],
     )
-    async def test_node_without_messages_does_not_end_the_stream(self, first_node):
+    async def test_node_without_messages_does_not_end_the_stream(self, first_node: Callable[[_GraphState], Any]):
         """Streaming returns the same answer as ainvoke when a node update has no messages."""
         function = _wrap(_graph_with_first_node(first_node))
 
