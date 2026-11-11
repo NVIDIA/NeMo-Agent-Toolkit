@@ -30,7 +30,6 @@ from uuid import uuid4
 import pandas as pd
 import yaml
 from pydantic import BaseModel
-from pydantic import SecretStr
 from tqdm import tqdm
 
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
@@ -68,8 +67,6 @@ try:
     from nat.data_models.evaluator import EvalInput
     from nat.data_models.evaluator import EvalInputItem
     from nat.data_models.intermediate_step import IntermediateStepType
-    from nat.data_models.user_info import BasicUserInfo
-    from nat.data_models.user_info import UserInfo
     from nat.plugins.eval.data_models.evaluator_io import EvalOutput
     from nat.plugins.eval.runtime.checkpoint import CHECKPOINT_FILE_NAME
     from nat.plugins.eval.runtime.checkpoint import EvalCheckpoint
@@ -231,11 +228,9 @@ class EvaluationRun:
                 pre_span_id = _generate_nonzero_span_id()
                 self._item_span_ids[str(item.id)] = pre_span_id
 
-            eval_username: str = "nat_eval_user"
+            eval_user_id: str = self.config.user_id
             if self.eval_config.general.per_input_user_id:
-                eval_username += f"-{uuid4()}"
-            eval_user_id: str = UserInfo(
-                basic_user=BasicUserInfo(username=eval_username, password=SecretStr("nat_eval_user"))).get_user_id()
+                eval_user_id += f"-{uuid4()}"
 
             # Set the pre-generated span_id in the ContextVar BEFORE entering
             # the session/runner context. asyncio.create_task() copies ContextVars,
