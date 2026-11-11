@@ -143,23 +143,56 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, LanggraphWrapperO
                 logger.info("Graph is an async context manager")
                 async with self._graph as graph:
                     async for output in graph.astream(value.model_dump(), config=config):
-                        yield self._parse_stream_output(output)
+                        parsed_output = self._parse_stream_output(output)
+                        if parsed_output is not None:
+                            yield parsed_output
             else:
                 async for output in self._graph.astream(value.model_dump(), config=config):
-                    yield self._parse_stream_output(output)
+                    parsed_output = self._parse_stream_output(output)
+                    if parsed_output is not None:
+                        yield parsed_output
         except Exception as e:
             raise RuntimeError(f"Error in LangGraph workflow: {e}") from e
 
     @staticmethod
-    def _parse_stream_output(output: dict) -> LanggraphWrapperOutput:
-        """Unwrap node-keyed dicts that LangGraph astream() yields."""
+    def _parse_stream_output(output: dict) -> LanggraphWrapperOutput | None:
+        """Convert a chunk that LangGraph ``astream()`` yields into a ``LanggraphWrapperOutput``.
+
+        LangGraph streams one ``{node_name: update}`` chunk per node, where ``update`` is whatever that node returned.
+        A node may update other state keys or return nothing, as agent middleware hooks do, so an update without
+        messages is not an error.
+
+        Args:
+            output: A chunk from ``astream()``. Either a flat state dict or a single node-keyed update.
+
+        Returns:
+            The parsed output, or ``None`` when the node update carries no messages and has nothing to stream.
+        """
         try:
             return LanggraphWrapperOutput.model_validate(output)
         except Exception:
-            if len(output) == 1:
-                node_output = next(iter(output.values()))
+            if len(output) != 1:
+                raise
+
+        node_output = next(iter(output.values()))
+        if node_output is None:
+            return None
+
+        if isinstance(node_output, dict):
+            messages = node_output.get("messages")
+            if messages is None:
+                return None
+
+            try:
                 return LanggraphWrapperOutput.model_validate(node_output)
-            raise
+            except ValueError:
+                if isinstance(messages, list):
+                    raise
+
+            # The add_messages reducer accepts a single message as well as a collection of messages
+            node_output = {**node_output, "messages": [messages]}
+
+        return LanggraphWrapperOutput.model_validate(node_output)
 
     @staticmethod
     def convert_to_str(value: LanggraphWrapperOutput) -> str:

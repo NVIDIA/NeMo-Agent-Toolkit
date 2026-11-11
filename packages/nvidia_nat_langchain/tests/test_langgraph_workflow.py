@@ -13,18 +13,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Callable
+from typing import Annotated
+from typing import Any
+from typing import TypedDict
 from unittest.mock import patch
 
 import pytest
+from langchain.agents import create_agent
+from langchain.agents.middleware import AgentMiddleware
+from langchain.agents.middleware import AgentState
+from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage
+from langchain_core.messages import AnyMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import SystemMessage
+from langgraph.graph import END
+from langgraph.graph import START
+from langgraph.graph import StateGraph
+from langgraph.graph.message import add_messages
+from langgraph.graph.state import CompiledStateGraph
+from langgraph.runtime import Runtime
 
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Message
 from nat.data_models.api_server import UserMessageContentRoleType
+from nat.plugins.langchain.langgraph_workflow import LanggraphWrapperConfig
 from nat.plugins.langchain.langgraph_workflow import LanggraphWrapperFunction
 from nat.plugins.langchain.langgraph_workflow import LanggraphWrapperInput
 from nat.plugins.langchain.langgraph_workflow import LanggraphWrapperOutput
@@ -224,6 +240,113 @@ class TestParseStreamOutput:
         }
         with pytest.raises(Exception):
             LanggraphWrapperFunction._parse_stream_output(raw)
+
+    def test_node_update_without_messages_is_skipped(self):
+        """A node that only updates other state keys carries nothing to stream."""
+        raw = {"classify": {"route": "faq"}}
+
+        assert LanggraphWrapperFunction._parse_stream_output(raw) is None
+
+    def test_node_returning_none_is_skipped(self):
+        """A node that returns nothing, such as an agent middleware hook, carries nothing to stream."""
+        raw = {"audit": None}
+
+        assert LanggraphWrapperFunction._parse_stream_output(raw) is None
+
+    def test_single_message_update(self):
+        """A node may return one message instead of a list, which the add_messages reducer accepts."""
+        raw = {"answer": {"messages": AIMessage(content="hi")}}
+        result = LanggraphWrapperFunction._parse_stream_output(raw)
+
+        assert isinstance(result, LanggraphWrapperOutput)
+        assert [message.content for message in result.messages] == ["hi"]
+
+    def test_tuple_of_messages_update(self):
+        """A node may return its messages as a tuple, which is parsed as a collection and not as one message."""
+        raw = {"answer": {"messages": (AIMessage(content="hi"), AIMessage(content="there"))}}
+        result = LanggraphWrapperFunction._parse_stream_output(raw)
+
+        assert isinstance(result, LanggraphWrapperOutput)
+        assert [message.content for message in result.messages] == ["hi", "there"]
+
+    def test_invalid_message_in_list_raises(self):
+        """A list that holds something other than a message is still rejected."""
+        raw = {"answer": {"messages": [object()]}}
+
+        with pytest.raises(ValueError, match="messages.0"):
+            LanggraphWrapperFunction._parse_stream_output(raw)
+
+
+class _GraphState(TypedDict, total=False):
+    """State with a messages channel and one unrelated key."""
+
+    messages: Annotated[list[AnyMessage], add_messages]
+    route: str
+
+
+def _answer(_state: _GraphState) -> dict[str, Any]:
+    return {"messages": [AIMessage(content="hello")]}
+
+
+def _graph_with_first_node(first_node: Callable[[_GraphState], Any]) -> CompiledStateGraph:
+    """Compile a graph that runs first_node and then a node that answers with "hello"."""
+    builder = StateGraph(_GraphState)
+    builder.add_node("first", first_node)
+    builder.add_node("answer", _answer)
+    builder.add_edge(START, "first")
+    builder.add_edge("first", "answer")
+    builder.add_edge("answer", END)
+    return builder.compile()
+
+
+def _wrap(graph: CompiledStateGraph) -> LanggraphWrapperFunction:
+    return LanggraphWrapperFunction(config=LanggraphWrapperConfig(graph="module.py:graph"), graph=graph)
+
+
+class _NoOpMiddleware(AgentMiddleware):
+    """Agent middleware whose hook leaves the state unchanged."""
+
+    def before_model(self, state: AgentState, runtime: Runtime) -> None:
+        return None
+
+
+class TestStreamCompiledGraph:
+    """Tests for streaming compiled graphs whose nodes do not all return a list of messages."""
+
+    @pytest.mark.parametrize(
+        "first_node",
+        [
+            pytest.param(lambda _state: {"route": "faq"}, id="updates_other_state_key"),
+            pytest.param(lambda _state: None, id="returns_none"),
+        ],
+    )
+    async def test_node_without_messages_does_not_end_the_stream(self, first_node: Callable[[_GraphState], Any]):
+        """Streaming returns the same answer as ainvoke when a node update has no messages."""
+        function = _wrap(_graph_with_first_node(first_node))
+
+        assert await function.ainvoke("hi", to_type=str) == "hello"
+        assert [chunk async for chunk in function.astream("hi", to_type=str)] == ["hello"]
+
+    async def test_node_returning_a_single_message(self):
+        """Streaming accepts a node that returns one message instead of a list."""
+        builder = StateGraph(_GraphState)
+        builder.add_node("answer", lambda _state: {"messages": AIMessage(content="hello")})
+        builder.add_edge(START, "answer")
+        builder.add_edge("answer", END)
+        function = _wrap(builder.compile())
+
+        assert await function.ainvoke("hi", to_type=str) == "hello"
+        assert [chunk async for chunk in function.astream("hi", to_type=str)] == ["hello"]
+
+    async def test_create_agent_with_middleware_that_returns_none(self):
+        """Streaming works for a LangChain agent whose middleware hook returns None."""
+
+        def build_agent() -> CompiledStateGraph:
+            model = GenericFakeChatModel(messages=iter([AIMessage(content="hello")]))
+            return create_agent(model=model, tools=[], middleware=[_NoOpMiddleware()])
+
+        assert await _wrap(build_agent()).ainvoke("hi", to_type=str) == "hello"
+        assert [chunk async for chunk in _wrap(build_agent()).astream("hi", to_type=str)] == ["hello"]
 
 
 class TestBuildRunnableConfig:
