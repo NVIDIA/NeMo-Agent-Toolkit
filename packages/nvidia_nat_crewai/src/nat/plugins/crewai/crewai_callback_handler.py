@@ -36,6 +36,18 @@ from nat.data_models.token_usage import TokenUsageBaseModel
 logger = logging.getLogger(__name__)
 
 
+def _record_end_safely(push_end: Callable[[], None]) -> None:
+    """Record the end event of a failed call without letting a recording error replace the call's own error.
+
+    Args:
+        push_end: Pushes the end event that closes the failed call's start event.
+    """
+    try:
+        push_end()
+    except Exception:
+        logger.exception("Error recording the end of a failed call")
+
+
 class CrewAIProfilerHandler(BaseProfilerCallback):
     """
     A callback manager/handler for CrewAI that intercepts calls to:
@@ -97,25 +109,22 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
             except Exception as e:
                 logger.exception("Error getting tool name: %s", e)
 
-            try:
-                # Pre-call usage event
-                stats = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
-                                                framework=LLMFrameworkEnum.CREWAI,
-                                                name=tool_name,
-                                                data=StreamEventData(),
-                                                metadata=TraceMetadata(tool_inputs={
-                                                    "args": args, "kwargs": dict(kwargs)
-                                                }),
-                                                usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
+            # Pre-call usage event
+            stats = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
+                                            framework=LLMFrameworkEnum.CREWAI,
+                                            name=tool_name,
+                                            data=StreamEventData(),
+                                            metadata=TraceMetadata(tool_inputs={
+                                                "args": args, "kwargs": dict(kwargs)
+                                            }),
+                                            usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
 
-                self.step_manager.push_intermediate_step(stats)
+            self.step_manager.push_intermediate_step(stats)
 
-                self.last_call_ts = now
+            self.last_call_ts = now
 
-                # Call the original _use(...)
-                result = original_func(tool_usage_instance, *args, **kwargs)
-                now = time.time()
-                # Post-call usage stats
+            def push_tool_end(output: str = "") -> None:
+                """Record the end event that closes this call's TOOL_START."""
                 usage_stat = IntermediateStepPayload(
                     event_type=IntermediateStepType.TOOL_END,
                     UUID=stats.UUID,
@@ -124,18 +133,26 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
                     name=tool_name,
                     data=StreamEventData(input={
                         "args": args, "kwargs": dict(kwargs)
-                    }, output=str(result)),
-                    metadata=TraceMetadata(tool_outputs={"result": str(result)}),
+                    }, output=output),
+                    metadata=TraceMetadata(tool_outputs={"result": output}),
                     usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
                 )
 
                 self.step_manager.push_intermediate_step(usage_stat)
 
-                return result
-
-            except Exception as e:
-                logger.error("ToolUsage._use error: %s", e)
+            try:
+                # Call the original _use(...)
+                result = original_func(tool_usage_instance, *args, **kwargs)
+            except BaseException as e:
+                # Close the tool step, then let CrewAI see the tool's error
+                if isinstance(e, Exception):
+                    logger.error("ToolUsage._use error: %s", e)
+                _record_end_safely(push_tool_end)
                 raise
+
+            push_tool_end(str(result))
+
+            return result
 
         return wrapped_tool_use
 
@@ -178,8 +195,31 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
 
             self.step_manager.push_intermediate_step(input_stats)
 
-            # Call the original litellm.completion(...)
-            output = original_func(*args, **kwargs)
+            def push_llm_end(model_output: str = "",
+                             chat_response: dict[str, Any] | None = None,
+                             token_usage: TokenUsageBaseModel | None = None) -> None:
+                """Record the end event that closes this call's LLM_START."""
+                output_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
+                                                       UUID=input_stats.UUID,
+                                                       span_event_timestamp=now,
+                                                       framework=LLMFrameworkEnum.CREWAI,
+                                                       name=model_name,
+                                                       data=StreamEventData(input=model_input, output=model_output),
+                                                       metadata=TraceMetadata(chat_responses=chat_response),
+                                                       usage_info=UsageInfo(
+                                                           token_usage=token_usage or TokenUsageBaseModel(),
+                                                           num_llm_calls=1,
+                                                           seconds_between_calls=seconds_between_calls))
+
+                self.step_manager.push_intermediate_step(output_stats)
+
+            try:
+                # Call the original litellm.completion(...)
+                output = original_func(*args, **kwargs)
+            except BaseException:
+                # Close the LLM step, then let CrewAI see the provider's error
+                _record_end_safely(push_llm_end)
+                raise
 
             model_output = []
             try:
@@ -208,20 +248,8 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
             except Exception as e:
                 logger.exception("Error getting model usage: %s", e)
 
-            now = time.time()
             # Record the end event
-            output_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
-                                                   UUID=input_stats.UUID,
-                                                   span_event_timestamp=now,
-                                                   framework=LLMFrameworkEnum.CREWAI,
-                                                   name=model_name,
-                                                   data=StreamEventData(input=model_input, output=model_output),
-                                                   metadata=TraceMetadata(chat_responses=chat_response),
-                                                   usage_info=UsageInfo(token_usage=token_usage,
-                                                                        num_llm_calls=1,
-                                                                        seconds_between_calls=seconds_between_calls))
-
-            self.step_manager.push_intermediate_step(output_stats)
+            push_llm_end(model_output, chat_response, token_usage)
 
             # (Note: the original code did NOT update self.last_call_ts here)
             return output
