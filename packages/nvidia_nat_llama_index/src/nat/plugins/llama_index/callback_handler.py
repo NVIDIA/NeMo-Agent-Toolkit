@@ -26,6 +26,7 @@ from llama_index.core.callbacks import EventPayload
 from llama_index.core.callbacks.base_handler import BaseCallbackHandler
 from llama_index.core.llms import ChatResponse
 from llama_index.core.llms import CompletionResponse
+from llama_index.core.llms import TextBlock
 
 from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -230,11 +231,10 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
 
             if isinstance(response, ChatResponse | CompletionResponse):
                 if isinstance(response, ChatResponse):
-                    try:
-                        for block in response.message.blocks:
-                            llm_text_output += block.text
-                    except Exception as e:
-                        logger.exception("Error getting LLM text output: %s", e)
+                    # Only text blocks hold the reply text; reasoning (ThinkingBlock), tool-call and other blocks
+                    # have no `text` field.
+                    llm_text_output = "".join(block.text for block in response.message.blocks
+                                              if isinstance(block, TextBlock))
                     chat_responses = response.message if response.message else None
                 else:
                     llm_text_output = response.text or ""
