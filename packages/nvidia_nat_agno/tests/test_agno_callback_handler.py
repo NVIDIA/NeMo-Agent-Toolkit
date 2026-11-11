@@ -16,6 +16,8 @@
 import time
 from uuid import uuid4
 
+import pytest
+
 from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStepPayload
@@ -373,3 +375,44 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     assert end_event.payload.name == "TestTool"
     assert "result" in end_event.payload.metadata.tool_outputs
     assert end_event.payload.metadata.tool_outputs["result"] == "Tool execution result"
+
+
+@pytest.fixture(name="restore_litellm_completion")
+def restore_litellm_completion_fixture():
+    """Restore ``litellm.completion`` after a test that installs the handler."""
+    import litellm
+
+    original_completion = litellm.completion
+    yield
+    litellm.completion = original_completion
+
+
+async def test_agno_handler_llm_call_error_reaches_caller(reactive_stream: Subject, restore_litellm_completion):
+    """A failed ``litellm.completion`` call raises the provider's error and still closes the LLM step."""
+    import litellm
+    from agno.models.litellm.chat import LiteLLM
+    from agno.models.message import Message
+
+    from nat.plugins.agno.callback_handler import AgnoProfilerHandler
+
+    all_stats = []
+    reactive_stream.subscribe(all_stats.append)
+    AgnoProfilerHandler().instrument()
+
+    model = LiteLLM(id="gpt-4o", api_key="test-key", request_params={"mock_response": "litellm.RateLimitError"})
+
+    with pytest.raises(litellm.RateLimitError):
+        model.invoke(messages=[Message(role="user", content="Hello")], assistant_message=Message(role="assistant"))
+
+    llm_events = [
+        event for event in all_stats
+        if event.event_type in (IntermediateStepType.LLM_START, IntermediateStepType.LLM_END)
+    ]
+    assert [event.event_type for event in llm_events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+
+    start_event, end_event = llm_events
+    assert end_event.UUID == start_event.UUID
+    assert end_event.payload.name == "gpt-4o"
+    assert end_event.payload.data.input == "Hello"
+    assert end_event.payload.data.output == ""
+    assert end_event.payload.usage_info.token_usage == TokenUsageBaseModel()

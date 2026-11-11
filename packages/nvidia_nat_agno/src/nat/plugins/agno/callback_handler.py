@@ -186,6 +186,24 @@ class AgnoProfilerHandler(BaseProfilerCallback):
 
             self.step_manager.push_intermediate_step(input_stats)
 
+            def push_llm_end(model_output: str = "",
+                             chat_responses: Any = None,
+                             token_usage: TokenUsageBaseModel | None = None) -> None:
+                """Record the end event that closes this call's LLM_START."""
+                usage_info = UsageInfo(token_usage=token_usage or TokenUsageBaseModel(),
+                                       num_llm_calls=1,
+                                       seconds_between_calls=seconds_between_calls)
+                output_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
+                                                       span_event_timestamp=time.time(),
+                                                       framework=LLMFrameworkEnum.AGNO,
+                                                       name=model_name,
+                                                       UUID=uuid,
+                                                       data=StreamEventData(input=model_input, output=model_output),
+                                                       metadata=TraceMetadata(chat_responses=chat_responses),
+                                                       usage_info=usage_info)
+
+                self.step_manager.push_intermediate_step(output_stats)
+
             # Verify we have a valid original function before calling it
             if original_func is None:
                 logger.error("Original litellm.completion function is None - cannot call it")
@@ -198,8 +216,10 @@ class AgnoProfilerHandler(BaseProfilerCallback):
                     output = original_func(*args, **kwargs)
                     logger.debug(f"Original litellm.completion returned: {type(output)}")
                 except Exception as e:
-                    logger.exception(f"Error calling original litellm.completion: {e}")
-                    output = None
+                    # Close the LLM step, then let the caller (and any retry logic) see the provider's error
+                    logger.error("Error calling original litellm.completion: %s", e)
+                    push_llm_end()
+                    raise
 
             # Initialize default values
             model_output = ""
@@ -276,20 +296,8 @@ class AgnoProfilerHandler(BaseProfilerCallback):
                 except Exception as e:
                     logger.exception("Error getting model output: %s", e)
 
-            now = time.time()
             # Record the end event
-            output_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
-                                                   span_event_timestamp=now,
-                                                   framework=LLMFrameworkEnum.AGNO,
-                                                   name=model_name,
-                                                   UUID=uuid,
-                                                   data=StreamEventData(input=model_input, output=model_output),
-                                                   metadata=TraceMetadata(chat_responses=chat_responses),
-                                                   usage_info=UsageInfo(token_usage=token_usage,
-                                                                        num_llm_calls=1,
-                                                                        seconds_between_calls=seconds_between_calls))
-
-            self.step_manager.push_intermediate_step(output_stats)
+            push_llm_end(model_output=model_output, chat_responses=chat_responses, token_usage=token_usage)
             return output
 
         return wrapped_llm_call
