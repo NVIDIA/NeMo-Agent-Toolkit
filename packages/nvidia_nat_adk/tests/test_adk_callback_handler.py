@@ -173,7 +173,6 @@ async def test_llm_call_monkey_patch(mock_acompletion, handler, mock_context):
     assert result == mock_response
 
 
-@pytest.mark.asyncio
 async def test_adk_handler_failed_llm_call_ends_llm_step(handler, mock_context):
     """A failed litellm.acompletion call is closed with LLM_END and its error reaches the caller."""
     import litellm
@@ -199,7 +198,45 @@ async def test_adk_handler_failed_llm_call_ends_llm_step(handler, mock_context):
     assert end.span_event_timestamp <= start.event_timestamp
 
 
-@pytest.mark.asyncio
+async def test_adk_handler_cancelled_calls_end_their_steps(handler, mock_context):
+    """A cancelled LLM or tool call is closed with its end event and the cancellation propagates."""
+    import asyncio
+
+    handler._original_llm_call = AsyncMock(side_effect=asyncio.CancelledError())
+    handler._original_tool_call = AsyncMock(side_effect=asyncio.CancelledError())
+    tool = MagicMock()
+    tool.name = "test_tool"
+
+    with pytest.raises(asyncio.CancelledError):
+        await handler._llm_call_monkey_patch()(model="gpt-5.4-mini", messages=[{"content": "hi"}])
+    with pytest.raises(asyncio.CancelledError):
+        await handler._tool_use_monkey_patch()(tool, args={})
+
+    steps = [c[0][0] for c in mock_context.push_intermediate_step.call_args_list]
+    assert [s.event_type for s in steps] == [
+        IntermediateStepType.LLM_START,
+        IntermediateStepType.LLM_END,
+        IntermediateStepType.TOOL_START,
+        IntermediateStepType.TOOL_END,
+    ]
+    assert steps[1].UUID == steps[0].UUID
+    assert steps[3].UUID == steps[2].UUID
+
+
+async def test_adk_handler_end_event_error_keeps_provider_error(handler, mock_context):
+    """If recording the end event of a failed call raises, the caller still gets the provider's error."""
+
+    def push(step):
+        if step.event_type == IntermediateStepType.LLM_END:
+            raise RuntimeError("event stream failed")
+
+    mock_context.push_intermediate_step.side_effect = push
+    handler._original_llm_call = AsyncMock(side_effect=ValueError("provider error"))
+
+    with pytest.raises(ValueError, match="provider error"):
+        await handler._llm_call_monkey_patch()(model="gpt-5.4-mini", messages=[{"content": "hi"}])
+
+
 async def test_adk_handler_streamed_llm_call_records_output(handler, mock_context):
     """A streamed litellm.acompletion call records LLM_END with its output and usage once the stream ends."""
     import litellm
@@ -229,7 +266,6 @@ async def test_adk_handler_streamed_llm_call_records_output(handler, mock_contex
     assert end.span_event_timestamp <= start.event_timestamp
 
 
-@pytest.mark.asyncio
 async def test_adk_handler_closed_stream_ends_llm_step(handler, mock_context):
     """Closing a streamed call before it is exhausted records LLM_END with the chunks received so far."""
     import litellm

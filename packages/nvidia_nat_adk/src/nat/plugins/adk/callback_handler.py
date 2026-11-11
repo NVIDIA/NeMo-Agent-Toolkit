@@ -33,6 +33,14 @@ from nat.data_models.token_usage import TokenUsageBaseModel
 logger = logging.getLogger(__name__)
 
 
+def _record_end_safely(push_end: Callable[[], None]) -> None:
+    """Record the end event of a failed call without letting a recording error replace the call's own error."""
+    try:
+        push_end()
+    except Exception as _e:
+        logger.exception("Error recording the end of a failed call")
+
+
 class _ProfiledStream:
     """
     Passes a streamed ``litellm.acompletion`` response through to the caller and collects its chunks.
@@ -42,18 +50,22 @@ class _ProfiledStream:
     """
 
     def __init__(self, stream: Any, on_end: Callable[[list[Any]], None]):
+        """Wrap ``stream`` and call ``on_end`` with its chunks once it ends."""
         self._stream = stream
         self._on_end = on_end
         self._chunks: list[Any] = []
         self._ended = False
 
     def __getattr__(self, name: str) -> Any:
+        """Read any other attribute from the wrapped stream."""
         return getattr(self._stream, name)
 
     def __aiter__(self) -> "_ProfiledStream":
+        """Return this wrapper as the async iterator."""
         return self
 
     async def __anext__(self) -> Any:
+        """Return the next chunk of the wrapped stream, recording the end of the stream when it stops."""
         try:
             chunk = await self._stream.__anext__()
         except BaseException:
@@ -71,6 +83,7 @@ class _ProfiledStream:
             self._end()
 
     def _end(self) -> None:
+        """Call ``on_end`` once with the chunks received so far."""
         if self._ended:
             return
         self._ended = True
@@ -244,10 +257,11 @@ class ADKProfilerHandler(BaseProfilerCallback):
                     raise RuntimeError(
                         "Original tool function is None - instrumentation may not have been set up correctly")
                 result = await original_func(base_tool_instance, *args, **kwargs)
-            except Exception as e:
-                # Close the tool step, then let ADK see the tool's error
-                logger.error("BaseTool error occurred: %s", e)
-                push_tool_end()
+            except BaseException as e:
+                # Close the tool step (also when the call is cancelled), then let ADK see the tool's error
+                if isinstance(e, Exception):
+                    logger.error("BaseTool error occurred: %s", e)
+                _record_end_safely(push_tool_end)
                 raise
 
             push_tool_end(str(result))
@@ -399,10 +413,12 @@ class ADKProfilerHandler(BaseProfilerCallback):
                     raise RuntimeError(
                         "Original LLM function is None - instrumentation may not have been set up correctly")
                 output = await original_func(*args, **kwargs)
-            except Exception as e:
-                # Close the LLM step, then let the caller (and any retry logic) see the provider's error
-                logger.error("Error calling original litellm.acompletion: %s", e)
-                push_llm_end()
+            except BaseException as e:
+                # Close the LLM step (also when the call is cancelled), then let the caller (and any retry logic) see
+                # the provider's error
+                if isinstance(e, Exception):
+                    logger.error("Error calling original litellm.acompletion: %s", e)
+                _record_end_safely(push_llm_end)
                 raise
 
             if kwargs.get("stream"):
