@@ -365,3 +365,41 @@ async def test_llama_index_handler_records_text_of_mixed_block_response(reactive
 
     assert [stat.event_type for stat in stats_list] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
     assert stats_list[1].payload.data.output == expected_output
+
+
+@pytest.mark.parametrize("blocks, expected_output",
+                         [
+                             pytest.param(["First", "tool_call", "Second"], "FirstSecond", id="text_around_tool_call"),
+                             pytest.param(["tool_call"], "", id="tool_call_only"),
+                         ])
+async def test_llama_index_handler_joins_text_blocks_in_order(reactive_stream: Subject,
+                                                              blocks: list[str],
+                                                              expected_output: str):
+    """LLM_END records the text blocks of a chat response in order and skips the other blocks."""
+    from llama_index.core.base.llms.types import ToolCallBlock
+    from llama_index.core.callbacks import CBEventType
+    from llama_index.core.callbacks import EventPayload
+    from llama_index.core.llms import ChatMessage
+    from llama_index.core.llms import ChatResponse
+    from llama_index.core.llms import TextBlock
+
+    from nat.plugins.llama_index.callback_handler import LlamaIndexProfilerHandler
+
+    handler = LlamaIndexProfilerHandler()
+    stats_list = []
+    _ = reactive_stream.subscribe(stats_list.append)
+
+    message = ChatMessage(
+        role="assistant",
+        blocks=[
+            ToolCallBlock(tool_call_id="call_1", tool_name="get_weather") if block == "tool_call" else TextBlock(
+                text=block) for block in blocks
+        ])
+    handler.on_event_start(event_type=CBEventType.LLM,
+                           payload={EventPayload.PROMPT: "What is the weather?"},
+                           event_id="evt-1")
+    handler.on_event_end(event_type=CBEventType.LLM,
+                         payload={EventPayload.RESPONSE: ChatResponse(message=message)},
+                         event_id="evt-1")
+
+    assert stats_list[-1].payload.data.output == expected_output
