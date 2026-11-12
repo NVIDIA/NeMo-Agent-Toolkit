@@ -135,6 +135,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self._run_id_to_llm_input = {}
         self._run_id_to_parent_span = {}
         self._run_id_to_tool_input = {}
+        self._run_id_to_tool_name = {}
         self._run_id_to_chain_input = {}
         self._run_id_to_chain_name = {}
         self._run_id_to_start_time = {}
@@ -416,7 +417,18 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         inputs: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> Any:
+        """Open the span of a tool call and record its input, name and start time.
 
+        Args:
+            serialized: The serialized tool.
+            input_str: The tool input as a string.
+            run_id: The LangChain run ID of the tool call.
+            parent_run_id: The run ID of the parent run, if any.
+            tags: The tags of the tool call.
+            metadata: The metadata of the tool call.
+            inputs: The tool input as a dictionary.
+            **kwargs: Additional keyword arguments passed by LangChain.
+        """
         stats = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
                                         framework=LLMFrameworkEnum.LANGCHAIN,
                                         name=serialized.get("name", ""),
@@ -428,6 +440,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
 
         self.step_manager.push_intermediate_step(stats)
         self._run_id_to_tool_input[str(run_id)] = input_str
+        self._run_id_to_tool_name[str(run_id)] = serialized.get("name", "")
         self._run_id_to_start_time[str(run_id)] = time.time()
 
     async def on_chain_start(
@@ -507,8 +520,31 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         tags: list[str] | None = None,
         **kwargs: Any,
     ) -> None:
+        """Close the span of a failed or cancelled chain run without exposing exception text.
 
-        self._clear_chain_run_state(str(run_id))
+        Args:
+            error: The exception that ended the chain run.
+            run_id: The LangChain run ID of the chain.
+            parent_run_id: The run ID of the parent run, if any.
+            tags: The tags of the chain run.
+            **kwargs: Additional keyword arguments passed by LangChain.
+        """
+        run_id_str = str(run_id)
+        if run_id_str not in self._run_id_to_chain_name:
+            return
+        try:
+            self.step_manager.push_intermediate_step(
+                IntermediateStepPayload(event_type=IntermediateStepType.FUNCTION_END,
+                                        span_event_timestamp=self._run_id_to_start_time.get(run_id_str, time.time()),
+                                        framework=LLMFrameworkEnum.LANGCHAIN,
+                                        name=self._run_id_to_chain_name[run_id_str],
+                                        UUID=run_id_str,
+                                        tags=copy.deepcopy(tags),
+                                        data=StreamEventData(input=self._run_id_to_chain_input.get(run_id_str, "")),
+                                        metadata={"status": type(error).__name__},
+                                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel())))
+        finally:
+            self._clear_chain_run_state(run_id_str)
 
     async def on_tool_end(
         self,
@@ -518,7 +554,14 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> Any:
+        """Close the span of a completed tool call and discard its bookkeeping.
 
+        Args:
+            output: The tool's output.
+            run_id: The LangChain run ID of the tool call.
+            parent_run_id: The run ID of the parent run, if any.
+            **kwargs: Additional keyword arguments passed by LangChain, including the tool ``name``.
+        """
         stats = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
                                         span_event_timestamp=self._run_id_to_start_time.get(str(run_id), time.time()),
                                         framework=LLMFrameworkEnum.LANGCHAIN,
@@ -530,4 +573,45 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                                                              output=output,
                                                              payload=output))
 
-        self.step_manager.push_intermediate_step(stats)
+        try:
+            self.step_manager.push_intermediate_step(stats)
+        finally:
+            self._clear_tool_run_state(str(run_id))
+
+    async def on_tool_error(
+        self,
+        error: BaseException,
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Close the span of a failed tool call without exposing exception text.
+
+        Args:
+            error: The exception that ended the tool call.
+            run_id: The LangChain run ID of the tool call.
+            parent_run_id: The run ID of the parent run, if any.
+            **kwargs: Additional keyword arguments passed by LangChain.
+        """
+        run_id_str = str(run_id)
+        if run_id_str not in self._run_id_to_tool_name:
+            return
+        try:
+            self.step_manager.push_intermediate_step(
+                IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
+                                        span_event_timestamp=self._run_id_to_start_time.get(run_id_str, time.time()),
+                                        framework=LLMFrameworkEnum.LANGCHAIN,
+                                        name=self._run_id_to_tool_name[run_id_str],
+                                        UUID=run_id_str,
+                                        data=StreamEventData(input=self._run_id_to_tool_input.get(run_id_str, "")),
+                                        metadata={"status": type(error).__name__},
+                                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel())))
+        finally:
+            self._clear_tool_run_state(run_id_str)
+
+    def _clear_tool_run_state(self, run_id_str: str) -> None:
+        """Discard bookkeeping for a completed or failed tool call."""
+        self._run_id_to_tool_input.pop(run_id_str, None)
+        self._run_id_to_tool_name.pop(run_id_str, None)
+        self._run_id_to_start_time.pop(run_id_str, None)
