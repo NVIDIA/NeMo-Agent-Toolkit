@@ -107,7 +107,7 @@ nat run --config_file examples/A2A/math_assistant_a2a/configs/config.yml \
 
 ### Additional Examples
 
-For more query examples, see [`data/sample_queries.json`](data/sample_queries.json).
+For more query examples, see [`data/sample_queries.json`](src/nat_math_assistant_a2a/data/sample_queries.json).
 
 **Run a specific query by its ID:**
 

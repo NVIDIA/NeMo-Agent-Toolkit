@@ -540,7 +540,7 @@ async def my_hitl_middleware(config: MyHITLConfig, builder: Builder):
 
 ### Guardrails Middleware
 
-The Guardrails middleware (`_type: guardrails`) hosts [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) as a policy engine at function input and output boundaries. It is provided by the `nvidia-nat-security` plugin; install it with `nvidia-nat-security[guardrails]`. Input rails run on `pre_invoke` (function arguments) and output rails run on `post_invoke` (function output). The middleware operates on strings only.
+The Guardrails middleware (`_type: guardrails`) hosts [NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails) as a policy engine at function input and output boundaries. It is provided by the `nvidia-nat-security` plugin; install it with `nvidia-nat-security[guardrails]`. Input rails run on `pre_invoke` (function arguments) and output rails run on `post_invoke` (function output). The middleware operates on strings only.
 
 #### Selecting what to guard
 
