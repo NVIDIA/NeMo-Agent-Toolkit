@@ -134,8 +134,9 @@ def test_streaming_response_does_not_break_call():
                                               mock_response="hi",
                                               stream=True)
     assert not hasattr(result, "choices")
+    assert "".join(chunk.choices[0].delta.content or "" for chunk in result if chunk.choices) == "hi"
 
     payloads = [call.args[0] for call in handler.step_manager.push_intermediate_step.call_args_list]
     llm_end = [p for p in payloads if p.event_type == IntermediateStepType.LLM_END]
     assert len(llm_end) == 1
-    assert llm_end[0].usage_info.token_usage.total_tokens == 0
+    assert llm_end[0].data.output == "hi"
