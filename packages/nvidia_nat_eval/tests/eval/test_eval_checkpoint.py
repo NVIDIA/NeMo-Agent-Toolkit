@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import numpy as np
 import pytest
 
 from nat.data_models.config import Config
@@ -54,6 +55,14 @@ def _llm_end_step(question: str, answer: str, total_tokens: int = 7) -> Intermed
                                 data=StreamEventData(input=question, output=answer),
                                 usage_info=UsageInfo(token_usage=TokenUsageBaseModel(
                                     prompt_tokens=total_tokens - 2, completion_tokens=2, total_tokens=total_tokens))))
+
+
+def _tool_end_step(question: str, output) -> IntermediateStep:
+    return IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(function_name="tool", function_id="tool-1"),
+                            payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
+                                                            name="tool",
+                                                            data=StreamEventData(input=question, output=output)))
 
 
 def _item(item_id, question: str) -> EvalInputItem:
@@ -100,6 +109,24 @@ def test_checkpoint_round_trip_restores_output_and_trajectory(tmp_path):
     assert step.event_type == IntermediateStepType.LLM_END
     assert step.usage_info.token_usage.total_tokens == 7
     assert items[1].output_obj is None
+
+
+def test_checkpoint_records_a_step_whose_data_is_not_json(tmp_path):
+    """A tool result such as a `numpy.int64` is written as its string form, like a non-JSON output."""
+    answered = _answered(1, "q1")
+    answered.trajectory.append(_tool_end_step("q1", np.int64(14)))
+    checkpoint = EvalCheckpoint(tmp_path / CHECKPOINT_FILE_NAME)
+    checkpoint.start(resume=False)
+    checkpoint.record(answered)
+    checkpoint.close()
+
+    items = [_item(1, "q1")]
+    restored = EvalCheckpoint(tmp_path / CHECKPOINT_FILE_NAME).restore(items)
+
+    assert restored == items
+    event_types = [step.event_type for step in items[0].trajectory]
+    assert event_types == [IntermediateStepType.LLM_END, IntermediateStepType.TOOL_END]
+    assert items[0].trajectory[1].data.output == "14"
 
 
 def test_checkpoint_skips_a_torn_last_line(tmp_path):
@@ -361,6 +388,20 @@ async def test_failed_items_are_not_checkpointed(tmp_path):
 
     assert evaluation_run.workflow_interrupted
     assert [r["id"] for r in _read_records(tmp_path / CHECKPOINT_FILE_NAME)] == [1]
+
+
+async def test_a_step_whose_data_is_not_json_does_not_fail_the_run(tmp_path):
+    """A tool returning a `numpy.int64` must not stop `nat eval` when the item is checkpointed."""
+    evaluation_run = _evaluation_run(tmp_path, [_item(1, "q1"), _item(2, "q2")])
+    with patch("nat.builder.runtime_event_subscriber.pull_intermediate",
+               AsyncMock(return_value=[_tool_end_step("q", np.int64(14))])):
+        await evaluation_run.run_workflow_local(_session_manager(lambda q: f"answer {q}"))
+    evaluation_run.checkpoint.close()
+
+    assert not evaluation_run.workflow_interrupted
+    records = _read_records(tmp_path / CHECKPOINT_FILE_NAME)
+    assert [(r["id"], r["output"]) for r in records] == [(1, "answer q1"), (2, "answer q2")]
+    assert [r["trajectory"][0]["payload"]["data"]["output"] for r in records] == ["14", "14"]
 
 
 # --- run_and_evaluate with --resume ---------------------------------------------------------------------------------
