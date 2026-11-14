@@ -41,6 +41,7 @@ from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluator
 from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluatorConfig
 from nat.plugins.langchain.eval.trajectory_evaluator import _atif_to_agent_actions
+from nat.plugins.langchain.eval.trajectory_evaluator import _extract_score_from_parser_error
 from nat.plugins.langchain.eval.trajectory_evaluator import _message_to_text
 from nat.plugins.langchain.eval.trajectory_evaluator import register_trajectory_evaluator
 
@@ -160,10 +161,62 @@ async def test_trajectory_evaluate_recovers_score_from_output_parser_error(traje
 
         assert isinstance(eval_output, EvalOutput)
         assert len(eval_output.eval_output_items) == 2
-        assert eval_output.average_score == pytest.approx(5.0)
+        # A judge score of 5 is the top of the 1 to 5 scale, reported as 1.0 like a parsed "Score: 5".
+        assert eval_output.average_score == pytest.approx(1.0)
         for item in eval_output.eval_output_items:
-            assert item.score == pytest.approx(5.0)
+            assert item.score == pytest.approx(1.0)
             assert item.reasoning["recovered_from_output_parser_error"] is True
+
+
+@pytest.mark.parametrize(
+    "error_text, expected",
+    [
+        ("Could not find score in model eval output: Overall, I would give the trajectory a score of 4.", 0.75),
+        ("Score is not an integer digit in the range 1-5: The agent mostly succeeded.\n\nScore: 3.5", 0.625),
+        ("Score is not a digit in the range 1-5: Every step was needed.\n\nScore: 10", None),
+        ("Score is not a digit in the range 1-5: Nothing worked.\n\nScore: 0", None),
+        ("not enough values to unpack (expected 2, got 1)", None),
+    ],
+    ids=["integer-in-range", "fraction-in-range", "above-scale", "below-scale", "no-score"],
+)
+def test_extract_score_from_parser_error_uses_parser_scale(error_text, expected):
+    recovered = _extract_score_from_parser_error(error_text)
+
+    if expected is None:
+        assert recovered is None
+    else:
+        assert recovered == pytest.approx(expected)
+
+
+async def test_trajectory_recovered_score_matches_parsed_score(rag_eval_input):
+    """The same judge score gives the same item score whether LangChain's parser reads it or it is recovered."""
+    judge = FakeListChatModel(responses=[
+        "The agent answered directly and correctly.\n\nScore: 4",
+        "The agent answered directly and correctly. Overall, I would give the trajectory a score of 4.",
+    ])
+    evaluator = TrajectoryEvaluator(llm=judge, tools=None, max_concurrency=1)
+
+    eval_output = await evaluator.evaluate(rag_eval_input)
+
+    parsed, recovered = eval_output.eval_output_items
+    assert "recovered_from_output_parser_error" not in parsed.reasoning
+    assert recovered.reasoning["recovered_from_output_parser_error"] is True
+    assert parsed.score == pytest.approx(0.75)
+    assert recovered.score == pytest.approx(0.75)
+    assert eval_output.average_score == pytest.approx(0.75)
+
+
+async def test_trajectory_judge_score_outside_scale_is_an_error(rag_eval_input):
+    """A score the judge gives outside 1 to 5 is reported as an evaluation error, not as the item's score."""
+    judge = FakeListChatModel(responses=["Every step was needed.\n\nScore: 10"] * 2)
+    evaluator = TrajectoryEvaluator(llm=judge, tools=None, max_concurrency=1)
+
+    eval_output = await evaluator.evaluate(rag_eval_input)
+
+    for item in eval_output.eval_output_items:
+        assert item.score == pytest.approx(0.0)
+        assert item.error is not None
+        assert "range 1-5" in item.error
 
 
 @pytest.fixture(name="atif_samples")
