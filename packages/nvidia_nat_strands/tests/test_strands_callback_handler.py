@@ -137,6 +137,53 @@ class TestStrandsToolInstrumentationHook:
         assert call_args.name == "test_tool"
         assert call_args.UUID == tool_use_id
 
+    def test_on_after_tool_invocation_skips_unknown_tool(self, tool_hook, mock_step_manager):
+        """An unknown tool (no selected_tool) never started a tool step, so no TOOL_END is emitted."""
+        mock_event = MagicMock()
+        mock_event.tool_use = {"toolUseId": "unknown-id", "name": "missing_tool", "input": {}}
+        mock_event.selected_tool = None
+        mock_event.result = {"content": [{"text": "Unknown tool: missing_tool"}]}
+        mock_event.exception = None
+
+        tool_hook.on_after_tool_invocation(mock_event)
+
+        mock_step_manager.push_intermediate_step.assert_not_called()
+
+    @staticmethod
+    def _start_tool_call(tool_hook, tool_use_id: str) -> None:
+        """Emit TOOL_START for a ``test_tool`` call."""
+        mock_event = MagicMock()
+        mock_event.tool_use = {"toolUseId": tool_use_id, "name": "test_tool", "input": {"param": "value"}}
+        mock_event.selected_tool = MagicMock()
+        mock_event.selected_tool.tool_name = "test_tool"
+        mock_event.selected_tool.tool_spec = {"name": "test_tool"}
+        tool_hook.on_before_tool_invocation(mock_event)
+
+    def test_on_after_invocation_ends_tool_calls_of_failed_invocation(self, tool_hook, mock_step_manager):
+        """When the invocation raised or was cancelled (no result), open tool calls get a TOOL_END."""
+        self._start_tool_call(tool_hook, "open-id")
+        mock_step_manager.push_intermediate_step.reset_mock()
+
+        tool_hook.on_after_invocation(MagicMock(result=None))
+        tool_hook.on_after_invocation(MagicMock(result=None))
+
+        mock_step_manager.push_intermediate_step.assert_called_once()
+        end_payload = mock_step_manager.push_intermediate_step.call_args[0][0]
+        assert end_payload.event_type == IntermediateStepType.TOOL_END
+        assert end_payload.UUID == "open-id"
+        assert end_payload.name == "test_tool"
+        assert end_payload.data.output == ""
+        assert end_payload.data.input == str({"param": "value"})
+
+    def test_on_after_invocation_keeps_tool_calls_of_finished_invocation(self, tool_hook, mock_step_manager):
+        """An invocation that finished normally leaves tool calls that are still running (background tools) open."""
+        self._start_tool_call(tool_hook, "running-id")
+        mock_step_manager.push_intermediate_step.reset_mock()
+
+        tool_hook.on_after_invocation(MagicMock(result=MagicMock(stop_reason="end_turn")))
+
+        mock_step_manager.push_intermediate_step.assert_not_called()
+
 
 class TestStrandsProfilerHandler:
     """Tests for StrandsProfilerHandler."""
@@ -628,22 +675,25 @@ class TestStrandsProfilerHandlerAgentInstrumentation:
         agent = MockAgent()
 
         # Verify hooks were registered
-        assert agent.hooks.add_callback.call_count == 2
+        assert agent.hooks.add_callback.call_count == 3
 
         # Verify callbacks were registered
         calls = agent.hooks.add_callback.call_args_list
-        assert len(calls) == 2
+        assert len(calls) == 3
 
         # Verify that the callbacks are callable (can't check exact function since
         # tool hooks are created per-agent now, not at handler level)
         assert callable(calls[0][0][1])
         assert callable(calls[1][0][1])
+        assert callable(calls[2][0][1])
 
         # Verify the callback names contain the expected method names
         callback1_name = calls[0][0][1].__name__
         callback2_name = calls[1][0][1].__name__
+        callback3_name = calls[2][0][1].__name__
         assert 'before_tool_invocation' in callback1_name or 'on_before_tool_invocation' in callback1_name
         assert 'after_tool_invocation' in callback2_name or 'on_after_tool_invocation' in callback2_name
+        assert callback3_name == 'on_after_invocation'
 
     @patch("nat.plugins.strands.callback_handler.importlib")
     def test_instrument_agent_init_agent_not_found(self, mock_importlib, handler):
