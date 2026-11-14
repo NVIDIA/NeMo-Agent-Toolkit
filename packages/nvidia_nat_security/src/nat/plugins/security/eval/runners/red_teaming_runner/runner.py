@@ -793,23 +793,47 @@ class RedTeamingRunner:
         """Build a flat list of dictionaries from nested evaluation results.
 
         Each record represents a single condition evaluation, with a unique identifier
-        combining scenario_id, item_id, and condition_name.
+        combining scenario_id, item_id, and condition_name. An item the evaluator failed on
+        (an error item in place of a RedTeamingEvalOutputItem) is recorded once, with its error
+        message and no condition name, so that it counts as a failed evaluation.
 
         Args:
             results: The nested results from the red teaming evaluation.
 
         Returns:
-            A list of flat dictionaries, one per condition evaluation.
+            A list of flat dictionaries, one per condition evaluation or failed item.
+
+        Raises:
+            ValueError: If the red teaming evaluator returned an item of another type without an error.
         """
         flat_results = []
         evaluator_results = self._find_red_teaming_evaluator_results(results)
 
         for scenario_id, result in evaluator_results.items():
+            scenario = self.config.scenarios[scenario_id] if self.config is not None else None
+            tags = scenario.tags if scenario is not None else []
+            scenario_group = scenario.scenario_group if scenario is not None else "default_scenario_group"
             for eval_output_item in result.eval_output_items:
                 item_id = eval_output_item.id
                 if not isinstance(eval_output_item, RedTeamingEvalOutputItem):
-                    raise ValueError("Expected RedTeamingEvalOutputItem, as an output to the red teaming evaluator,"
-                                     f"got {type(eval_output_item)}")
+                    if eval_output_item.error is None:
+                        raise ValueError("Expected RedTeamingEvalOutputItem, as an output to the red teaming "
+                                         f"evaluator, got {type(eval_output_item)}")
+                    # The evaluator raised on this item (for example, the judge LLM call failed after its
+                    # retries), so the evaluation returned an error item in its place.
+                    flat_results.append({
+                        "uid": f"{scenario_id}_{item_id}",
+                        "scenario_id": scenario_id,
+                        "item_id": item_id,
+                        "condition_name": None,
+                        "score": eval_output_item.score,
+                        "reasoning": eval_output_item.reasoning,
+                        "evaluated_output": None,
+                        "error_message": eval_output_item.error,
+                        "tags": tags,
+                        "scenario_group": scenario_group,
+                    })
+                    continue
                 if hasattr(eval_output_item, 'results_by_condition') and eval_output_item.results_by_condition:
                     for condition_name, condition_result in eval_output_item.results_by_condition.items():
                         # Extract evaluated_output from intermediate_step.payload.output
@@ -820,26 +844,16 @@ class RedTeamingRunner:
                                 evaluated_output = payload.output
 
                         flat_record = {
-                            "uid":
-                                f"{scenario_id}_{item_id}_{condition_name}",
-                            "scenario_id":
-                                scenario_id,
-                            "item_id":
-                                item_id,
-                            "condition_name":
-                                condition_name,
-                            "score":
-                                condition_result.score,
-                            "reasoning":
-                                condition_result.reasoning,
-                            "evaluated_output":
-                                evaluated_output,
-                            "error_message":
-                                condition_result.error_message,
-                            "tags":
-                                self.config.scenarios[scenario_id].tags if self.config is not None else [],
-                            "scenario_group": (self.config.scenarios[scenario_id].scenario_group
-                                               if self.config is not None else "default_scenario_group"),
+                            "uid": f"{scenario_id}_{item_id}_{condition_name}",
+                            "scenario_id": scenario_id,
+                            "item_id": item_id,
+                            "condition_name": condition_name,
+                            "score": condition_result.score,
+                            "reasoning": condition_result.reasoning,
+                            "evaluated_output": evaluated_output,
+                            "error_message": condition_result.error_message,
+                            "tags": tags,
+                            "scenario_group": scenario_group,
                         }
                         flat_results.append(flat_record)
 
