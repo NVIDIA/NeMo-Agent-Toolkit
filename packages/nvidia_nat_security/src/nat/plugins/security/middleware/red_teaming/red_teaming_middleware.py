@@ -270,6 +270,12 @@ class RedTeamingMiddleware(FunctionMiddleware):
             matches = self._resolve_multiple_field_matches(matches)
         else:
             matches = [matches[0]]
+        for match in matches:
+            # Only strings and numbers can carry a payload. Any other value (an object, a list or null)
+            # would be overwritten without the payload reaching the function.
+            if not isinstance(match.value, str | int | float):
+                raise ValueError(f"target_field {self._target_field} matched {match.full_path}, which holds "
+                                 f"{type(match.value).__name__}, not a string or number")
         modified_values = [
             self._apply_payload_to_simple_type(match.value, self._attack_payload, self._payload_placement)
             for match in matches

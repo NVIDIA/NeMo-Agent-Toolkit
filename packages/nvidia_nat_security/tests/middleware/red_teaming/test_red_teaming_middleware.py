@@ -426,3 +426,58 @@ def test_string_placement_modes(placement, original, expected):
     middleware = RedTeamingMiddleware(attack_payload="PAYLOAD", payload_placement=placement, target_location="input")
     result = middleware._apply_payload_to_function_value(original)
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    "target_field, held_type",
+    [("$.reviews[*]", "dict"), ("$.reviews", "list"), ("$.description", "NoneType")],
+    ids=["object", "list", "null"],
+)
+def test_target_field_must_resolve_to_string_or_number(target_field, held_type):
+    """A target_field that matches an object, a list or null raises instead of overwriting the value."""
+    middleware = RedTeamingMiddleware(
+        attack_payload="INJECTED",
+        target_field=target_field,
+        payload_placement="replace",
+        target_location="output",
+        target_field_resolution_strategy="all",
+    )
+    output = {"description": None, "reviews": [{"review": "Great trowel", "rating": 5}]}
+
+    with pytest.raises(ValueError, match=f"holds {held_type}, not a string or number"):
+        middleware._apply_payload_to_function_value(output)
+
+    assert output == {"description": None, "reviews": [{"review": "Great trowel", "rating": 5}]}
+    assert middleware._call_count == 0
+
+
+class ProductInput(BaseModel):
+    product_id: str
+    note: str | None = None
+
+
+async def test_null_target_field_does_not_count_as_an_attack():
+    """An input attack on a field that is null fails before the function runs, instead of passing null through."""
+    middleware = RedTeamingMiddleware(
+        attack_payload="INJECTED",
+        target_field="$.note",
+        payload_placement="append_end",
+        target_location="input",
+    )
+    mock_call_next = AsyncMock(return_value={"status": "ok"})
+    context = FunctionMiddlewareContext(
+        name=f"retail_tools{FunctionGroup.SEPARATOR}get_product_info",
+        config=MagicMock(),
+        description="Product lookup",
+        input_schema=ProductInput,
+        single_output_schema=dict,
+        stream_output_schema=None,
+    )
+
+    with pytest.raises(ValueError, match="holds NoneType, not a string or number"):
+        await middleware.function_middleware_invoke(ProductInput(product_id="PROD001"),
+                                                    call_next=mock_call_next,
+                                                    context=context)
+
+    mock_call_next.assert_not_called()
+    assert middleware._call_count == 0
