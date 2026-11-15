@@ -37,6 +37,7 @@ from mcp.shared._httpx_utils import MCP_DEFAULT_SSE_READ_TIMEOUT
 from mcp.shared._httpx_utils import MCP_DEFAULT_TIMEOUT
 from mcp.shared._httpx_utils import create_mcp_http_client
 from mcp.types import EmbeddedResource
+from mcp.types import PaginatedRequestParams
 from mcp.types import TextContent
 from mcp.types import TextResourceContents
 from nat.authentication.interfaces import AuthenticatedContext
@@ -491,7 +492,12 @@ class MCPBaseClient(ABC):
                 # Add timeout to the list_tools call.
                 # This is needed because MCP SDK does not support timeout for list_tools()
                 with anyio.fail_after(self._tool_call_timeout.total_seconds()):
-                    tools = await session.list_tools()
+                    response = await session.list_tools()
+                    tools = list(response.tools)
+                    # Servers may paginate tools/list; keep requesting pages until no cursor is returned.
+                    while response.nextCursor:
+                        response = await session.list_tools(params=PaginatedRequestParams(cursor=response.nextCursor))
+                        tools.extend(response.tools)
             except TimeoutError as e:
                 from nat.plugins.mcp.exceptions import MCPTimeoutError
 
@@ -500,7 +506,7 @@ class MCPBaseClient(ABC):
             return tools
 
         try:
-            response = await self._with_reconnect(_get_tools)
+            tools = await self._with_reconnect(_get_tools)
         except Exception as e:
             logger.warning("Failed to get tools: %s", e)
             raise
@@ -514,7 +520,7 @@ class MCPBaseClient(ABC):
                     tool_input_schema=tool.inputSchema,
                     parent_client=self,
                 )
-            for tool in response.tools
+            for tool in tools
         }
 
     @mcp_exception_handler
