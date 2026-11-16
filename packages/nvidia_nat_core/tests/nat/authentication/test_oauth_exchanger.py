@@ -209,6 +209,48 @@ async def test_refresh_expired_token(monkeypatch, cfg):
     assert cred.token.get_secret_value() == NEW_TOKEN
 
 
+async def test_refresh_passes_plain_client_secret(monkeypatch, cfg):
+    seen_kwargs: dict = {}
+
+    class _RecordingAuthlibClient:
+
+        def __init__(self, *_args, **kwargs):
+            seen_kwargs.update(kwargs)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def refresh_token(self, *_args, **_kwargs):
+            return {"access_token": "newTok"}
+
+    monkeypatch.setattr(
+        "nat.authentication.oauth2.oauth2_auth_code_flow_provider.AuthlibOAuth2Client",
+        _RecordingAuthlibClient,
+        raising=True,
+    )
+
+    async def fail_cb(*_a, **_kw):
+        raise RuntimeError("should not hit callback")
+
+    _patch_context(monkeypatch, fail_cb)
+
+    client = OAuth2AuthCodeFlowProvider(cfg)
+    await client._token_storage.store(
+        "carol",
+        AuthResult(
+            credentials=[BearerTokenCred(token="stale")],  # type: ignore[arg-type]
+            token_expires_at=datetime.now(UTC) - timedelta(seconds=1),
+            raw={"refresh_token": "refTok"},
+        ))
+
+    await client.authenticate("carol")
+
+    assert seen_kwargs["client_secret"] == "secret"
+
+
 # --------------------------------------------------------------------------- #
 # 5. Refresh fails → fallback to callback
 # --------------------------------------------------------------------------- #
