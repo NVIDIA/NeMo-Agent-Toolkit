@@ -163,13 +163,13 @@ class SearchSpace(BaseModel, Generic[T]):
             raise ValueError("Log scale is not yet supported for grid search with ranges. "
                              "Please provide explicit values using the 'values' field.")
 
-        # Use arange to respect step size
-        values = np.arange(low_val, high_val, step_val).tolist()
+        # Use arange to respect step size. Floating-point error can make its last value land on, or just
+        # past, the high endpoint (e.g. 1.0000000000000002 for low=0.7, high=1.0, step=0.05), so values
+        # within tolerance of high are dropped and the exact high endpoint is appended instead.
+        values = [v for v in np.arange(low_val, high_val, step_val).tolist() if high_val - v > 1e-9]
 
-        # Always include the high endpoint if not already present (within tolerance)
-        # This ensures the full range is explored in grid search
-        if not values or abs(values[-1] - high_val) > 1e-9:
-            values.append(high_val)
+        # Always include the high endpoint. This ensures the full range is explored in grid search
+        values.append(high_val)
 
         return values
 
