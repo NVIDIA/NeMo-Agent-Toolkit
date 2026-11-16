@@ -68,7 +68,9 @@ class EvalCheckpoint:
             "id": item.id,
             "input": item.input_obj,
             "output": item.output_obj,
-            "trajectory": [step.model_dump(mode="json") for step in item.trajectory],
+            # a step can hold a value that is not JSON (a tool returning a `numpy.int64`, say); like the output,
+            # it is written as its string form instead of failing the run
+            "trajectory": [step.model_dump(mode="json", fallback=str) for step in item.trajectory],
         }
         self._file.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
         self._file.flush()
