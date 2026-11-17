@@ -19,6 +19,7 @@ from io import StringIO
 from pathlib import Path
 
 import pytest
+import yaml
 
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
@@ -136,6 +137,28 @@ def test_yaml_loads_leaves_embedded_dollar_identifiers_in_string_values():
     config: dict = yaml_loads(yaml_str, Path("."))
     flows: list[str] = config["middleware"]["example"]["rails"]["input"]["flows"]
     assert flows == ["content safety check input $model=content_safety"]
+
+
+@pytest.mark.parametrize("yaml_str",
+                         [
+                             "v: 'a\\\\b'\n",
+                             "v: \\\\server\\share\\qa.json\n",
+                             "v: 'cost \\$5'\n",
+                             "v: '^https://x\\.com/\\$'\n",
+                             "v: |\n  In JSON, write a backslash as \\\\ and a newline as \\n.\n",
+                         ],
+                         ids=["double-backslash", "unc-path", "backslash-dollar", "regex", "block-prompt"])
+def test_yaml_loads_keeps_backslashes_in_values_without_references(yaml_str: str):
+    """A value with no `${...}` reference loads exactly as YAML parses it, backslashes included."""
+    assert yaml_loads(yaml_str, Path(".")) == yaml.safe_load(yaml_str)
+
+
+def test_yaml_dump_then_load_keeps_backslashes():
+    """`nat serve` dumps the loaded config and its workers load it again, so a round trip must not change values."""
+    config = {"workflow": {"description": "\\\\server\\share and \\$5"}}
+    stream = StringIO()
+    yaml_dump(config, stream)
+    assert yaml_loads(stream.getvalue(), Path(".")) == config
 
 
 def test_yaml_loads_does_not_expand_variables_inside_env_values(monkeypatch: pytest.MonkeyPatch):

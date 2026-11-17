@@ -252,7 +252,12 @@ class _EnvVarLoader(yaml.SafeLoader):
 
     def construct_scalar(self, node: yaml.ScalarNode) -> str:
         # Every scalar, including keys and explicitly tagged values, is expanded exactly once here.
-        return expand(self._restore(super().construct_scalar(node)), surrounded_vars_only=True)
+        value = self._restore(super().construct_scalar(node))
+        if "${" not in value:
+            # `expand` also treats `\` as an escape character (`\\` -> `\`, `\$` -> `$`), so a value
+            # without a reference is returned as YAML parsed it.
+            return value
+        return expand(value, surrounded_vars_only=True)
 
 
 def _env_var_loader(references: dict[str, str]) -> type[_EnvVarLoader]:
