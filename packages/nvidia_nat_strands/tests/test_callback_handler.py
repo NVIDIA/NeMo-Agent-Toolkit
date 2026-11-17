@@ -108,7 +108,13 @@ async def test_strands_handler_tool_execution(reactive_stream: Subject):
 
 @pytest.fixture(name="scripted_agent_factory")
 def fixture_scripted_agent_factory(monkeypatch):
-    """Instrument ``Agent.__init__`` and return a factory for agents whose model calls ``get_weather`` once."""
+    """Instrument ``Agent.__init__`` and return a factory for agents whose model calls ``get_weather`` once.
+
+    The factory can also have the model call ``get_report`` alongside ``get_weather``, as a background tool that runs
+    until the factory's ``report_released`` event is set, or until its background task times out.
+    """
+    import asyncio
+
     from strands import Agent
     from strands import tool
     from strands.hooks import BeforeToolCallEvent
@@ -117,7 +123,10 @@ def fixture_scripted_agent_factory(monkeypatch):
     from nat.plugins.strands.callback_handler import StrandsProfilerHandler
 
     class ScriptedModel(Model):
-        """Asks for ``get_weather`` and answers once it has the tool result."""
+        """Asks for ``get_weather`` (and ``get_report``) and answers once it has the tool results."""
+
+        def __init__(self, with_report: bool):
+            self.with_report = with_report
 
         def update_config(self, **model_config):
             pass
@@ -136,9 +145,11 @@ def fixture_scripted_agent_factory(monkeypatch):
                 yield {"contentBlockStop": {}}
                 yield {"messageStop": {"stopReason": "end_turn"}}
                 return
-            yield {"contentBlockStart": {"start": {"toolUse": {"toolUseId": "call-1", "name": "get_weather"}}}}
-            yield {"contentBlockDelta": {"delta": {"toolUse": {"input": '{"city": "Paris"}'}}}}
-            yield {"contentBlockStop": {}}
+            tool_uses = [("call-1", "get_weather")] + ([("call-2", "get_report")] if self.with_report else [])
+            for tool_use_id, tool_name in tool_uses:
+                yield {"contentBlockStart": {"start": {"toolUse": {"toolUseId": tool_use_id, "name": tool_name}}}}
+                yield {"contentBlockDelta": {"delta": {"toolUse": {"input": '{"city": "Paris"}'}}}}
+                yield {"contentBlockStop": {}}
             yield {"messageStop": {"stopReason": "tool_use"}}
 
     @tool
@@ -146,14 +157,33 @@ def fixture_scripted_agent_factory(monkeypatch):
         """Get the weather for a city."""
         return f"Sunny in {city}"
 
+    report_released = asyncio.Event()
+
+    @tool
+    async def get_report(city: str) -> str:
+        """Get the weather report for a city."""
+        await report_released.wait()
+        return f"Report for {city}"
+
     # Restore Agent.__init__ after the test
     monkeypatch.setattr(Agent, "__init__", Agent.__init__)
     StrandsProfilerHandler()._instrument_agent_init()  # pylint: disable=protected-access
 
-    def make_agent(before_tool_call):
-        agent = Agent(model=ScriptedModel(), tools=[get_weather], callback_handler=None)
+    def make_agent(before_tool_call, with_report: bool = False, report_timeout: float | None = None):
+        if with_report:
+            background_tasks = {"always": ["get_report"]}
+            if report_timeout is not None:
+                background_tasks["timeout"] = report_timeout
+            agent = Agent(model=ScriptedModel(with_report=True),
+                          tools=[get_weather, get_report],
+                          callback_handler=None,
+                          background_tasks=background_tasks)
+        else:
+            agent = Agent(model=ScriptedModel(with_report=False), tools=[get_weather], callback_handler=None)
         agent.add_hook(before_tool_call, BeforeToolCallEvent)
         return agent
+
+    make_agent.report_released = report_released
 
     return make_agent
 
@@ -186,6 +216,23 @@ async def test_strands_handler_ends_cancelled_tool_call(reactive_stream: Subject
     assert tool_end.payload.name == "get_weather"
 
 
+async def test_strands_handler_ends_cancelled_tool_call_with_start_input(reactive_stream: Subject,
+                                                                         scripted_agent_factory):
+    """A hook that changes the tool input in place before it cancels the call does not change the TOOL_END input."""
+    all_stats = []
+    reactive_stream.subscribe(all_stats.append)
+
+    def redirect_and_deny(event):
+        event.tool_use["input"]["city"] = "London"
+        event.cancel_tool = "Tool call denied by policy"
+
+    await scripted_agent_factory(redirect_and_deny).invoke_async("weather in Paris?")
+
+    start, end = [step for step in all_stats if step.event_type.value.startswith("TOOL")]
+    assert start.payload.data.input == str({"city": "Paris"})
+    assert end.payload.data.input == str({"city": "Paris"})
+
+
 async def test_strands_handler_ends_interrupted_tool_call(reactive_stream: Subject, scripted_agent_factory):
     """A tool call that a hook interrupts for approval ends its tool step when the invocation stops."""
     all_stats = []
@@ -208,3 +255,55 @@ async def test_strands_handler_ends_interrupted_tool_call(reactive_stream: Subje
     await agent.invoke_async([{"interruptResponse": {"interruptId": result.interrupts[0].id, "response": "y"}}])
 
     assert _tool_steps(all_stats) == [("TOOL_START", "call-1", None), ("TOOL_END", "call-1", "Sunny in Paris")]
+
+
+async def test_strands_handler_keeps_background_tool_call_open_on_interrupt(reactive_stream: Subject,
+                                                                            scripted_agent_factory):
+    """A background tool call still running when the invocation is interrupted ends with its real output."""
+    import asyncio
+
+    all_stats = []
+    reactive_stream.subscribe(all_stats.append)
+
+    def ask_approval(event):
+        if event.tool_use["name"] == "get_weather" and event.interrupt("approval") != "y":
+            event.cancel_tool = "User denied the tool call"
+
+    agent = scripted_agent_factory(ask_approval, with_report=True)
+    result = await agent.invoke_async("weather in Paris?")
+
+    assert result.stop_reason == "interrupt"
+    assert sorted(_tool_steps(all_stats)) == [
+        ("TOOL_END", "call-1", ""),
+        ("TOOL_START", "call-1", None),
+        ("TOOL_START", "call-2", None),
+    ]
+
+    # The background call ends with its real output once it finishes
+    scripted_agent_factory.report_released.set()
+    async with asyncio.timeout(5):
+        while ("TOOL_END", "call-2", "Report for Paris") not in _tool_steps(all_stats):
+            await asyncio.sleep(0.01)
+
+    # Approving the interrupted call runs it as a new tool step
+    all_stats.clear()
+    await agent.invoke_async([{"interruptResponse": {"interruptId": result.interrupts[0].id, "response": "y"}}])
+
+    assert _tool_steps(all_stats) == [("TOOL_START", "call-1", None), ("TOOL_END", "call-1", "Sunny in Paris")]
+
+
+async def test_strands_handler_ends_timed_out_background_tool_call(reactive_stream: Subject, scripted_agent_factory):
+    """A background tool call whose task times out, so that it gets no AfterToolCallEvent, ends its tool step."""
+    all_stats = []
+    reactive_stream.subscribe(all_stats.append)
+
+    agent = scripted_agent_factory(lambda event: None, with_report=True, report_timeout=0.1)
+    result = await agent.invoke_async("weather in Paris?")
+
+    assert result.stop_reason == "end_turn"
+    assert sorted(_tool_steps(all_stats)) == [
+        ("TOOL_END", "call-1", "Sunny in Paris"),
+        ("TOOL_END", "call-2", ""),
+        ("TOOL_START", "call-1", None),
+        ("TOOL_START", "call-2", None),
+    ]

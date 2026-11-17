@@ -44,8 +44,10 @@ class StrandsToolInstrumentationHook:
     capture tool execution events and emit proper TOOL_START/END spans.
     """
 
-    # Agent stop reason when a hook or a tool interrupts the invocation for human input
-    _INTERRUPT_STOP_REASON = "interrupt"
+    # Agent state key under which Strands keeps a snapshot of each background task
+    _BACKGROUND_TASKS_STATE_KEY = "strands.background_tasks"
+    # Background task statuses after which the task runs no more
+    _BACKGROUND_TASK_TERMINAL_STATUSES = frozenset({"completed", "failed", "cancelled"})
 
     def __init__(self, handler: 'StrandsProfilerHandler'):
         """Initialize the hook with a reference to the profiler handler.
@@ -55,7 +57,7 @@ class StrandsToolInstrumentationHook:
         """
         self.handler = handler
         self._tool_start_times: dict[str, float] = {}
-        # Name and input of each tool call whose TOOL_START has no TOOL_END yet, by tool use ID
+        # Name and a snapshot of the input of each tool call whose TOOL_START has no TOOL_END yet, by tool use ID
         self._open_tool_calls: dict[str, tuple[str, dict]] = {}
         self._step_manager = Context.get().intermediate_step_manager
 
@@ -81,7 +83,8 @@ class StrandsToolInstrumentationHook:
 
             # Store start time for duration calculation
             self._tool_start_times[tool_use_id] = time.time()
-            self._open_tool_calls[tool_use_id] = (tool_name, tool_input)
+            # Snapshot the input: a later hook can change it in place before it cancels or interrupts the call
+            self._open_tool_calls[tool_use_id] = (tool_name, copy.deepcopy(tool_input))
 
             step_manager = self._step_manager
 
@@ -129,7 +132,11 @@ class StrandsToolInstrumentationHook:
                 logger.debug("Tool hook: no selected_tool, skipping")
                 return
 
-            tool_name, tool_input = self._open_tool_calls.pop(tool_use_id, (tool_name, tool_input))
+            open_tool_name, open_tool_input = self._open_tool_calls.pop(tool_use_id, (tool_name, tool_input))
+            if not selected_tool:
+                # A cancelled call never ran, so end it with the name and input it started with. A call that ran
+                # keeps the name and input of this event, which are what the tool ran with.
+                tool_name, tool_input = open_tool_name, open_tool_input
             start_time = self._tool_start_times.pop(tool_use_id, time.time())
 
             # Extract output from result
@@ -157,17 +164,25 @@ class StrandsToolInstrumentationHook:
         """Handle the end of an agent invocation.
 
         Strands emits no AfterToolCallEvent for a tool call that a hook or the tool interrupts, or that is stopped by
-        an error or cancellation. When the invocation was interrupted or did not finish, emit TOOL_END with empty
-        output for each tool call that is still open, so its TOOL_START does not stay open.
+        an error or cancellation. Emit TOOL_END with empty output for each tool call that is still open, so its
+        TOOL_START does not stay open.
+
+        A background tool call keeps running after the invocation ends, even an interrupted one, and Strands emits its
+        AfterToolCallEvent with the real output when it finishes. Such a call stays open while its background task
+        has not ended. A call whose task ended without an AfterToolCallEvent (it was cancelled or timed out) is
+        closed like any other.
 
         Args:
             event: AfterInvocationEvent from Strands
         """
-        result = getattr(event, "result", None)
-        if result is not None and getattr(result, "stop_reason", None) != self._INTERRUPT_STOP_REASON:
-            return
+        background_task_statuses = self._background_task_statuses(getattr(event, "agent", None))
 
         for tool_use_id, (tool_name, tool_input) in list(self._open_tool_calls.items()):
+            background_task_status = background_task_statuses.get(tool_use_id)
+            if (background_task_status is not None
+                    and background_task_status not in self._BACKGROUND_TASK_TERMINAL_STATUSES):
+                continue
+
             self._open_tool_calls.pop(tool_use_id, None)
             start_time = self._tool_start_times.pop(tool_use_id, time.time())
             try:
@@ -175,6 +190,28 @@ class StrandsToolInstrumentationHook:
                 logger.debug("TOOL_END for unfinished tool call: %s (ID: %s)", tool_name, tool_use_id)
             except Exception:  # noqa: BLE001
                 logger.exception("Failed to end the tool step of %s (ID: %s)", tool_name, tool_use_id)
+
+    def _background_task_statuses(self, agent: Any) -> dict[str, str]:
+        """Get the status of each background task of the agent, by the tool use ID it runs.
+
+        Args:
+            agent: Strands agent
+
+        Returns:
+            Dictionary of background task statuses by tool use ID, empty when the agent runs no background tasks
+        """
+        state = getattr(agent, "state", None)
+        try:
+            tasks = state.get(self._BACKGROUND_TASKS_STATE_KEY) if state is not None else None
+        except Exception:  # noqa: BLE001
+            logger.debug("Failed to read the background tasks of the agent", exc_info=True)
+            return {}
+        if not isinstance(tasks, list):
+            return {}
+        return {
+            task["tool_use_id"]: task.get("status")
+            for task in tasks if isinstance(task, dict) and isinstance(task.get("tool_use_id"), str)
+        }
 
     def _push_tool_end(self, tool_name: str, tool_use_id: str, tool_input: dict, tool_output: str,
                        start_time: float) -> None:

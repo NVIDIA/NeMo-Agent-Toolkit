@@ -175,14 +175,56 @@ class TestStrandsToolInstrumentationHook:
         assert end_payload.data.output == ""
         assert end_payload.data.input == str({"param": "value"})
 
-    def test_on_after_invocation_keeps_tool_calls_of_finished_invocation(self, tool_hook, mock_step_manager):
-        """An invocation that finished normally leaves tool calls that are still running (background tools) open."""
-        self._start_tool_call(tool_hook, "running-id")
+    @staticmethod
+    def _finished_invocation_event(background_tasks: list[dict] | None) -> MagicMock:
+        """AfterInvocationEvent of an invocation that finished normally, with the agent's background tasks."""
+        agent = MagicMock()
+        agent.state.get.side_effect = lambda key: background_tasks if key == "strands.background_tasks" else None
+        return MagicMock(agent=agent, result=MagicMock(stop_reason="end_turn"))
+
+    def test_on_after_invocation_keeps_running_background_tool_calls(self, tool_hook, mock_step_manager):
+        """A tool call whose background task has not ended stays open until its own AfterToolCallEvent."""
+        self._start_tool_call(tool_hook, "working-id")
+        self._start_tool_call(tool_hook, "input-required-id")
         mock_step_manager.push_intermediate_step.reset_mock()
 
-        tool_hook.on_after_invocation(MagicMock(result=MagicMock(stop_reason="end_turn")))
+        tool_hook.on_after_invocation(
+            self._finished_invocation_event([
+                {
+                    "tool_use_id": "working-id", "status": "working"
+                },
+                {
+                    "tool_use_id": "input-required-id", "status": "input_required"
+                },
+            ]))
 
         mock_step_manager.push_intermediate_step.assert_not_called()
+
+    def test_on_after_invocation_ends_tool_calls_of_ended_background_tasks(self, tool_hook, mock_step_manager):
+        """A tool call whose background task ended without an AfterToolCallEvent gets a TOOL_END."""
+        self._start_tool_call(tool_hook, "cancelled-id")
+        mock_step_manager.push_intermediate_step.reset_mock()
+
+        tool_hook.on_after_invocation(
+            self._finished_invocation_event([{
+                "tool_use_id": "cancelled-id", "status": "cancelled"
+            }]))
+
+        mock_step_manager.push_intermediate_step.assert_called_once()
+        end_payload = mock_step_manager.push_intermediate_step.call_args[0][0]
+        assert end_payload.event_type == IntermediateStepType.TOOL_END
+        assert end_payload.UUID == "cancelled-id"
+        assert end_payload.data.output == ""
+
+    def test_on_after_invocation_ends_tool_calls_without_background_task(self, tool_hook, mock_step_manager):
+        """A tool call still open after an invocation that finished, with no background task running it, ends."""
+        self._start_tool_call(tool_hook, "open-id")
+        mock_step_manager.push_intermediate_step.reset_mock()
+
+        tool_hook.on_after_invocation(self._finished_invocation_event(None))
+
+        mock_step_manager.push_intermediate_step.assert_called_once()
+        assert mock_step_manager.push_intermediate_step.call_args[0][0].UUID == "open-id"
 
 
 class TestStrandsProfilerHandler:
