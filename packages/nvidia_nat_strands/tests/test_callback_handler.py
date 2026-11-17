@@ -114,6 +114,7 @@ def fixture_scripted_agent_factory(monkeypatch):
     until the factory's ``report_released`` event is set, or until its background task times out.
     """
     import asyncio
+    import inspect
 
     from strands import Agent
     from strands import tool
@@ -165,12 +166,17 @@ def fixture_scripted_agent_factory(monkeypatch):
         await report_released.wait()
         return f"Report for {city}"
 
+    # Read before Agent.__init__ is instrumented: strands-agents releases before 1.56 have no background tasks
+    supports_background_tasks = "background_tasks" in inspect.signature(Agent.__init__).parameters
+
     # Restore Agent.__init__ after the test
     monkeypatch.setattr(Agent, "__init__", Agent.__init__)
     StrandsProfilerHandler()._instrument_agent_init()  # pylint: disable=protected-access
 
     def make_agent(before_tool_call, with_report: bool = False, report_timeout: float | None = None):
         if with_report:
+            if not supports_background_tasks:
+                pytest.skip("The installed strands-agents does not support background tasks")
             background_tasks = {"always": ["get_report"]}
             if report_timeout is not None:
                 background_tasks["timeout"] = report_timeout
