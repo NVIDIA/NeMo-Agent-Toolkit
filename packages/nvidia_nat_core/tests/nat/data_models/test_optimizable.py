@@ -271,6 +271,15 @@ class TestSearchSpaceToGridValues:
         assert result[0] == pytest.approx(0.0)
         assert result[-1] == pytest.approx(0.1)
 
+    @pytest.mark.parametrize("low, high, step", [(0.7, 1.0, 0.05), (1.0, 1.3, 0.1), (0.5, 1.0, 0.1)])
+    def test_float_range_stays_within_bounds(self, low, high, step):
+        """Floating-point error in the range must not produce a value above high, such as top_p=1.0000000000000002."""
+        space = SearchSpace(low=low, high=high, step=step)
+        result = space.to_grid_values()
+        assert all(low <= v <= high for v in result)
+        assert result[-1] == high
+        assert len(result) == round((high - low) / step) + 1
+
     def test_integer_range_with_non_integral_step_returns_floats(self):
         """Test that non-integral step for integer range returns float values."""
         space = SearchSpace(low=0, high=10, step=1.5)
