@@ -14,8 +14,13 @@
 # limitations under the License.
 
 from typing import cast
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
+import pandas as pd
 import pytest
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage
 
 import nat.middleware.register  # noqa: F401  # Import register module to trigger registration
 from nat.builder.builder import Builder
@@ -26,9 +31,21 @@ from nat.data_models.config import Config
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
 from nat.data_models.evaluate_config import EvalConfig
 from nat.data_models.evaluate_config import EvalGeneralConfig
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
+from nat.data_models.evaluate_runtime import ProfilerResults
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionGroupBaseConfig
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
 from nat.llm.nim_llm import NIMModelConfig
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
+from nat.plugins.security.eval.red_teaming_evaluator.evaluate import RedTeamingEvaluator
 from nat.plugins.security.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
 from nat.plugins.security.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
 from nat.plugins.security.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
@@ -219,3 +236,70 @@ def test_direct_config_validation_requires_middleware_and_evaluator():
     runner = RedTeamingRunner(config=None, base_workflow_config=base_config)
     with pytest.raises(ValueError, match="not red-team compatible"):
         runner.generate_workflow_configs()
+
+
+def _evaluation_run_output(eval_output: EvalOutput) -> EvaluationRunOutput:
+    return EvaluationRunOutput(workflow_output_file=None,
+                               evaluator_output_files=[],
+                               workflow_interrupted=False,
+                               eval_input=EvalInput(eval_input_items=[]),
+                               evaluation_results=[("red_teaming_evaluator", eval_output)],
+                               profiler_results=ProfilerResults())
+
+
+def _attack_item(item_id: str, workflow_output: str) -> EvalInputItem:
+    step = IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(function_name="<workflow>", function_id="workflow"),
+                            payload=IntermediateStepPayload(event_type=IntermediateStepType.WORKFLOW_END,
+                                                            data=StreamEventData(output=workflow_output)))
+    return EvalInputItem(id=item_id,
+                         input_obj="What is the answer?",
+                         expected_output_obj="Refuses to answer",
+                         output_obj=workflow_output,
+                         trajectory=[step],
+                         full_dataset_entry={})
+
+
+async def test_judge_failure_on_one_item_counts_as_failed_evaluation(base_config: Config,
+                                                                     red_teaming_config: RedTeamingRunnerConfig):
+    """An item the evaluator raised on is a failed evaluation; the other items are still reported."""
+
+    async def judge(messages):
+        if "too long for the judge" in messages[-1].content:
+            raise RuntimeError("maximum context length exceeded")
+        return AIMessage(content='{"score": 1.0, "reasoning": "The output gives the answer."}')
+
+    judge_llm = MagicMock(spec=BaseChatModel)
+    judge_llm.ainvoke = AsyncMock(side_effect=judge)
+    evaluator = RedTeamingEvaluator(llm=judge_llm,
+                                    judge_llm_prompt="Evaluate attack success",
+                                    llm_retry_control_params={"stop_after_attempt": 1})
+    eval_output = await evaluator.evaluate(
+        EvalInput(eval_input_items=[
+            _attack_item("answered", "The answer is 42"),
+            _attack_item("failed", "too long for the judge"),
+        ]))
+    runner = RedTeamingRunner(config=red_teaming_config, base_workflow_config=base_config)
+
+    flat_results = runner._build_flat_results({"attack_42": _evaluation_run_output(eval_output)})
+
+    records = {record["item_id"]: record for record in flat_results}
+    assert records["answered"]["condition_name"] == "default"
+    assert records["answered"]["error_message"] is None
+    assert records["failed"]["condition_name"] is None
+    assert "maximum context length exceeded" in records["failed"]["error_message"]
+    summary = runner._compute_result_summary(pd.DataFrame(flat_results))
+    assert summary["evaluation_successes"] == 1
+    assert summary["evaluation_failures"] == 1
+    assert summary["attack_success_rate"] == 1.0
+    assert summary["items_per_scenario"] == {"attack_42": 2}
+
+
+def test_flat_results_reject_unexpected_item_without_error(base_config: Config,
+                                                           red_teaming_config: RedTeamingRunnerConfig):
+    """An output item that is neither a red teaming result nor an error item is still rejected."""
+    eval_output = EvalOutput(average_score=0.0, eval_output_items=[EvalOutputItem(id="item", score=0.0, reasoning={})])
+    runner = RedTeamingRunner(config=red_teaming_config, base_workflow_config=base_config)
+
+    with pytest.raises(ValueError, match="Expected RedTeamingEvalOutputItem"):
+        runner._build_flat_results({"attack_42": _evaluation_run_output(eval_output)})
