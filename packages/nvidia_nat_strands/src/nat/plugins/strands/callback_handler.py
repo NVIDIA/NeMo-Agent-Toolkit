@@ -44,6 +44,11 @@ class StrandsToolInstrumentationHook:
     capture tool execution events and emit proper TOOL_START/END spans.
     """
 
+    # Agent state key under which Strands keeps a snapshot of each background task
+    _BACKGROUND_TASKS_STATE_KEY = "strands.background_tasks"
+    # Background task statuses after which the task runs no more
+    _BACKGROUND_TASK_TERMINAL_STATUSES = frozenset({"completed", "failed", "cancelled"})
+
     def __init__(self, handler: 'StrandsProfilerHandler'):
         """Initialize the hook with a reference to the profiler handler.
 
@@ -52,6 +57,8 @@ class StrandsToolInstrumentationHook:
         """
         self.handler = handler
         self._tool_start_times: dict[str, float] = {}
+        # Name and a snapshot of the input of each tool call whose TOOL_START has no TOOL_END yet, by tool use ID
+        self._open_tool_calls: dict[str, tuple[str, dict]] = {}
         self._step_manager = Context.get().intermediate_step_manager
 
     def on_before_tool_invocation(self, event: Any) -> None:
@@ -76,6 +83,8 @@ class StrandsToolInstrumentationHook:
 
             # Store start time for duration calculation
             self._tool_start_times[tool_use_id] = time.time()
+            # Snapshot the input: a later hook can change it in place before it cancels or interrupts the call
+            self._open_tool_calls[tool_use_id] = (tool_name, copy.deepcopy(tool_input))
 
             step_manager = self._step_manager
 
@@ -106,7 +115,7 @@ class StrandsToolInstrumentationHook:
         Emits a TOOL_END span.
 
         Args:
-            event: AfterToolInvocationEvent from Strands
+            event: AfterToolCallEvent from Strands
         """
         try:
             tool_use = event.tool_use
@@ -114,12 +123,20 @@ class StrandsToolInstrumentationHook:
             result = event.result
             exception = event.exception
 
-            if not selected_tool:
+            # Extract tool information
+            tool_name, tool_use_id, tool_input = self._extract_tool_info(selected_tool, tool_use)
+
+            # Strands passes no selected_tool when a hook cancelled the call with cancel_tool, after
+            # on_before_tool_invocation already started it. Skip only calls that were never started (unknown tools).
+            if not selected_tool and tool_use_id not in self._open_tool_calls:
                 logger.debug("Tool hook: no selected_tool, skipping")
                 return
 
-            # Extract tool information
-            tool_name, tool_use_id, tool_input = self._extract_tool_info(selected_tool, tool_use)
+            open_tool_name, open_tool_input = self._open_tool_calls.pop(tool_use_id, (tool_name, tool_input))
+            if not selected_tool:
+                # A cancelled call never ran, so end it with the name and input it started with. A call that ran
+                # keeps the name and input of this event, which are what the tool ran with.
+                tool_name, tool_input = open_tool_name, open_tool_input
             start_time = self._tool_start_times.pop(tool_use_id, time.time())
 
             # Extract output from result
@@ -135,26 +152,90 @@ class StrandsToolInstrumentationHook:
             if exception:
                 tool_output = f"Error: {exception}"
 
-            # Use stored step_manager to avoid context isolation issues
-            step_manager = self._step_manager
-
-            end_payload = IntermediateStepPayload(
-                event_type=IntermediateStepType.TOOL_END,
-                span_event_timestamp=start_time,
-                framework=LLMFrameworkEnum.STRANDS,
-                name=tool_name,
-                UUID=tool_use_id,
-                metadata=TraceMetadata(tool_outputs=tool_output),
-                usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
-                data=StreamEventData(input=str(tool_input), output=tool_output),
-            )
-            step_manager.push_intermediate_step(end_payload)
+            self._push_tool_end(tool_name, tool_use_id, tool_input, tool_output, start_time)
 
             logger.debug("TOOL_END: %s (ID: %s)", tool_name, tool_use_id)
 
         except Exception:  # noqa: BLE001
             logger.error("Failed to handle after_tool_invocation")
             raise
+
+    def on_after_invocation(self, event: Any) -> None:
+        """Handle the end of an agent invocation.
+
+        Strands emits no AfterToolCallEvent for a tool call that a hook or the tool interrupts, or that is stopped by
+        an error or cancellation. Emit TOOL_END with empty output for each tool call that is still open, so its
+        TOOL_START does not stay open.
+
+        A background tool call keeps running after the invocation ends, even an interrupted one, and Strands emits its
+        AfterToolCallEvent with the real output when it finishes. Such a call stays open while its background task
+        has not ended. A call whose task ended without an AfterToolCallEvent (it was cancelled or timed out) is
+        closed like any other.
+
+        Args:
+            event: AfterInvocationEvent from Strands
+        """
+        background_task_statuses = self._background_task_statuses(getattr(event, "agent", None))
+
+        for tool_use_id, (tool_name, tool_input) in list(self._open_tool_calls.items()):
+            background_task_status = background_task_statuses.get(tool_use_id)
+            if (background_task_status is not None
+                    and background_task_status not in self._BACKGROUND_TASK_TERMINAL_STATUSES):
+                continue
+
+            self._open_tool_calls.pop(tool_use_id, None)
+            start_time = self._tool_start_times.pop(tool_use_id, time.time())
+            try:
+                self._push_tool_end(tool_name, tool_use_id, tool_input, "", start_time)
+                logger.debug("TOOL_END for unfinished tool call: %s (ID: %s)", tool_name, tool_use_id)
+            except Exception:  # noqa: BLE001
+                logger.exception("Failed to end the tool step of %s (ID: %s)", tool_name, tool_use_id)
+
+    def _background_task_statuses(self, agent: Any) -> dict[str, str]:
+        """Get the status of each background task of the agent, by the tool use ID it runs.
+
+        Args:
+            agent: Strands agent
+
+        Returns:
+            Dictionary of background task statuses by tool use ID, empty when the agent runs no background tasks
+        """
+        state = getattr(agent, "state", None)
+        try:
+            tasks = state.get(self._BACKGROUND_TASKS_STATE_KEY) if state is not None else None
+        except Exception:  # noqa: BLE001
+            logger.debug("Failed to read the background tasks of the agent", exc_info=True)
+            return {}
+        if not isinstance(tasks, list):
+            return {}
+        return {
+            task["tool_use_id"]: task.get("status")
+            for task in tasks if isinstance(task, dict) and isinstance(task.get("tool_use_id"), str)
+        }
+
+    def _push_tool_end(self, tool_name: str, tool_use_id: str, tool_input: dict, tool_output: str,
+                       start_time: float) -> None:
+        """Emit the TOOL_END span that closes a tool call's TOOL_START.
+
+        Args:
+            tool_name: Name of the tool
+            tool_use_id: Tool use ID, used as the step UUID
+            tool_input: Input of the tool call
+            tool_output: Output of the tool call
+            start_time: Time the tool call started
+        """
+        end_payload = IntermediateStepPayload(
+            event_type=IntermediateStepType.TOOL_END,
+            span_event_timestamp=start_time,
+            framework=LLMFrameworkEnum.STRANDS,
+            name=tool_name,
+            UUID=tool_use_id,
+            metadata=TraceMetadata(tool_outputs=tool_output),
+            usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
+            data=StreamEventData(input=str(tool_input), output=tool_output),
+        )
+        # Use stored step_manager to avoid context isolation issues
+        self._step_manager.push_intermediate_step(end_payload)
 
     def _extract_tool_info(self, selected_tool: Any, tool_use: dict) -> tuple[str, str, dict]:
         """Extract tool name, ID, and input from event.
@@ -276,6 +357,7 @@ class StrandsProfilerHandler(BaseProfilerCallback):
                 try:
                     # Import hook event types
                     # pylint: disable=import-outside-toplevel
+                    from strands.hooks import AfterInvocationEvent
                     from strands.hooks import AfterToolCallEvent
                     from strands.hooks import BeforeToolCallEvent
 
@@ -285,6 +367,7 @@ class StrandsProfilerHandler(BaseProfilerCallback):
                     # Register tool hooks on this agent instance
                     agent_self.hooks.add_callback(BeforeToolCallEvent, agent_tool_hook.on_before_tool_invocation)
                     agent_self.hooks.add_callback(AfterToolCallEvent, agent_tool_hook.on_after_tool_invocation)
+                    agent_self.hooks.add_callback(AfterInvocationEvent, agent_tool_hook.on_after_invocation)
 
                     logger.debug("Strands tool hooks registered on Agent instance")
 
