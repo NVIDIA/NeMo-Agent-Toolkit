@@ -91,6 +91,16 @@ class TestParseToOpenAIMessage:
         assert result["role"] == "user"
         assert result["content"] == "Hello"
 
+    def test_removes_logprobs_from_llm_start_message(self):
+        """Test that input messages do not include response-only logprobs."""
+        data = StreamEventData(payload=[{"role": "user", "content": "Hello", "logprobs": None}])
+        step = create_intermediate_step(IntermediateStepType.LLM_START, payload_data=data)
+
+        result = parse_to_openai_message(step)
+
+        assert result == {"role": "user", "content": "Hello"}
+        assert data.payload[0]["logprobs"] is None
+
     def test_routes_other_types_to_generic_parser(self):
         """Test that other event types are routed to generic parser."""
         data = StreamEventData(output="Some output")

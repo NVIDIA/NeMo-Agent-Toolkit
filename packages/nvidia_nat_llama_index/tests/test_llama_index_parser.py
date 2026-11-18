@@ -15,8 +15,32 @@
 
 from unittest.mock import MagicMock
 
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import InvocationNode
+from nat.data_models.intermediate_step import StreamEventData
 from nat.plugins.llama_index.llama_index_parser import _extract_content
 from nat.plugins.llama_index.llama_index_parser import _parse_dict_message
+from nat.plugins.llama_index.llama_index_parser import parse_to_openai_message
+
+
+def test_parse_to_openai_message_removes_logprobs_from_llm_start_message():
+    """Test that input messages do not include response-only logprobs."""
+    step = IntermediateStep(
+        parent_id="root",
+        function_ancestry=InvocationNode(function_name="test", function_id="test"),
+        payload=IntermediateStepPayload(
+            event_type=IntermediateStepType.LLM_START,
+            data=StreamEventData(input={
+                "role": "user", "content": "Hello", "logprobs": None
+            }),
+        ),
+    )
+
+    result = parse_to_openai_message(step)
+
+    assert result == {"role": "user", "content": "Hello"}
 
 
 class TestParseDictMessage:

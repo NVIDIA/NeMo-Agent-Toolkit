@@ -51,6 +51,10 @@ def parse_to_openai_message(message: IntermediateStep) -> dict:  # noqa: ARG001
     elif message.event_type == IntermediateStepType.LLM_START:
         # Extract user/system messages from the input
         result = _parse_input_message(message)
+        # drop logprobs field if exists
+        if "logprobs" in result:
+            result = result.copy()
+            del result["logprobs"]
     else:
         # For other types, try to infer from the data
         result = _parse_generic_message(message)
