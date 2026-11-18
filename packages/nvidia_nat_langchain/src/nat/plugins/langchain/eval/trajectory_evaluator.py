@@ -49,6 +49,10 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_EVENT_FILTER = [IntermediateStepType.LLM_END, IntermediateStepType.TOOL_END]
 
+# LangChain's TrajectoryOutputParser accepts a judge score from 1 to 5 and reports it as (score - 1) / 4.
+_JUDGE_MIN_SCORE = 1
+_JUDGE_MAX_SCORE = 5
+
 
 def _coerce_text(value) -> str:
     """Best-effort coercion to text for judge-chain inputs."""
@@ -58,7 +62,12 @@ def _coerce_text(value) -> str:
 
 
 def _extract_score_from_parser_error(error_text: str) -> float | None:
-    """Best-effort extraction of numeric judge score from parser failures."""
+    """Best-effort extraction of the judge's score from parser failures.
+
+    The judge scores a trajectory from 1 to 5, and the parser reports (score - 1) / 4. A recovered score
+    is normalized the same way, so recovered and parsed scores share the documented 0 to 1 range. A number
+    outside 1 to 5 is not on the judge's scale and is not recovered.
+    """
     if not error_text:
         return None
     matches = re.findall(r"score\s*(?:of|:)?\s*([0-9]+(?:\.[0-9]+)?)", error_text, flags=re.IGNORECASE)
@@ -69,7 +78,9 @@ def _extract_score_from_parser_error(error_text: str) -> float | None:
         score = float(matches[-1])
     except ValueError:
         return None
-    return score
+    if not _JUDGE_MIN_SCORE <= score <= _JUDGE_MAX_SCORE:
+        return None
+    return (score - _JUDGE_MIN_SCORE) / (_JUDGE_MAX_SCORE - _JUDGE_MIN_SCORE)
 
 
 class TrajectoryEvaluatorConfig(EvaluatorLLMConfig, name="trajectory"):
