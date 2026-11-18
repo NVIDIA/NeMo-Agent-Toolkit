@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import json
 from unittest.mock import MagicMock
 
@@ -100,6 +101,40 @@ class TestParseToOpenAIMessage:
 
         assert result == {"role": "user", "content": "Hello"}
         assert data.payload[0]["logprobs"] is None
+
+    def test_removes_logprobs_from_multiple_llm_start_messages(self):
+        """Test that multi-message input is normalized without mutating the payload."""
+        payload = [
+            {
+                "role": "system", "content": "Rules", "logprobs": None
+            },
+            {
+                "role": "user", "content": "Hello", "logprobs": {
+                    "tokens": ["Hello"]
+                }
+            },
+            {
+                "role": "user", "content": "No response metadata"
+            },
+        ]
+        original_payload = copy.deepcopy(payload)
+        data = StreamEventData(payload=payload)
+        step = create_intermediate_step(IntermediateStepType.LLM_START, payload_data=data)
+
+        result = parse_to_openai_message(step)
+
+        assert result == [
+            {
+                "role": "system", "content": "Rules"
+            },
+            {
+                "role": "user", "content": "Hello"
+            },
+            {
+                "role": "user", "content": "No response metadata"
+            },
+        ]
+        assert data.payload == original_payload
 
     def test_routes_other_types_to_generic_parser(self):
         """Test that other event types are routed to generic parser."""

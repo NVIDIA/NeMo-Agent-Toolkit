@@ -52,7 +52,15 @@ def parse_to_openai_message(message: IntermediateStep) -> dict:  # noqa: ARG001
         # Extract user/system messages from the input
         result = _parse_input_message(message)
         # drop logprobs field if exists
-        if "logprobs" in result:
+        if isinstance(result, list):
+            normalized_result = []
+            for item in result:
+                if "logprobs" in item:
+                    item = item.copy()
+                    del item["logprobs"]
+                normalized_result.append(item)
+            result = normalized_result
+        elif "logprobs" in result:
             result = result.copy()
             del result["logprobs"]
     else:
