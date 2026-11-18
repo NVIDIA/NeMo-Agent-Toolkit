@@ -212,35 +212,48 @@ class CalcRunner:
 
         if use_runtime and self.linear_analyzer.wf_runtime_fit:
             fit = self.linear_analyzer.wf_runtime_fit
-            gpu_estimate_by_wf_runtime = calc_gpu_estimate_based_on_slope(target_time_metric=self.target_wf_runtime,
-                                                                          target_users=self.target_users,
-                                                                          test_gpu_count=self.test_gpu_count,
-                                                                          observed_slope=fit.slope,
-                                                                          observed_intercept=fit.intercept)
-            logger.info(
-                "[GPU Estimation %s] Runtime slope=%.4f, intercept=%.4f, R²=%.3f, outliers_removed=%s, estimate=%.2f",
-                "offline" if self.config.offline_mode else "online",
-                fit.slope,
-                fit.intercept,
-                fit.r_squared,
-                fit.outliers_removed,
-                gpu_estimate_by_wf_runtime)
+            try:
+                gpu_estimate_by_wf_runtime = calc_gpu_estimate_based_on_slope(target_time_metric=self.target_wf_runtime,
+                                                                              target_users=self.target_users,
+                                                                              test_gpu_count=self.test_gpu_count,
+                                                                              observed_slope=fit.slope,
+                                                                              observed_intercept=fit.intercept)
+            except ValueError as e:
+                # The target cannot be met at any concurrency, e.g. it is below the fitted intercept. Leave this
+                # estimate unset instead of failing the run, which would also drop the other estimate and the output.
+                logger.warning("Skipping the GPU estimate by workflow runtime: %s", e)
+            else:
+                logger.info(
+                    "[GPU Estimation %s] Runtime slope=%.4f, intercept=%.4f, R²=%.3f, outliers_removed=%s, "
+                    "estimate=%.2f",
+                    "offline" if self.config.offline_mode else "online",
+                    fit.slope,
+                    fit.intercept,
+                    fit.r_squared,
+                    fit.outliers_removed,
+                    gpu_estimate_by_wf_runtime)
 
         if use_latency and self.linear_analyzer.llm_latency_fit:
             fit = self.linear_analyzer.llm_latency_fit
-            gpu_estimate_by_llm_latency = calc_gpu_estimate_based_on_slope(target_time_metric=self.target_llm_latency,
-                                                                           target_users=self.target_users,
-                                                                           test_gpu_count=self.test_gpu_count,
-                                                                           observed_slope=fit.slope,
-                                                                           observed_intercept=fit.intercept)
-            logger.info(
-                "[GPU Estimation %s] Latency slope=%.4f, intercept=%.4f, R²=%.3f, outliers_removed=%s, estimate=%.2f",
-                "offline" if self.config.offline_mode else "online",
-                fit.slope,
-                fit.intercept,
-                fit.r_squared,
-                fit.outliers_removed,
-                gpu_estimate_by_llm_latency)
+            try:
+                gpu_estimate_by_llm_latency = calc_gpu_estimate_based_on_slope(
+                    target_time_metric=self.target_llm_latency,
+                    target_users=self.target_users,
+                    test_gpu_count=self.test_gpu_count,
+                    observed_slope=fit.slope,
+                    observed_intercept=fit.intercept)
+            except ValueError as e:
+                logger.warning("Skipping the GPU estimate by LLM latency: %s", e)
+            else:
+                logger.info(
+                    "[GPU Estimation %s] Latency slope=%.4f, intercept=%.4f, R²=%.3f, outliers_removed=%s, "
+                    "estimate=%.2f",
+                    "offline" if self.config.offline_mode else "online",
+                    fit.slope,
+                    fit.intercept,
+                    fit.r_squared,
+                    fit.outliers_removed,
+                    gpu_estimate_by_llm_latency)
 
         return GPUEstimates(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
                             gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency)

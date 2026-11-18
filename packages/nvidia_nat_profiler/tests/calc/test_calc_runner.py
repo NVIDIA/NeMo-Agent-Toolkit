@@ -127,3 +127,22 @@ async def test_calc_runner(latencies, runtimes):
             assert output.calc_data[concurrency].gpu_estimates.gpu_estimate_by_wf_runtime is None
         else:
             assert output.calc_data[concurrency].gpu_estimates.gpu_estimate_by_wf_runtime is not None
+
+
+def test_calc_runner_skips_unreachable_slope_target():
+    """A target below the fitted intercept skips that estimate instead of failing the whole calculation."""
+    # The workflow runtime fit has slope 50 and intercept 100, so a 90s runtime target cannot be met.
+    config = make_config(concurrencies=[1, 2, 4], target_latency=20.0, target_runtime=90.0)
+    runner = CalcRunner(config)
+    runner.metrics_per_concurrency = {
+        1: make_sizing_metrics(2.0, 150.0),
+        2: make_sizing_metrics(4.0, 200.0),
+        4: make_sizing_metrics(8.0, 300.0),
+    }
+
+    output = runner.generate_calc_runner_output()
+
+    assert output.gpu_estimates.gpu_estimate_by_wf_runtime is None
+    assert output.gpu_estimates.gpu_estimate_by_llm_latency is not None
+    assert set(output.calc_data.keys()) == {1, 2, 4}
+    assert output.fit_results.wf_runtime_fit.intercept == pytest.approx(100.0)
