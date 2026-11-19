@@ -409,6 +409,7 @@ async def list_tools_direct(command, url, tool_name=None, transport='sse', args=
     from mcp.client.stdio import StdioServerParameters
     from mcp.client.stdio import stdio_client
     from mcp.client.streamable_http import streamablehttp_client
+    from mcp.types import PaginatedRequestParams
 
     try:
         if transport == 'stdio':
@@ -435,9 +436,21 @@ async def list_tools_direct(command, url, tool_name=None, transport='sse', args=
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 response = await session.list_tools()
+                server_tools = list(response.tools)
+                # Servers may paginate tools/list; keep requesting pages until no cursor is returned.
+                # This path has no timeout, so stop if the server sends a cursor it already sent.
+                seen_cursors = set()
+                while response.nextCursor:
+                    if response.nextCursor in seen_cursors:
+                        logger.warning("MCP server repeated a tools/list cursor; listing the %d tools received so far",
+                                       len(server_tools))
+                        break
+                    seen_cursors.add(response.nextCursor)
+                    response = await session.list_tools(params=PaginatedRequestParams(cursor=response.nextCursor))
+                    server_tools.extend(response.tools)
 
         tools = []
-        for tool in response.tools:
+        for tool in server_tools:
             if tool_name:
                 if tool.name == tool_name:
                     tools.append(format_tool(tool))
