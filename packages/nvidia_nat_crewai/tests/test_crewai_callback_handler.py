@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -24,6 +27,9 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import UsageInfo
 from nat.utils.reactive.subject import Subject
+
+if TYPE_CHECKING:
+    from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
 
 
 @pytest.mark.slow
@@ -314,7 +320,7 @@ def test_crewai_handler_failed_stream_ends_llm_step(reactive_stream: Subject):
 
 
 @pytest.fixture(name="instrumented_handler")
-def instrumented_handler_fixture(monkeypatch):
+def instrumented_handler_fixture(monkeypatch: pytest.MonkeyPatch) -> "CrewAIProfilerHandler":
     """A ``CrewAIProfilerHandler`` instrumented for the test; the patched LiteLLM and CrewAI functions are restored."""
     import litellm
     from crewai.tools import tool_usage
@@ -330,7 +336,8 @@ def instrumented_handler_fixture(monkeypatch):
     return handler
 
 
-async def test_crewai_handler_async_llm_call_records_output(reactive_stream: Subject, instrumented_handler):
+async def test_crewai_handler_async_llm_call_records_output(reactive_stream: Subject,
+                                                            instrumented_handler: "CrewAIProfilerHandler") -> None:
     """``litellm.acompletion``, which CrewAI's ``LLM.acall`` uses, records an LLM_START / LLM_END pair."""
     import litellm
 
@@ -355,7 +362,8 @@ async def test_crewai_handler_async_llm_call_records_output(reactive_stream: Sub
     assert Context.get().active_span_id == initial_span
 
 
-async def test_crewai_handler_streamed_async_llm_call_records_output(reactive_stream: Subject, instrumented_handler):
+async def test_crewai_handler_streamed_async_llm_call_records_output(
+        reactive_stream: Subject, instrumented_handler: "CrewAIProfilerHandler") -> None:
     """A streamed ``litellm.acompletion`` call records LLM_END with its output and usage once the stream is read."""
     import litellm
 
@@ -379,7 +387,8 @@ async def test_crewai_handler_streamed_async_llm_call_records_output(reactive_st
     assert end.span_event_timestamp <= start.event_timestamp
 
 
-async def test_crewai_handler_closed_async_stream_ends_llm_step(reactive_stream: Subject, instrumented_handler):
+async def test_crewai_handler_closed_async_stream_ends_llm_step(reactive_stream: Subject,
+                                                                instrumented_handler: "CrewAIProfilerHandler") -> None:
     """Closing a streamed ``litellm.acompletion`` call early records LLM_END with the chunks received so far, once."""
     import litellm
 
@@ -395,7 +404,8 @@ async def test_crewai_handler_closed_async_stream_ends_llm_step(reactive_stream:
     assert results[1].payload.data.output == first.choices[0].delta.content
 
 
-async def test_crewai_handler_failed_async_llm_call_ends_llm_step(reactive_stream: Subject, instrumented_handler):
+async def test_crewai_handler_failed_async_llm_call_ends_llm_step(
+        reactive_stream: Subject, instrumented_handler: "CrewAIProfilerHandler") -> None:
     """A failed ``litellm.acompletion`` call closes its LLM step, and the caller still gets the provider's error."""
     import litellm
 
@@ -413,7 +423,7 @@ async def test_crewai_handler_failed_async_llm_call_ends_llm_step(reactive_strea
     assert Context.get().active_span_id == initial_span
 
 
-async def test_crewai_handler_cancelled_async_llm_call_ends_llm_step(reactive_stream: Subject):
+async def test_crewai_handler_cancelled_async_llm_call_ends_llm_step(reactive_stream: Subject) -> None:
     """A cancelled ``litellm.acompletion`` call closes its LLM step, and the cancellation propagates."""
     import asyncio
 
@@ -423,7 +433,7 @@ async def test_crewai_handler_cancelled_async_llm_call_ends_llm_step(reactive_st
     _ = reactive_stream.subscribe(results.append)
     started = asyncio.Event()
 
-    async def hanging_acompletion(**kwargs):
+    async def hanging_acompletion(**kwargs: Any) -> None:
         started.set()
         await asyncio.Event().wait()
 
@@ -440,7 +450,7 @@ async def test_crewai_handler_cancelled_async_llm_call_ends_llm_step(reactive_st
     assert results[0].UUID == results[1].UUID
 
 
-async def test_crewai_handler_failed_async_stream_ends_llm_step(reactive_stream: Subject):
+async def test_crewai_handler_failed_async_stream_ends_llm_step(reactive_stream: Subject) -> None:
     """A ``litellm.acompletion`` stream that fails while it is read records LLM_END, and the caller gets the error."""
     import litellm
 
@@ -449,12 +459,12 @@ async def test_crewai_handler_failed_async_stream_ends_llm_step(reactive_stream:
     results = []
     _ = reactive_stream.subscribe(results.append)
 
-    async def failing_stream():
+    async def failing_stream() -> AsyncIterator[Any]:
         stream = await litellm.acompletion(**_streamed_completion_kwargs())
         yield await anext(stream)
         raise litellm.APIConnectionError(message="connection reset", llm_provider="openai", model="gpt-4o-mini")
 
-    async def acompletion(**kwargs):
+    async def acompletion(**kwargs: Any) -> AsyncIterator[Any]:
         return failing_stream()
 
     handler = CrewAIProfilerHandler()

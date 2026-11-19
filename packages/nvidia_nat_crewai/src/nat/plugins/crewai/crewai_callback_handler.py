@@ -405,7 +405,7 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
         """
         original_func = self._original_llm_acall
 
-        async def wrapped_llm_acall(*args, **kwargs) -> Any:
+        async def wrapped_llm_acall(*args: Any, **kwargs: Any) -> Any:
             """Record the same LLM_START and LLM_END events as the ``litellm.completion`` wrapper."""
             end = self._start_llm_call(kwargs)
 
