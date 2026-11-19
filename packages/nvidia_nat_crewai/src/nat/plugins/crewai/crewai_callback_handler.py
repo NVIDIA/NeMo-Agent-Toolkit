@@ -19,6 +19,7 @@ import threading
 import time
 from collections.abc import Callable
 from typing import Any
+from typing import NamedTuple
 
 import litellm
 from crewai.tools import tool_usage
@@ -48,9 +49,9 @@ def _record_end_safely(push_end: Callable[[], None]) -> None:
         logger.exception("Error recording the end of a failed call")
 
 
-class _ProfiledStream:
+class _ProfiledStreamBase:
     """
-    Passes a streamed ``litellm.completion`` response through to the caller and collects its chunks.
+    Collects the chunks of a streamed LiteLLM response that is passed through to the caller.
 
     ``on_end`` is called once with the chunks received so far, when the stream is exhausted, raises or is closed.
     Other attributes are read from the wrapped stream.
@@ -66,6 +67,20 @@ class _ProfiledStream:
     def __getattr__(self, name: str) -> Any:
         """Read any other attribute from the wrapped stream."""
         return getattr(self._stream, name)
+
+    def _end(self) -> None:
+        """Call ``on_end`` once with the chunks received so far."""
+        if self._ended:
+            return
+        self._ended = True
+        try:
+            self._on_end(self._chunks)
+        except Exception:
+            logger.exception("Error recording the end of a streamed LLM call")
+
+
+class _ProfiledStream(_ProfiledStreamBase):
+    """Passes a streamed ``litellm.completion`` response through to the caller and collects its chunks."""
 
     def __iter__(self) -> "_ProfiledStream":
         """Return this wrapper as the iterator."""
@@ -91,22 +106,53 @@ class _ProfiledStream:
         finally:
             self._end()
 
-    def _end(self) -> None:
-        """Call ``on_end`` once with the chunks received so far."""
-        if self._ended:
-            return
-        self._ended = True
+
+class _ProfiledAsyncStream(_ProfiledStreamBase):
+    """Passes a streamed ``litellm.acompletion`` response through to the caller and collects its chunks."""
+
+    def __aiter__(self) -> "_ProfiledAsyncStream":
+        """Return this wrapper as the async iterator."""
+        return self
+
+    async def __anext__(self) -> Any:
+        """Return the next chunk of the wrapped stream, recording the end of the stream when it stops."""
         try:
-            self._on_end(self._chunks)
-        except Exception:
-            logger.exception("Error recording the end of a streamed LLM call")
+            chunk = await anext(self._stream)
+        except BaseException:
+            # StopAsyncIteration when the stream is exhausted, or the error (or cancellation) that ended it
+            self._end()
+            raise
+        self._chunks.append(chunk)
+        return chunk
+
+    async def aclose(self) -> None:
+        """Close the wrapped stream if it has ``aclose``, then record the end of a stream the caller stopped reading."""
+        try:
+            aclose = getattr(self._stream, "aclose", None)
+            if callable(aclose):
+                await aclose()
+        finally:
+            self._end()
+
+
+class _LLMCallEnd(NamedTuple):
+    """The functions that record the LLM_END event of one ``litellm.completion`` or ``litellm.acompletion`` call."""
+
+    failed: Callable[[], None]
+    """Records the end of a call that raised, with empty output and usage."""
+
+    response: Callable[[Any], None]
+    """Records the end of a call from its response."""
+
+    stream: Callable[[list[Any]], None]
+    """Records the end of a streamed call from the chunks it yielded."""
 
 
 class CrewAIProfilerHandler(BaseProfilerCallback):
     """
     A callback manager/handler for CrewAI that intercepts calls to:
       - ToolUsage._use
-      - LLM Calls
+      - LLM calls (litellm.completion and litellm.acompletion)
 
     to collect usage statistics (tokens, inputs, outputs, time intervals, etc.)
     and store them in NAT's usage_stats queue for subsequent analysis.
@@ -121,6 +167,7 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
         # Original references to CrewAI methods (for uninstrumenting if needed)
         self._original_tool_use = None
         self._original_llm_call = None
+        self._original_llm_acall = None
 
     def instrument(self) -> None:
         """
@@ -131,6 +178,7 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
         # Save the originals
         self._original_tool_use = getattr(tool_usage.ToolUsage, "_use", None)
         self._original_llm_call = getattr(litellm, "completion", None)
+        self._original_llm_acall = getattr(litellm, "acompletion", None)
 
         # Patch if available
         if self._original_tool_use:
@@ -138,6 +186,9 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
 
         if self._original_llm_call:
             litellm.completion = self._llm_call_monkey_patch()
+
+        if self._original_llm_acall:
+            litellm.acompletion = self._llm_acall_monkey_patch()
 
         logger.debug("CrewAIProfilerHandler instrumentation applied successfully.")
 
@@ -210,6 +261,108 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
 
         return wrapped_tool_use
 
+    def _start_llm_call(self, kwargs: dict[str, Any]) -> _LLMCallEnd:
+        """
+        Record the LLM_START event of a ``litellm.completion`` or ``litellm.acompletion`` call.
+
+        Args:
+            kwargs: The keyword arguments of the call.
+
+        Returns:
+            The functions that record the LLM_END event closing this call's LLM_START.
+        """
+        now = time.time()
+        seconds_between_calls = int(now - self.last_call_ts)
+        model_name = kwargs.get('model', "")
+
+        model_input = []
+        try:
+            for message in kwargs.get('messages', []):
+                content = message.get('content', "")
+                model_input.append("" if content is None else str(content))
+        except Exception as e:
+            logger.exception("Error getting model input: %s", e)
+
+        model_input = "".join(model_input)
+
+        # Record the start event
+        input_stats = IntermediateStepPayload(
+            event_type=IntermediateStepType.LLM_START,
+            framework=LLMFrameworkEnum.CREWAI,
+            name=model_name,
+            data=StreamEventData(input=model_input),
+            metadata=TraceMetadata(chat_inputs=copy.deepcopy(kwargs.get('messages', []))),
+            usage_info=UsageInfo(token_usage=TokenUsageBaseModel(),
+                                 num_llm_calls=1,
+                                 seconds_between_calls=seconds_between_calls))
+
+        self.step_manager.push_intermediate_step(input_stats)
+
+        def push_llm_end(model_output: str = "",
+                         chat_response: dict[str, Any] | None = None,
+                         token_usage: TokenUsageBaseModel | None = None) -> None:
+            """Record the end event that closes this call's LLM_START."""
+            token_usage = token_usage or TokenUsageBaseModel()
+            output_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
+                                                   UUID=input_stats.UUID,
+                                                   span_event_timestamp=now,
+                                                   framework=LLMFrameworkEnum.CREWAI,
+                                                   name=model_name,
+                                                   data=StreamEventData(input=model_input, output=model_output),
+                                                   metadata=TraceMetadata(chat_responses=chat_response),
+                                                   usage_info=UsageInfo(token_usage=token_usage,
+                                                                        num_llm_calls=1,
+                                                                        seconds_between_calls=seconds_between_calls))
+
+            self.step_manager.push_intermediate_step(output_stats)
+
+        def push_response_end(output: Any) -> None:
+            """Record the end event for a call from its response."""
+            model_output = []
+            try:
+                for choice in output.choices:
+                    if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
+                        content = choice.message.content or ""
+                    elif hasattr(choice, 'model_extra') and 'message' in choice.model_extra:
+                        msg = choice.model_extra["message"]
+                        content = msg.get('content', "") or ""
+                    else:
+                        content = ""
+                    model_output.append(str(content))
+            except Exception as e:
+                logger.exception("Error getting model output: %s", e)
+
+            model_output = "".join(model_output)
+
+            chat_response = None
+            token_usage = TokenUsageBaseModel()
+            try:
+                if output.choices:
+                    chat_response = output.choices[0].model_dump()
+                model_extra = getattr(output, 'model_extra', None) or {}
+                if 'usage' in model_extra:
+                    token_usage = TokenUsageBaseModel(**model_extra['usage'].model_dump())
+            except Exception as e:
+                logger.exception("Error getting model usage: %s", e)
+
+            # Record the end event
+            push_llm_end(model_output, chat_response, token_usage)
+
+        def push_stream_end(chunks: list[Any]) -> None:
+            """Record the end event for a streamed call from the chunks it yielded."""
+            if not chunks:
+                push_llm_end()
+                return
+            try:
+                response = litellm.stream_chunk_builder(chunks, messages=kwargs.get('messages'))
+            except Exception as e:
+                logger.exception("Error combining the streamed chunks: %s", e)
+                push_llm_end()
+                return
+            push_response_end(response)
+
+        return _LLMCallEnd(failed=push_llm_end, response=push_response_end, stream=push_stream_end)
+
     def _llm_call_monkey_patch(self) -> Callable[..., Any]:
         """
         Returns a function that wraps calls to litellm.completion(...) with usage-logging.
@@ -221,114 +374,55 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
             Replicates _llm_call_wrapper logic without wrapt: collects usage stats,
             calls the original, and captures output stats.
             """
-
-            now = time.time()
-            seconds_between_calls = int(now - self.last_call_ts)
-            model_name = kwargs.get('model', "")
-
-            model_input = []
-            try:
-                for message in kwargs.get('messages', []):
-                    content = message.get('content', "")
-                    model_input.append("" if content is None else str(content))
-            except Exception as e:
-                logger.exception("Error getting model input: %s", e)
-
-            model_input = "".join(model_input)
-
-            # Record the start event
-            input_stats = IntermediateStepPayload(
-                event_type=IntermediateStepType.LLM_START,
-                framework=LLMFrameworkEnum.CREWAI,
-                name=model_name,
-                data=StreamEventData(input=model_input),
-                metadata=TraceMetadata(chat_inputs=copy.deepcopy(kwargs.get('messages', []))),
-                usage_info=UsageInfo(token_usage=TokenUsageBaseModel(),
-                                     num_llm_calls=1,
-                                     seconds_between_calls=seconds_between_calls))
-
-            self.step_manager.push_intermediate_step(input_stats)
-
-            def push_llm_end(model_output: str = "",
-                             chat_response: dict[str, Any] | None = None,
-                             token_usage: TokenUsageBaseModel | None = None) -> None:
-                """Record the end event that closes this call's LLM_START."""
-                output_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
-                                                       UUID=input_stats.UUID,
-                                                       span_event_timestamp=now,
-                                                       framework=LLMFrameworkEnum.CREWAI,
-                                                       name=model_name,
-                                                       data=StreamEventData(input=model_input, output=model_output),
-                                                       metadata=TraceMetadata(chat_responses=chat_response),
-                                                       usage_info=UsageInfo(
-                                                           token_usage=token_usage or TokenUsageBaseModel(),
-                                                           num_llm_calls=1,
-                                                           seconds_between_calls=seconds_between_calls))
-
-                self.step_manager.push_intermediate_step(output_stats)
-
-            def push_response_end(output: Any) -> None:
-                """Record the end event for a call from its response."""
-                model_output = []
-                try:
-                    for choice in output.choices:
-                        if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
-                            content = choice.message.content or ""
-                        elif hasattr(choice, 'model_extra') and 'message' in choice.model_extra:
-                            msg = choice.model_extra["message"]
-                            content = msg.get('content', "") or ""
-                        else:
-                            content = ""
-                        model_output.append(str(content))
-                except Exception as e:
-                    logger.exception("Error getting model output: %s", e)
-
-                model_output = "".join(model_output)
-
-                chat_response = None
-                token_usage = TokenUsageBaseModel()
-                try:
-                    if output.choices:
-                        chat_response = output.choices[0].model_dump()
-                    model_extra = getattr(output, 'model_extra', None) or {}
-                    if 'usage' in model_extra:
-                        token_usage = TokenUsageBaseModel(**model_extra['usage'].model_dump())
-                except Exception as e:
-                    logger.exception("Error getting model usage: %s", e)
-
-                # Record the end event
-                push_llm_end(model_output, chat_response, token_usage)
-
-            def push_stream_end(chunks: list[Any]) -> None:
-                """Record the end event for a streamed call from the chunks it yielded."""
-                if not chunks:
-                    push_llm_end()
-                    return
-                try:
-                    response = litellm.stream_chunk_builder(chunks, messages=kwargs.get('messages'))
-                except Exception as e:
-                    logger.exception("Error combining the streamed chunks: %s", e)
-                    push_llm_end()
-                    return
-                push_response_end(response)
+            end = self._start_llm_call(kwargs)
 
             try:
                 # Call the original litellm.completion(...)
                 output = original_func(*args, **kwargs)
             except BaseException:
                 # Close the LLM step, then let CrewAI see the provider's error
-                _record_end_safely(push_llm_end)
+                _record_end_safely(end.failed)
                 raise
 
             if kwargs.get('stream'):
                 # With stream=True LiteLLM returns a stream that CrewAI reads after this call returns. Record the end
                 # event once the stream is exhausted, fails or is closed, with the output and usage combined from its
                 # chunks.
-                return _ProfiledStream(output, push_stream_end)
+                return _ProfiledStream(output, end.stream)
 
-            push_response_end(output)
+            end.response(output)
 
             # (Note: the original code did NOT update self.last_call_ts here)
             return output
 
         return wrapped_llm_call
+
+    def _llm_acall_monkey_patch(self) -> Callable[..., Any]:
+        """
+        Returns a coroutine function that wraps calls to litellm.acompletion(...) with usage-logging.
+
+        CrewAI's ``LLM.acall`` calls ``litellm.acompletion``, which does not go through ``litellm.completion``.
+        """
+        original_func = self._original_llm_acall
+
+        async def wrapped_llm_acall(*args, **kwargs) -> Any:
+            """Record the same LLM_START and LLM_END events as the ``litellm.completion`` wrapper."""
+            end = self._start_llm_call(kwargs)
+
+            try:
+                # Call the original litellm.acompletion(...)
+                output = await original_func(*args, **kwargs)
+            except BaseException:
+                # Close the LLM step, then let CrewAI see the provider's error or the cancellation
+                _record_end_safely(end.failed)
+                raise
+
+            if kwargs.get('stream'):
+                # With stream=True CrewAI reads the returned stream with `async for` after this call returns
+                return _ProfiledAsyncStream(output, end.stream)
+
+            end.response(output)
+
+            return output
+
+        return wrapped_llm_acall

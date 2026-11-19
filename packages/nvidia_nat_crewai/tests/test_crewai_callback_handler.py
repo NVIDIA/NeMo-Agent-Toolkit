@@ -311,3 +311,160 @@ def test_crewai_handler_failed_stream_ends_llm_step(reactive_stream: Subject):
     assert [step.event_type for step in results] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
     assert results[0].UUID == results[1].UUID
     assert results[1].payload.data.output == first.choices[0].delta.content
+
+
+@pytest.fixture(name="instrumented_handler")
+def instrumented_handler_fixture(monkeypatch):
+    """A ``CrewAIProfilerHandler`` instrumented for the test; the patched LiteLLM and CrewAI functions are restored."""
+    import litellm
+    from crewai.tools import tool_usage
+
+    from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
+
+    monkeypatch.setattr(litellm, "completion", litellm.completion)
+    monkeypatch.setattr(litellm, "acompletion", litellm.acompletion)
+    monkeypatch.setattr(tool_usage.ToolUsage, "_use", tool_usage.ToolUsage._use)
+
+    handler = CrewAIProfilerHandler()
+    handler.instrument()
+    return handler
+
+
+async def test_crewai_handler_async_llm_call_records_output(reactive_stream: Subject, instrumented_handler):
+    """``litellm.acompletion``, which CrewAI's ``LLM.acall`` uses, records an LLM_START / LLM_END pair."""
+    import litellm
+
+    results = []
+    _ = reactive_stream.subscribe(results.append)
+    initial_span = Context.get().active_span_id
+
+    response = await litellm.acompletion(**_completion_kwargs("Hi there"))
+
+    assert response.choices[0].message.content == "Hi there"
+    assert [step.event_type for step in results] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    start, end = results
+    assert end.UUID == start.UUID
+    assert start.parent_id == initial_span
+    assert start.payload.framework == LLMFrameworkEnum.CREWAI
+    assert start.payload.data.input == "question"
+    assert end.payload.name == "nvidia_nim/meta/llama-3.1-8b-instruct"
+    assert end.payload.data.output == "Hi there"
+    assert end.payload.metadata.chat_responses["message"]["content"] == "Hi there"
+    assert end.usage_info.token_usage.total_tokens > 0
+    assert end.span_event_timestamp <= start.event_timestamp
+    assert Context.get().active_span_id == initial_span
+
+
+async def test_crewai_handler_streamed_async_llm_call_records_output(reactive_stream: Subject, instrumented_handler):
+    """A streamed ``litellm.acompletion`` call records LLM_END with its output and usage once the stream is read."""
+    import litellm
+
+    results = []
+    _ = reactive_stream.subscribe(results.append)
+
+    stream = await litellm.acompletion(**_streamed_completion_kwargs(), stream_options={"include_usage": True})
+
+    # The end event is recorded only after the caller has read the stream
+    assert [step.event_type for step in results] == [IntermediateStepType.LLM_START]
+    text = "".join([chunk.choices[0].delta.content or "" async for chunk in stream if chunk.choices])
+    assert text == "Hi there"
+
+    assert [step.event_type for step in results] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    start, end = results
+    assert end.UUID == start.UUID
+    assert end.payload.data.output == "Hi there"
+    assert end.payload.metadata.chat_responses["message"]["content"] == "Hi there"
+    assert end.usage_info.token_usage.completion_tokens > 0
+    assert end.usage_info.token_usage.total_tokens > 0
+    assert end.span_event_timestamp <= start.event_timestamp
+
+
+async def test_crewai_handler_closed_async_stream_ends_llm_step(reactive_stream: Subject, instrumented_handler):
+    """Closing a streamed ``litellm.acompletion`` call early records LLM_END with the chunks received so far, once."""
+    import litellm
+
+    results = []
+    _ = reactive_stream.subscribe(results.append)
+
+    stream = await litellm.acompletion(**_streamed_completion_kwargs())
+    first = await anext(stream)
+    await stream.aclose()
+    await stream.aclose()
+
+    assert [step.event_type for step in results] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert results[1].payload.data.output == first.choices[0].delta.content
+
+
+async def test_crewai_handler_failed_async_llm_call_ends_llm_step(reactive_stream: Subject, instrumented_handler):
+    """A failed ``litellm.acompletion`` call closes its LLM step, and the caller still gets the provider's error."""
+    import litellm
+
+    results = []
+    _ = reactive_stream.subscribe(results.append)
+    initial_span = Context.get().active_span_id
+
+    with pytest.raises(litellm.RateLimitError):
+        await litellm.acompletion(**_completion_kwargs("litellm.RateLimitError"))
+
+    assert [step.event_type for step in results] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert results[0].UUID == results[1].UUID
+    assert results[1].payload.data.output == ""
+    assert results[1].usage_info.token_usage.total_tokens == 0
+    assert Context.get().active_span_id == initial_span
+
+
+async def test_crewai_handler_cancelled_async_llm_call_ends_llm_step(reactive_stream: Subject):
+    """A cancelled ``litellm.acompletion`` call closes its LLM step, and the cancellation propagates."""
+    import asyncio
+
+    from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
+
+    results = []
+    _ = reactive_stream.subscribe(results.append)
+    started = asyncio.Event()
+
+    async def hanging_acompletion(**kwargs):
+        started.set()
+        await asyncio.Event().wait()
+
+    handler = CrewAIProfilerHandler()
+    handler._original_llm_acall = hanging_acompletion
+
+    task = asyncio.create_task(handler._llm_acall_monkey_patch()(**_completion_kwargs("Hi there")))
+    await started.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert [step.event_type for step in results] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert results[0].UUID == results[1].UUID
+
+
+async def test_crewai_handler_failed_async_stream_ends_llm_step(reactive_stream: Subject):
+    """A ``litellm.acompletion`` stream that fails while it is read records LLM_END, and the caller gets the error."""
+    import litellm
+
+    from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
+
+    results = []
+    _ = reactive_stream.subscribe(results.append)
+
+    async def failing_stream():
+        stream = await litellm.acompletion(**_streamed_completion_kwargs())
+        yield await anext(stream)
+        raise litellm.APIConnectionError(message="connection reset", llm_provider="openai", model="gpt-4o-mini")
+
+    async def acompletion(**kwargs):
+        return failing_stream()
+
+    handler = CrewAIProfilerHandler()
+    handler._original_llm_acall = acompletion
+
+    stream = await handler._llm_acall_monkey_patch()(**_streamed_completion_kwargs())
+    first = await anext(stream)
+    with pytest.raises(litellm.APIConnectionError):
+        await anext(stream)
+
+    assert [step.event_type for step in results] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert results[0].UUID == results[1].UUID
+    assert results[1].payload.data.output == first.choices[0].delta.content
