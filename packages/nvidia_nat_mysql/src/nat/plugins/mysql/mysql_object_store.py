@@ -81,7 +81,7 @@ class MySQLObjectStore(ObjectStore):
                     await cur.execute("""
                     CREATE TABLE IF NOT EXISTS object_meta (
                         id INT AUTO_INCREMENT PRIMARY KEY,
-                        path VARCHAR(768) NOT NULL UNIQUE,
+                        path VARCHAR(768) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL UNIQUE,
                         size BIGINT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     ) ENGINE=InnoDB;
@@ -95,6 +95,18 @@ class MySQLObjectStore(ObjectStore):
                         FOREIGN KEY (id) REFERENCES object_meta(id) ON DELETE CASCADE
                     ) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
                     """)
+
+                    # Tables created before keys were case-sensitive now get key column converted once
+                    await cur.execute("""
+                    SELECT COLLATION_NAME FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'object_meta' AND COLUMN_NAME = 'path';
+                    """)
+                    (collation, ) = await cur.fetchone()
+                    if collation != "utf8mb4_0900_bin":
+                        await cur.execute("""
+                        ALTER TABLE object_meta
+                        MODIFY path VARCHAR(768) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL;
+                        """)
                 finally:
                     await cur.execute("SET sql_notes = 1;")
 

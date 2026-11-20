@@ -115,3 +115,17 @@ class ObjectStoreTests:
         # Try to delete the object again
         with pytest.raises(NoSuchKeyError):
             await store.delete_object(key)
+
+    async def test_keys_are_case_sensitive(self, store: ObjectStore):
+
+        key = f"Test_Key_{uuid.uuid4()}"
+
+        await store.put_object(key, ObjectStoreItem(data=b"upper"))
+
+        # A key that differs by case only is different key
+        with pytest.raises(NoSuchKeyError):
+            await store.get_object(key.lower())
+
+        await store.put_object(key.lower(), ObjectStoreItem(data=b"lower"))
+        assert (await store.get_object(key)).data == b"upper"
+        assert (await store.get_object(key.lower())).data == b"lower"
