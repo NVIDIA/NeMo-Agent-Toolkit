@@ -295,6 +295,49 @@ def test_optimize_parameters_warns_when_an_evaluator_failed_on_items(tmp_path: P
     ]
 
 
+def test_optimize_parameters_writes_trial_configs_as_plain_yaml(tmp_path: Path):
+    """Users are told to load `config_numeric_trial_N.yml`, so it must be plain YAML like `optimized_config.yml`."""
+    import yaml
+
+    # the default config holds paths (`eval.general.output_dir`) and durations (`general.per_user_workflow_timeout`)
+    base_cfg = Config()
+    out_dir = tmp_path / "opt"
+    optimizer_config = OptimizerConfig(
+        output_path=out_dir,
+        eval_metrics={"acc": OptimizerMetric(evaluator_name="Accuracy", direction="maximize", weight=1.0)},
+        reps_per_param_set=1,
+    )
+    optimizer_config.numeric.n_trials = 2
+    run_cfg = _make_run_config(base_cfg)
+
+    class _EvalRun:
+
+        def __init__(self, config: EvaluationRunConfig):
+            self.config = config
+
+        async def run_and_evaluate(self) -> SimpleNamespace:
+            return SimpleNamespace(evaluation_results=[("Accuracy", SimpleNamespace(average_score=0.8))])
+
+    with patch("nat.plugins.config_optimizer.parameters.optimizer.optuna.create_study",
+               side_effect=lambda **kwargs: _FakeStudy(kwargs.get("directions", []))), \
+         patch("nat.plugins.config_optimizer.parameters.optimizer.load_evaluation_run", return_value=_EvalRun), \
+         patch("nat.plugins.config_optimizer.parameters.optimizer.apply_suggestions", return_value=base_cfg), \
+         patch("nat.plugins.config_optimizer.parameters.optimizer.pick_trial",
+               return_value=SimpleNamespace(params={})), \
+         patch("nat.plugins.config_optimizer.parameters.pareto_visualizer.create_pareto_visualization"):
+
+        optimize_parameters(base_cfg=base_cfg,
+                            full_space={"param": SearchSpace(values=[1, 2])},
+                            optimizer_config=optimizer_config,
+                            opt_run_config=run_cfg)
+
+    expected = base_cfg.model_dump(mode="json")
+    for file_name in ("config_numeric_trial_0.yml", "config_numeric_trial_1.yml", "optimized_config.yml"):
+        # safe_load is what the config loader uses; it rejects `!!python/object` tags
+        with (out_dir / file_name).open(encoding="utf-8") as fh:
+            assert yaml.safe_load(fh) == expected
+
+
 def test_optimize_parameters_requires_output_path(tmp_path: Path):
     base_cfg = Config()
     optimizer_config = _make_optimizer_config(tmp_path)

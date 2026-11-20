@@ -196,7 +196,9 @@ def optimize_parameters(
         trial_id_width = len(str(max(0, optimizer_config.numeric.n_trials - 1)))
         trial_id_padded = f"{trial.number:0{trial_id_width}d}"
         with (out_dir / f"config_numeric_trial_{trial_id_padded}.yml").open("w") as fh:
-            yaml.dump(cfg_trial.model_dump(), fh)
+            # mode='json', like optimized_config.yml below: a trial config is meant to be loaded again, and a
+            # plain dump writes paths, durations and component refs as `!!python/object` tags that no loader reads
+            yaml.dump(cfg_trial.model_dump(mode='json'), fh)
 
         all_results = asyncio.run(_run_all_evals())
         all_scores = [r[0] for r in all_results]
