@@ -826,6 +826,40 @@ def _iterator_hit(doc_id: str, distance: float):
     return Hit({"id": doc_id, "distance": distance, "entity": {"text": f"Text {doc_id}"}}, pk_name="id")
 
 
+class _RecordingIteratorMilvusClient(_IteratorMilvusClient):
+
+    def search_iterator(self, **kwargs):
+        self.iterator_output_fields = kwargs["output_fields"]
+        return super().search_iterator(**kwargs)
+
+
+async def test_milvus_search_with_iterator_requests_content_field():
+    client = _RecordingIteratorMilvusClient([_SearchPage([_iterator_hit("1", 0.1)])])
+    retriever = MilvusRetriever(client=client, embedder=TestEmbeddings(), use_iterator=True)
+    output_fields = ["title"]
+
+    res = await retriever.search(query="Test query?",
+                                 collection_name="collection1",
+                                 top_k=5,
+                                 output_fields=output_fields)
+
+    assert "text" in client.iterator_output_fields
+    assert "title" in client.iterator_output_fields
+    assert output_fields == ["title"]
+    assert [doc.page_content for doc in res.results] == ["Text 1"]
+
+
+async def test_milvus_search_does_not_modify_output_fields(milvus_retriever_fresh):
+    output_fields = ["title"]
+
+    await milvus_retriever_fresh.search(query="Test query?",
+                                        collection_name="collection1",
+                                        top_k=2,
+                                        output_fields=output_fields)
+
+    assert output_fields == ["title"]
+
+
 @pytest.mark.parametrize("page_distances, top_k, distance_cutoff, expected_ids",
                          [([[0.1, 0.2], [0.3]], 10, None, ["1", "2", "3"]), ([[0.1, 0.2]], 2, None, ["1", "2"]),
                           ([[0.1, 0.9]], 10, 0.5, ["1"]), ([], 10, None, [])],
