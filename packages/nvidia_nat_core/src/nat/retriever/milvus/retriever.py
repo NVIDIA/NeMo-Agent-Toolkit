@@ -138,6 +138,10 @@ class MilvusRetriever(Retriever):
                 field["name"] for field in collection_schema.get("fields") if field["name"] != vector_field_name
             ]
 
+        # Results are built from the content field, so it has to be returned even if the caller left it out
+        if self.content_field not in output_fields:
+            output_fields = [*output_fields, self.content_field]
+
         search_vector = await self._embedder.aembed_query(query)
 
         # Create search iterator
@@ -241,7 +245,7 @@ class MilvusRetriever(Retriever):
             output_fields = [field for field in available_fields if field != vector_field_name]
 
         if self.content_field not in output_fields:
-            output_fields.append(self.content_field)
+            output_fields = [*output_fields, self.content_field]
 
         search_vector = await self._embedder.aembed_query(query)
 
