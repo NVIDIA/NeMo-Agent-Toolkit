@@ -24,6 +24,9 @@ import pytest
 
 # pyright: reportMissingImports=false, reportAttributeAccessIssue=false
 from click.testing import CliRunner
+from mcp.types import ListToolsResult
+from mcp.types import PaginatedRequestParams
+from mcp.types import Tool
 
 from nat.builder.function import FunctionGroup
 from nat.plugins.mcp.cli.commands import MCPPingResult
@@ -298,6 +301,7 @@ def _install_fake_mcp(monkeypatch, *, list_tools_response=None, call_tool_result
 
                 def __init__(self, tools):
                     self.tools = tools
+                    self.nextCursor = None
 
             tools = list_tools_response or []
             return _Resp(tools)
@@ -366,6 +370,7 @@ def _install_fake_mcp(monkeypatch, *, list_tools_response=None, call_tool_result
             self.text = text
 
     fake_mcp_types.TextContent = _TextContent
+    fake_mcp_types.PaginatedRequestParams = PaginatedRequestParams
 
     import sys
 
@@ -521,6 +526,77 @@ def test_list_tools_direct_error_is_formatted(monkeypatch, transport, command):
             env=None,
         ))
     assert tools == []
+
+
+_THREE_PAGES = {
+    None: (["tool_a"], "page-2"),
+    "page-2": (["tool_b"], "page-3"),
+    "page-3": (["tool_c"], None),
+}
+
+
+def _install_paginated_mcp(monkeypatch, pages):
+    """Serve ``pages`` (cursor -> (tool names, next cursor)) from ``tools/list`` and return the cursors requested."""
+    requested_cursors = []
+
+    async def _list_tools(self, cursor=None, *, params=None):
+        del self
+        requested_cursor = params.cursor if params is not None else cursor
+        requested_cursors.append(requested_cursor)
+        # Fail instead of hanging if the client never stops asking for pages.
+        if len(requested_cursors) > 10:
+            raise RuntimeError("tools/list requested more than 10 times")
+        names, next_cursor = pages[requested_cursor]
+        return ListToolsResult(tools=[Tool(name=name, inputSchema={"type": "object"}) for name in names],
+                               nextCursor=next_cursor)
+
+    fake_mcp = _install_fake_mcp(monkeypatch)
+    monkeypatch.setattr(fake_mcp.ClientSession, "list_tools", _list_tools)
+    return requested_cursors
+
+
+def test_mcp_client_tool_list_direct_lists_every_page(monkeypatch):
+    requested_cursors = _install_paginated_mcp(monkeypatch, _THREE_PAGES)
+
+    result = CliRunner().invoke(mcp_client_tool_list, ["--direct"])
+
+    assert result.exit_code == 0
+    assert result.output.split() == ["tool_a", "tool_b", "tool_c"]
+    assert requested_cursors == [None, "page-2", "page-3"]
+
+
+def test_mcp_client_tool_list_direct_finds_tool_on_later_page(monkeypatch):
+    _install_paginated_mcp(monkeypatch, _THREE_PAGES)
+
+    result = CliRunner().invoke(mcp_client_tool_list, ["--direct", "--tool", "tool_c"])
+
+    assert result.exit_code == 0
+    assert "Tool: tool_c" in result.output
+    assert "not found" not in result.output
+
+
+def test_mcp_client_tool_list_direct_stops_on_repeated_cursor(monkeypatch, caplog):
+    # The last page points back to page-2, so the cursors cycle page-2 -> page-3 -> page-2.
+    pages = {None: (["tool_a"], "page-2"), "page-2": (["tool_b"], "page-3"), "page-3": (["tool_c"], "page-2")}
+    requested_cursors = _install_paginated_mcp(monkeypatch, pages)
+
+    with caplog.at_level("WARNING", logger="nat.plugins.mcp.cli.commands"):
+        result = CliRunner().invoke(mcp_client_tool_list, ["--direct"])
+
+    assert result.exit_code == 0
+    assert result.output.split() == ["tool_a", "tool_b", "tool_c"]
+    assert requested_cursors == [None, "page-2", "page-3"]
+    assert "repeated a tools/list cursor" in caplog.text
+
+
+def test_mcp_client_tool_list_direct_empty_cursor_ends_listing(monkeypatch):
+    requested_cursors = _install_paginated_mcp(monkeypatch, {None: (["tool_a"], "")})
+
+    result = CliRunner().invoke(mcp_client_tool_list, ["--direct"])
+
+    assert result.exit_code == 0
+    assert result.output.split() == ["tool_a"]
+    assert requested_cursors == [None]
 
 
 @pytest.mark.parametrize(
