@@ -126,6 +126,9 @@ async def test_evaluate_partial_failure(evaluator, rag_eval_input):
 
     assert "Perfect" in successful_item.reasoning["reasoning"]
     assert "parsing judge LLM response" in failed_item.reasoning["reasoning"]
+    assert successful_item.error is None
+    assert failed_item.error is not None
+    assert eval_output.num_errors == 1
 
     assert eval_output.average_score > 0
     assert eval_output.average_score < 1
@@ -163,6 +166,80 @@ async def test_evaluate_custom_scoring():
     assert len(output.eval_output_items) == 1
     assert output.eval_output_items[0].score == 0.75
     assert output.eval_output_items[0].reasoning["reasoning"] == "Fair explanation."
+
+
+@pytest.mark.parametrize(
+    "default_scoring, readable_reply, zero_reply, missing_key_reply",
+    [
+        (True,
+         '{"coverage_score": 0.9, "correctness_score": 0.9, "relevance_score": 0.9, "reasoning": "Good."}',
+         '{"coverage_score": 0.0, "correctness_score": 0.0, "relevance_score": 0.0, "reasoning": "Wrong."}',
+         '{"coverage_score": 0.9, "reasoning": "No other scores."}'),
+        (False,
+         '{"score": 0.9, "reasoning": "Good."}',
+         '{"score": 0.0, "reasoning": "Wrong."}',
+         '{"reasoning": "No score."}'),
+    ],
+    ids=["default-scoring", "custom-scoring"],
+)
+@pytest.mark.parametrize("lane", ["legacy", "atif"])
+async def test_unparseable_judge_reply_is_an_error(default_scoring, readable_reply, zero_reply, missing_key_reply,
+                                                   lane):
+    """A judge reply that cannot be parsed is reported as an evaluation error, not as a real score of 0."""
+    replies = {
+        "Q-readable": readable_reply,
+        "Q-scored-zero": zero_reply,
+        "Q-not-json": "I would rate this answer 0.9 out of 1.",
+        "Q-missing-key": missing_key_reply,
+    }
+
+    async def judge(messages):
+        question = next(q for q in replies if q in messages[1].content)
+        return MagicMock(content=replies[question])
+
+    llm = MagicMock(spec=BaseChatModel)
+    llm.ainvoke = AsyncMock(side_effect=judge)
+    evaluator = TunableRagEvaluator(llm=llm,
+                                    judge_llm_prompt="Score this answer.",
+                                    max_concurrency=1,
+                                    default_scoring=default_scoring,
+                                    default_score_weights={},
+                                    llm_retry_control_params=None)
+
+    if lane == "legacy":
+        eval_output = await evaluator.evaluate(
+            EvalInput(eval_input_items=[
+                EvalInputItem(id=question,
+                              input_obj=question,
+                              expected_output_obj="Expected",
+                              output_obj="Answer",
+                              expected_trajectory=[],
+                              trajectory=[],
+                              full_dataset_entry={}) for question in replies
+            ]))
+    else:
+        eval_output = await evaluator.evaluate_atif_fn([
+            AtifEvalSample(item_id=question,
+                           trajectory=ATIFTrajectory(session_id=question,
+                                                     agent=ATIFAgentConfig(name="test-agent", version="0.0.0"),
+                                                     steps=[ATIFStep(step_id=1, source="user", message=question)]),
+                           expected_output_obj="Expected",
+                           output_obj="Answer",
+                           metadata={}) for question in replies
+        ])
+
+    items = {item.id: item for item in eval_output.eval_output_items}
+    assert items["Q-readable"].score == pytest.approx(0.9)
+    assert items["Q-readable"].error is None
+    # A judge that reads the answer and scores it 0 is a real score, not an evaluation error.
+    assert items["Q-scored-zero"].score == 0.0
+    assert items["Q-scored-zero"].error is None
+    for question in ("Q-not-json", "Q-missing-key"):
+        assert items[question].score == 0.0
+        assert items[question].error is not None
+    assert "Got invalid JSON object" in items["Q-not-json"].error
+    assert "Expected key" in items["Q-missing-key"].error
+    assert eval_output.num_errors == 2
 
 
 @pytest.fixture(name="atif_samples")
