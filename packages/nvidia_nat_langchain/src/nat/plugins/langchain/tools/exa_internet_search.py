@@ -103,11 +103,11 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
                     return f"No web search results found for: {question}"
                 if not search_response.results:
                     return f"No web search results found for: {question}"
-                # Format - SearchResponse.results contains Result objects with .url and .text attrs
-                web_search_results = "\n\n---\n\n".join([
-                    f'<Document href="{doc.url}"/>\n{doc.text}\n</Document>' for doc in search_response.results
-                    if doc.text
-                ])
+                # Format - SearchResponse.results contains Result objects with .url, .text and .highlights attrs.
+                # With text disabled (max_content_length=None) only the highlights carry content.
+                contents = [(doc.url, doc.text or "\n".join(doc.highlights or [])) for doc in search_response.results]
+                web_search_results = "\n\n---\n\n".join(
+                    [f'<Document href="{url}"/>\n{content}\n</Document>' for url, content in contents if content])
                 return web_search_results or f"No web search results found for: {question}"
             except Exception:
                 # Return a graceful message instead of raising, so the agent can
