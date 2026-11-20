@@ -98,16 +98,19 @@ class AverageLLMLatencyAtifEvaluator(AtifBaseEvaluator):
 
     async def evaluate_atif_item(self, sample: AtifEvalSample) -> EvalOutputItem:
         latencies: list[float] = []
+        num_llm_calls = 0
         for step in sample.trajectory.steps:
-            if not _llm_call_count(step):
+            call_count = _llm_call_count(step)
+            if not call_count:
                 continue
             latency = _step_llm_latency(step)
             if latency is not None:
                 latencies.append(latency)
+                num_llm_calls += call_count
 
         avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
         reasoning: dict = {
-            "num_llm_calls": len(latencies),
+            "num_llm_calls": num_llm_calls,
             "latencies": latencies,
         }
         return EvalOutputItem(

@@ -180,6 +180,26 @@ async def test_evaluate_atif_item_counts_atof_steps_by_llm_call_count():
     assert result.reasoning["latencies"] == pytest.approx([2.0, 4.0], abs=1e-4)
 
 
+async def test_evaluate_atif_item_reports_call_count_of_aggregated_step():
+    """A timed step that aggregates several LLM calls reports all of them in ``num_llm_calls``."""
+    steps = [
+        ATIFStep(step_id=1,
+                 source="agent",
+                 message="ok",
+                 llm_call_count=3,
+                 extra={"invocation": {
+                     "start_timestamp": 1000.0, "end_timestamp": 1006.0
+                 }}),
+    ]
+    sample = _make_sample("atof-aggregated", steps)
+
+    result = await AverageLLMLatencyAtifEvaluator().evaluate_atif_item(sample)
+
+    assert result.score == pytest.approx(6.0, abs=1e-4)
+    assert result.reasoning["latencies"] == pytest.approx([6.0], abs=1e-4)
+    assert result.reasoning["num_llm_calls"] == 3
+
+
 async def test_evaluate_atif_item_skips_non_finite_invocation_timing():
     """Non-finite invocation timestamps are skipped, not scored.
 
