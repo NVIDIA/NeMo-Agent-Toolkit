@@ -137,6 +137,63 @@ async def test_empty_results(tool_config):
             assert "No web search results found" in result
 
 
+async def test_highlights_returned_when_text_disabled():
+    from nat.plugins.langchain.tools.exa_internet_search import ExaInternetSearchToolConfig
+    from nat.plugins.langchain.tools.exa_internet_search import exa_internet_search
+
+    config = ExaInternetSearchToolConfig(api_key="test-key", max_content_length=None, highlights=True)
+
+    doc = MagicMock()
+    doc.url = "https://example.com/a"
+    doc.text = None
+    doc.highlights = ["first highlight", "second highlight"]
+    mock_result = MagicMock()
+    mock_result.results = [doc]
+
+    with patch("langchain_exa.ExaSearchResults") as mock_exa_cls:
+        mock_instance = MagicMock()
+        mock_instance._arun = AsyncMock(return_value=mock_result)
+        mock_exa_cls.return_value = mock_instance
+
+        async with exa_internet_search(config, None) as func_info:
+            result = await func_info.single_fn("test query")
+
+    assert "No web search results found" not in result
+    assert 'href="https://example.com/a"' in result
+    assert "first highlight" in result
+    assert "second highlight" in result
+
+
+async def test_text_preferred_over_highlights():
+    from nat.plugins.langchain.tools.exa_internet_search import ExaInternetSearchToolConfig
+    from nat.plugins.langchain.tools.exa_internet_search import exa_internet_search
+
+    config = ExaInternetSearchToolConfig(api_key="test-key")
+
+    doc = MagicMock()
+    doc.url = "https://example.com/a"
+    doc.text = "full page text"
+    doc.highlights = ["a highlight"]
+    empty_doc = MagicMock()
+    empty_doc.url = "https://example.com/b"
+    empty_doc.text = None
+    empty_doc.highlights = None
+    mock_result = MagicMock()
+    mock_result.results = [doc, empty_doc]
+
+    with patch("langchain_exa.ExaSearchResults") as mock_exa_cls:
+        mock_instance = MagicMock()
+        mock_instance._arun = AsyncMock(return_value=mock_result)
+        mock_exa_cls.return_value = mock_instance
+
+        async with exa_internet_search(config, None) as func_info:
+            result = await func_info.single_fn("test query")
+
+    assert "full page text" in result
+    assert "a highlight" not in result
+    assert "example.com/b" not in result
+
+
 async def test_retries_on_exception(tool_config):
     from nat.plugins.langchain.tools.exa_internet_search import exa_internet_search
 
