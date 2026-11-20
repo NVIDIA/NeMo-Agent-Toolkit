@@ -357,7 +357,16 @@ class TunableRagEvaluator(BaseEvaluator):
 
         async def wrapped(sample: AtifEvalSample) -> EvalOutputItem:
             async with self.semaphore:
-                return await self.evaluate_atif_item(sample)
+                try:
+                    return await self.evaluate_atif_item(sample)
+                except Exception as e:
+                    # Like the legacy lane (`BaseEvaluator.evaluate`): a judge call that still fails after its
+                    # retries costs this item its score, not every item of the evaluator.
+                    error_message = f"Evaluator error: {e}"
+                    return EvalOutputItem(id=sample.item_id,
+                                          score=0.0,
+                                          reasoning={"error": error_message},
+                                          error=error_message)
 
         output_items = await asyncio.gather(*[wrapped(sample) for sample in atif_samples])
         numeric_scores = [item.score for item in output_items if isinstance(item.score, int | float)]

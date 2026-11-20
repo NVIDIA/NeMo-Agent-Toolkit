@@ -215,6 +215,30 @@ async def test_evaluate_atif_success(evaluator, atif_samples):
     assert eval_output.average_score > 0
 
 
+async def test_atif_lane_keeps_other_items_when_a_judge_call_fails(evaluator, rag_eval_input, atif_samples):
+    """A judge call that raises fails its own item in both lanes; the other items keep their scores."""
+    evaluator.llm_retry_control_params = {
+        "stop_after_attempt": 1, "initial_backoff_delay_seconds": 1, "has_exponential_jitter": False
+    }
+    judge_ok = MagicMock(content='{"coverage_score": 0.9, "correctness_score": 0.8,'
+                         '"relevance_score": 0.7, "reasoning": "judged"}')
+    # legacy lane first, then the ATIF lane: the judge fails on the first item of each
+    evaluator.llm.ainvoke = AsyncMock(
+        side_effect=[RuntimeError("429 Too Many Requests"), judge_ok, RuntimeError("429 Too Many Requests"), judge_ok])
+
+    legacy_output = await evaluator.evaluate(rag_eval_input)
+    atif_output = await evaluator.evaluate_atif_fn(atif_samples)
+
+    for eval_output in (legacy_output, atif_output):
+        failed_item, judged_item = eval_output.eval_output_items
+        assert failed_item.score == 0.0
+        assert failed_item.error == "Evaluator error: 429 Too Many Requests"
+        assert judged_item.score == pytest.approx(0.8)
+        assert judged_item.error is None
+        assert eval_output.average_score == pytest.approx(0.4)
+        assert eval_output.num_errors == 1
+
+
 async def test_legacy_and_atif_lane_parity_with_tolerance(evaluator, rag_eval_input, atif_samples):
     # Two legacy evaluations then two ATIF evaluations with identical per-item judge outputs.
     evaluator.llm.ainvoke = AsyncMock(side_effect=[
