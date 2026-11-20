@@ -35,6 +35,20 @@ def _iso_to_epoch(ts: str | None) -> float | None:
         return None
 
 
+def _llm_call_count(step: Step) -> int:
+    """Return how many LLM calls an ATIF step represents.
+
+    Uses ``step.llm_call_count`` when the producer sets it (the ATOF-to-ATIF
+    converter does, and never writes ``step.metrics``); otherwise an agent step
+    with ``metrics`` counts as one call.
+    """
+    if step.source != "agent":
+        return 0
+    if step.llm_call_count is not None:
+        return step.llm_call_count
+    return 1 if step.metrics is not None else 0
+
+
 def _step_llm_latency(step: Step) -> float | None:
     """Return the LLM start-to-end latency (seconds) for one ATIF agent step.
 
@@ -70,7 +84,7 @@ def _step_llm_latency(step: Step) -> float | None:
 
 class AverageLLMLatencyAtifEvaluator(AtifBaseEvaluator):
     """
-    ATIF-native mean latency between LLM start and end for agent steps with metrics.
+    ATIF-native mean latency between LLM start and end for agent steps that made an LLM call.
 
     Per step, prefers the ``step.extra["invocation"]`` start/end timestamps
     written by the ATOF-to-ATIF converter, and falls back to
@@ -85,7 +99,7 @@ class AverageLLMLatencyAtifEvaluator(AtifBaseEvaluator):
     async def evaluate_atif_item(self, sample: AtifEvalSample) -> EvalOutputItem:
         latencies: list[float] = []
         for step in sample.trajectory.steps:
-            if step.source != "agent" or not step.metrics:
+            if not _llm_call_count(step):
                 continue
             latency = _step_llm_latency(step)
             if latency is not None:
@@ -129,14 +143,14 @@ class AverageWorkflowRuntimeAtifEvaluator(AtifBaseEvaluator):
 
 class AverageNumberOfLLMCallsAtifEvaluator(AtifBaseEvaluator):
     """
-    ATIF-native count of LLM calls per item: agent steps with metrics.
+    ATIF-native count of LLM calls per item: ``llm_call_count`` summed over agent steps.
     """
 
     def __init__(self, max_concurrency: int = 8):
         super().__init__(max_concurrency=max_concurrency)
 
     async def evaluate_atif_item(self, sample: AtifEvalSample) -> EvalOutputItem:
-        num_calls = sum(1 for step in sample.trajectory.steps if step.source == "agent" and step.metrics is not None)
+        num_calls = sum(_llm_call_count(step) for step in sample.trajectory.steps)
         return EvalOutputItem(
             id=sample.item_id,
             score=float(num_calls),
