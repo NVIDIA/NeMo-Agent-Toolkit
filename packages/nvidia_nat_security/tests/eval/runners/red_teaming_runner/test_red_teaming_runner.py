@@ -51,6 +51,7 @@ from nat.plugins.security.eval.red_teaming_evaluator.register import RedTeamingE
 from nat.plugins.security.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
 from nat.plugins.security.eval.runners.red_teaming_runner.config import RedTeamingScenario
 from nat.plugins.security.eval.runners.red_teaming_runner.config import _RedTeamingScenarioRaw
+from nat.plugins.security.eval.runners.red_teaming_runner.report_utils import _render_summary_html
 from nat.plugins.security.eval.runners.red_teaming_runner.runner import RedTeamingRunner
 from nat.plugins.security.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 
@@ -303,3 +304,98 @@ def test_flat_results_reject_unexpected_item_without_error(base_config: Config,
 
     with pytest.raises(ValueError, match="Expected RedTeamingEvalOutputItem"):
         runner._build_flat_results({"attack_42": _evaluation_run_output(eval_output)})
+
+
+async def test_summary_has_no_rates_when_every_evaluation_failed(base_config: Config,
+                                                                 red_teaming_config: RedTeamingRunnerConfig,
+                                                                 tmp_path,
+                                                                 caplog):
+    """With no successful evaluation the summary reports no attack success rate or score, not 0.0."""
+    judge_llm = MagicMock(spec=BaseChatModel)
+    judge_llm.ainvoke = AsyncMock(side_effect=ConnectionError("judge endpoint unreachable"))
+    evaluator = RedTeamingEvaluator(llm=judge_llm,
+                                    judge_llm_prompt="Evaluate attack success",
+                                    llm_retry_control_params={"stop_after_attempt": 1})
+    eval_output = await evaluator.evaluate(
+        EvalInput(eval_input_items=[
+            _attack_item("first", "The answer is 42"),
+            _attack_item("second", "Here is how to do it"),
+        ]))
+    runner = RedTeamingRunner(config=red_teaming_config, base_workflow_config=base_config)
+
+    summary = runner._compute_result_summary(
+        pd.DataFrame(runner._build_flat_results({"attack_42": _evaluation_run_output(eval_output)})))
+
+    assert summary["evaluation_successes"] == 0
+    assert summary["evaluation_failures"] == 2
+    assert summary["attack_success_rate"] is None
+    assert summary["overall_score"] is None
+    assert summary["per_scenario_summary"] == {
+        "attack_42": {
+            "mean_score": None, "max_score": None, "min_score": None, "attack_success_rate": None, "scores": []
+        }
+    }
+
+    with caplog.at_level("INFO", logger="nat.plugins.security.eval.runners.red_teaming_runner.runner"):
+        runner._log_results_summary(summary, tmp_path)
+    assert "Attack Success Rate (score > 0.5):    n/a (no successful evaluations)" in caplog.text
+    assert "Overall Risk Score (lower is better): n/a (no successful evaluations)" in caplog.text
+    assert "0.00%" not in caplog.text
+
+
+def test_summary_lists_a_scenario_whose_evaluations_all_failed(base_config: Config,
+                                                               red_teaming_config: RedTeamingRunnerConfig,
+                                                               tmp_path,
+                                                               caplog):
+    """A scenario with no successful evaluation is listed without statistics and left out of the overall score."""
+    df = pd.DataFrame([
+        {
+            "scenario_id": "attack_a", "item_id": "1", "score": 1.0, "error_message": None
+        },
+        {
+            "scenario_id": "attack_a", "item_id": "2", "score": 0.0, "error_message": None
+        },
+        {
+            "scenario_id": "attack_b", "item_id": "1", "score": 0.0, "error_message": "judge timed out"
+        },
+        {
+            "scenario_id": "attack_b", "item_id": "2", "score": 0.0, "error_message": "judge timed out"
+        },
+    ])
+    runner = RedTeamingRunner(config=red_teaming_config, base_workflow_config=base_config)
+
+    summary = runner._compute_result_summary(df)
+
+    assert summary["attack_success_rate"] == 0.5
+    assert summary["overall_score"] == 0.5
+    assert summary["per_scenario_summary"]["attack_a"]["attack_success_rate"] == 0.5
+    assert summary["per_scenario_summary"]["attack_b"] == {
+        "mean_score": None, "max_score": None, "min_score": None, "attack_success_rate": None, "scores": []
+    }
+
+    with caplog.at_level("INFO", logger="nat.plugins.security.eval.runners.red_teaming_runner.runner"):
+        runner._log_results_summary(summary, tmp_path)
+    scenario_b_row = next(line for line in caplog.text.splitlines() if line.strip().startswith("attack_b"))
+    assert [cell.strip() for cell in scenario_b_row.split("|")[1:]] == ["n/a"] * 4
+
+    html = _render_summary_html(summary)
+    assert "<td>attack_b</td>" in html
+    assert html.count(">n/a</td>") == 4
+
+
+def test_summary_of_no_results_has_no_rates(base_config: Config, red_teaming_config: RedTeamingRunnerConfig):
+    """An empty result set has no attack success rate or score either."""
+    runner = RedTeamingRunner(config=red_teaming_config, base_workflow_config=base_config)
+
+    summary = runner._compute_result_summary(pd.DataFrame())
+
+    assert summary["attack_success_rate"] is None
+    assert summary["overall_score"] is None
+
+
+def test_html_summary_shows_missing_rates_as_not_available():
+    """The report's summary tiles say n/a, in a neutral color, for a missing score or rate."""
+    html = _render_summary_html({"overall_score": None, "attack_success_rate": None, "per_scenario_summary": {}})
+
+    assert html.count('<div class="stat-value" style="color: white;">n/a</div>') == 2
+    assert html.count("background-color: rgba(128, 128, 128, 0.6)") == 2
