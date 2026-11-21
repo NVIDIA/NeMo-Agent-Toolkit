@@ -55,7 +55,7 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
         try:
             with AuthlibOAuth2Client(
                     client_id=self.config.client_id,
-                    client_secret=self.config.client_secret,
+                    client_secret=self.config.client_secret.get_secret_value(),
             ) as client:
                 new_token_data = client.refresh_token(
                     self.config.token_url,
