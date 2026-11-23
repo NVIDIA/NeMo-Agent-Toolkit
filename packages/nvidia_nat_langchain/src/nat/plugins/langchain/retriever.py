@@ -52,14 +52,12 @@ async def milvus_langchain(retriever_config: MilvusRetrieverConfig, builder: Bui
     retriever_config.connection_args.update({"uri": str(retriever_config.uri)})
     embedder = await builder.get_embedder(embedder_name=retriever_config.embedding_model,
                                           wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    # content_field holds the document text, which LangChain calls text_field. Its alias is
+    # "primary_field", but in LangChain that name means the primary key field, so pass it by name.
     vector_store = Milvus(embedding_function=embedder,
+                          text_field=retriever_config.content_field,
                           **retriever_config.model_dump(include={
-                              "connection_args",
-                              "collection_name",
-                              "content_field",
-                              "vector_field",
-                              "search_params",
-                              "description"
+                              "connection_args", "collection_name", "vector_field", "search_params", "description"
                           },
                                                         by_alias=True))
 
