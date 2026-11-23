@@ -154,6 +154,52 @@ async def test_evaluate_atif_item_uses_invocation_timing():
     assert result.reasoning["latencies"] == pytest.approx([3.5], abs=1e-4)
 
 
+def _atof_converted_steps() -> list[ATIFStep]:
+    """Agent steps shaped like ATOF-to-ATIF converter output: ``llm_call_count`` set, no ``metrics``."""
+
+    def invocation(start: float, end: float) -> dict:
+        return {"invocation": {"start_timestamp": start, "end_timestamp": end}}
+
+    return [
+        ATIFStep(step_id=1, source="user", message="hi"),
+        ATIFStep(step_id=2, source="agent", message="ok", llm_call_count=1, extra=invocation(1000.0, 1002.0)),
+        ATIFStep(step_id=3, source="agent", message="ok", llm_call_count=1, extra=invocation(1003.0, 1007.0)),
+        # Deterministic dispatch (no LLM consulted) and an untracked boundary step are not LLM calls.
+        ATIFStep(step_id=4, source="agent", message="", llm_call_count=0, extra=invocation(1007.0, 1008.0)),
+        ATIFStep(step_id=5, source="agent", message="done", extra=invocation(1000.0, 1009.0)),
+    ]
+
+
+async def test_evaluate_atif_item_counts_atof_steps_by_llm_call_count():
+    """Steps from the ATOF converter carry ``llm_call_count`` instead of ``metrics`` (#2608)."""
+    sample = _make_sample("atof-1", _atof_converted_steps())
+
+    result = await AverageLLMLatencyAtifEvaluator().evaluate_atif_item(sample)
+
+    assert result.score == pytest.approx(3.0, abs=1e-4)
+    assert result.reasoning["latencies"] == pytest.approx([2.0, 4.0], abs=1e-4)
+
+
+async def test_evaluate_atif_item_reports_call_count_of_aggregated_step():
+    """A timed step that aggregates several LLM calls reports all of them in ``num_llm_calls``."""
+    steps = [
+        ATIFStep(step_id=1,
+                 source="agent",
+                 message="ok",
+                 llm_call_count=3,
+                 extra={"invocation": {
+                     "start_timestamp": 1000.0, "end_timestamp": 1006.0
+                 }}),
+    ]
+    sample = _make_sample("atof-aggregated", steps)
+
+    result = await AverageLLMLatencyAtifEvaluator().evaluate_atif_item(sample)
+
+    assert result.score == pytest.approx(6.0, abs=1e-4)
+    assert result.reasoning["latencies"] == pytest.approx([6.0], abs=1e-4)
+    assert result.reasoning["num_llm_calls"] == 3
+
+
 async def test_evaluate_atif_item_skips_non_finite_invocation_timing():
     """Non-finite invocation timestamps are skipped, not scored.
 
@@ -410,6 +456,17 @@ async def test_num_llm_calls_atif_counts_agent_steps_with_metrics():
 
     assert result.score == 2.0
     assert result.reasoning["num_llm_calls"] == 2
+
+
+async def test_num_llm_calls_atif_counts_atof_steps_by_llm_call_count():
+    """``llm_call_count`` decides the count for ATOF-converted steps, which have no ``metrics`` (#2608)."""
+    steps = _atof_converted_steps() + [ATIFStep(step_id=6, source="agent", message="ok", llm_call_count=3)]
+    sample = _make_sample("calls-atof", steps)
+
+    result = await AverageNumberOfLLMCallsAtifEvaluator().evaluate_atif_item(sample)
+
+    assert result.score == 5.0
+    assert result.reasoning["num_llm_calls"] == 5
 
 
 # --- AverageTokensPerLLMEndAtifEvaluator ---
