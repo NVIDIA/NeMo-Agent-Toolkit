@@ -382,6 +382,20 @@ def _get_risk_color(value: float, max_value: float = 1.0) -> str:
     return f"rgba({r}, {g}, {b}, {opacity})"
 
 
+# Tile and cell color for a score or rate with no successful evaluation behind it.
+_NO_DATA_COLOR = "rgba(128, 128, 128, 0.6)"
+
+
+def _format_optional(value: float | None, spec: str) -> str:
+    """Format a score or rate, which is None when no evaluation behind it succeeded."""
+    return "n/a" if value is None else format(value, spec)
+
+
+def _optional_risk_color(value: float | None) -> str:
+    """Risk color for a score or rate, or a neutral color when it is None."""
+    return _NO_DATA_COLOR if value is None else _get_risk_color(value, 1.0)
+
+
 def _render_summary_html(summary: dict[str, Any] | None) -> str:
     """Render the summary section as HTML.
 
@@ -394,8 +408,8 @@ def _render_summary_html(summary: dict[str, Any] | None) -> str:
     if not summary:
         return ""
 
-    overall_score = summary.get("overall_score", 0.0)
-    attack_success_rate = summary.get("attack_success_rate", 0.0)
+    overall_score = summary.get("overall_score")
+    attack_success_rate = summary.get("attack_success_rate")
     num_scenarios = summary.get("num_scenarios", 0)
     total_workflow_runs = summary.get("total_workflow_runs", 0)
     total_evaluations = summary.get("total_evaluations", 0)
@@ -404,24 +418,25 @@ def _render_summary_html(summary: dict[str, Any] | None) -> str:
     per_scenario = summary.get("per_scenario_summary", {})
 
     # Get dynamic colors based on risk values
-    score_color = _get_risk_color(overall_score, 1.0)
-    asr_color = _get_risk_color(attack_success_rate, 1.0)
+    score_color = _optional_risk_color(overall_score)
+    asr_color = _optional_risk_color(attack_success_rate)
 
     # Build per-scenario rows with ASR as first data column
     scenario_rows = ""
     for scenario_id, stats in per_scenario.items():
-        scenario_asr = stats.get("attack_success_rate", 0.0)
-        mean_score = stats.get("mean_score", 0.0)
-        min_score = stats.get("min_score", 0.0)
-        max_score = stats.get("max_score", 0.0)
-        row_asr_color = _get_risk_color(scenario_asr, 1.0)
+        scenario_asr = stats.get("attack_success_rate")
+        mean_score = stats.get("mean_score")
+        min_score = stats.get("min_score")
+        max_score = stats.get("max_score")
+        row_asr_color = _optional_risk_color(scenario_asr)
+        asr_text = _format_optional(scenario_asr, ".1%")
         scenario_rows += f"""
             <tr>
                 <td>{scenario_id}</td>
-                <td style="background-color: {row_asr_color}; color: white; font-weight: bold;">{scenario_asr:.1%}</td>
-                <td>{mean_score:.3f}</td>
-                <td>{min_score:.3f}</td>
-                <td>{max_score:.3f}</td>
+                <td style="background-color: {row_asr_color}; color: white; font-weight: bold;">{asr_text}</td>
+                <td>{_format_optional(mean_score, '.3f')}</td>
+                <td>{_format_optional(min_score, '.3f')}</td>
+                <td>{_format_optional(max_score, '.3f')}</td>
             </tr>"""
 
     return f"""
@@ -431,11 +446,11 @@ def _render_summary_html(summary: dict[str, Any] | None) -> str:
             <div class="summary-stats">
                 <div class="stat-card risk-score" style="background-color: {score_color}; border: none;">
                     <div class="stat-label" style="color: rgba(255,255,255,0.9);">Overall Risk Score ↓</div>
-                    <div class="stat-value" style="color: white;">{overall_score:.3f}</div>
+                    <div class="stat-value" style="color: white;">{_format_optional(overall_score, '.3f')}</div>
                 </div>
                 <div class="stat-card risk-score" style="background-color: {asr_color}; border: none;">
                     <div class="stat-label" style="color: rgba(255,255,255,0.9);">Attack Success Rate ↓</div>
-                    <div class="stat-value" style="color: white;">{attack_success_rate:.1%}</div>
+                    <div class="stat-value" style="color: white;">{_format_optional(attack_success_rate, '.1%')}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Scenarios</div>
