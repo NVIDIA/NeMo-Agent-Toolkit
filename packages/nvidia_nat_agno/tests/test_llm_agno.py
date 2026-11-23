@@ -22,8 +22,10 @@ import pytest
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
+from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.agno.llm import litellm_agno
 from nat.plugins.agno.llm import nim_agno
 from nat.plugins.agno.llm import openai_agno
 
@@ -261,3 +263,34 @@ class TestOpenAIAgno:
         async with openai_agno(openai_config, mock_builder):
             mock_httpx_async_client.assert_called_once()
             assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
+
+class TestLiteLLMAgno:
+    """Tests for the litellm_agno function."""
+
+    async def test_litellm_agno_builds_client(self, mock_builder):
+        """Test that litellm_agno builds a real Agno LiteLLM model with the config values."""
+        config = LiteLlmModelConfig(model_name="openai/gpt-4o-mini",
+                                    base_url="http://localhost:4000",
+                                    api_key="test-key",
+                                    temperature=0.0,
+                                    seed=7)
+
+        async with litellm_agno(config, mock_builder) as client:
+            assert client.id == "openai/gpt-4o-mini"
+            params = client.get_request_params()
+            assert params["api_base"] == "http://localhost:4000"
+            assert params["api_key"] == "test-key"
+            assert params["temperature"] == 0.0
+            assert params["seed"] == 7
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    async def test_litellm_agno_verify_ssl(self, mock_builder, verify_ssl):
+        """Test that verify_ssl reaches litellm, which makes the HTTP calls for the Agno LiteLLM model."""
+        import litellm
+
+        config = LiteLlmModelConfig(model_name="openai/gpt-4o-mini", verify_ssl=verify_ssl)
+
+        with patch.object(litellm, "ssl_verify", not verify_ssl):
+            async with litellm_agno(config, mock_builder):
+                assert litellm.ssl_verify is verify_ssl
