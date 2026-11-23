@@ -538,3 +538,33 @@ async def test_real_sdk_memory_ignores_ids_in_item_metadata(sdk_requests: list):
 
     (_, add_body), = sdk_requests
     assert add_body["messages"][0]["metadata"] == {"user_id": "alice", "agent_id": "default_agent", "session_id": "7"}
+
+
+async def test_real_sdk_search_returns_semantic_feature_text():
+    """Test that a semantic feature from the real SDK comes back as its name and value, not the model repr."""
+    response = Mock(status_code=200)
+    response.json.return_value = {
+        "status": 0,
+        "content": {
+            "episodic_memory": {
+                "long_term_memory": {
+                    "episodes": []
+                }, "short_term_memory": {
+                    "episodes": [], "episode_summary": []
+                }
+            },
+            "semantic_memory": [{
+                "category": "profile", "tag": "food", "feature_name": "favorite_food", "value": "pizza"
+            }]
+        }
+    }
+    project = Project(client=MemMachineClient(base_url="http://localhost:8095"), org_id="org", project_id="proj")
+    editor = MemMachineEditor(memmachine_instance=project)
+
+    with patch.object(MemMachineClient, "request", Mock(return_value=response)):
+        memories = await editor.search(query="food", user_id="alice")
+
+    assert len(memories) == 1
+    assert memories[0].memory == "favorite_food: pizza"
+    assert memories[0].tags == ["food"]
+    assert memories[0].metadata == {"category": "profile"}

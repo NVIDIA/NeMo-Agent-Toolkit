@@ -412,6 +412,14 @@ class MemMachineEditor(MemoryEditor):
                         tags = tags_raw
                     else:
                         tags = []
+            elif hasattr(result, 'feature_name') and hasattr(result, 'value'):
+                # The SDK returns SemanticFeature models: the fact is `feature_name` and `value`,
+                # grouped under a `category` and a `tag`
+                memory_text = f"{result.feature_name}: {result.value}"
+                if getattr(result, 'tag', None):
+                    tags = [result.tag]
+                if getattr(result, 'category', None):
+                    item_meta = {"category": result.category}
             elif hasattr(result, 'feature'):
                 memory_text = result.feature
                 if hasattr(result, 'metadata'):
