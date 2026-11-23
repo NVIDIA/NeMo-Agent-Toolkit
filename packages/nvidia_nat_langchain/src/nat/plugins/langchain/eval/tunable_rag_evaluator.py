@@ -239,6 +239,7 @@ class TunableRagEvaluator(BaseEvaluator):
         correctness_score = 0.0
         relevance_score = 0.0
         reasoning = "Error in evaluator from parsing judge LLM response."
+        error = None
 
         try:
             parsed_response = response_parser.parse(response.content)
@@ -286,6 +287,7 @@ class TunableRagEvaluator(BaseEvaluator):
             logger.exception("Error parsing judge LLM response: %s", e)
             score = 0.0
             reasoning = "Error in evaluator from parsing judge LLM response."
+            error = f"Error in evaluator from parsing judge LLM response: {e}"
 
         if self.default_scoring:
             reasoning_obj = {
@@ -310,7 +312,7 @@ class TunableRagEvaluator(BaseEvaluator):
         if retrieved_contexts is not None:
             reasoning_obj["retrieved_contexts"] = [] if context_truncated else retrieved_contexts
             reasoning_obj["context_truncated"] = context_truncated
-        return EvalOutputItem(id=item_id, score=score, reasoning=reasoning_obj)
+        return EvalOutputItem(id=item_id, score=score, reasoning=reasoning_obj, error=error)
 
     async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
         input_obj = item.input_obj
