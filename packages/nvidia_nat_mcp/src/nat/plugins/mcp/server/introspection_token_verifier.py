@@ -46,7 +46,7 @@ class IntrospectionTokenVerifier(TokenVerifier):
         introspection_endpoint = config.introspection_endpoint
         discovery_url = config.discovery_url
         client_id = config.client_id
-        client_secret = config.client_secret
+        client_secret = config.client_secret.get_secret_value() if config.client_secret else None
 
         self._bearer_token_validator = BearerTokenValidator(
             issuer=issuer,

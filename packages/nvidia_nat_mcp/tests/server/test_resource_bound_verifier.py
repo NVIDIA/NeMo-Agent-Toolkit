@@ -178,6 +178,16 @@ async def test_configured_audience_is_enforced_by_worker_verifier(
         assert token.claims["aud"] == [token_audience]
 
 
+def test_verifier_passes_plain_client_secret() -> None:
+    """Hand the introspection client the secret value, not the masked SecretStr."""
+    config = OAuth2ResourceServerConfig(issuer_url="https://issuer.example",
+                                        introspection_endpoint="https://issuer.example/introspect",
+                                        client_id="resource-server",
+                                        client_secret=SecretStr("synthetic-secret"))
+    verifier = IntrospectionTokenVerifier(config)
+    assert verifier._bearer_token_validator.client_secret == "synthetic-secret"
+
+
 async def test_sse_app_enforces_server_auth(monkeypatch):
     """SSE rejects anonymous callers and uses the configured token verifier."""
     from starlette.testclient import TestClient
