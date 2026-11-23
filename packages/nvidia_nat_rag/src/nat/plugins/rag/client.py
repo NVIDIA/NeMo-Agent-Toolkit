@@ -102,6 +102,10 @@ async def nat_rag(config: NATRAGConfig, builder: Builder) -> AsyncGenerator[Func
     if "base_url" not in base_dict:
         raise ValueError("base_url is required for LLM config specified in NVIDIA RAG Config.")
     base_dict["server_url"] = base_dict.pop("base_url")
+    # model_dump turns the secret into a plain string, and model_copy does not validate it back.
+    # NVIDIA RAG reads api_key with get_secret_value(), so it must stay a SecretStr.
+    if "api_key" in base_dict:
+        base_dict["api_key"] = SecretStr(base_dict["api_key"])
 
     rag_config.llm.parameters = rag_config.llm.parameters.model_copy(
         update=nim_llm_config.model_dump(include={"temperature", "top_p", "max_tokens"}, exclude_none=True))
@@ -119,6 +123,8 @@ async def nat_rag(config: NATRAGConfig, builder: Builder) -> AsyncGenerator[Func
     if "base_url" not in base_dict:
         raise ValueError("base_url is required for embedder config specified in NVIDIA RAG Config.")
     base_dict["server_url"] = base_dict.pop("base_url")
+    if "api_key" in base_dict:
+        base_dict["api_key"] = SecretStr(base_dict["api_key"])
     rag_config.embeddings = rag_config.embeddings.model_copy(update=base_dict)
 
     # resolve retriever config
