@@ -93,7 +93,14 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
     # LlamaIndex uses context_size instead of max_tokens
     config_dict = llm_config.model_dump(
         exclude={
-            "api_type", "base_url", "credentials_profile_name", "region_name", "thinking", "top_p", "type", "verify_ssl"
+            "api_type",
+            "base_url",
+            "credentials_profile_name",
+            "region_name",
+            "thinking",
+            "top_p",
+            "type",
+            "verify_ssl"
         },
         by_alias=True,
         exclude_none=True,
@@ -116,7 +123,9 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
         session = boto3.Session(profile_name=config_dict.get("profile_name"),
                                 region_name=config_dict.get("region_name"))
         # Same retry and timeout defaults LlamaIndex applies when it creates the client itself.
-        client_config = Config(retries={"max_attempts": 10, "mode": "standard"},
+        client_config = Config(retries={
+            "max_attempts": 10, "mode": "standard"
+        },
                                connect_timeout=60.0,
                                read_timeout=60.0,
                                user_agent_extra="x-client-framework:llama_index")
