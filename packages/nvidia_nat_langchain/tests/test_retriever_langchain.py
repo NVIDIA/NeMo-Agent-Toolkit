@@ -42,3 +42,22 @@ async def test_milvus_langchain_passes_top_k(top_k: int | None, expected_search_
     milvus_kwargs = mock_milvus.call_args.kwargs
     assert milvus_kwargs["collection_name"] == "docs"
     assert milvus_kwargs["connection_args"] == {"uri": "http://localhost:19530/"}
+
+
+@pytest.mark.parametrize("content_field", [None, "content"], ids=["default", "custom"])
+async def test_milvus_langchain_uses_content_field_as_text_field(content_field: str | None):
+    config_kwargs = {"uri": "http://localhost:19530", "embedding_model": "embedder", "collection_name": "docs"}
+    if content_field is not None:
+        config_kwargs["primary_field"] = content_field
+    config = MilvusRetrieverConfig(**config_kwargs)
+    builder = MagicMock()
+    builder.get_embedder = AsyncMock(return_value=MagicMock())
+
+    with patch("langchain_milvus.Milvus") as mock_milvus:
+        async with milvus_langchain(config, builder):
+            pass
+
+    milvus_kwargs = mock_milvus.call_args.kwargs
+    assert milvus_kwargs["text_field"] == (content_field or "text")
+    # The content field is not the primary key, so LangChain keeps its own primary key default
+    assert "primary_field" not in milvus_kwargs
