@@ -180,7 +180,7 @@ async def litellm_agno(llm_config: LiteLlmModelConfig, _builder: Builder):
         exclude_unset=True,
     )
     if llm_config.seed is not None:
-        config_dict["request_params"] = {"seed": llm_config.seed}
+        config_dict["request_params"] = {**(config_dict.get("request_params") or {}), "seed": llm_config.seed}
 
     client = LiteLLM(**config_dict, id=llm_config.model_name)
 

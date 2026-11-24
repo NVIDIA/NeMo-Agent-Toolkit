@@ -284,6 +284,20 @@ class TestLiteLLMAgno:
             assert params["temperature"] == 0.0
             assert params["seed"] == 7
 
+    async def test_litellm_agno_seed_keeps_request_params(self, mock_builder):
+        """Test that the seed is merged into, not substituted for, configured request_params."""
+        config = LiteLlmModelConfig(model_name="openai/gpt-4o-mini",
+                                    seed=7,
+                                    request_params={
+                                        "max_tokens": 32, "stop": ["END"]
+                                    })
+
+        async with litellm_agno(config, mock_builder) as client:
+            params = client.get_request_params()
+            assert params["seed"] == 7
+            assert params["max_tokens"] == 32
+            assert params["stop"] == ["END"]
+
     @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
     async def test_litellm_agno_verify_ssl(self, mock_builder, verify_ssl):
         """Test that verify_ssl reaches litellm, which makes the HTTP calls for the Agno LiteLLM model."""
