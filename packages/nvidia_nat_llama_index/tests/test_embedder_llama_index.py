@@ -55,6 +55,29 @@ class TestOpenAIEmbedderLlamaIndex:
             mock_httpx_sync_client.assert_called_once()
             assert mock_httpx_sync_client.call_args.kwargs["verify"] is verify_ssl
 
+    @patch("llama_index.embeddings.openai.OpenAIEmbedding")
+    async def test_base_url_passed_as_api_base(self, mock_embedding, mock_builder):
+        """The configured base_url reaches OpenAIEmbedding as api_base, which is the name LlamaIndex reads."""
+        config = OpenAIEmbedderModelConfig(model_name="text-embedding-3-small", base_url="http://localhost:8000/v1")
+        async with openai_llama_index(config, mock_builder):
+            kwargs = mock_embedding.call_args.kwargs
+            assert kwargs["api_base"] == "http://localhost:8000/v1"
+            assert "base_url" not in kwargs
+
+    @patch("llama_index.embeddings.openai.OpenAIEmbedding")
+    async def test_no_api_base_without_base_url(self, mock_embedding, openai_embedder_config, mock_builder):
+        """Without a base_url, api_base is left out so LlamaIndex keeps its default resolution."""
+        async with openai_llama_index(openai_embedder_config, mock_builder):
+            assert "api_base" not in mock_embedding.call_args.kwargs
+
+    async def test_base_url_sets_client_endpoint(self, mock_builder):
+        """A real OpenAIEmbedding built from the config targets the configured endpoint."""
+        config = OpenAIEmbedderModelConfig(model_name="text-embedding-3-small",
+                                           base_url="http://localhost:8000/v1",
+                                           api_key="test-key")
+        async with openai_llama_index(config, mock_builder) as client:
+            assert client.api_base == "http://localhost:8000/v1"
+
 
 # ---------------------------------------------------------------------------
 # Azure OpenAI embedder → Llama-Index

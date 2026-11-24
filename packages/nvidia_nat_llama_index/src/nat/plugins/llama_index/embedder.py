@@ -81,12 +81,17 @@ async def openai_llama_index(embedder_config: OpenAIEmbedderModelConfig, _builde
 
     from llama_index.embeddings.openai import OpenAIEmbedding
 
+    config_dict = embedder_config.model_dump(exclude={"base_url", "type", "verify_ssl"},
+                                             by_alias=True,
+                                             exclude_none=True,
+                                             exclude_unset=True)
+    if embedder_config.base_url is not None:
+        # LlamaIndex's OpenAIEmbedding expects "api_base" instead of "base_url"
+        config_dict["api_base"] = embedder_config.base_url
+
     async with http_clients(embedder_config) as http_clients_dict:
         client = OpenAIEmbedding(
-            **embedder_config.model_dump(exclude={"type", "verify_ssl"},
-                                         by_alias=True,
-                                         exclude_none=True,
-                                         exclude_unset=True),
+            **config_dict,
             **http_clients_dict,
         )
 
