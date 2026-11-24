@@ -263,14 +263,17 @@ class TestSamplingOptionsForwarded:
             assert "additional_kwargs" not in kwargs
 
     @patch("llama_index.llms.openai.OpenAI")
-    async def test_openai_without_options_adds_no_additional_kwargs(self, mock_openai: MagicMock,
+    async def test_openai_without_options_adds_no_additional_kwargs(self,
+                                                                    mock_openai: MagicMock,
                                                                     mock_builder: MagicMock):
         async with openai_llama_index(OpenAIModelConfig(model_name="gpt-4o"), mock_builder):
             assert "additional_kwargs" not in mock_openai.call_args.kwargs
 
     @patch("llama_index.llms.azure_openai.AzureOpenAI")
     async def test_azure_openai(self, mock_azure: MagicMock, mock_builder: MagicMock):
-        cfg = AzureOpenAIModelConfig(azure_deployment="dep", azure_endpoint="https://x.openai.azure.com", top_p=0.4,
+        cfg = AzureOpenAIModelConfig(azure_deployment="dep",
+                                     azure_endpoint="https://x.openai.azure.com",
+                                     top_p=0.4,
                                      seed=3)
         async with azure_openai_llama_index(cfg, mock_builder):
             kwargs = mock_azure.call_args.kwargs
