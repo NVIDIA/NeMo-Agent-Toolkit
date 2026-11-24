@@ -138,3 +138,34 @@ class TestNATRAG:
                 function_names = list(functions.keys())
                 assert any(name.endswith("search") for name in function_names)
                 assert any(name.endswith("generate") for name in function_names)
+
+    async def test_api_keys_reach_rag_config_as_secrets(self,
+                                                        config: NATRAGConfig,
+                                                        mock_builder: MagicMock,
+                                                        mock_rag_client: MagicMock,
+                                                        monkeypatch: pytest.MonkeyPatch) -> None:
+        from nat.embedder.nim_embedder import NIMEmbedderModelConfig
+        from nat.llm.nim_llm import NIMModelConfig
+
+        monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+        monkeypatch.delenv("NGC_API_KEY", raising=False)
+        mock_builder.get_llm_config.return_value = NIMModelConfig(
+            model_name="nvidia/nemotron-3.5-lightning-30b-a3b",
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_key="llm-key",
+        )
+        mock_builder.get_embedder_config.return_value = NIMEmbedderModelConfig(
+            model_name="nvidia/nemotron-3-embed-1b",
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_key="embedder-key",
+        )
+
+        with patch("nvidia_rag.rag_server.main.NvidiaRAG", return_value=mock_rag_client) as mock_nvidia_rag:
+            async with nat_rag(config, mock_builder):
+                pass
+
+        rag_config = mock_nvidia_rag.call_args.kwargs["config"]
+        assert rag_config.llm.get_api_key() == "llm-key"
+        assert rag_config.reflection.get_api_key() == "llm-key"
+        assert rag_config.filter_expression_generator.get_api_key() == "llm-key"
+        assert rag_config.embeddings.get_api_key() == "embedder-key"
