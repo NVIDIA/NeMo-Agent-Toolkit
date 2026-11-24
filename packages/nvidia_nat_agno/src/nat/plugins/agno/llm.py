@@ -27,6 +27,7 @@ from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import _handle_litellm_verify_ssl
 from nat.llm.utils.http_client import async_http_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
@@ -161,23 +162,26 @@ async def litellm_agno(llm_config: LiteLlmModelConfig, _builder: Builder):
     from agno.models.litellm.chat import LiteLLM
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.AGNO)
+    # Agno's LiteLLM model has no http_client or seed field and rejects them. LiteLLM makes its own
+    # HTTP calls, so verify_ssl is set the litellm way and seed goes in the request parameters.
+    _handle_litellm_verify_ssl(llm_config)
 
-    async with async_http_client(llm_config) as http_client:
-        client = LiteLLM(
-            **llm_config.model_dump(
-                exclude={
-                    "api_type",
-                    "model_name",
-                    "thinking",
-                    "type",
-                    "verify_ssl",
-                },
-                by_alias=True,
-                exclude_none=True,
-                exclude_unset=True,
-            ),
-            http_client=http_client,
-            id=llm_config.model_name,
-        )
+    config_dict = llm_config.model_dump(
+        exclude={
+            "api_type",
+            "model_name",
+            "seed",
+            "thinking",
+            "type",
+            "verify_ssl",
+        },
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+    if llm_config.seed is not None:
+        config_dict["request_params"] = {**(config_dict.get("request_params") or {}), "seed": llm_config.seed}
 
-        yield _patch_llm_based_on_config(client, llm_config)
+    client = LiteLLM(**config_dict, id=llm_config.model_name)
+
+    yield _patch_llm_based_on_config(client, llm_config)
