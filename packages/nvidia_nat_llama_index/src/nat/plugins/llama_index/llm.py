@@ -92,7 +92,16 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
 
     # LlamaIndex uses context_size instead of max_tokens
     config_dict = llm_config.model_dump(
-        exclude={"api_type", "credentials_profile_name", "region_name", "thinking", "top_p", "type", "verify_ssl"},
+        exclude={
+            "api_type",
+            "base_url",
+            "credentials_profile_name",
+            "region_name",
+            "thinking",
+            "top_p",
+            "type",
+            "verify_ssl"
+        },
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -104,6 +113,25 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
     # LlamaIndex names the AWS profile `profile_name` and silently drops unknown keyword arguments.
     if llm_config.credentials_profile_name is not None:
         config_dict["profile_name"] = llm_config.credentials_profile_name
+
+    # LlamaIndex's Bedrock wrapper has no endpoint argument and drops unknown keyword arguments, so a custom
+    # endpoint can only be honored by handing it a boto3 client that targets that endpoint.
+    if llm_config.base_url is not None:
+        import boto3
+        from botocore.config import Config
+
+        session = boto3.Session(profile_name=config_dict.get("profile_name"),
+                                region_name=config_dict.get("region_name"))
+        # Same retry and timeout defaults LlamaIndex applies when it creates the client itself.
+        client_config = Config(retries={
+            "max_attempts": 10, "mode": "standard"
+        },
+                               connect_timeout=60.0,
+                               read_timeout=60.0,
+                               user_agent_extra="x-client-framework:llama_index")
+        config_dict["client"] = session.client("bedrock-runtime",
+                                               endpoint_url=llm_config.base_url,
+                                               config=client_config)
 
     llm = Bedrock(**config_dict)
 

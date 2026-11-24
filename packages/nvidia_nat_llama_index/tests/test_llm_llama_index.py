@@ -15,6 +15,7 @@
 # pylint: disable=unused-argument, not-async-context-manager
 
 import os
+import sys
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -223,6 +224,33 @@ class TestBedrockLlamaIndex:
             assert "region_name" in br_cfg.model_fields_set
         async with aws_bedrock_llama_index(br_cfg, mock_builder):
             assert "region_name" not in mock_bedrock.call_args.kwargs
+
+    @patch("llama_index.llms.bedrock.Bedrock")
+    async def test_base_url_used_as_boto3_endpoint(self, mock_bedrock: MagicMock, mock_builder: MagicMock):
+        """base_url is not a Bedrock argument, so it must be applied to the boto3 client handed to Bedrock."""
+        boto3 = MagicMock()
+        botocore_config = MagicMock()
+        cfg = AWSBedrockModelConfig(model_name="ai21.j2-ultra",
+                                    base_url="https://bedrock.internal:8443",
+                                    region_name="us-west-2",
+                                    credentials_profile_name="dev")
+        modules = {"boto3": boto3, "botocore": MagicMock(), "botocore.config": botocore_config}
+        with patch.dict(sys.modules, modules):
+            async with aws_bedrock_llama_index(cfg, mock_builder):
+                boto3.Session.assert_called_once_with(profile_name="dev", region_name="us-west-2")
+                client_call = boto3.Session.return_value.client.call_args
+                assert client_call.args == ("bedrock-runtime", )
+                assert client_call.kwargs["endpoint_url"] == "https://bedrock.internal:8443"
+                kwargs = mock_bedrock.call_args.kwargs
+                assert kwargs["client"] is boto3.Session.return_value.client.return_value
+                assert "base_url" not in kwargs
+
+    @patch("llama_index.llms.bedrock.Bedrock")
+    async def test_no_client_without_base_url(self, mock_bedrock: MagicMock, mock_builder: MagicMock):
+        cfg = AWSBedrockModelConfig(model_name="ai21.j2-ultra")
+        async with aws_bedrock_llama_index(cfg, mock_builder):
+            assert "client" not in mock_bedrock.call_args.kwargs
+            assert "base_url" not in mock_bedrock.call_args.kwargs
 
     @patch("llama_index.llms.bedrock.Bedrock")
     async def test_region_forwarded(self, mock_bedrock: MagicMock, mock_builder: MagicMock):
