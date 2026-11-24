@@ -23,9 +23,13 @@ import pytest
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
+from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.plugins.llama_index.llm import aws_bedrock_llama_index
+from nat.plugins.llama_index.llm import azure_openai_llama_index
+from nat.plugins.llama_index.llm import litellm_llama_index
 from nat.plugins.llama_index.llm import nim_llama_index
 from nat.plugins.llama_index.llm import openai_llama_index
 
@@ -229,6 +233,71 @@ class TestBedrockLlamaIndex:
         cfg = AWSBedrockModelConfig(model_name="ai21.j2-ultra", region_name="us-west-2")
         async with aws_bedrock_llama_index(cfg, mock_builder):
             assert mock_bedrock.call_args.kwargs["region_name"] == "us-west-2"
+
+
+# ---------------------------------------------------------------------------
+# top_p / seed forwarding
+# ---------------------------------------------------------------------------
+# The LlamaIndex wrappers have no constructor argument for these options and drop unknown keyword arguments,
+# so they have to be sent through ``additional_kwargs``.
+
+
+class TestSamplingOptionsForwarded:
+    """top_p and seed must reach the LlamaIndex client through additional_kwargs."""
+
+    @patch("llama_index.llms.openai.OpenAI")
+    async def test_openai(self, mock_openai: MagicMock, mock_builder: MagicMock):
+        cfg = OpenAIModelConfig(model_name="gpt-4o", top_p=0.5, seed=7)
+        async with openai_llama_index(cfg, mock_builder):
+            kwargs = mock_openai.call_args.kwargs
+            assert kwargs["additional_kwargs"] == {"top_p": 0.5, "seed": 7}
+            assert "top_p" not in kwargs
+            assert "seed" not in kwargs
+
+    @patch("llama_index.llms.openai.OpenAIResponses")
+    async def test_openai_responses_keeps_top_p_argument(self, mock_resp: MagicMock, mock_builder: MagicMock):
+        cfg = OpenAIModelConfig(model_name="gpt-4o", api_type=APITypeEnum.RESPONSES, top_p=0.5)
+        async with openai_llama_index(cfg, mock_builder):
+            kwargs = mock_resp.call_args.kwargs
+            assert kwargs["top_p"] == 0.5
+            assert "additional_kwargs" not in kwargs
+
+    @patch("llama_index.llms.openai.OpenAI")
+    async def test_openai_without_options_adds_no_additional_kwargs(self,
+                                                                    mock_openai: MagicMock,
+                                                                    mock_builder: MagicMock):
+        async with openai_llama_index(OpenAIModelConfig(model_name="gpt-4o"), mock_builder):
+            assert "additional_kwargs" not in mock_openai.call_args.kwargs
+
+    @patch("llama_index.llms.azure_openai.AzureOpenAI")
+    async def test_azure_openai(self, mock_azure: MagicMock, mock_builder: MagicMock):
+        cfg = AzureOpenAIModelConfig(azure_deployment="dep",
+                                     azure_endpoint="https://x.openai.azure.com",
+                                     top_p=0.4,
+                                     seed=3)
+        async with azure_openai_llama_index(cfg, mock_builder):
+            kwargs = mock_azure.call_args.kwargs
+            assert kwargs["additional_kwargs"] == {"top_p": 0.4, "seed": 3}
+            assert "top_p" not in kwargs
+            assert "seed" not in kwargs
+
+    @patch("llama_index.llms.nvidia.NVIDIA")
+    async def test_nim(self, mock_nv: MagicMock, mock_builder: MagicMock):
+        cfg = NIMModelConfig(model_name="nemotron-3b", top_p=0.9)
+        async with nim_llama_index(cfg, mock_builder):
+            kwargs = mock_nv.call_args.kwargs
+            assert kwargs["additional_kwargs"] == {"top_p": 0.9}
+            assert "top_p" not in kwargs
+
+    @patch("llama_index.llms.litellm.LiteLLM")
+    async def test_litellm(self, mock_litellm: MagicMock, mock_builder: MagicMock):
+        cfg = LiteLlmModelConfig(model_name="gpt-4o", top_p=0.8, seed=11, additional_kwargs={"user": "abc"})
+        with patch("nat.llm.utils.http_client._handle_litellm_verify_ssl"):
+            async with litellm_llama_index(cfg, mock_builder):
+                kwargs = mock_litellm.call_args.kwargs
+                assert kwargs["additional_kwargs"] == {"user": "abc", "top_p": 0.8, "seed": 11}
+                assert "top_p" not in kwargs
+                assert "seed" not in kwargs
 
 
 # ---------------------------------------------------------------------------

@@ -41,6 +41,17 @@ from nat.utils.type_utils import override
 ModelType = TypeVar("ModelType")
 
 
+def _sampling_to_additional_kwargs(config_dict: dict) -> None:
+    """Move the sampling options LlamaIndex has no constructor argument for into ``additional_kwargs``.
+
+    The LlamaIndex OpenAI, Azure OpenAI, NVIDIA and LiteLLM wrappers silently drop unknown keyword arguments,
+    so ``top_p`` and ``seed`` only reach the provider request when they are part of ``additional_kwargs``.
+    """
+    sampling = {key: config_dict.pop(key) for key in ("top_p", "seed") if key in config_dict}
+    if sampling:
+        config_dict["additional_kwargs"] = {**config_dict.get("additional_kwargs", {}), **sampling}
+
+
 def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
 
     from llama_index.core.base.llms.types import ChatMessage
@@ -124,6 +135,7 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
         exclude_unset=True)
     if llm_config.request_timeout is not None:
         config_dict["timeout"] = llm_config.request_timeout
+    _sampling_to_additional_kwargs(config_dict)
 
     async with http_clients(llm_config) as http_clients_dict:
         config_dict.update(http_clients_dict)
@@ -153,6 +165,7 @@ async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
         exclude_none=True,
         exclude_unset=True,
     )
+    _sampling_to_additional_kwargs(config_dict)
 
     async with http_clients(llm_config) as http_clients_dict:
         config_dict.update(http_clients_dict)
@@ -187,6 +200,7 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
         if llm_config.api_type == APITypeEnum.RESPONSES:
             llm = OpenAIResponses(**config_dict)
         else:
+            _sampling_to_additional_kwargs(config_dict)
             llm = OpenAI(**config_dict)
 
         yield _patch_llm_based_on_config(llm, llm_config)
@@ -202,10 +216,12 @@ async def litellm_llama_index(llm_config: LiteLlmModelConfig, _builder: Builder)
     _handle_litellm_verify_ssl(llm_config)
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
 
-    llm = LiteLLM(
-        **llm_config.model_dump(exclude={"api_type", "thinking", "type", "verify_ssl"},
-                                by_alias=True,
-                                exclude_none=True,
-                                exclude_unset=True), )
+    config_dict = llm_config.model_dump(exclude={"api_type", "thinking", "type", "verify_ssl"},
+                                        by_alias=True,
+                                        exclude_none=True,
+                                        exclude_unset=True)
+    _sampling_to_additional_kwargs(config_dict)
+
+    llm = LiteLLM(**config_dict)
 
     yield _patch_llm_based_on_config(llm, llm_config)
