@@ -169,13 +169,11 @@ def match_valid_channel(channel_name: str) -> None:
                        settings.channel_names)
         while (True):
             channel_name = input("Channel Name: ").strip()
-            if len(channel_name) < 1:
-                logger.warning("Invalid channel name, cannot be empty or whitespace.")
             if (channel_name in settings.channel_names):
-                logger.warning("Channel name '%s' already exists, choose a different name.", channel_name)
-            else:
-                settings.channels[channel_name] = {}
                 break
+            logger.warning("Channel name '%s' has not been configured, choose a name from %s .",
+                           channel_name,
+                           settings.channel_names)
 
     channals_settings = settings.channels
     channel_settings = channals_settings.get(channel_name)
