@@ -69,7 +69,7 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
         _ = weave.init(project_name=project_name)
 
     # Handle custom redact keys if specified
-    if config.redact_keys and config.redact_pii:
+    if config.redact_keys:
         from weave.utils import sanitize
 
         for key in config.redact_keys:
