@@ -85,6 +85,7 @@ def add_channel_interative(channel_type: str) -> None:
         channel_name = input("Channel Name: ").strip()
         if len(channel_name) < 1:
             logger.warning("Invalid channel name, cannot be empty or whitespace.")
+            continue
         if (channel_name in settings.channels):
             logger.warning("Channel name '%s' already exists, choose a different name.", channel_name)
         else:
