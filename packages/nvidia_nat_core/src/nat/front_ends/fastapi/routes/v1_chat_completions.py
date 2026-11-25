@@ -106,9 +106,11 @@ def post_openai_api_compatible_endpoint(*, worker: Any, session_manager: Session
 
     async def post_openai_api_compatible(response: Response, request: Request, payload: ChatRequest):
         stream_requested = getattr(payload, "stream", False)
+        auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
 
         if stream_requested:
-            async with session_manager.session(http_connection=request) as session:
+            async with session_manager.session(http_connection=request,
+                                               user_authentication_callback=auth_cb) as session:
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                          content=generate_streaming_response_as_str(
                                              payload,
@@ -119,7 +121,7 @@ def post_openai_api_compatible_endpoint(*, worker: Any, session_manager: Session
                                              output_type=ChatResponseChunk))
 
         response.headers["Content-Type"] = "application/json"
-        async with session_manager.session(http_connection=request) as session:
+        async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
             try:
                 result = await generate_single_response(payload, session, result_type=ChatResponse)
                 add_context_headers_to_response(response)
