@@ -505,6 +505,7 @@ class ATIFStreamConverter:
         self._tool_defs_captured = False
         self._pending: _PendingAgentTurn | None = None
         self._emitted_steps: list[ATIFStep] = []
+        self._deferred_steps: list[ATIFStep] = []
         self._total_prompt = 0
         self._total_completion = 0
         self._total_cached = 0
@@ -571,6 +572,8 @@ class ATIFStreamConverter:
                 self._step_id += 1
                 self._emitted_steps.append(final_step)
                 results.append(final_step)
+            # push() returns one step; hand the rest back from finalize() instead of dropping them
+            self._deferred_steps.extend(results[1:])
             return results[0] if results else None
 
         if event_type == IntermediateStepType.LLM_END:
@@ -667,7 +670,8 @@ class ATIFStreamConverter:
 
     def finalize(self) -> list[ATIFStep]:
         """Flush any pending agent turn and return remaining steps."""
-        result: list[ATIFStep] = []
+        result: list[ATIFStep] = self._deferred_steps
+        self._deferred_steps = []
         flushed = self._flush_pending()
         if flushed:
             result.append(flushed)
