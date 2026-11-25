@@ -996,6 +996,25 @@ class TestStreamConverter:
         assert result.source == "user"
         assert result.message == "hello"
 
+    def test_workflow_end_does_not_drop_terminal_step(self):
+        """WORKFLOW_END flushing a pending turn must still surface the final-answer step."""
+        converter = ATIFStreamConverter()
+        converter.push(_make_step(IntermediateStepType.WORKFLOW_START, input_data="q", timestamp_offset=0.0))
+        converter.push(_make_step(IntermediateStepType.LLM_END, output_data="Final Answer: 42", timestamp_offset=1.0))
+        emitted = []
+        first = converter.push(
+            _make_step(IntermediateStepType.WORKFLOW_END, output_data="42", timestamp_offset=2.0))
+        if first is not None:
+            emitted.append(first)
+        emitted.extend(converter.finalize())
+
+        assert [s.message for s in emitted] == ["Final Answer: 42", "42"]
+        assert [s.message for s in converter.get_trajectory().steps if s.source == "agent"] == [
+            "Final Answer: 42", "42"
+        ]
+        # finalize() hands each deferred step out once
+        assert converter.finalize() == []
+
     def test_llm_end_flushes_previous_turn(self):
         """Second LLM_END flushes the first turn."""
         converter = ATIFStreamConverter()
