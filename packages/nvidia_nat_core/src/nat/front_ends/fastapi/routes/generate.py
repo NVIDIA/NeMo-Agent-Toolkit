@@ -87,7 +87,8 @@ def post_streaming_raw_endpoint(*,
         )
 
     async def post_stream(request: Request, payload: Any = Body(), filter_steps: str | None = None):
-        async with session_manager.session(http_connection=request) as session:
+        auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
+        async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
             return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                      content=generate_streaming_response_full_as_str(payload,
                                                                                      session=session,
@@ -110,7 +111,8 @@ def post_streaming_atif_endpoint(*,
     """Build an experimental POST handler that streams ATIF-formatted steps."""
 
     async def post_stream(request: Request, payload: Any = Body()):
-        async with session_manager.session(http_connection=request) as session:
+        auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
+        async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
             return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                      content=generate_streaming_response_atif_as_str(payload,
                                                                                      session=session,
