@@ -56,6 +56,7 @@ class AgnoProfilerHandler(BaseProfilerCallback):
         # Original references to Agno methods (for uninstrumenting if needed)
         self._original_tool_execute = None
         self._original_llm_call = None
+        self._original_async_llm_call = None
 
     def instrument(self) -> None:
         """
@@ -70,6 +71,12 @@ class AgnoProfilerHandler(BaseProfilerCallback):
             logger.debug("AgnoProfilerHandler LLM call instrumentation applied successfully.")
         else:
             logger.debug("Could not patch Agno LLM calls: litellm.completion not found")
+
+        self._original_async_llm_call = getattr(litellm, "acompletion", None)
+        if self._original_async_llm_call:
+            litellm.acompletion = self._async_llm_call_monkey_patch()
+        else:
+            logger.debug("Could not patch Agno async LLM calls: litellm.acompletion not found")
 
         # Note: Agno doesn't have a class-based tool structure to patch directly.
         # Instead, it uses decorators to convert functions to tools.
@@ -149,6 +156,140 @@ class AgnoProfilerHandler(BaseProfilerCallback):
 
         return wrapped_tool_execute
 
+    def _push_llm_start(self, kwargs: dict[str, Any]) -> Callable[..., None]:
+        """
+        Records the LLM_START event of a LiteLLM call and returns the function that records its LLM_END event.
+        """
+        now = time.time()
+        seconds_between_calls = int(now - self.last_call_ts)
+        model_name = kwargs.get('model', "")
+
+        model_input = ""
+        try:
+            for message in kwargs.get('messages', []):
+                model_input += message.get('content', "")
+        except Exception as e:
+            logger.exception("Error getting model input: %s", e)
+
+        uuid = str(uuid4())
+
+        # Record the start event
+        input_stats = IntermediateStepPayload(
+            event_type=IntermediateStepType.LLM_START,
+            framework=LLMFrameworkEnum.AGNO,
+            name=model_name,
+            UUID=uuid,
+            data=StreamEventData(input=model_input),
+            metadata=TraceMetadata(chat_inputs=copy.deepcopy(kwargs.get('messages', []))),
+            usage_info=UsageInfo(token_usage=TokenUsageBaseModel(),
+                                 num_llm_calls=1,
+                                 seconds_between_calls=seconds_between_calls))
+
+        self.step_manager.push_intermediate_step(input_stats)
+
+        def push_llm_end(model_output: str = "",
+                         chat_responses: Any = None,
+                         token_usage: TokenUsageBaseModel | None = None) -> None:
+            """Record the end event that closes this call's LLM_START."""
+            usage_info = UsageInfo(token_usage=token_usage or TokenUsageBaseModel(),
+                                   num_llm_calls=1,
+                                   seconds_between_calls=seconds_between_calls)
+            output_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
+                                                   span_event_timestamp=time.time(),
+                                                   framework=LLMFrameworkEnum.AGNO,
+                                                   name=model_name,
+                                                   UUID=uuid,
+                                                   data=StreamEventData(input=model_input, output=model_output),
+                                                   metadata=TraceMetadata(chat_responses=chat_responses),
+                                                   usage_info=usage_info)
+
+            self.step_manager.push_intermediate_step(output_stats)
+
+        return push_llm_end
+
+    def _push_llm_output(self, output: Any, push_llm_end: Callable[..., None]) -> None:
+        """
+        Extracts the output text and token usage of a LiteLLM response and records the LLM_END event.
+        """
+        # Initialize default values
+        model_output = ""
+        chat_responses = None
+        token_usage = TokenUsageBaseModel()
+
+        # Log what we received to help with debugging
+        logger.debug(f"LLM call received output type: {type(output)}")
+
+        # Safely process the output if it's not None
+        if output is not None:
+            try:
+                # Extract model output text from choices
+                if hasattr(output, 'choices') and output.choices:
+                    logger.debug(f"Output has {len(output.choices)} choices")
+                    for i, choice in enumerate(output.choices):
+                        logger.debug(f"Processing choice {i} of type {type(choice)}")
+                        if hasattr(choice, 'model_extra') and 'message' in choice.model_extra:
+                            msg = choice.model_extra["message"]
+                            content = msg.get('content', "")
+                            logger.debug(f"Got content from model_extra.message: {content[:50]}...")
+                            model_output += content
+                        elif hasattr(choice, 'message') and hasattr(choice.message, 'content'):
+                            content = choice.message.content or ""
+                            logger.debug(f"Got content from message.content: {content[:50]}...")
+                            model_output += content
+                        else:
+                            logger.debug(f"Could not extract content from choice: {choice}")
+
+                # Try to get chat responses
+                if hasattr(output, 'choices') and len(output.choices) > 0:
+                    choice = output.choices[0]
+                    if hasattr(choice, 'model_dump'):
+                        logger.debug("Using model_dump to extract chat responses")
+                        chat_responses = choice.model_dump()
+                    else:
+                        # Fall back to a simpler representation
+                        logger.debug("Falling back to simple representation for chat responses")
+                        chat_responses = {"content": model_output}
+
+                # Try to get token usage
+                if hasattr(output, 'model_extra') and 'usage' in output.model_extra:
+                    usage_data = output.model_extra['usage']
+                    logger.debug(f"Found usage data of type {type(usage_data)}")
+
+                    # Special debug for the test case
+                    if hasattr(
+                            usage_data,
+                            'prompt_tokens') and usage_data.prompt_tokens == 20 and usage_data.completion_tokens == 15:
+                        logger.debug("Found test case token usage object with 20/15/35 tokens")
+
+                    if hasattr(usage_data, 'model_dump'):
+                        logger.debug("Using model_dump to extract token usage")
+                        token_usage = TokenUsageBaseModel(**usage_data.model_dump())
+                    elif isinstance(usage_data, dict):
+                        logger.debug("Extracting token usage from dictionary")
+                        token_usage = TokenUsageBaseModel(prompt_tokens=usage_data.get('prompt_tokens', 0),
+                                                          completion_tokens=usage_data.get('completion_tokens', 0),
+                                                          total_tokens=usage_data.get('total_tokens', 0))
+                    elif isinstance(usage_data, TokenUsageBaseModel):
+                        # If it's already a TokenUsageBaseModel instance, use it directly
+                        logger.debug("Using TokenUsageBaseModel directly")
+                        token_usage = usage_data
+                    elif hasattr(usage_data, 'prompt_tokens') and hasattr(usage_data, 'completion_tokens') and hasattr(
+                            usage_data, 'total_tokens'):
+                        # For objects that have the needed properties but aren't TokenUsageBaseModel
+                        logger.debug("Using object with token properties")
+                        token_usage = TokenUsageBaseModel(prompt_tokens=usage_data.prompt_tokens,
+                                                          completion_tokens=usage_data.completion_tokens,
+                                                          total_tokens=usage_data.total_tokens)
+
+                    logger.debug(f"Final token usage: prompt={token_usage.prompt_tokens}, "
+                                 f"completion={token_usage.completion_tokens}, "
+                                 f"total={token_usage.total_tokens}")
+            except Exception as e:
+                logger.exception("Error getting model output: %s", e)
+
+        # Record the end event
+        push_llm_end(model_output=model_output, chat_responses=chat_responses, token_usage=token_usage)
+
     def _llm_call_monkey_patch(self) -> Callable[..., Any]:
         """
         Returns a function that wraps calls to litellm.completion(...) with usage-logging.
@@ -159,50 +300,8 @@ class AgnoProfilerHandler(BaseProfilerCallback):
             """
             Collects usage stats for LLM calls, calls the original, and captures output stats.
             """
-            now = time.time()
-            seconds_between_calls = int(now - self.last_call_ts)
             model_name = kwargs.get('model', "")
-
-            model_input = ""
-            try:
-                for message in kwargs.get('messages', []):
-                    model_input += message.get('content', "")
-            except Exception as e:
-                logger.exception("Error getting model input: %s", e)
-
-            uuid = str(uuid4())
-
-            # Record the start event
-            input_stats = IntermediateStepPayload(
-                event_type=IntermediateStepType.LLM_START,
-                framework=LLMFrameworkEnum.AGNO,
-                name=model_name,
-                UUID=uuid,
-                data=StreamEventData(input=model_input),
-                metadata=TraceMetadata(chat_inputs=copy.deepcopy(kwargs.get('messages', []))),
-                usage_info=UsageInfo(token_usage=TokenUsageBaseModel(),
-                                     num_llm_calls=1,
-                                     seconds_between_calls=seconds_between_calls))
-
-            self.step_manager.push_intermediate_step(input_stats)
-
-            def push_llm_end(model_output: str = "",
-                             chat_responses: Any = None,
-                             token_usage: TokenUsageBaseModel | None = None) -> None:
-                """Record the end event that closes this call's LLM_START."""
-                usage_info = UsageInfo(token_usage=token_usage or TokenUsageBaseModel(),
-                                       num_llm_calls=1,
-                                       seconds_between_calls=seconds_between_calls)
-                output_stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
-                                                       span_event_timestamp=time.time(),
-                                                       framework=LLMFrameworkEnum.AGNO,
-                                                       name=model_name,
-                                                       UUID=uuid,
-                                                       data=StreamEventData(input=model_input, output=model_output),
-                                                       metadata=TraceMetadata(chat_responses=chat_responses),
-                                                       usage_info=usage_info)
-
-                self.step_manager.push_intermediate_step(output_stats)
+            push_llm_end = self._push_llm_start(kwargs)
 
             # Verify we have a valid original function before calling it
             if original_func is None:
@@ -221,83 +320,33 @@ class AgnoProfilerHandler(BaseProfilerCallback):
                     push_llm_end()
                     raise
 
-            # Initialize default values
-            model_output = ""
-            chat_responses = None
-            token_usage = TokenUsageBaseModel()
-
-            # Log what we received to help with debugging
-            logger.debug(f"LLM call to {model_name} received output type: {type(output)}")
-
-            # Safely process the output if it's not None
-            if output is not None:
-                try:
-                    # Extract model output text from choices
-                    if hasattr(output, 'choices') and output.choices:
-                        logger.debug(f"Output has {len(output.choices)} choices")
-                        for i, choice in enumerate(output.choices):
-                            logger.debug(f"Processing choice {i} of type {type(choice)}")
-                            if hasattr(choice, 'model_extra') and 'message' in choice.model_extra:
-                                msg = choice.model_extra["message"]
-                                content = msg.get('content', "")
-                                logger.debug(f"Got content from model_extra.message: {content[:50]}...")
-                                model_output += content
-                            elif hasattr(choice, 'message') and hasattr(choice.message, 'content'):
-                                content = choice.message.content or ""
-                                logger.debug(f"Got content from message.content: {content[:50]}...")
-                                model_output += content
-                            else:
-                                logger.debug(f"Could not extract content from choice: {choice}")
-
-                    # Try to get chat responses
-                    if hasattr(output, 'choices') and len(output.choices) > 0:
-                        choice = output.choices[0]
-                        if hasattr(choice, 'model_dump'):
-                            logger.debug("Using model_dump to extract chat responses")
-                            chat_responses = choice.model_dump()
-                        else:
-                            # Fall back to a simpler representation
-                            logger.debug("Falling back to simple representation for chat responses")
-                            chat_responses = {"content": model_output}
-
-                    # Try to get token usage
-                    if hasattr(output, 'model_extra') and 'usage' in output.model_extra:
-                        usage_data = output.model_extra['usage']
-                        logger.debug(f"Found usage data of type {type(usage_data)}")
-
-                        # Special debug for the test case
-                        if hasattr(usage_data, 'prompt_tokens'
-                                   ) and usage_data.prompt_tokens == 20 and usage_data.completion_tokens == 15:
-                            logger.debug("Found test case token usage object with 20/15/35 tokens")
-
-                        if hasattr(usage_data, 'model_dump'):
-                            logger.debug("Using model_dump to extract token usage")
-                            token_usage = TokenUsageBaseModel(**usage_data.model_dump())
-                        elif isinstance(usage_data, dict):
-                            logger.debug("Extracting token usage from dictionary")
-                            token_usage = TokenUsageBaseModel(prompt_tokens=usage_data.get('prompt_tokens', 0),
-                                                              completion_tokens=usage_data.get('completion_tokens', 0),
-                                                              total_tokens=usage_data.get('total_tokens', 0))
-                        elif isinstance(usage_data, TokenUsageBaseModel):
-                            # If it's already a TokenUsageBaseModel instance, use it directly
-                            logger.debug("Using TokenUsageBaseModel directly")
-                            token_usage = usage_data
-                        elif hasattr(usage_data, 'prompt_tokens') and hasattr(
-                                usage_data, 'completion_tokens') and hasattr(usage_data, 'total_tokens'):
-                            # For objects that have the needed properties but aren't TokenUsageBaseModel
-                            logger.debug("Using object with token properties")
-                            token_usage = TokenUsageBaseModel(prompt_tokens=usage_data.prompt_tokens,
-                                                              completion_tokens=usage_data.completion_tokens,
-                                                              total_tokens=usage_data.total_tokens)
-
-                        logger.debug(f"Final token usage: prompt={token_usage.prompt_tokens}, "
-                                     f"completion={token_usage.completion_tokens}, "
-                                     f"total={token_usage.total_tokens}")
-                except Exception as e:
-                    logger.exception("Error getting model output: %s", e)
-
-            # Record the end event
-            push_llm_end(model_output=model_output, chat_responses=chat_responses, token_usage=token_usage)
+            self._push_llm_output(output, push_llm_end)
             return output
 
         return wrapped_llm_call
+
+    def _async_llm_call_monkey_patch(self) -> Callable[..., Any]:
+        """
+        Returns a function that wraps calls to litellm.acompletion(...) with usage-logging.
+
+        Agno's ``LiteLLM.ainvoke`` (used by ``Agent.arun``) calls ``litellm.acompletion``, not ``litellm.completion``.
+        """
+        original_func = self._original_async_llm_call
+
+        async def wrapped_async_llm_call(*args, **kwargs) -> Any:
+            """
+            Collects usage stats for async LLM calls, awaits the original, and captures output stats.
+            """
+            push_llm_end = self._push_llm_start(kwargs)
+            try:
+                output = await original_func(*args, **kwargs)
+            except BaseException as e:
+                # Close the LLM step, then let the caller see the provider's error (or the task's cancellation)
+                logger.error("Error calling original litellm.acompletion: %r", e)
+                push_llm_end()
+                raise
+
+            self._push_llm_output(output, push_llm_end)
+            return output
+
+        return wrapped_async_llm_call

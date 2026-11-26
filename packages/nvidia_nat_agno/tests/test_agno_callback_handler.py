@@ -379,12 +379,14 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
 
 @pytest.fixture(name="restore_litellm_completion")
 def restore_litellm_completion_fixture():
-    """Restore ``litellm.completion`` after a test that installs the handler."""
+    """Restore ``litellm.completion`` and ``litellm.acompletion`` after a test that installs the handler."""
     import litellm
 
     original_completion = litellm.completion
+    original_acompletion = litellm.acompletion
     yield
     litellm.completion = original_completion
+    litellm.acompletion = original_acompletion
 
 
 async def test_agno_handler_llm_call_error_reaches_caller(reactive_stream: Subject, restore_litellm_completion):
@@ -416,3 +418,91 @@ async def test_agno_handler_llm_call_error_reaches_caller(reactive_stream: Subje
     assert end_event.payload.data.input == "Hello"
     assert end_event.payload.data.output == ""
     assert end_event.payload.usage_info.token_usage == TokenUsageBaseModel()
+
+
+async def test_agno_handler_async_llm_call(reactive_stream: Subject, restore_litellm_completion):
+    """An async Agno LiteLLM call (``litellm.acompletion``) records LLM_START and LLM_END with its output and usage."""
+    from agno.models.litellm.chat import LiteLLM
+    from agno.models.message import Message
+
+    from nat.plugins.agno.callback_handler import AgnoProfilerHandler
+
+    all_stats = []
+    reactive_stream.subscribe(all_stats.append)
+    AgnoProfilerHandler().instrument()
+
+    model = LiteLLM(id="gpt-4o", api_key="test-key", request_params={"mock_response": "Hi there"})
+    await model.ainvoke(messages=[Message(role="user", content="Hello")], assistant_message=Message(role="assistant"))
+
+    llm_events = [
+        event for event in all_stats
+        if event.event_type in (IntermediateStepType.LLM_START, IntermediateStepType.LLM_END)
+    ]
+    assert [event.event_type for event in llm_events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+
+    start_event, end_event = llm_events
+    assert end_event.UUID == start_event.UUID
+    assert end_event.payload.framework == LLMFrameworkEnum.AGNO
+    assert end_event.payload.data.input == "Hello"
+    assert end_event.payload.data.output == "Hi there"
+    assert end_event.payload.usage_info.token_usage.total_tokens > 0
+
+
+async def test_agno_handler_async_llm_call_error_reaches_caller(reactive_stream: Subject, restore_litellm_completion):
+    """A failed ``litellm.acompletion`` call raises the provider's error and still closes the LLM step."""
+    import litellm
+    from agno.models.litellm.chat import LiteLLM
+    from agno.models.message import Message
+
+    from nat.plugins.agno.callback_handler import AgnoProfilerHandler
+
+    all_stats = []
+    reactive_stream.subscribe(all_stats.append)
+    AgnoProfilerHandler().instrument()
+
+    model = LiteLLM(id="gpt-4o", api_key="test-key", request_params={"mock_response": "litellm.RateLimitError"})
+
+    with pytest.raises(litellm.RateLimitError):
+        await model.ainvoke(messages=[Message(role="user", content="Hello")],
+                            assistant_message=Message(role="assistant"))
+
+    llm_events = [
+        event for event in all_stats
+        if event.event_type in (IntermediateStepType.LLM_START, IntermediateStepType.LLM_END)
+    ]
+    assert [event.event_type for event in llm_events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert llm_events[1].UUID == llm_events[0].UUID
+
+
+async def test_agno_handler_cancelled_async_llm_call_ends_llm_step(reactive_stream: Subject,
+                                                                   restore_litellm_completion):
+    """Cancelling the task awaiting ``litellm.acompletion`` closes the LLM step and propagates the cancellation."""
+    import asyncio
+
+    import litellm
+
+    from nat.plugins.agno.callback_handler import AgnoProfilerHandler
+
+    started = asyncio.Event()
+
+    async def never_returns(*_args, **_kwargs):
+        started.set()
+        await asyncio.Event().wait()
+
+    all_stats = []
+    reactive_stream.subscribe(all_stats.append)
+    litellm.acompletion = never_returns
+    AgnoProfilerHandler().instrument()
+
+    task = asyncio.create_task(litellm.acompletion(model="gpt-4o", messages=[{"role": "user", "content": "Hello"}]))
+    await started.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    llm_events = [
+        event for event in all_stats
+        if event.event_type in (IntermediateStepType.LLM_START, IntermediateStepType.LLM_END)
+    ]
+    assert [event.event_type for event in llm_events] == [IntermediateStepType.LLM_START, IntermediateStepType.LLM_END]
+    assert llm_events[1].UUID == llm_events[0].UUID
