@@ -14,11 +14,13 @@
 # limitations under the License.
 
 import asyncio
+import json
 import time
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import httpx
 import pytest
 from pydantic import SecretStr
 
@@ -53,6 +55,7 @@ def mock_config_with_credentials() -> MCPOAuth2ProviderConfig:
     return MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client_id",
         client_secret="test_client_secret",
         client_name="Test Client",
@@ -87,11 +90,43 @@ def mock_credentials() -> OAuth2Credentials:
 class TestMCPOAuth2ProviderConfig:
     """Test MCP OAuth2 provider config validation."""
 
+    def test_manual_registration_preserves_configured_issuer(self):
+        issuer = "https://auth.example.com"
+        config = MCPOAuth2ProviderConfig.model_validate({
+            "server_url": "https://example.com/mcp",
+            "redirect_uri": "https://example.com/callback",
+            "client_id": "public_client_id",
+            "expected_issuer": issuer,
+        })
+
+        assert config.expected_issuer == issuer
+
+    @pytest.mark.parametrize("secret", [None, "test_secret"])
+    def test_manual_registration_requires_issuer(self, mock_config, secret):
+        with pytest.raises(ValueError, match="expected_issuer is required"):
+            MCPOAuth2ProviderConfig.model_validate({
+                **mock_config.model_dump(),
+                "client_id": "registered",
+                "client_secret": secret,
+            })
+
+    @pytest.mark.parametrize("issuer",
+                             [
+                                 "http://auth.example.com",
+                                 "https://user@auth.example.com",
+                                 "https://auth.example.com/realm?",
+                                 "https://auth.example.com/#fragment",
+                             ])
+    def test_validate_expected_issuer_url(self, mock_config, issuer):
+        with pytest.raises(ValueError, match="expected_issuer"):
+            MCPOAuth2ProviderConfig.model_validate({**mock_config.model_dump(), "expected_issuer": issuer})
+
     def test_validate_allows_public_client_without_secret(self):
         """Manual mode should allow a pre-registered public client without client_secret."""
         config = MCPOAuth2ProviderConfig(
             server_url="https://example.com/mcp",  # type: ignore
             redirect_uri="https://example.com/callback",  # type: ignore
+            expected_issuer="https://auth.example.com",
             client_id="public_client_id",
             enable_dynamic_registration=False,
         )
@@ -115,6 +150,53 @@ class TestMCPOAuth2ProviderConfig:
 
 class TestDiscoverOAuth2Endpoints:
     """Test the DiscoverOAuth2Endpoints class."""
+
+    @pytest.mark.parametrize("servers", [[], ["https://auth.example.com/"]])
+    async def test_manual_resource_metadata_requires_configured_issuer(self, mock_config_with_credentials, servers):
+        discoverer = DiscoverOAuth2Endpoints(mock_config_with_credentials)
+        url = "https://example.com/.well-known/oauth-protected-resource"
+        resource = {"resource": "https://example.com/mcp", "authorization_servers": servers}
+        with patch("httpx.AsyncClient") as client:
+            client.return_value.__aenter__.return_value.get.return_value = httpx.Response(200,
+                                                                                          json=resource,
+                                                                                          request=httpx.Request(
+                                                                                              "GET", url))
+            with pytest.raises(ValueError, match="expected_issuer"):
+                await discoverer._fetch_pr_issuer(url)
+
+    async def test_manual_discovery_selects_configured_issuer(self, mock_config_with_credentials):
+        issuer = mock_config_with_credentials.expected_issuer
+        discoverer = DiscoverOAuth2Endpoints(mock_config_with_credentials)
+        resource = {"resource": "https://example.com/mcp", "authorization_servers": ["https://example.org", issuer]}
+        metadata = {
+            "issuer": issuer,
+            "authorization_endpoint": f"{issuer}/authorize",
+            "token_endpoint": f"{issuer}/token",
+        }
+
+        with patch("httpx.AsyncClient") as client:
+            get = client.return_value.__aenter__.return_value.get
+            get.side_effect = [
+                httpx.Response(200, json=resource, request=httpx.Request("GET", "https://example.com")),
+                httpx.Response(200, json=metadata),
+            ]
+            endpoints, changed = await discoverer.discover()
+
+        assert changed
+        assert str(endpoints.authorization_url) == metadata["authorization_endpoint"]
+        assert get.await_args.args[0] == f"{issuer}/.well-known/oauth-authorization-server"
+        assert get.await_args.kwargs["follow_redirects"] is False
+
+    @pytest.mark.parametrize("issuer_fields", [{}, {"issuer": "https://auth.example.com/"}])
+    def test_manual_metadata_requires_exact_issuer(self, mock_config_with_credentials, issuer_fields):
+        discoverer = DiscoverOAuth2Endpoints(mock_config_with_credentials)
+        document = {
+            **issuer_fields,
+            "authorization_endpoint": "https://auth.example.com/authorize",
+            "token_endpoint": "https://auth.example.com/token",
+        }
+        with pytest.raises(ValueError, match="issuer"):
+            discoverer._parse_authorization_metadata(json.dumps(document).encode())
 
     async def test_discover_cached_endpoints(self, mock_config):
         """Test that cached endpoints are returned for non-401 requests."""
@@ -223,7 +305,7 @@ class TestDiscoverOAuth2Endpoints:
         # Test with path
         urls = discoverer._build_path_aware_discovery_urls("https://auth.example.com/api/v1")
         expected = [
-            "https://auth.example.com/.well-known/oauth-protected-resource/api/v1",
+            "https://auth.example.com/.well-known/oauth-authorization-server/api/v1",
             "https://auth.example.com/api/v1/.well-known/oauth-authorization-server",
             "https://auth.example.com/.well-known/oauth-authorization-server",
             "https://auth.example.com/.well-known/openid-configuration/api/v1",
@@ -326,6 +408,22 @@ class TestDynamicClientRegistration:
 class TestMCPOAuth2Provider:
     """Test the MCPOAuth2Provider class."""
 
+    async def test_manual_rediscovery_failure_clears_cached_registration(self,
+                                                                         mock_config_with_credentials,
+                                                                         mock_endpoints,
+                                                                         mock_credentials):
+        provider = MCPOAuth2Provider(mock_config_with_credentials)
+        provider._cached_endpoints = mock_endpoints
+        provider._cached_credentials = mock_credentials
+        provider._auth_code_provider = AsyncMock()
+        with patch.object(provider._discoverer, "discover", side_effect=httpx.ReadTimeout("metadata timeout")):
+            with pytest.raises(httpx.ReadTimeout):
+                await provider._discover_and_register()
+
+        assert provider._cached_endpoints is None
+        assert provider._cached_credentials is None
+        assert provider._auth_code_provider is None
+
     async def test_authenticate_requires_user_id_raises(self, mock_config):
         """authenticate must be called with user_id; otherwise it raises."""
         provider = MCPOAuth2Provider(mock_config)
@@ -406,6 +504,7 @@ class TestMCPOAuth2Provider:
         config = MCPOAuth2ProviderConfig(
             server_url="https://example.com/mcp",  # type: ignore
             redirect_uri="https://example.com/callback",  # type: ignore
+            expected_issuer="https://auth.example.com",
             client_id="test_client_id",
             client_secret="test_client_secret",
             enable_dynamic_registration=False,
@@ -656,9 +755,12 @@ class TestMCPOAuth2Provider:
 
     async def test_discover_and_register_with_manual_credentials(self, mock_config):
         """Test discover and register with manual credentials."""
-        config = mock_config.model_copy(update={
-            'client_id': 'manual_client_id', 'client_secret': SecretStr('manual_client_secret')
-        })
+        config = mock_config.model_copy(
+            update={
+                'client_id': 'manual_client_id',
+                'client_secret': SecretStr('manual_client_secret'),
+                'expected_issuer': 'https://auth.example.com'
+            })
         provider = MCPOAuth2Provider(config)
 
         with patch.object(provider._discoverer, 'discover') as mock_discover:
@@ -851,7 +953,7 @@ class TestMCPOAuth2Provider:
                 mock_register.return_value = second_credentials
                 await provider._discover_and_register()
 
-                # Credentials should be unchanged — no re-registration occurred
+                # Credentials should be unchanged â€” no re-registration occurred
                 assert provider._cached_credentials.client_id == "first_client_id"
                 assert provider._credentials_cache_time == first_cache_time
                 assert mock_register.call_count == 1
@@ -864,6 +966,7 @@ class TestMCPOAuth2Provider:
         config = MCPOAuth2ProviderConfig(
             server_url="https://example.com/mcp",  # type: ignore
             redirect_uri="https://example.com/callback",  # type: ignore
+            expected_issuer="https://auth.example.com",
             client_id="test_client",
             enable_dynamic_registration=False)
         provider = MCPOAuth2Provider(config)

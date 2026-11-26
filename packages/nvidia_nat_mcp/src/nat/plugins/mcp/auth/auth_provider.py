@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import json
 import logging
 import time
 from collections.abc import Awaitable
@@ -91,7 +92,7 @@ class DiscoverOAuth2Endpoints:
         if not is_401_retry and self._cached_endpoints is not None:
             return self._cached_endpoints, False
 
-        issuer: str = str(self.config.server_url)  # default to server URL
+        issuer: str | None = None
         endpoints: OAuth2Endpoints | None = None
 
         # 1) 401 hint (RFC 9728) if present
@@ -106,7 +107,7 @@ class DiscoverOAuth2Endpoints:
                         issuer = issuer_hint
 
         # 2) Try RS protected resource well-known if we still only have default issuer
-        if issuer == str(self.config.server_url):
+        if issuer is None:
             pr_url = urljoin(self._authorization_base_url(), "/.well-known/oauth-protected-resource")
             try:
                 logger.debug("Fetching protected resource metadata: %s", pr_url)
@@ -114,10 +115,14 @@ class DiscoverOAuth2Endpoints:
                 if issuer2:
                     issuer = issuer2
             except Exception as e:
+                if self.config.expected_issuer is not None:
+                    raise RuntimeError("Could not verify expected_issuer in protected resource metadata") from e
                 logger.debug("Protected resource metadata not available: %s", e)
 
         # 3) Path-aware RFC 8414 / OIDC discovery using issuer (or server base)
-        endpoints = await self._discover_via_issuer_or_base(issuer)
+        if issuer is None and self.config.expected_issuer is not None:
+            raise RuntimeError("Protected resource metadata did not list expected_issuer")
+        endpoints = await self._discover_via_issuer_or_base(issuer or str(self.config.server_url))
         if endpoints is None:
             raise RuntimeError("Could not discover OAuth2 endpoints from MCP server")
 
@@ -156,15 +161,31 @@ class DiscoverOAuth2Endpoints:
             resp.raise_for_status()
             body = await resp.aread()
         try:
-            pr = ProtectedResourceMetadata.model_validate_json(body)
+            document = json.loads(body)
+            pr = ProtectedResourceMetadata.model_validate(document)
         except Exception as e:
+            if self.config.expected_issuer is not None:
+                raise ValueError("Invalid protected resource metadata for expected_issuer") from e
             logger.debug("Invalid ProtectedResourceMetadata at %s: %s", url, e)
             return None
+        expected_issuer = self.config.expected_issuer
+        if expected_issuer is not None and expected_issuer not in (document.get("authorization_servers") or []):
+            raise ValueError("Protected resource metadata did not list expected_issuer")
         self._resource_from_metadata = str(pr.resource)
         logger.debug("Resource identifier from protected resource metadata: %s", self._resource_from_metadata)
+        if expected_issuer is not None:
+            return expected_issuer
         if pr.authorization_servers:
             return str(pr.authorization_servers[0])
         return None
+
+    def _parse_authorization_metadata(self, body: bytes) -> OAuthMetadata:
+        document = json.loads(body)
+        metadata = OAuthMetadata.model_validate(document)
+        # URL model fields normalize identifiers, including adding a trailing slash to a bare origin.
+        if self.config.expected_issuer is not None and document["issuer"] != self.config.expected_issuer:
+            raise ValueError("Authorization server metadata issuer does not match expected_issuer")
+        return metadata
 
     async def _discover_via_issuer_or_base(self, base_or_issuer: str) -> OAuth2Endpoints | None:
         """Perform path-aware RFC 8414 / OIDC discovery given an issuer or base URL."""
@@ -172,7 +193,9 @@ class DiscoverOAuth2Endpoints:
         async with httpx.AsyncClient(timeout=10.0) as client:
             for url in urls:
                 try:
-                    resp = await client.get(url, follow_redirects=True, headers={"Accept": "application/json"})
+                    resp = await client.get(url,
+                                            follow_redirects=self.config.expected_issuer is None,
+                                            headers={"Accept": "application/json"})
                     if resp.status_code != 200:
                         continue
 
@@ -196,7 +219,7 @@ class DiscoverOAuth2Endpoints:
                     body = await resp.aread()
 
                     try:
-                        meta = OAuthMetadata.model_validate_json(body)
+                        meta = self._parse_authorization_metadata(body)
                     except Exception as e:
                         logger.debug("Invalid OAuthMetadata at %s: %s", url, e)
                         continue
@@ -227,7 +250,7 @@ class DiscoverOAuth2Endpoints:
         urls: list[str] = []
         if path:
             # this is the specified by the MCP spec
-            urls.append(urljoin(base, f".well-known/oauth-protected-resource{path}"))
+            urls.append(urljoin(base, f".well-known/oauth-authorization-server{path}"))
             # this is fallback for backward compatibility
             urls.append(urljoin(base, f"{path}/.well-known/oauth-authorization-server"))
         urls.append(urljoin(base, "/.well-known/oauth-authorization-server"))
@@ -436,7 +459,14 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         using OIDC client registration.
         """
         # Discover OAuth2 endpoints
-        self._cached_endpoints, endpoints_changed = await self._discoverer.discover(response=response)
+        try:
+            self._cached_endpoints, endpoints_changed = await self._discoverer.discover(response=response)
+        except Exception:
+            if self.config.expected_issuer is not None:
+                self._discoverer = DiscoverOAuth2Endpoints(self.config)
+                self._cached_endpoints = None
+                self._invalidate_cached_registration(reason="issuer-discovery-failed")
+            raise
         if endpoints_changed:
             logger.info("OAuth2 endpoints: %s", self._cached_endpoints)
             self._invalidate_cached_registration(reason="endpoints-changed")

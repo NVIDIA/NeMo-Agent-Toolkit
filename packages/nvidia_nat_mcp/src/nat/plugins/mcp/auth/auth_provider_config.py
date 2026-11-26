@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from ipaddress import ip_address
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import field_validator
 from pydantic import model_validator
 
 from nat.authentication.interfaces import AuthProviderBaseConfig
@@ -45,6 +48,8 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     client_id: str | None = Field(default=None, description="OAuth2 client ID for pre-registered clients")
     client_secret: OptionalSecretStr = Field(default=None,
                                              description="OAuth2 client secret for pre-registered clients")
+    expected_issuer: str | None = Field(default=None,
+                                        description="Exact authorization server issuer identifier for a manual client.")
     enable_dynamic_registration: bool = Field(
         default=True,
         description="Enable OAuth2 Dynamic Client Registration (RFC 7591). Ignored when client_id is provided.")
@@ -77,6 +82,26 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     # MCP authentication is handled internally via 401-triggered discovery and does not support preflight.
     preflight_auth: Literal[False] = False
 
+    @field_validator("expected_issuer")
+    @classmethod
+    def validate_expected_issuer(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        # Validate URL syntax while preserving the original identifier for the metadata comparison.
+        url = HttpUrl(value)
+        parsed = urlsplit(value)
+        if (not parsed.hostname or parsed.username is not None or "?" in value or "#" in value or "\\" in value
+                or any(char.isspace() or ord(char) < 32 for char in value)):
+            raise ValueError("expected_issuer must be an absolute URL without userinfo, a query, or a fragment")
+        if url.scheme == "http" and parsed.hostname != "localhost":
+            try:
+                loopback = ip_address(parsed.hostname).is_loopback
+            except ValueError:
+                loopback = False
+            if not loopback:
+                raise ValueError("expected_issuer requires HTTPS except on loopback")
+        return value
+
     @model_validator(mode="after")
     def validate_auth_config(self):
         """Validate authentication configuration for MCP-specific options."""
@@ -84,18 +109,11 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
         # if default_user_id is not provided, use the server_url as the default user id
         if not self.default_user_id:
             self.default_user_id = str(self.server_url)
-        # Manual registration + MCP discovery (public and confidential clients).
-        # NOTE: client_id takes precedence over enable_dynamic_registration.
-        if self.client_id:
-            # Has pre-registered client ID; client_secret is optional.
-            pass
-        # Dynamic registration + MCP discovery
-        elif self.enable_dynamic_registration:
-            # Pure dynamic registration - no explicit credentials needed
-            pass
-
-        # Invalid configuration
-        else:
+        if self.client_id and self.expected_issuer is None:
+            raise ValueError("expected_issuer is required for a pre-registered client_id")
+        if self.client_secret and not self.client_id:
+            raise ValueError("client_secret requires a pre-registered client_id")
+        if not self.client_id and not self.enable_dynamic_registration:
             raise ValueError("Must provide either: "
                              "1) enable_dynamic_registration=True without client_id (dynamic), or "
                              "2) client_id with optional client_secret (manual)")
