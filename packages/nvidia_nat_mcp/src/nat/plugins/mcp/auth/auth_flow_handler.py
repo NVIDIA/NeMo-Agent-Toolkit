@@ -124,7 +124,10 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
         flow_state = _FlowState()
         client = self.construct_oauth_client(cfg)
 
+        flow_state.client = client
         flow_state.token_url = cfg.token_url
+        resource = (cfg.authorization_kwargs or {}).get("resource")
+        flow_state.resource = resource if isinstance(resource, str) and resource else None
         flow_state.use_pkce = cfg.use_pkce
 
         # PKCE bits

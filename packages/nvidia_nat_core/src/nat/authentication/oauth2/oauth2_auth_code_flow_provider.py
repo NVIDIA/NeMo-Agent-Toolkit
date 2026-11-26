@@ -57,10 +57,14 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
                     client_id=self.config.client_id,
                     client_secret=self.config.client_secret.get_secret_value(),
             ) as client:
+                refresh_kwargs: dict[str, str] = {"client_id": self.config.client_id}  # Required by MaaS OAuth
+                resource = (self.config.authorization_kwargs or {}).get("resource")
+                if isinstance(resource, str) and resource:
+                    refresh_kwargs["resource"] = resource
                 new_token_data = client.refresh_token(
                     self.config.token_url,
                     refresh_token=refresh_token,
-                    client_id=self.config.client_id,  # Required by MaaS OAuth
+                    **refresh_kwargs,
                 )
 
                 expires_at_ts = new_token_data.get("expires_at")
