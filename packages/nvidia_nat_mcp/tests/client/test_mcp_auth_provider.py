@@ -19,6 +19,7 @@ import time
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
+from urllib.parse import urlsplit
 
 import httpx
 import pytest
@@ -321,6 +322,18 @@ class TestDiscoverOAuth2Endpoints:
 
         base_url = discoverer._authorization_base_url()
         assert base_url == "https://example.com"
+
+    def test_discovery_fallback_preserves_issuer_authority(self, mock_config):
+        discoverer = DiscoverOAuth2Endpoints(mock_config)
+        issuer = "https://localhost:8443//localhost/tenant/"
+        urls = discoverer._build_path_aware_discovery_urls(issuer)
+
+        origin = urlsplit(issuer)
+        for url in urls:
+            parsed = urlsplit(url)
+            assert (parsed.scheme, parsed.netloc) == (origin.scheme, origin.netloc)
+        assert urls[1] == "https://localhost:8443//localhost/tenant/.well-known/oauth-authorization-server"
+        assert urls[4] == "https://localhost:8443//localhost/tenant/.well-known/openid-configuration"
 
     def test_build_path_aware_discovery_urls(self, mock_config):
         """Test building path-aware discovery URLs."""

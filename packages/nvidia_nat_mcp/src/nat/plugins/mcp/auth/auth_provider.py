@@ -255,14 +255,14 @@ class DiscoverOAuth2Endpoints:
         if path:
             # this is the specified by the MCP spec
             urls.append(urljoin(base, f".well-known/oauth-authorization-server{path}"))
-            # this is fallback for backward compatibility
-            urls.append(urljoin(base, f"{path}/.well-known/oauth-authorization-server"))
+            # Append the path to the issuer origin without resolving it as a URL reference.
+            urls.append(f"{base}{path}/.well-known/oauth-authorization-server")
         urls.append(urljoin(base, "/.well-known/oauth-authorization-server"))
         if path:
             # this is the specified by the MCP spec
             urls.append(urljoin(base, f".well-known/openid-configuration{path}"))
             # this is fallback for backward compatibility
-            urls.append(urljoin(base, f"{path}/.well-known/openid-configuration"))
+            urls.append(f"{base}{path}/.well-known/openid-configuration")
         urls.append(base_or_issuer.rstrip("/") + "/.well-known/openid-configuration")
         return urls
 
