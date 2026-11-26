@@ -86,6 +86,7 @@ def _validate_oauth_cli_options(
     auth_scopes: str | None,
     client_id: str | None,
     client_secret: str | None,
+    expected_issuer: str | None,
 ):
     oauth_requested = any((
         auth,
@@ -94,7 +95,10 @@ def _validate_oauth_cli_options(
         auth_scopes,
         client_id,
         client_secret,
+        expected_issuer,
     ))
+    if client_id and not expected_issuer:
+        raise click.ClickException("[ERROR] --client-id requires --expected-issuer")
     if client_secret and not client_id:
         raise click.ClickException("[ERROR] --client-secret requires --client-id")
 
@@ -221,6 +225,7 @@ async def _create_mcp_client_config(
     per_user: bool = False,
     client_id: str | None = None,
     client_secret: str | None = None,
+    expected_issuer: str | None = None,
 ) -> tuple[str, MCPClientBaseConfig]:
     from nat.plugins.mcp.client.client_config import MCPClientConfig
     from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
@@ -236,6 +241,7 @@ async def _create_mcp_client_config(
                 default_user_id=auth_user_id or url,
                 scopes=auth_scopes or [],
                 client_id=client_id,
+                expected_issuer=expected_issuer,
                 client_secret=SecretStr(client_secret) if client_secret else None,
             )
             auth_provider_name = "mcp_oauth2_cli"
@@ -302,6 +308,7 @@ async def list_tools_via_function_group(
     user_id: str | None = None,
     client_id: str | None = None,
     client_secret: str | None = None,
+    expected_issuer: str | None = None,
 ) -> list[dict[str, str | None]]:
     """List tools by constructing the mcp_client function group and introspecting functions.
 
@@ -344,7 +351,8 @@ async def list_tools_via_function_group(
                                                                auth_scopes,
                                                                per_user,
                                                                client_id,
-                                                               client_secret)
+                                                               client_secret,
+                                                               expected_issuer)
         group = await builder.add_function_group(group_name, group_cfg)
 
         # Access functions exposed by the group
@@ -493,7 +501,8 @@ async def ping_mcp_server(url: str,
                           auth_user_id: str | None = None,
                           auth_scopes: list[str] | None = None,
                           client_id: str | None = None,
-                          client_secret: str | None = None) -> MCPPingResult:
+                          client_secret: str | None = None,
+                          expected_issuer: str | None = None) -> MCPPingResult:
     """Ping an MCP server to check if it's responsive.
 
     When ``auth_redirect_uri`` is provided the ping routes through
@@ -533,7 +542,8 @@ async def ping_mcp_server(url: str,
                                                                          auth_scopes,
                                                                          False,
                                                                          client_id,
-                                                                         client_secret)
+                                                                         client_secret,
+                                                                         expected_issuer)
                 group = await builder.add_function_group(group_name, group_cfg)
                 start_time = time.time()
                 await group.get_accessible_functions()
@@ -636,6 +646,7 @@ def mcp_client_tool_group():
 @click.option('--user-id',
               default='nat_mcp_cli_user_id',
               help='User ID for per-user workflows (defaults to nat_mcp_cli_user_id)')
+@click.option('--expected-issuer', help='Exact authorization server issuer for a pre-registered client ID')
 @click.option('--client-id', help='Optional pre-registered client ID for authentication')
 @click.option('--client-secret',
               envvar='NAT_MCP_CLIENT_SECRET',
@@ -658,7 +669,8 @@ def mcp_client_tool_list(ctx,
                          per_user,
                          user_id,
                          client_id: str | None,
-                         client_secret: str | None):
+                         client_secret: str | None,
+                         expected_issuer: str | None):
     """List MCP tool names (default) or show detailed tool information.
 
     Use --detail for full output including descriptions and input schemas.
@@ -687,6 +699,7 @@ def mcp_client_tool_list(ctx,
         user_id (str): User ID to use for per-user function group (default: nat_mcp_cli_user_id)
         client_id (str | None): Optional pre-registered client ID for authentication
         client_secret (str | None): Optional pre-registered client secret for authentication
+        expected_issuer (str | None): Authorization server issuer for a pre-registered client ID
 
     Examples:
         nat mcp client tool list                           # List tool names only
@@ -712,7 +725,8 @@ def mcp_client_tool_list(ctx,
                                 auth_user_id=auth_user_id,
                                 auth_scopes=auth_scopes,
                                 client_id=client_id,
-                                client_secret=client_secret)
+                                client_secret=client_secret,
+                                expected_issuer=expected_issuer)
 
     if transport in ['sse', 'streamable-http']:
         if not url:
@@ -743,7 +757,8 @@ def mcp_client_tool_list(ctx,
                                           per_user=per_user,
                                           user_id=user_id,
                                           client_id=client_id,
-                                          client_secret=client_secret))
+                                          client_secret=client_secret,
+                                          expected_issuer=expected_issuer))
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))
@@ -778,6 +793,7 @@ def mcp_client_tool_list(ctx,
 @click.option('--auth-redirect-uri', help='OAuth2 redirect URI for authentication (streamable-http only)')
 @click.option('--auth-user-id', help='User ID for authentication (streamable-http only)')
 @click.option('--auth-scopes', help='OAuth2 scopes (comma-separated, streamable-http only)')
+@click.option('--expected-issuer', help='Exact authorization server issuer for a pre-registered client ID')
 @click.option('--client-id', help='Optional pre-registered client ID for authentication')
 @click.option('--client-secret',
               envvar='NAT_MCP_CLIENT_SECRET',
@@ -794,7 +810,8 @@ def mcp_client_ping(url: str,
                     auth_user_id: str | None,
                     auth_scopes: str | None,
                     client_id: str | None,
-                    client_secret: str | None) -> None:
+                    client_secret: str | None,
+                    expected_issuer: str | None) -> None:
     """Ping an MCP server to check if it's responsive.
 
     This command sends a ping request to the MCP server and measures the response time.
@@ -826,7 +843,8 @@ def mcp_client_ping(url: str,
         auth_user_id=auth_user_id,
         auth_scopes=auth_scopes,
         client_id=client_id,
-        client_secret=client_secret)
+        client_secret=client_secret,
+        expected_issuer=expected_issuer)
 
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
@@ -836,7 +854,7 @@ def mcp_client_ping(url: str,
         auth, url, auth_redirect_uri, auth_user_id, auth_scopes
     )
 
-    if ((auth or auth_redirect_uri or auth_user_id or auth_scopes or client_id or client_secret)
+    if ((auth or auth_redirect_uri or auth_user_id or auth_scopes or client_id or client_secret or expected_issuer)
             and transport != "streamable-http"):
         raise click.ClickException("Auth options are only supported with --transport streamable-http")
 
@@ -855,7 +873,8 @@ def mcp_client_ping(url: str,
                         auth_user_id,
                         auth_scopes_list,
                         client_id,
-                        client_secret))
+                        client_secret,
+                        expected_issuer))
 
     if json_output:
         click.echo(result.model_dump_json(indent=2))
@@ -987,7 +1006,8 @@ async def call_tool_and_print(command: str | None,
                               per_user: bool = False,
                               user_id: str | None = None,
                               client_id: str | None = None,
-                              client_secret: str | None = None) -> str:
+                              client_secret: str | None = None,
+                              expected_issuer: str | None = None) -> str:
     """Call an MCP tool either directly or via the function group and return output.
 
     When ``direct`` is True, uses the raw MCP protocol client (bypassing the
@@ -1063,7 +1083,8 @@ async def call_tool_and_print(command: str | None,
                                                          auth_scopes,
                                                          per_user,
                                                          client_id,
-                                                         client_secret)
+                                                         client_secret,
+                                                         expected_issuer)
 
         group = await builder.add_function_group(group_name, group_cfg)
         fns = await group.get_accessible_functions()
@@ -1108,6 +1129,7 @@ async def call_tool_and_print(command: str | None,
 @click.option('--user-id',
               default='nat_mcp_cli_user_id',
               help='User ID for per-user workflows (defaults to nat_mcp_cli_user_id)')
+@click.option('--expected-issuer', help='Exact authorization server issuer for a pre-registered client ID')
 @click.option('--client-id', help='Optional pre-registered client ID for authentication')
 @click.option('--client-secret',
               envvar='NAT_MCP_CLIENT_SECRET',
@@ -1129,7 +1151,8 @@ def mcp_client_tool_call(tool_name: str,
                          per_user: bool,
                          user_id: str | None,
                          client_id: str | None,
-                         client_secret: str | None) -> None:
+                         client_secret: str | None,
+                         expected_issuer: str | None) -> None:
     """Call an MCP tool by name with optional JSON arguments.
 
     Validates transport parameters, parses ``--json-args`` into a dictionary,
@@ -1171,7 +1194,8 @@ def mcp_client_tool_call(tool_name: str,
                                 auth_user_id=auth_user_id,
                                 auth_scopes=auth_scopes,
                                 client_id=client_id,
-                                client_secret=client_secret)
+                                client_secret=client_secret,
+                                expected_issuer=expected_issuer)
 
     # Parse stdio params
     stdio_args = args.split() if args else []
@@ -1221,6 +1245,7 @@ def mcp_client_tool_call(tool_name: str,
                 user_id=user_id,
                 client_id=client_id,
                 client_secret=client_secret,
+                expected_issuer=expected_issuer,
             ))
         if output:
             click.echo(output)

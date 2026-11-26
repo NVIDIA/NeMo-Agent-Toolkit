@@ -108,6 +108,7 @@ async def test_has_cached_auth_token_with_valid_token():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -132,6 +133,7 @@ async def test_has_cached_auth_token_with_expired_token():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -157,6 +159,7 @@ async def test_has_cached_auth_token_no_cached_tokens():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -178,6 +181,7 @@ async def test_has_cached_auth_token_multiple_tokens_one_valid():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -227,6 +231,7 @@ async def test_get_tool_call_timeout_with_cached_token():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -257,6 +262,7 @@ async def test_get_tool_call_timeout_without_cached_token():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -286,6 +292,7 @@ async def test_auth_adapter_tracks_authentication_state():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -300,6 +307,7 @@ async def test_auth_adapter_initializes_with_auth_provider():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -319,6 +327,7 @@ async def test_with_reconnect_timeout_during_auth_no_reconnect():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -356,6 +365,7 @@ async def test_with_reconnect_error_during_auth_no_reconnect():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -393,6 +403,7 @@ async def test_with_reconnect_timeout_not_during_auth_does_reconnect():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -435,6 +446,7 @@ async def test_with_reconnect_error_not_during_auth_does_reconnect():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -485,6 +497,7 @@ async def test_call_tool_uses_correct_timeout_with_cached_token():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -527,6 +540,7 @@ async def test_call_tool_uses_extended_timeout_without_token():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)
@@ -566,6 +580,7 @@ async def test_timeout_switches_after_authentication():
     auth_config = MCPOAuth2ProviderConfig(
         server_url="https://example.com/mcp",  # type: ignore
         redirect_uri="https://example.com/callback",  # type: ignore
+        expected_issuer="https://auth.example.com",
         client_id="test_client",
         client_secret="test_secret")
     auth_provider = MCPOAuth2Provider(auth_config)

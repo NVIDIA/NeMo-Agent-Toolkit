@@ -289,6 +289,7 @@ authentication:
     _type: mcp_oauth2
     server_url: http://localhost:9902/mcp
     redirect_uri: http://localhost:8000/auth/redirect
+    expected_issuer: http://localhost:8080/realms/master
     client_id: ${NAT_CALCULATOR_CLIENT_ID:-"nat-mcp-client"}
     client_secret: ${NAT_CALCULATOR_CLIENT_SECRET}
     scopes: [calculator_mcp_execute]

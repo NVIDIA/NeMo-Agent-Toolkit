@@ -304,6 +304,8 @@ Options:
                                   only)
   --auth-scopes TEXT              OAuth2 scopes (comma-separated, streamable-
                                   http only)
+  --expected-issuer TEXT          Exact authorization server issuer for a pre-
+                                  registered client ID
   --client-id TEXT                Optional pre-registered client ID for
                                   authentication
   --client-secret TEXT            Optional pre-registered client secret for
@@ -369,6 +371,8 @@ Options:
   --user-id TEXT                  User ID for per-user workflows (defaults to
                                   nat_mcp_cli_user_id)  [default:
                                   nat_mcp_cli_user_id]
+  --expected-issuer TEXT          Exact authorization server issuer for a pre-
+                                  registered client ID
   --client-id TEXT                Optional pre-registered client ID for
                                   authentication
   --client-secret TEXT            Optional pre-registered client secret for
@@ -420,6 +424,8 @@ Options:
   --user-id TEXT                  User ID for per-user workflows (defaults to
                                   nat_mcp_cli_user_id)  [default:
                                   nat_mcp_cli_user_id]
+  --expected-issuer TEXT          Exact authorization server issuer for a pre-
+                                  registered client ID
   --client-id TEXT                Optional pre-registered client ID for
                                   authentication
   --client-secret TEXT            Optional pre-registered client secret for

@@ -31,6 +31,7 @@ authentication:
     _type: mcp_oauth2
     server_url: ${NAT_CORPORATE_MCP_OUTLOOK_URL}
     redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
+    expected_issuer: ${NAT_CORPORATE_MCP_OUTLOOK_ISSUER}
     client_id: ${NAT_CORPORATE_MCP_OUTLOOK_CLIENT_ID}
 
 llms:
