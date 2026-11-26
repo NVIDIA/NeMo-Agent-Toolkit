@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import asyncio
+import json
 import logging
 import time
 from collections.abc import Awaitable
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
@@ -35,16 +37,24 @@ from nat.authentication.interfaces import AuthenticatedContext
 from nat.authentication.interfaces import AuthFlowType
 from nat.authentication.interfaces import AuthProviderBase
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.authentication.token_storage import ObjectStoreTokenStorage
 from nat.data_models.authentication import AuthResult
 from nat.data_models.common import get_secret_value
+from nat.object_store.in_memory_object_store import InMemoryObjectStore
+from nat.object_store.interfaces import ObjectStore
 from nat.plugins.mcp.auth.auth_flow_handler import MCPAuthenticationFlowHandler
 from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
+
+if TYPE_CHECKING:
+    from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
 
 logger = logging.getLogger(__name__)
 
 
 class OAuth2Endpoints(BaseModel):
     """OAuth2 endpoints discovered from MCP server."""
+    issuer: str | None = Field(default=None, description="Issuer identifier from authorization server metadata")
+    resource: str | None = Field(default=None, description="Resource identifier from protected resource metadata")
     authorization_url: HttpUrl = Field(..., description="OAuth2 authorization endpoint URL")
     token_url: HttpUrl = Field(..., description="OAuth2 token endpoint URL")
     registration_url: HttpUrl | None = Field(default=None, description="OAuth2 client registration endpoint URL")
@@ -84,12 +94,12 @@ class DiscoverOAuth2Endpoints:
         Returns:
             A tuple of OAuth2Endpoints and a boolean indicating if the endpoints have changed.
         """
-        previous_resource = self._resource_from_metadata
-        self._resource_from_metadata = None
         is_401_retry = response is not None and response.status_code == 401
         # Fast path: reuse cache when not a 401 retry
         if not is_401_retry and self._cached_endpoints is not None:
             return self._cached_endpoints, False
+
+        self._resource_from_metadata = None
 
         issuer: str = str(self.config.server_url)  # default to server URL
         endpoints: OAuth2Endpoints | None = None
@@ -121,8 +131,8 @@ class DiscoverOAuth2Endpoints:
         if endpoints is None:
             raise RuntimeError("Could not discover OAuth2 endpoints from MCP server")
 
-        changed = (self._cached_endpoints is None or endpoints.model_dump() != self._cached_endpoints.model_dump()
-                   or previous_resource != self._resource_from_metadata)
+        endpoints.resource = self._resource_from_metadata
+        changed = endpoints != self._cached_endpoints
 
         self._cached_endpoints = endpoints
         logger.info("OAuth2 endpoints selected: %s", self._cached_endpoints)
@@ -196,7 +206,8 @@ class DiscoverOAuth2Endpoints:
                     body = await resp.aread()
 
                     try:
-                        meta = OAuthMetadata.model_validate_json(body)
+                        document = json.loads(body)
+                        meta = OAuthMetadata.model_validate(document)
                     except Exception as e:
                         logger.debug("Invalid OAuthMetadata at %s: %s", url, e)
                         continue
@@ -205,6 +216,7 @@ class DiscoverOAuth2Endpoints:
                         # Convert AnyHttpUrl to HttpUrl using TypeAdapter
                         http_url_adapter = TypeAdapter(HttpUrl)
                         return OAuth2Endpoints(
+                            issuer=document["issuer"],
                             authorization_url=http_url_adapter.validate_python(str(meta.authorization_endpoint)),
                             token_url=http_url_adapter.validate_python(str(meta.token_endpoint)),
                             registration_url=http_url_adapter.validate_python(str(meta.registration_endpoint))
@@ -336,7 +348,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         self._auth_callback = None
 
         # Initialize token storage
-        self._token_storage = None
+        self._token_object_store: ObjectStore | None = None
         self._token_storage_object_store_name = None
 
         if self.config.token_storage_object_store:
@@ -345,8 +357,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             logger.info("Configured to use object store '%s' for token storage", self._token_storage_object_store_name)
         else:
             # Default: use in-memory token storage
-            from nat.authentication.token_storage import InMemoryTokenStorage
-            self._token_storage = InMemoryTokenStorage()
+            self._token_object_store = InMemoryObjectStore()
 
     def _invalidate_cached_registration(self, reason: str) -> None:
         """Invalidate cached OAuth client registration and auth provider."""
@@ -374,16 +385,6 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         msg = str(error).lower()
         return ("redirect uri" in msg and "not registered for client" in msg)
 
-    async def _discover_and_register_locked(self,
-                                            response: httpx.Response | None = None,
-                                            *,
-                                            force_refresh: bool = False):
-        """Serialize discovery/registration to avoid races across concurrent auth flows."""
-        async with self._discover_register_lock:
-            if force_refresh:
-                self._invalidate_cached_registration(reason="forced-refresh")
-            await self._discover_and_register(response=response)
-
     def _set_custom_auth_callback(self,
                                   auth_callback: Callable[[OAuth2AuthCodeFlowProviderConfig, AuthFlowType],
                                                           Awaitable[AuthenticatedContext]]):
@@ -410,19 +411,17 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             raise RuntimeError("User is not authorized to call the tool")
 
         response = kwargs.get('response')
-        if response and response.status_code == 401:
-            await self._discover_and_register_locked(response=response)
-
+        provider = await self._prepare_auth_code_provider(response)
         try:
-            return await self._nat_oauth2_authenticate(user_id=user_id)
+            return await self._nat_oauth2_authenticate(user_id, provider)
         except RuntimeError as e:
             # Some AS deployments intermittently reject authorize requests with
             # "redirect URI not registered" for a cached client_id. Force one
             # re-registration attempt to self-heal before failing the request.
             if self._is_redirect_uri_registration_error(e):
                 logger.warning("Detected redirect URI registration error; forcing re-registration and retry")
-                await self._discover_and_register_locked(response=response, force_refresh=True)
-                return await self._nat_oauth2_authenticate(user_id=user_id)
+                provider = await self._prepare_auth_code_provider(response, force_refresh=True)
+                return await self._nat_oauth2_authenticate(user_id, provider)
             raise
 
     @property
@@ -459,30 +458,41 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
             self._credentials_cache_time = time.monotonic()
 
-    async def _nat_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
-        """Perform the OAuth2 flow using MCP-specific authentication flow handler."""
+    async def _prepare_auth_code_provider(self,
+                                          response: httpx.Response | None,
+                                          *,
+                                          force_refresh: bool = False) -> "OAuth2AuthCodeFlowProvider | None":
+        # Snapshot the provider with its registration before releasing the lock for user interaction.
+        async with self._discover_register_lock:
+            if force_refresh:
+                self._invalidate_cached_registration(reason="forced-refresh")
+            if force_refresh or (response is not None and response.status_code == 401):
+                await self._discover_and_register(response=response)
+            return await self._get_auth_code_provider()
+
+    async def _nat_oauth2_authenticate(self, user_id: str, provider: "OAuth2AuthCodeFlowProvider | None") -> AuthResult:
+        if provider is None:
+            logger.warning("OAuth2 discovery and registration are required before authentication.")
+            return AuthResult(credentials=[], token_expires_at=None, raw={})
+        return await provider.authenticate(user_id=user_id)
+
+    async def _get_auth_code_provider(self) -> "OAuth2AuthCodeFlowProvider | None":
+        """Build a provider whose configuration and token store share the same registration."""
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
 
         if (not self._cached_endpoints or not self._cached_credentials or self._is_cached_credentials_expired()):
-            # if discovery is yet to to be done return empty auth result
-            logger.warning(
-                "OAuth2 endpoints or credentials not available or expired for user_id=%s. "
-                "Discovery and registration must be performed before authentication. "
-                "Returning empty AuthResult.",
-                user_id)
-            return AuthResult(credentials=[], token_expires_at=None, raw={})
+            return None
 
         endpoints = self._cached_endpoints
         credentials = self._cached_credentials
 
         # Resolve object store reference if needed
-        if self._token_storage_object_store_name and not self._token_storage:
+        if self._token_storage_object_store_name and self._token_object_store is None:
             try:
                 if not self._builder:
                     raise RuntimeError("Builder not available for resolving object store")
-                object_store = await self._builder.get_object_store_client(self._token_storage_object_store_name)
-                from nat.authentication.token_storage import ObjectStoreTokenStorage
-                self._token_storage = ObjectStoreTokenStorage(object_store)
+                self._token_object_store = await self._builder.get_object_store_client(
+                    self._token_storage_object_store_name)
                 logger.info(f"Initialized token storage with object store '{self._token_storage_object_store_name}'")
             except Exception as e:
                 logger.warning(
@@ -490,16 +500,15 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                     self._token_storage_object_store_name,
                     e,
                 )
-                from nat.authentication.token_storage import InMemoryTokenStorage
-                self._token_storage = InMemoryTokenStorage()
+                self._token_object_store = InMemoryObjectStore()
 
         # Build the OAuth2 provider if not already built
         if self._auth_code_provider is None:
             scopes = self._effective_scopes
-            resource = self._discoverer._resource_from_metadata or str(self.config.server_url)
+            resource = endpoints.resource or str(self.config.server_url)
             logger.debug("Using resource for authorization request: %s (from_metadata=%s)",
                          resource,
-                         self._discoverer._resource_from_metadata is not None)
+                         endpoints.resource is not None)
             oauth2_config = OAuth2AuthCodeFlowProviderConfig(
                 client_id=credentials.client_id,
                 client_secret=credentials.client_secret or "",
@@ -519,12 +528,20 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 oauth2_config.authorization_kwargs.get("resource") if oauth2_config.authorization_kwargs else None,
                 oauth2_config.scopes,
             )
-            self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config, token_storage=self._token_storage)
+            namespace = (str(self.config.server_url),
+                         endpoints.issuer or "",
+                         str(endpoints.authorization_url),
+                         str(endpoints.token_url),
+                         credentials.client_id,
+                         resource,
+                         *sorted(set(scopes)))
+            assert self._token_object_store is not None
+            storage = ObjectStoreTokenStorage(self._token_object_store, namespace=namespace)
+            self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config, token_storage=storage)
 
             # Use MCP-specific authentication method if available
             if hasattr(self._auth_code_provider, "_set_custom_auth_callback"):
                 callback = self._auth_callback or self._flow_handler.authenticate
                 self._auth_code_provider._set_custom_auth_callback(callback)  # type: ignore[arg-type]
 
-        # Auth code provider is responsible for per-user cache + refresh
-        return await self._auth_code_provider.authenticate(user_id=user_id)
+        return self._auth_code_provider

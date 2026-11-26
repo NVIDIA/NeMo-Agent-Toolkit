@@ -112,7 +112,7 @@ For MySQL or Redis configurations, replace the `object_stores` section with the 
 
 The system stores tokens as JSON-serialized `AuthResult` objects in the object store with the following structure:
 
-- **Key format**: `tokens/{sha256_hash}` where the hash is computed from the `user_id` to ensure S3 compatibility
+- **Key format**: `tokens/v2/{namespace_hash}/{user_hash}`. The first SHA-256 digest identifies the MCP server URL, authorization server issuer and endpoints, client ID, resource, and requested scope set. The second digest identifies the user.
 - **Content type**: `application/json`
 - **Metadata**: Includes token expiration timestamp when available
 
@@ -136,6 +136,12 @@ Example stored token:
 }
 ```
 
+### Upgrading an Existing Store
+
+After upgrading, each user authorizes once for each MCP client identity. A new client ID, including one returned by dynamic registration, also requires authorization. Rotating the client secret while keeping the same client ID and other identity fields preserves the stored grant.
+
+Older objects under `tokens/{user_hash}` remain readable with the original storage interface. They carry no client binding, so the MCP provider leaves them in place and writes a new record after authorization. During a rolling upgrade, older workers continue using the previous keys. Once those workers are retired, administrators can remove the legacy objects according to their retention policy.
+
 ## Token Lifecycle
 
 ### Initial Authentication
@@ -143,13 +149,13 @@ Example stored token:
 When a user first authenticates, the system completes the following steps:
 1. The OAuth2 flow completes and returns an access token.
 2. The token is serialized and stored using the configured storage backend.
-3. The token is associated with the user's resolved user ID.
+3. The token is associated with the user's resolved ID and the MCP OAuth client identity.
 
 ### Token Retrieval
 
 On subsequent requests, the system completes the following steps:
 1. The user's identity is resolved from the authenticated request context.
-2. The stored token is retrieved from the storage backend using that user ID.
+2. The provider looks up that user in the current client namespace.
 3. The token expiration is checked.
 4. If expired, a token refresh is attempted.
 

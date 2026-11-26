@@ -21,11 +21,13 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import httpx
 import pytest
 from pydantic import SecretStr
 
 from nat.authentication.token_storage import InMemoryTokenStorage
 from nat.authentication.token_storage import ObjectStoreTokenStorage
+from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BearerTokenCred
 from nat.data_models.object_store import NoSuchKeyError
@@ -89,6 +91,27 @@ def mock_config():
 
 class TestObjectStoreTokenStorage:
     """Test the ObjectStoreTokenStorage class."""
+
+    async def test_namespaced_storage_round_trip(self, sample_auth_result):
+        object_store = InMemoryObjectStore()
+        legacy = ObjectStoreTokenStorage(object_store)
+        first = ObjectStoreTokenStorage(object_store, namespace=("provider", "client"))
+
+        await legacy.store("user", sample_auth_result)
+        assert await first.retrieve("user") is None
+        await first.store("user", sample_auth_result)
+
+        reopened = ObjectStoreTokenStorage(object_store, namespace=("provider", "client"))
+        assert await reopened.retrieve("user") == sample_auth_result
+        assert await reopened.retrieve("other-user") is None
+        for identity in (("other-provider", "client"), ("provider", "other-client")):
+            other = ObjectStoreTokenStorage(object_store, namespace=identity)
+            assert await other.retrieve("user") is None
+            await other.delete("user")
+        assert await reopened.retrieve("user") == sample_auth_result
+        await reopened.delete("user")
+        assert await first.retrieve("user") is None
+        assert await legacy.retrieve("user") == sample_auth_result
 
     async def test_store_and_retrieve(self, mock_object_store, sample_auth_result):
         """Test storing and retrieving a token."""
@@ -306,8 +329,7 @@ class TestTokenStorageIntegration:
         provider = MCPOAuth2Provider(mock_config)
 
         # Verify in-memory storage is initialized
-        assert provider._token_storage is not None
-        assert isinstance(provider._token_storage, InMemoryTokenStorage)
+        assert isinstance(provider._token_object_store, InMemoryObjectStore)
 
     async def test_oauth2_provider_with_object_store_reference(self, mock_config):
         """Test that MCPOAuth2Provider can be configured with an object store reference."""
@@ -321,7 +343,7 @@ class TestTokenStorageIntegration:
 
         # Verify object store name is stored
         assert provider._token_storage_object_store_name == "test_store"
-        assert provider._token_storage is None  # Not resolved yet
+        assert provider._token_object_store is None  # Not resolved yet
 
     async def test_token_storage_lazy_resolution(self, mock_config, sample_auth_result):
         """Test that object store is lazily resolved during authentication."""
@@ -349,12 +371,75 @@ class TestTokenStorageIntegration:
             mock_instance._set_custom_auth_callback = MagicMock()
             mock_provider_class.return_value = mock_instance
 
-            await provider._nat_oauth2_authenticate(user_id="test_user")
+            await provider.authenticate(user_id="test_user")
 
             # Verify object store was resolved
-            assert provider._token_storage is not None
-            assert isinstance(provider._token_storage, ObjectStoreTokenStorage)
+            assert provider._token_object_store is mock_object_store
             assert mock_builder.get_object_store_client.called
+
+    async def test_registration_rotation_uses_separate_grants(self, mock_config):
+        mock_config.oauth_client_ttl = 0
+        provider = MCPOAuth2Provider(mock_config)
+        endpoints = OAuth2Endpoints(issuer="https://auth.example.com",
+                                    authorization_url="https://auth.example.com/authorize",
+                                    token_url="https://auth.example.com/token")
+        response = httpx.Response(401)
+        clients = [OAuth2Credentials(client_id=value) for value in ("first", "second", "first")]
+        callback = AsyncMock(side_effect=[
+            AuthenticatedContext(headers={"Authorization": "Bearer grant-one"}),
+            AuthenticatedContext(headers={"Authorization": "Bearer grant-two"}),
+        ])
+        provider._set_custom_auth_callback(callback)
+
+        with (patch.object(provider._discoverer, "discover", return_value=(endpoints, False)),
+              patch.object(provider._registrar, "register", side_effect=clients)):
+            first = await provider.authenticate(user_id="user", response=response)
+            second = await provider.authenticate(user_id="user", response=response)
+            restored = await provider.authenticate(user_id="user", response=response)
+
+        assert [call.args[0].client_id for call in callback.await_args_list] == ["first", "second"]
+        assert first != second
+        assert restored == first
+
+    @pytest.mark.parametrize("field", ["issuer", "resource", "scopes", "server_url"])
+    async def test_manual_grant_scope_across_restarts(self, mock_config, field):
+        builder = MagicMock()
+        builder.get_object_store_client = AsyncMock(return_value=InMemoryObjectStore())
+        mock_config.client_id = "client"
+        mock_config.token_storage_object_store = "shared-store"
+        mock_config.scopes = ["read", "write"]
+        endpoints = OAuth2Endpoints(issuer="https://auth.example.com",
+                                    authorization_url="https://auth.example.com/authorize",
+                                    token_url="https://auth.example.com/token",
+                                    resource="https://example.com/resource")
+        callback = AsyncMock(side_effect=[
+            AuthenticatedContext(headers={"Authorization": "Bearer first-grant"}),
+            AuthenticatedContext(headers={"Authorization": "Bearer new-grant"}),
+        ])
+
+        async def authorize():
+            provider = MCPOAuth2Provider(mock_config, builder=builder)
+            provider._set_custom_auth_callback(callback)
+            with patch.object(provider._discoverer, "discover", return_value=(endpoints, True)):
+                return await provider.authenticate(user_id="user", response=httpx.Response(401))
+
+        first = await authorize()
+        mock_config.client_secret = SecretStr("replacement-secret")
+        mock_config.scopes.reverse()
+        assert await authorize() == first
+        callback.assert_awaited_once()
+
+        if field == "issuer":
+            endpoints.issuer += "/tenant"
+        elif field == "resource":
+            endpoints.resource += "/collection"
+        elif field == "scopes":
+            mock_config.scopes = ["read"]
+        else:
+            mock_config = mock_config.model_copy(update={"server_url": "https://other.example.com/mcp"})
+
+        assert await authorize() != first
+        assert callback.await_count == 2
 
     async def test_token_persistence_across_provider_instances(self):
         """Test that tokens stored in object store can be retrieved by different provider instances."""
