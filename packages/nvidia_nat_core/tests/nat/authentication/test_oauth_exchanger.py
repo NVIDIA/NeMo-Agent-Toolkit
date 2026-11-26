@@ -157,7 +157,10 @@ async def test_authenticate_uses_resolved_context_identity(monkeypatch, cfg):
 # --------------------------------------------------------------------------- #
 # 4. Token refresh succeeds
 # --------------------------------------------------------------------------- #
-async def test_refresh_expired_token(monkeypatch, cfg):
+@pytest.mark.parametrize("resource", [None, "https://resource.example/mcp"])
+async def test_refresh_expired_token(monkeypatch, cfg, resource):
+    if resource is not None:
+        cfg.authorization_kwargs = {"resource": resource}
     future_ts = int((datetime.now(UTC) + timedelta(minutes=20)).timestamp())
 
     REF_TOKEN = "refTok"
@@ -175,7 +178,8 @@ async def test_refresh_expired_token(monkeypatch, cfg):
         def __exit__(self, *_):
             return False
 
-        def refresh_token(self, token_url, client_id, refresh_token):
+        def refresh_token(self, token_url, client_id, refresh_token, **kwargs):
+            assert kwargs == ({"resource": resource} if resource is not None else {})
             assert token_url == cfg.token_url
             assert refresh_token == REF_TOKEN
             assert client_id == cfg.client_id

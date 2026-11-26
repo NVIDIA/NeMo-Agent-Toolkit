@@ -48,6 +48,7 @@ class _FlowState:
     verifier: str | None = None
     token_url: str | None = None
     use_pkce: bool | None = None
+    resource: str | None = None
     client: AsyncOAuth2Client | None = None
 
 
@@ -167,6 +168,8 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         flow_state.token_url = cfg.token_url
         flow_state.use_pkce = cfg.use_pkce
         flow_state.client = client
+        resource = (cfg.authorization_kwargs or {}).get("resource")
+        flow_state.resource = resource if isinstance(resource, str) and resource else None
 
         # PKCE bits
         if cfg.use_pkce:
@@ -234,11 +237,14 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
                 return "Invalid state; restart authentication."
             flow_state = self._flows[state]
             try:
+                token_kwargs: dict[str, str] = {"state": state}
+                if flow_state.resource:
+                    token_kwargs["resource"] = flow_state.resource
                 token = await flow_state.client.fetch_token(  # type: ignore[union-attr]
                     url=flow_state.token_url,
                     authorization_response=str(request.url),
                     code_verifier=flow_state.verifier if flow_state.use_pkce else None,
-                    state=state,
+                    **token_kwargs,
                 )
                 flow_state.future.set_result(token)
             except OAuthError as e:
