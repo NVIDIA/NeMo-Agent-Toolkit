@@ -198,6 +198,30 @@ class TestDiscoverOAuth2Endpoints:
         with pytest.raises(ValueError, match="issuer"):
             discoverer._parse_authorization_metadata(json.dumps(document).encode())
 
+    @pytest.mark.parametrize(("pinned", "endpoint", "allowed"),
+                             [
+                                 (True, "https://tokens.example/token", True),
+                                 (True, "http://localhost:8080/token", True),
+                                 (True, "http://127.0.0.2/token", True),
+                                 (True, "http://[::1]:8080/token", True),
+                                 (True, "http://tokens.example/token", False),
+                                 (True, "http://localhost.example/token", False),
+                                 (False, "http://tokens.example/token", True),
+                             ])
+    def test_token_endpoint_transport(self, mock_config, mock_config_with_credentials, pinned, endpoint, allowed):
+        config = mock_config_with_credentials if pinned else mock_config
+        discoverer = DiscoverOAuth2Endpoints(config)
+        body = json.dumps({
+            "issuer": "https://auth.example.com",
+            "authorization_endpoint": "https://auth.example.com/authorize",
+            "token_endpoint": endpoint,
+        }).encode()
+        if allowed:
+            assert str(discoverer._parse_authorization_metadata(body).token_endpoint) == endpoint
+        else:
+            with pytest.raises(ValueError, match="token_endpoint"):
+                discoverer._parse_authorization_metadata(body)
+
     async def test_discover_cached_endpoints(self, mock_config):
         """Test that cached endpoints are returned for non-401 requests."""
         discoverer = DiscoverOAuth2Endpoints(mock_config)
@@ -423,6 +447,41 @@ class TestMCPOAuth2Provider:
         assert provider._cached_endpoints is None
         assert provider._cached_credentials is None
         assert provider._auth_code_provider is None
+
+    @pytest.mark.parametrize("pinned", [True, False], ids=["manual", "dynamic"])
+    async def test_cancelled_discovery(self, mock_config, mock_config_with_credentials, mock_endpoints, pinned):
+        config = mock_config_with_credentials if pinned else mock_config
+        provider = MCPOAuth2Provider(config)
+        provider._cached_endpoints = provider._discoverer._cached_endpoints = mock_endpoints
+        provider._discoverer._resource_from_metadata = str(config.server_url)
+        provider._cached_credentials = OAuth2Credentials(client_id="test-client")
+        provider._credentials_cache_time = time.monotonic()
+        provider._auth_code_provider = MagicMock()
+        started = asyncio.Event()
+
+        async def wait_for_metadata(**kwargs):
+            started.set()
+            await asyncio.Future()
+
+        with patch.object(provider._discoverer, "discover", side_effect=wait_for_metadata):
+            task = asyncio.create_task(provider._discover_and_register_locked())
+            try:
+                await asyncio.wait_for(started.wait(), timeout=5)
+            finally:
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+
+        assert not provider._discover_register_lock.locked()
+        cached = {
+            "endpoints": provider._cached_endpoints,
+            "discovery_endpoints": provider._discoverer._cached_endpoints,
+            "resource": provider._discoverer._resource_from_metadata,
+            "credentials": provider._cached_credentials,
+            "timestamp": provider._credentials_cache_time,
+            "flow_provider": provider._auth_code_provider,
+        }
+        assert {key: value is None for key, value in cached.items()} == dict.fromkeys(cached, pinned)
 
     async def test_authenticate_requires_user_id_raises(self, mock_config):
         """authenticate must be called with user_id; otherwise it raises."""

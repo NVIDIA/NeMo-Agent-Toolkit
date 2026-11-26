@@ -21,6 +21,7 @@ from collections.abc import Awaitable
 from collections.abc import Callable
 from urllib.parse import urljoin
 from urllib.parse import urlparse
+from urllib.parse import urlsplit
 
 import httpx
 from pydantic import BaseModel
@@ -40,6 +41,7 @@ from nat.data_models.authentication import AuthResult
 from nat.data_models.common import get_secret_value
 from nat.plugins.mcp.auth.auth_flow_handler import MCPAuthenticationFlowHandler
 from nat.plugins.mcp.auth.auth_provider_config import MCPOAuth2ProviderConfig
+from nat.plugins.mcp.auth.auth_provider_config import require_https_or_loopback
 
 logger = logging.getLogger(__name__)
 
@@ -183,8 +185,10 @@ class DiscoverOAuth2Endpoints:
         document = json.loads(body)
         metadata = OAuthMetadata.model_validate(document)
         # URL model fields normalize identifiers, including adding a trailing slash to a bare origin.
-        if self.config.expected_issuer is not None and document["issuer"] != self.config.expected_issuer:
-            raise ValueError("Authorization server metadata issuer does not match expected_issuer")
+        if self.config.expected_issuer is not None:
+            if document["issuer"] != self.config.expected_issuer:
+                raise ValueError("Authorization server metadata issuer does not match expected_issuer")
+            require_https_or_loopback(urlsplit(str(metadata.token_endpoint)), "token_endpoint")
         return metadata
 
     async def _discover_via_issuer_or_base(self, base_or_issuer: str) -> OAuth2Endpoints | None:
@@ -461,7 +465,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         # Discover OAuth2 endpoints
         try:
             self._cached_endpoints, endpoints_changed = await self._discoverer.discover(response=response)
-        except Exception:
+        except (Exception, asyncio.CancelledError):
             if self.config.expected_issuer is not None:
                 self._discoverer = DiscoverOAuth2Endpoints(self.config)
                 self._cached_endpoints = None

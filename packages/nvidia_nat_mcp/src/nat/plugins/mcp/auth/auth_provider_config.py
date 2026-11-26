@@ -15,6 +15,7 @@
 
 from ipaddress import ip_address
 from typing import Literal
+from urllib.parse import SplitResult
 from urllib.parse import urlsplit
 
 from pydantic import Field
@@ -24,6 +25,21 @@ from pydantic import model_validator
 
 from nat.authentication.interfaces import AuthProviderBaseConfig
 from nat.data_models.common import OptionalSecretStr
+
+
+def require_https_or_loopback(url: SplitResult, field_name: str) -> None:
+    """Require HTTPS for an OAuth URL, allowing HTTP on literal loopback hosts and localhost."""
+    if url.scheme == "https":
+        return
+    if url.scheme == "http" and url.hostname:
+        if url.hostname == "localhost":
+            return
+        try:
+            if ip_address(url.hostname).is_loopback:
+                return
+        except ValueError:
+            pass
+    raise ValueError(f"{field_name} requires HTTPS except on loopback")
 
 
 class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
@@ -88,18 +104,12 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
         if value is None:
             return None
         # Validate URL syntax while preserving the original identifier for the metadata comparison.
-        url = HttpUrl(value)
+        HttpUrl(value)
         parsed = urlsplit(value)
         if (not parsed.hostname or parsed.username is not None or "?" in value or "#" in value or "\\" in value
                 or any(char.isspace() or ord(char) < 32 for char in value)):
             raise ValueError("expected_issuer must be an absolute URL without userinfo, a query, or a fragment")
-        if url.scheme == "http" and parsed.hostname != "localhost":
-            try:
-                loopback = ip_address(parsed.hostname).is_loopback
-            except ValueError:
-                loopback = False
-            if not loopback:
-                raise ValueError("expected_issuer requires HTTPS except on loopback")
+        require_https_or_loopback(parsed, "expected_issuer")
         return value
 
     @model_validator(mode="after")
