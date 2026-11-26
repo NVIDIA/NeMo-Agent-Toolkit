@@ -169,7 +169,8 @@ class TestDiscoverOAuth2Endpoints:
         """Test discovery falls back to server base URL when no hint provided."""
         discoverer = DiscoverOAuth2Endpoints(mock_config)
 
-        with patch.object(discoverer, '_discover_via_issuer_or_base') as mock_discover:
+        with (patch.object(discoverer, "_fetch_pr_issuer", return_value=None),
+              patch.object(discoverer, "_discover_via_issuer_or_base") as mock_discover):
             mock_discover.return_value = OAuth2Endpoints(
                 authorization_url="https://auth.example.com/authorize",  # type: ignore
                 token_url="https://auth.example.com/token",  # type: ignore
@@ -523,6 +524,7 @@ class TestMCPOAuth2Provider:
             assert str(endpoints.authorization_url) == "https://auth.example.com/authorize"
             assert str(endpoints.token_url) == "https://auth.example.com/token"
             assert str(endpoints.registration_url) == "https://auth.example.com/register"
+            assert endpoints.issuer == "https://auth.example.com"
 
     async def test_discover_via_issuer_or_base_no_authorization_endpoint(self, mock_config):
         """Test discovery with missing authorization endpoint."""
@@ -785,7 +787,7 @@ class TestMCPOAuth2Provider:
         assert scopes == ['config_scope']  # Config should take precedence
 
     @pytest.mark.parametrize("oauth_client_ttl", [0.01, 0.0], ids=["0.01", "disabled"])
-    async def test_oauth_client_ttl(self, mock_endpoints, oauth_client_ttl):
+    async def test_oauth_client_ttl(self, mock_endpoints, oauth_client_ttl, monkeypatch):
         """Test that expired oauth_client_ttl causes re-registration with a new client_id."""
         config = MCPOAuth2ProviderConfig(
             server_url="https://example.com/mcp",  # type: ignore
@@ -795,6 +797,9 @@ class TestMCPOAuth2Provider:
         )
         provider = MCPOAuth2Provider(config)
 
+        clock = MagicMock()
+        clock.monotonic.return_value = 100.0
+        monkeypatch.setattr("nat.plugins.mcp.auth.auth_provider.time", clock)
         first_credentials = OAuth2Credentials(client_id="first_client_id", client_secret="secret")
         second_credentials = OAuth2Credentials(client_id="second_client_id", client_secret="secret")
 
@@ -810,8 +815,7 @@ class TestMCPOAuth2Provider:
                 assert provider._auth_code_provider is None  # not built yet
                 first_cache_time = provider._credentials_cache_time
 
-                # Wait for TTL to expire
-                await asyncio.sleep(oauth_client_ttl)
+                clock.monotonic.return_value += 1
 
                 mock_register.return_value = second_credentials
                 await provider._discover_and_register()
@@ -870,14 +874,15 @@ class TestMCPOAuth2Provider:
         provider._cached_endpoints = mock_endpoints
         provider._cached_credentials = mock_credentials
         provider._credentials_cache_time = time.monotonic()
-        provider._discoverer._resource_from_metadata = "https://metadata.example.com"
+        mock_endpoints.resource = "https://metadata.example.com"
 
         with patch("nat.authentication.oauth2.oauth2_auth_code_flow_provider.OAuth2AuthCodeFlowProvider") as mock_cls:
             mock_instance = AsyncMock()
             mock_instance.authenticate.return_value = AuthResult(credentials=[], token_expires_at=None, raw={})
+            mock_instance._set_custom_auth_callback = MagicMock()
             mock_cls.return_value = mock_instance
 
-            await provider._nat_oauth2_authenticate(user_id="test_user")
+            await provider.authenticate(user_id="test_user")
 
             built_config = mock_cls.call_args[0][0]
             assert built_config.authorization_kwargs["resource"] == "https://metadata.example.com"

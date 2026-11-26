@@ -92,14 +92,19 @@ class ObjectStoreTokenStorage(TokenStorageBase):
     restarts when using backends like S3, MySQL, or Redis.
     """
 
-    def __init__(self, object_store: ObjectStore):
+    def __init__(self, object_store: ObjectStore, *, namespace: tuple[str, ...] | None = None):
         """
         Initialize the object store token storage.
 
         Args:
             object_store: The object store instance to use for token persistence
+            namespace: Ordered grant identity components. Omit to use the original user-only keys.
         """
         self._object_store = object_store
+        self._key_prefix = "tokens"
+        if namespace is not None:
+            encoded = json.dumps(namespace, separators=(",", ":")).encode("utf-8")
+            self._key_prefix = f"tokens/v2/{hashlib.sha256(encoded).hexdigest()}"
 
     def _get_key(self, user_id: str) -> str:
         """
@@ -116,7 +121,7 @@ class ObjectStoreTokenStorage(TokenStorageBase):
         """
         # Hash the user_id to create an S3-safe key
         user_hash = hashlib.sha256(user_id.encode('utf-8')).hexdigest()
-        return f"tokens/{user_hash}"
+        return f"{self._key_prefix}/{user_hash}"
 
     async def store(self, user_id: str, auth_result: AuthResult) -> None:
         """
