@@ -20,6 +20,7 @@ import asyncio
 import csv
 import json
 import logging
+import math
 import random
 from collections.abc import Sequence
 from pathlib import Path
@@ -190,9 +191,12 @@ class GAPromptOptimizer(BasePromptOptimizer):
             for run_results in all_results:
                 for name, result in run_results:
                     if name == metric_name:
-                        scores.append(result.average_score)
+                        score = result.average_score
+                        if score is not None and math.isfinite(score):
+                            scores.append(score)
                         break
-            metrics[metric_name] = float(sum(scores) / len(scores)) if scores else 0.0
+            if scores:
+                metrics[metric_name] = float(sum(scores) / len(scores))
         ind.metrics = metrics
         await self._post_evaluate_single(
             ind,
@@ -233,7 +237,7 @@ class GAPromptOptimizer(BasePromptOptimizer):
         oracle_feedback_worst_n: int = 5,
     ) -> None:
         """Evaluate all individuals (concurrently)."""
-        unevaluated = [ind for ind in population if not ind.metrics]
+        unevaluated = [ind for ind in population if ind.metrics is None]
         if unevaluated:
             sem = asyncio.Semaphore(max_concurrency)
 
@@ -270,7 +274,7 @@ class GAPromptOptimizer(BasePromptOptimizer):
         eps: float = 1e-12,
     ) -> list[dict[str, float]]:
         """Return per-individual dict of normalised scores in [0,1] where higher is better."""
-        arrays = {m: [ind.metrics.get(m, 0.0) if ind.metrics else 0.0 for ind in individuals] for m in metric_names}
+        arrays = {m: [(ind.metrics or {})[m] for ind in individuals] for m in metric_names}
         normed: list[dict[str, float]] = []
         for i in range(len(individuals)):
             entry: dict[str, float] = {}
@@ -334,20 +338,34 @@ class GAPromptOptimizer(BasePromptOptimizer):
         population: list[Individual],
         optimizer_config: OptimizerConfig,
         diversity_lambda: float = 0.0,
-    ) -> None:
-        """Set scalar_fitness on each individual (normalize, scalarize, diversity penalty)."""
+    ) -> list[Individual]:
+        """Score and return candidates with measurements for every configured objective."""
         metric_cfg = optimizer_config.eval_metrics or {}
-        if not metric_cfg:
-            return
         eval_metrics = [v.evaluator_name for v in metric_cfg.values()]
         directions = [v.direction for v in metric_cfg.values()]
         weights = [v.weight for v in metric_cfg.values()]
         mode = optimizer_config.multi_objective_combination_mode
 
-        norm_per_ind = self._normalize_generation(population, eval_metrics, directions)
-        penalties = self._apply_diversity_penalty(population, diversity_lambda)
-        for ind, norm_scores, penalty in zip(population, norm_per_ind, penalties):
+        eligible = []
+        required = set(eval_metrics)
+        for ind in population:
+            missing = required.difference(ind.metrics or {})
+            if missing:
+                ind.scalar_fitness = None
+                logger.warning("Skipping prompt candidate trial %s with missing metrics: %s",
+                               ind.trial_number,
+                               ", ".join(sorted(missing)))
+            else:
+                eligible.append(ind)
+        if not eligible:
+            raise ValueError("No prompt candidate has measurements for all required metrics: " +
+                             ", ".join(eval_metrics))
+
+        norm_per_ind = self._normalize_generation(eligible, eval_metrics, directions)
+        penalties = self._apply_diversity_penalty(eligible, diversity_lambda)
+        for ind, norm_scores, penalty in zip(eligible, norm_per_ind, penalties):
             ind.scalar_fitness = (self._scalarize(norm_scores, mode=mode, weights=weights) - penalty)
+        return eligible
 
     # ---------- persistence ---------- #
 
@@ -606,15 +624,15 @@ class GAPromptOptimizer(BasePromptOptimizer):
                     callback_manager=callback_manager,
                     oracle_feedback_worst_n=oracle_feedback_worst_n,
                 )
-                self._compute_fitness(population, optimizer_config, diversity_lambda)
+                eligible = self._compute_fitness(population, optimizer_config, diversity_lambda)
 
-                best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
+                best = max(eligible, key=lambda i: (i.scalar_fitness or 0.0))
                 self._persist_checkpoint(gen, best, prompt_space, out_dir)
                 best_fitness_history.append(best.scalar_fitness or 0.0)
 
                 if oracle_feedback_mode == "adaptive" and not adaptive_state["enabled"]:
-                    prompt_keys = [tuple(sorted(ind.prompts.items())) for ind in population]
-                    fitness_values = [ind.scalar_fitness or 0.0 for ind in population]
+                    prompt_keys = [tuple(sorted(ind.prompts.items())) for ind in eligible]
+                    fitness_values = [ind.scalar_fitness or 0.0 for ind in eligible]
                     trigger_result = check_adaptive_triggers(
                         best_fitness_history=best_fitness_history,
                         population_fitness_values=fitness_values,
@@ -636,8 +654,7 @@ class GAPromptOptimizer(BasePromptOptimizer):
                         "index": idx,
                         "scalar_fitness": ind.scalar_fitness,
                     }
-                    if ind.metrics:
-                        row.update({f"metric::{m}": ind.metrics[m] for m in eval_metrics})
+                    row.update({f"metric::{m}": (ind.metrics or {}).get(m) for m in eval_metrics})
                     history_rows.append(row)
 
                 _on_prompt_trial_end(
@@ -652,7 +669,7 @@ class GAPromptOptimizer(BasePromptOptimizer):
                 next_population: list[Individual] = []
                 if elitism > 0:
                     elites = sorted(
-                        population,
+                        eligible,
                         key=lambda i: (i.scalar_fitness or 0.0),
                         reverse=True,
                     )[:elitism]
@@ -661,10 +678,10 @@ class GAPromptOptimizer(BasePromptOptimizer):
                 needed = pop_size - len(next_population)
                 offspring: list[Individual] = []
                 while len(offspring) < needed:
-                    p1 = _select_parent(population)
-                    p2 = _select_parent(population)
-                    if p2 is p1 and len(population) > 1:
-                        p2 = random.choice([ind for ind in population if ind is not p1])
+                    p1 = _select_parent(eligible)
+                    p2 = _select_parent(eligible)
+                    if p2 is p1 and len(eligible) > 1:
+                        p2 = random.choice([ind for ind in eligible if ind is not p1])
                     child = await _make_child(p1, p2)
                     offspring.append(child)
                 population = next_population + offspring
@@ -682,8 +699,8 @@ class GAPromptOptimizer(BasePromptOptimizer):
                 callback_manager=callback_manager,
                 oracle_feedback_worst_n=oracle_feedback_worst_n,
             )
-            self._compute_fitness(population, optimizer_config, diversity_lambda)
-            best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
+            eligible = self._compute_fitness(population, optimizer_config, diversity_lambda)
+            best = max(eligible, key=lambda i: (i.scalar_fitness or 0.0))
             _on_prompt_study_end(
                 callback_manager,
                 best,
