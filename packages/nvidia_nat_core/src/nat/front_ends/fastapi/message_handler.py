@@ -113,6 +113,8 @@ class WebSocketMessageHandler:
         self._conversation_id: str | None = None
         self._workflow_schema_type: str | None = None
         self._user_interaction: UserInteraction | None = None
+        # Handler of the closed connection whose running workflow this connection took over on reconnect.
+        self._restored_handler: WebSocketMessageHandler | None = None
         self._pending_observability_trace: ResponseObservabilityTrace | None = None
         self._user_id: str | None = None
         self._restoration_attempted: bool = False
@@ -160,6 +162,7 @@ class WebSocketMessageHandler:
 
         # Swap socket on disconnected handler so its running workflow can send through new connection
         disconnected_handler._socket = self._socket
+        self._restored_handler = disconnected_handler
 
         # Copy disconnected handler's state so this handler can receive and process messages
         self._conversation_id = disconnected_handler._conversation_id
@@ -269,8 +272,11 @@ class WebSocketMessageHandler:
                     elif isinstance(validated_message, WebSocketUserInteractionResponseMessage):
                         user_content = await self._process_websocket_user_interaction_response_message(validated_message
                                                                                                        )
-                        assert self._user_interaction is not None
-                        self._user_interaction.future.set_result(user_content)
+                        user_interaction = self._pending_user_interaction()
+                        if user_interaction is None:
+                            logger.warning("Ignoring a user interaction response: no prompt is waiting for one")
+                        else:
+                            user_interaction.future.set_result(user_content)
                 except (asyncio.CancelledError, WebSocketDisconnect):
                     break
         finally:
@@ -287,6 +293,20 @@ class WebSocketMessageHandler:
             except Exception:
                 # _run_preflight_auth reports its own provider failures; log anything that escaped.
                 logger.exception("Preflight auth task failed")
+
+    def _pending_user_interaction(self) -> UserInteraction | None:
+        """
+        Return the human prompt that is waiting for an answer on this connection, if any.
+
+        A workflow restored on reconnect keeps the ``human_interaction_callback`` of the handler that started it,
+        so the prompts it raises after the reconnect are tracked on that handler, not on this one.
+        """
+        for handler in (self, self._restored_handler):
+            if handler is None or handler._user_interaction is None:
+                continue
+            if not handler._user_interaction.future.done():
+                return handler._user_interaction
+        return None
 
     def _extract_last_user_message_content(self, messages: list[UserMessages]) -> TextContent:
         """
