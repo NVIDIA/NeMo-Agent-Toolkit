@@ -30,8 +30,11 @@ from nat.data_models.api_server import OAuthMode
 from nat.data_models.api_server import OAuthModePreferencePayload
 from nat.data_models.api_server import WebSocketAuthMessage
 from nat.data_models.api_server import WebSocketMessageType
+from nat.data_models.interactive import HumanPromptText
+from nat.data_models.interactive import InteractionPrompt
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
+from nat.front_ends.fastapi.message_handler import UserInteraction
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 
 
@@ -411,3 +414,126 @@ async def test_run_does_not_cancel_inflight_flow_on_disconnect():
     flow_future.set_result("token")
     await asyncio.wait_for(run_task, timeout=1)
     assert cleanup_ran.is_set()
+
+
+def _interaction_response(text: str) -> dict:
+    return {
+        "type": WebSocketMessageType.USER_INTERACTION_MESSAGE,
+        "content": {
+            "messages": [{
+                "role": "user", "content": [{
+                    "type": "text", "text": text
+                }]
+            }]
+        },
+    }
+
+
+async def _wait_for_prompt(handler: WebSocketMessageHandler, text: str) -> None:
+    for _ in range(200):
+        interaction = handler._user_interaction
+        if interaction is not None and not interaction.future.done() and interaction.prompt_content.text == text:
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError(f"prompt {text!r} was never raised")
+
+
+# The test plugin applies nest_asyncio2 after this module imports `UserInteraction`, so its `asyncio.Future` field
+# no longer matches the futures the loop creates. Build it without validation, as the other HITL tests do.
+@patch("nat.front_ends.fastapi.message_handler.UserInteraction", new=UserInteraction.model_construct)
+async def _run_hitl_workflow_across_reconnect(prompt_before_reconnect: bool) -> tuple[list[str], asyncio.Task]:
+    """Run a workflow that asks two questions and reconnect the socket while it runs.
+
+    Returns the answers the workflow received and the receive loop task of the new connection.
+    """
+    old_handler, _, _ = _make_message_handler()
+    old_handler._user_id = "user-a"
+    old_handler._conversation_id = "conv-1"
+    old_handler._run_preflight_auth = AsyncMock()  # type: ignore[method-assign]
+
+    start = asyncio.Event()
+
+    async def _workflow() -> list[str]:
+        await start.wait()
+        answers = []
+        for i in (1, 2):
+            prompt = InteractionPrompt(id=f"prompt-{i}",
+                                       timestamp="2025-01-13T10:00:03Z",
+                                       content=HumanPromptText(text=f"question {i}"))
+            answers.append((await old_handler.human_interaction_callback(prompt)).text)
+        return answers
+
+    # The workflow runs with the human interaction callback of the first connection.
+    workflow_task = asyncio.create_task(_workflow())
+    old_handler._running_workflow_task = workflow_task
+    if prompt_before_reconnect:
+        start.set()
+        await _wait_for_prompt(old_handler, "question 1")
+
+    new_handler, new_socket, _ = _make_message_handler()
+    new_handler._user_id = "user-a"
+    new_handler._run_preflight_auth = AsyncMock()  # type: ignore[method-assign]
+    new_socket.query_params = {"conversation_id": "conv-1"}
+    new_handler._worker.get_conversation_handler.return_value = old_handler
+    await new_handler._restore_execution_state()
+    start.set()
+
+    frames: asyncio.Queue = asyncio.Queue()
+
+    async def _receive_json() -> dict:
+        frame = await frames.get()
+        if frame is None:
+            raise WebSocketDisconnect()
+        return frame
+
+    new_socket.receive_json = _receive_json
+    run_task = asyncio.create_task(new_handler.run())
+
+    try:
+        for i in (1, 2):
+            await _wait_for_prompt(old_handler, f"question {i}")
+            await frames.put(_interaction_response(f"answer {i}"))
+        answers = await asyncio.wait_for(asyncio.shield(workflow_task), timeout=2)
+    finally:
+        workflow_task.cancel()
+        await frames.put(None)
+        await asyncio.wait_for(asyncio.gather(run_task, return_exceptions=True), timeout=5)
+    return answers, run_task
+
+
+async def test_answers_reach_prompts_raised_after_reconnect():
+    """A reconnected socket answers the prompts the running workflow raises after the reconnect."""
+    answers, run_task = await _run_hitl_workflow_across_reconnect(prompt_before_reconnect=False)
+
+    assert answers == ["answer 1", "answer 2"]
+    assert run_task.exception() is None
+
+
+async def test_answers_reach_next_prompt_after_reconnect_during_prompt():
+    """After answering the prompt pending at reconnect, the next prompt can be answered too."""
+    answers, run_task = await _run_hitl_workflow_across_reconnect(prompt_before_reconnect=True)
+
+    assert answers == ["answer 1", "answer 2"]
+    assert run_task.exception() is None
+
+
+async def test_interaction_response_without_pending_prompt_is_ignored():
+    """A response with no prompt waiting (late or repeated) does not end the receive loop."""
+    handler, socket, _ = _make_message_handler()
+    handler._run_preflight_auth = AsyncMock()  # type: ignore[method-assign]
+    frames = iter([_interaction_response("late answer"), _interaction_response("late answer")])
+    received = []
+
+    async def _receive_json() -> dict:
+        try:
+            frame = next(frames)
+        except StopIteration:
+            raise WebSocketDisconnect() from None
+        received.append(frame)
+        return frame
+
+    socket.receive_json = _receive_json
+
+    await asyncio.wait_for(handler.run(), timeout=5)
+
+    assert len(received) == 2
