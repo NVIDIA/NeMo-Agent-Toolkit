@@ -1235,6 +1235,7 @@ async def test_rewoo_workflow_reports_the_token_usage_the_model_reported():
                          [
                              (str, "12345", "12345"),
                              (str, 2024, "2024"),
+                             (str, "1e3", "1e3"),
                              (int, "3", 3),
                              (float, 3.5, 3.5),
                              (bool, False, False),

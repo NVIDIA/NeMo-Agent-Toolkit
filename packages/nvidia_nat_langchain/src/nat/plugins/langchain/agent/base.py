@@ -107,28 +107,33 @@ def _incomplete_tool_call_args(chunk: BaseMessage) -> list[str]:
     return incomplete
 
 
-def _scalar_tool_input(tool: BaseTool, value: bool | int | float) -> dict[str, Any] | bool | int | float:
-    """Map a bare number or boolean tool input, such as ``12345`` or ``true``, onto the tool's single argument.
+def _is_number_or_bool(value: Any) -> bool:
+    """Whether a parsed tool input is a number or a boolean.
 
-    A tool is called with a dict of its arguments or with a string, so a number or a boolean always fails validation.
-    When the tool has one argument, the value is given to it with the type that argument declares: as is for an
-    ``int``, ``float`` or ``bool`` argument, and as the text it was written as for a ``str`` argument. Otherwise the
-    value is returned unchanged.
+    A tool is called with a dict of its arguments or with a string for its single argument. A number or a boolean is
+    neither, so a tool input such as ``12345`` or ``true`` is passed on as the string it was written as.
+    """
+    return isinstance(value, bool | int | float)
+
+
+def _single_argument_input(tool: BaseTool, tool_input: str) -> dict[str, Any] | str:
+    """Give a string tool input to the tool's single argument as a dict, so the tool gets the validated value.
+
+    langchain-core validates a string input against a tool's single argument but then passes the original string on,
+    so an ``int`` or ``bool`` argument would receive ``"3"`` or ``"false"``. As a dict, the input reaches the argument
+    with its declared type, while a ``str`` argument keeps the text as written. The string is returned unchanged when
+    the tool does not have exactly one argument or the input does not validate.
     """
     schema = tool.args_schema
     if not (isinstance(schema, type) and issubclass(schema, BaseModel)) or len(schema.model_fields) != 1:
-        return value
+        return tool_input
 
-    name = next(iter(schema.model_fields))
-    for candidate in ({name: value}, {name: json.dumps(value)}):
-        try:
-            schema.model_validate(candidate)
-        except ValidationError:
-            continue
-        return candidate
-
-    # Neither fits the argument: pass the value so the tool reports the validation error.
-    return {name: value}
+    candidate = {next(iter(schema.model_fields)): tool_input}
+    try:
+        schema.model_validate(candidate)
+    except ValidationError:
+        return tool_input
+    return candidate
 
 
 def _chunk_to_message(chunk: AIMessageChunk) -> AIMessage:
@@ -300,11 +305,10 @@ class BaseAgent(ABC):
         """
         last_exception = None
 
-        if isinstance(tool_input, bool | int | float):
-            tool_input = _scalar_tool_input(tool, tool_input)
-
         for attempt in range(1, max_retries + 1):
             try:
+                if isinstance(tool_input, str):
+                    tool_input = _single_argument_input(tool, tool_input)
                 response = await tool.ainvoke(tool_input, config=self._runnable_config)
 
                 # An agent used as a tool returns a ChatResponse for a chat request; pass on its text

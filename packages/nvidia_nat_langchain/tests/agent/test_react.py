@@ -2632,6 +2632,7 @@ def _single_argument_tool(annotation: type, received: list):
                          [
                              (str, "12345", "12345"),
                              (str, "true", "true"),
+                             (str, "1e3", "1e3"),
                              (int, "3", 3),
                              (float, "3.5", 3.5),
                              (bool, "false", False),

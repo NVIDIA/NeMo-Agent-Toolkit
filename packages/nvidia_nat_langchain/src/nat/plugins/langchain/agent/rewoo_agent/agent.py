@@ -42,6 +42,7 @@ from nat.plugins.langchain.agent.base import NO_INPUT_ERROR_MESSAGE
 from nat.plugins.langchain.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
 from nat.plugins.langchain.agent.base import AgentDecision
 from nat.plugins.langchain.agent.base import BaseAgent
+from nat.plugins.langchain.agent.base import _is_number_or_bool
 
 logger = logging.getLogger(__name__)
 _REWOO_PLACEHOLDER_PATTERN = re.compile(r"#E\d+")
@@ -270,6 +271,10 @@ class ReWOOAgentGraph(BaseAgent):
             logger.debug("%s Tool input is already structured. Use the tool input as is.", AGENT_LOG_PREFIX)
             return tool_input
 
+        if _is_number_or_bool(tool_input):
+            # A number or a boolean is not an argument dict: pass it on as text for the tool's single argument.
+            return json.dumps(tool_input)
+
         if not isinstance(tool_input, str):
             logger.debug("%s Tool input is not a string. Use the tool input as is.", AGENT_LOG_PREFIX)
             return tool_input
@@ -294,6 +299,9 @@ class ReWOOAgentGraph(BaseAgent):
                 # If it still fails, fall back to using the input as a raw string
                 tool_input_parsed = tool_input
                 logger.debug("%s Unable to parse structured tool input. Using raw tool input as is.", AGENT_LOG_PREFIX)
+
+        if _is_number_or_bool(tool_input_parsed):
+            return tool_input
 
         return tool_input_parsed
 
