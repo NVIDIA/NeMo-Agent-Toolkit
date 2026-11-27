@@ -2615,30 +2615,41 @@ async def test_agent_node_runs_a_complete_tool_call_without_finish_reason(mock_r
     assert result.agent_scratchpad[-1].tool == "Tool A"
 
 
-@pytest.mark.parametrize("tool_input", ["12345", "3.5", "true"])
-async def test_tool_node_number_or_bool_input_reaches_string_argument(mock_config_react_agent, mock_llm, tool_input):
-    """An Action Input that is a bare number or boolean is passed to the tool's single argument as written.
-
-    A tool is called with a dict of arguments or a string; the int, float or bool that ``json.loads`` makes of it is
-    neither, and fails validation before the tool runs.
-    """
+def _single_argument_tool(annotation: type, received: list):
+    """A tool whose one argument has the given type; it records what it receives."""
     from langchain_core.tools import StructuredTool
 
-    received: list[str] = []
+    async def lookup(value) -> str:
+        """Look up a value."""
+        received.append(value)
+        return f"got {value!r}"
 
-    async def lookup_order(order_id: str) -> str:
-        """Look up an order by its id."""
-        received.append(order_id)
-        return f"order {order_id}"
+    lookup.__annotations__ = {"value": annotation, "return": str}
+    return StructuredTool.from_function(coroutine=lookup, name="lookup")
 
+
+@pytest.mark.parametrize("annotation, tool_input, expected",
+                         [
+                             (str, "12345", "12345"),
+                             (str, "true", "true"),
+                             (int, "3", 3),
+                             (float, "3.5", 3.5),
+                             (bool, "false", False),
+                         ])
+async def test_tool_node_number_or_bool_input_reaches_the_tool_with_its_declared_type(
+        mock_config_react_agent, mock_llm, annotation, tool_input, expected):
+    """A bare number or boolean Action Input runs the tool, with the type of the tool's argument.
+
+    ``json.loads`` makes an int, float or bool of it, which is neither an argument dict nor a string.
+    """
+    received: list = []
     agent = ReActAgentGraph(llm=mock_llm,
                             prompt=create_react_agent_prompt(mock_config_react_agent),
-                            tools=[StructuredTool.from_function(coroutine=lookup_order)],
+                            tools=[_single_argument_tool(annotation, received)],
                             tool_call_max_retries=1)
-    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='lookup_order', tool_input=tool_input, log='test')])
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='lookup', tool_input=tool_input, log='test')])
 
-    response = await agent.tool_node(mock_state)
-    response = response.tool_responses[-1]
+    await agent.tool_node(mock_state)
 
-    assert received == [tool_input]
-    assert response.content == f"order {tool_input}"
+    assert received == [expected]
+    assert type(received[0]) is annotation

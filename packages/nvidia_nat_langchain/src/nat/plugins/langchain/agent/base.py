@@ -35,6 +35,8 @@ from langchain_core.runnables.config import merge_configs
 from langchain_core.tools import BaseTool
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import DEFAULT_RUNTIME
+from pydantic import BaseModel
+from pydantic import ValidationError
 
 from nat.data_models.api_server import ChatResponse
 
@@ -105,13 +107,28 @@ def _incomplete_tool_call_args(chunk: BaseMessage) -> list[str]:
     return incomplete
 
 
-def _is_number_or_bool(value: Any) -> bool:
-    """Whether a parsed tool input is a number or a boolean.
+def _scalar_tool_input(tool: BaseTool, value: bool | int | float) -> dict[str, Any] | bool | int | float:
+    """Map a bare number or boolean tool input, such as ``12345`` or ``true``, onto the tool's single argument.
 
-    A tool is called with a dict of its arguments or with a string for its single argument. A number or a boolean is
-    neither, so a tool input such as ``12345`` or ``true`` is passed on as the string it was written as.
+    A tool is called with a dict of its arguments or with a string, so a number or a boolean always fails validation.
+    When the tool has one argument, the value is given to it with the type that argument declares: as is for an
+    ``int``, ``float`` or ``bool`` argument, and as the text it was written as for a ``str`` argument. Otherwise the
+    value is returned unchanged.
     """
-    return isinstance(value, bool | int | float)
+    schema = tool.args_schema
+    if not (isinstance(schema, type) and issubclass(schema, BaseModel)) or len(schema.model_fields) != 1:
+        return value
+
+    name = next(iter(schema.model_fields))
+    for candidate in ({name: value}, {name: json.dumps(value)}):
+        try:
+            schema.model_validate(candidate)
+        except ValidationError:
+            continue
+        return candidate
+
+    # Neither fits the argument: pass the value so the tool reports the validation error.
+    return {name: value}
 
 
 def _chunk_to_message(chunk: AIMessageChunk) -> AIMessage:
@@ -282,6 +299,9 @@ class BaseAgent(ABC):
             The tool response
         """
         last_exception = None
+
+        if isinstance(tool_input, bool | int | float):
+            tool_input = _scalar_tool_input(tool, tool_input)
 
         for attempt in range(1, max_retries + 1):
             try:

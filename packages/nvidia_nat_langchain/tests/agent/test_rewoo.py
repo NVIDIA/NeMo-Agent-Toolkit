@@ -1231,35 +1231,36 @@ async def test_rewoo_workflow_reports_the_token_usage_the_model_reported():
     assert response.usage.total_tokens == 300
 
 
-@pytest.mark.parametrize("tool_input, expected", [
-    ("12345", "12345"),
-    (" 3.5 ", "3.5"),
-    ("true", "true"),
-    (2024, "2024"),
-    (False, "false"),
-])
-def test_parse_tool_input_keeps_number_or_bool_as_string(tool_input, expected):
-    """A number or boolean is not an argument dict: it stays a string for the tool's single argument."""
-    assert ReWOOAgentGraph._parse_tool_input(tool_input) == expected
-
-
-async def test_executor_node_passes_number_input_to_string_argument(mock_rewoo_agent):
-    """A planned tool input such as "12345" reaches a tool whose single argument is a string."""
+@pytest.mark.parametrize("annotation, tool_input, expected",
+                         [
+                             (str, "12345", "12345"),
+                             (str, 2024, "2024"),
+                             (int, "3", 3),
+                             (float, 3.5, 3.5),
+                             (bool, False, False),
+                         ])
+async def test_executor_node_passes_number_or_bool_input_with_the_declared_type(mock_rewoo_agent,
+                                                                                annotation,
+                                                                                tool_input,
+                                                                                expected):
+    """A planned tool input that is a number or boolean runs the tool, with the type of the tool's argument."""
     from langchain_core.tools import StructuredTool
 
-    received: list[str] = []
+    received: list = []
 
-    async def lookup_order(order_id: str) -> str:
-        """Look up an order by its id."""
-        received.append(order_id)
-        return f"order {order_id}"
+    async def lookup(value) -> str:
+        """Look up a value."""
+        received.append(value)
+        return f"got {value!r}"
 
-    tool = StructuredTool.from_function(coroutine=lookup_order)
-    steps = [_create_step_info("step1", "#E1", "lookup_order", "12345")]
+    lookup.__annotations__ = {"value": annotation, "return": str}
+    tool = StructuredTool.from_function(coroutine=lookup, name="lookup")
+    steps = [_create_step_info("step1", "#E1", "lookup", tool_input)]
     mock_state = _create_mock_state_with_parallel_data(steps)
 
-    with patch.dict(mock_rewoo_agent.tools_dict, {"lookup_order": tool}):
+    with patch.dict(mock_rewoo_agent.tools_dict, {"lookup": tool}):
         result = await mock_rewoo_agent.executor_node(mock_state)
 
-    assert received == ["12345"]
-    assert result["intermediate_results"]["#E1"].content == "order 12345"
+    assert received == [expected]
+    assert type(received[0]) is annotation
+    assert result["intermediate_results"]["#E1"].content == f"got {expected!r}"
