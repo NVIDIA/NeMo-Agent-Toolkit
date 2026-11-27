@@ -12,11 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import csv
 import json
 import logging
 import typing
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from unittest.mock import patch
 
 import pytest
@@ -93,7 +95,7 @@ async def test_optimize_prompts_requires_eval_metrics(tmp_path: Path):
 
 
 class InitFunctionConfig(FunctionBaseConfig, name="ga_init_test"):
-    pass
+    prompt: str = "Base"
 
 
 class RecombineFunctionConfig(FunctionBaseConfig, name="ga_recombine_test"):
@@ -230,6 +232,74 @@ async def test_optimize_prompts_happy_path_without_recombine(tmp_path: Path):
     assert (optimizer_config.output_path / "optimized_prompts.json").exists()
     assert (optimizer_config.output_path / "ga_history_prompts.csv").exists()
     assert (optimizer_config.output_path / "optimized_prompts_gen1.json").exists()
+
+
+@pytest.mark.parametrize("latency", [2.0, 0.0])
+async def test_missing_objective_cannot_win(tmp_path: Path, latency: float, caplog: pytest.LogCaptureFixture):
+    await _register_prompt_optimizer_functions()
+    base = Config(functions={"init_fn": InitFunctionConfig()}, workflow=InitFunctionConfig())
+    cfg = _make_optimizer_config(tmp_path)
+    cfg.eval_metrics["time"] = OptimizerMetric(evaluator_name="Latency", direction="minimize")
+    cfg.multi_objective_combination_mode = "sum"
+    cfg.prompt.prompt_recombination_function = None
+    cfg.prompt.ga_population_size = cfg.prompt.ga_elitism = 2
+    cfg.prompt.ga_mutation_rate = 1.0
+    space = {"workflow.prompt": SearchSpace(is_prompt=True, prompt="Base", prompt_purpose="Greet")}
+    base_calls = 0
+
+    class EvalRun:
+
+        def __init__(self, config: EvaluationRunConfig):
+            self.prompt = config.config_file.workflow.prompt
+
+        async def run_and_evaluate(self) -> SimpleNamespace:
+            nonlocal base_calls
+            results = [("Accuracy", SimpleNamespace(average_score=0.0))]
+            # Only the original prompt has a latency measurement, and only on every other repetition.
+            if self.prompt == "Base":
+                base_calls += 1
+                if base_calls % 2:
+                    results.append(("Latency", SimpleNamespace(average_score=latency)))
+            return SimpleNamespace(evaluation_results=results)
+
+    with patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run", return_value=EvalRun):
+        await optimize_prompts(base_cfg=base,
+                               full_space=space,
+                               optimizer_config=cfg,
+                               opt_run_config=_make_run_config(base))
+
+    for filename in ("optimized_prompts.json", "optimized_prompts_gen1.json"):
+        assert json.loads((tmp_path / filename).read_text())["workflow.prompt"][0] == "Base"
+    with (tmp_path / "ga_history_prompts.csv").open(newline="") as history:
+        measured, missing = csv.DictReader(history)
+    assert float(measured["metric::Latency"]) == latency
+    assert missing["metric::Latency"] == missing["scalar_fitness"] == ""
+    assert float(missing["metric::Accuracy"]) == 0.0
+    assert any("Latency" in message and "trial 1" in message for message in caplog.messages)
+
+
+@pytest.mark.parametrize("complete_first_generation", [False, True], ids=["initial", "final"])
+async def test_generation_without_measured_objectives_cannot_save_a_winner(tmp_path: Path,
+                                                                           complete_first_generation: bool):
+    await _register_prompt_optimizer_functions()
+    base = Config(functions={"init_fn": InitFunctionConfig()}, workflow=InitFunctionConfig())
+    cfg = _make_optimizer_config(tmp_path)
+    cfg.prompt.prompt_recombination_function = None
+    cfg.prompt.ga_population_size = 2
+    cfg.reps_per_param_set = 1
+    space = {"workflow.prompt": SearchSpace(is_prompt=True, prompt="Base", prompt_purpose="Greet")}
+    scores = ([0.0, 1.0] if complete_first_generation else []) + [None, float("nan")]
+    outputs = [SimpleNamespace(evaluation_results=[("Accuracy", SimpleNamespace(average_score=s))]) for s in scores]
+    eval_run = SimpleNamespace(run_and_evaluate=AsyncMock(side_effect=outputs))
+    with patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run",
+               return_value=lambda config: eval_run), pytest.raises(ValueError, match="No prompt candidate.*Accuracy"):
+        await optimize_prompts(base_cfg=base,
+                               full_space=space,
+                               optimizer_config=cfg,
+                               opt_run_config=_make_run_config(base))
+
+    assert (tmp_path / "optimized_prompts_gen1.json").exists() == complete_first_generation
+    assert not (tmp_path / "optimized_prompts.json").exists()
 
 
 async def test_optimize_prompts_warns_when_an_evaluator_failed_on_items(tmp_path: Path, caplog):
