@@ -53,6 +53,8 @@ class ToolCallAgentGraphState(BaseModel):
     """State schema for the Tool Calling Agent Graph"""
     messages: list[BaseMessage] = Field(default_factory=list)  # input and output of the Agent
     tool_iterations: int = Field(default=0)  # tool node runs in this invocation; messages may hold chat history
+    truncation_retries: int = Field(default=0)  # truncation retries spent in this invocation
+    max_tokens: int | None = Field(default=None)  # max_tokens raised by a truncation retry in this invocation
 
 
 def cached_input_details(details: dict | None) -> dict:
@@ -197,10 +199,11 @@ class ToolCallAgentGraph(DualNodeAgent):
         self.tool_caller = ToolNode(tools, handle_tool_errors=handle_tool_errors)
         self.return_direct = [tool.name for tool in return_direct] if return_direct else []
 
+        # The graph is built once and serves every request, so the retry budget and the raised max_tokens are kept
+        # in the graph state of each invocation, not on this instance.
         self._max_truncation_retries: int = max_truncation_retries
-        self._truncation_retries_remaining: int = max_truncation_retries
         self._truncation_scaling_fn: typing.Callable[[int], int] = truncation_scaling_fn or (lambda c: c + 1024)
-        self._current_max_tokens: int | None = getattr(llm, "max_tokens", None)
+        self._configured_max_tokens: int | None = getattr(llm, "max_tokens", None)
         self._max_empty_response_retries: int = max_empty_response_retries
         self.max_iterations = max_iterations
 
@@ -220,8 +223,13 @@ class ToolCallAgentGraph(DualNodeAgent):
         """
         # Use astream so LangGraph's stream_mode="messages" can observe individual LLM tokens.
         # Config is inherited from LangGraph's context, preserving streaming callbacks.
+        agent = self.agent
+        if state.max_tokens is not None:
+            # A truncation retry earlier in this invocation raised the limit.
+            bound_llm = self.llm.bind_tools(self.tools).bind(max_tokens=state.max_tokens)
+            agent = self.agent.first | bound_llm  # type: ignore[union-attr]
         chunks: list[AIMessageChunk] = []
-        async for chunk in self.agent.astream({"messages": state.messages}):
+        async for chunk in agent.astream({"messages": state.messages}):
             chunks.append(chunk)
         if not chunks:
             raise RuntimeError('No response received from agent')
@@ -364,30 +372,30 @@ class ToolCallAgentGraph(DualNodeAgent):
         Raises:
             RuntimeError: If all retries are exhausted without a non-truncated response.
         """
-        if self._current_max_tokens is None:
+        current_max_tokens: int | None = state.max_tokens or self._configured_max_tokens
+        if current_max_tokens is None:
             usage: UsageMetadata = self._get_token_usage(first_response)
-            self._current_max_tokens = usage.get("output_tokens", 0) or 4096
+            current_max_tokens = usage.get("output_tokens", 0) or 4096
 
         response: AIMessage | None = None
 
-        while self._truncation_retries_remaining > 0:
-            self._truncation_retries_remaining -= 1
-            new_limit: int = self._truncation_scaling_fn(self._current_max_tokens)
-            retries_used: int = self._max_truncation_retries - self._truncation_retries_remaining
+        while state.truncation_retries < self._max_truncation_retries:
+            state.truncation_retries += 1
+            new_limit: int = self._truncation_scaling_fn(current_max_tokens)
+            retries_used: int = state.truncation_retries
 
             logger.warning(
                 "%s Output truncated (finish_reason=length, current_max_tokens=%d). "
                 "Retry %d/%d with max_tokens=%d",
                 AGENT_LOG_PREFIX,
-                self._current_max_tokens,
+                current_max_tokens,
                 retries_used,
                 self._max_truncation_retries,
                 new_limit,
             )
 
-            self._current_max_tokens = new_limit
-            self.bound_llm = self.llm.bind_tools(self.tools).bind(max_tokens=new_limit)
-            self.agent = self.agent.first | self.bound_llm  # type: ignore[union-attr]
+            current_max_tokens = new_limit
+            state.max_tokens = new_limit
 
             response = await self._invoke_llm(state)
 
@@ -408,7 +416,7 @@ class ToolCallAgentGraph(DualNodeAgent):
 
         usage = self._get_token_usage(response or first_response)
         raise RuntimeError(f"LLM output still truncated after {self._max_truncation_retries} retries "
-                           f"(last max_tokens={self._current_max_tokens}). "
+                           f"(last max_tokens={current_max_tokens}). "
                            f"output_tokens={usage.get('output_tokens', 'N/A')}, "
                            f"input_tokens={usage.get('input_tokens', 'N/A')}, "
                            f"total_tokens={usage.get('total_tokens', 'N/A')}")
