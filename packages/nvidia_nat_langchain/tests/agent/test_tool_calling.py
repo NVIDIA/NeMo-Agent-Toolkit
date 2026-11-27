@@ -968,8 +968,8 @@ async def test_retry_on_truncation_succeeds(error_mock_llm, mock_tool):
 
     assert result.content == "complete"
     assert result.response_metadata["finish_reason"] == "stop"
-    assert agent._current_max_tokens == 612
-    assert agent._truncation_retries_remaining == 2
+    assert state.max_tokens == 612
+    assert state.truncation_retries == 1
 
 
 async def test_retry_on_truncation_converts_a_streamed_retry(error_mock_llm, mock_tool):
@@ -1045,7 +1045,7 @@ async def test_retry_on_truncation_increments_from_usage(error_mock_llm, mock_to
     observed_max_tokens: list[int | None] = []
 
     async def _capture_and_invoke(s):
-        observed_max_tokens.append(getattr(agent.bound_llm, "kwargs", {}).get("max_tokens"))
+        observed_max_tokens.append(s.max_tokens)
         return still_truncated
 
     with patch.object(agent, "_invoke_llm", side_effect=_capture_and_invoke):
@@ -1078,7 +1078,7 @@ async def test_retry_on_truncation_increments_from_configured_max_tokens(error_m
     observed_max_tokens: list[int | None] = []
 
     async def _capture_and_invoke(s):
-        observed_max_tokens.append(getattr(agent.bound_llm, "kwargs", {}).get("max_tokens"))
+        observed_max_tokens.append(s.max_tokens)
         return still_truncated
 
     with patch.object(agent, "_invoke_llm", side_effect=_capture_and_invoke):
@@ -1089,7 +1089,7 @@ async def test_retry_on_truncation_increments_from_configured_max_tokens(error_m
 
 
 async def test_retry_on_truncation_persists_across_calls(error_mock_llm, mock_tool):
-    """Retries and max_tokens carry forward across multiple truncation events."""
+    """Retries and max_tokens carry forward across multiple truncation events of one invocation."""
     agent = _make_agent(
         error_mock_llm,
         mock_tool,
@@ -1109,14 +1109,14 @@ async def test_retry_on_truncation_persists_across_calls(error_mock_llm, mock_to
     with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=good):
         await agent._retry_on_truncation(truncated, state)
 
-    assert agent._current_max_tokens == 300
-    assert agent._truncation_retries_remaining == 3
+    assert state.max_tokens == 300
+    assert state.truncation_retries == 1
 
     with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=good):
         await agent._retry_on_truncation(truncated, state)
 
-    assert agent._current_max_tokens == 400
-    assert agent._truncation_retries_remaining == 2
+    assert state.max_tokens == 400
+    assert state.truncation_retries == 2
 
     still_truncated = AIMessage(
         content="partial",
@@ -1129,7 +1129,7 @@ async def test_retry_on_truncation_persists_across_calls(error_mock_llm, mock_to
         with pytest.raises(RuntimeError, match="LLM output still truncated after 4 retries"):
             await agent._retry_on_truncation(truncated, state)
 
-    assert agent._truncation_retries_remaining == 0
+    assert state.truncation_retries == 4
 
 
 async def test_retry_on_empty_succeeds(error_mock_llm, mock_tool):
@@ -1502,3 +1502,89 @@ async def test_tool_calling_agent_returns_a_string_for_a_chat_request():
     async with tool_calling_agent_workflow(config, builder) as function_info:
         response = await function_info.single_fn(request)
     assert response == "all done"
+
+
+@pytest.fixture(name="first_reply_truncated_llm")
+def fixture_first_reply_truncated_llm():
+    """Mock LLM whose first reply to each question is cut off, and which records the max_tokens of each call."""
+    from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
+    from langchain_core.callbacks import CallbackManagerForLLMRun
+    from langchain_core.language_models import BaseChatModel
+    from langchain_core.messages import BaseMessage
+    from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import ChatResult
+
+    class _FirstReplyTruncatedLLM(BaseChatModel):
+        max_tokens: int | None = 1024
+        calls: list[tuple[str, int | None]] = []
+
+        def _reply(self, messages: list[BaseMessage], **kwargs: typing.Any) -> ChatResult:
+            question = str(messages[-1].content)
+            first_call = all(asked != question for asked, _ in self.calls)
+            self.calls.append((question, kwargs.get("max_tokens", self.max_tokens)))
+            if first_call:
+                msg = AIMessage(content="partial", response_metadata={"finish_reason": "length"})
+            else:
+                msg = AIMessage(content=f"answer to {question}", response_metadata={"finish_reason": "stop"})
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+        async def _agenerate(
+            self,
+            messages: list[BaseMessage],
+            stop: list[str] | None = None,
+            run_manager: AsyncCallbackManagerForLLMRun | None = None,
+            **kwargs: typing.Any,
+        ) -> ChatResult:
+            return self._reply(messages, **kwargs)
+
+        def _generate(
+            self,
+            messages: list[BaseMessage],
+            stop: list[str] | None = None,
+            run_manager: CallbackManagerForLLMRun | None = None,
+            **kwargs: typing.Any,
+        ) -> ChatResult:
+            return self._reply(messages, **kwargs)
+
+        def bind_tools(self, tools, **kwargs):
+            return self
+
+        @property
+        def _llm_type(self) -> str:
+            return "first-reply-truncated-mock-llm"
+
+    return _FirstReplyTruncatedLLM()
+
+
+async def test_truncation_retry_budget_is_per_invocation(first_reply_truncated_llm, mock_tool):
+    """The graph serves every request: one request's truncation retries must not use up the next request's budget,
+    nor raise max_tokens for it."""
+    agent = _make_agent(first_reply_truncated_llm,
+                        mock_tool,
+                        max_truncation_retries=1,
+                        truncation_scaling_fn=lambda c: c + 1024)
+    graph = await agent.build_graph()
+
+    for question in ("question 1", "question 2", "question 3"):
+        state = await graph.ainvoke(ToolCallAgentGraphState(messages=[HumanMessage(content=question)]))
+        assert state["messages"][-1].content == f"answer to {question}"
+
+    assert first_reply_truncated_llm.calls == [
+        ("question 1", 1024),
+        ("question 1", 2048),
+        ("question 2", 1024),
+        ("question 2", 2048),
+        ("question 3", 1024),
+        ("question 3", 2048),
+    ]
+
+
+async def test_invoke_llm_uses_max_tokens_raised_in_invocation(first_reply_truncated_llm, mock_tool):
+    """Later LLM calls of an invocation keep the max_tokens a truncation retry raised."""
+    agent = _make_agent(first_reply_truncated_llm, mock_tool, max_truncation_retries=1)
+    first_reply_truncated_llm.calls.append(("test", 1024))  # the reply to "test" is no longer cut off
+
+    await agent._invoke_llm(ToolCallAgentGraphState(messages=[HumanMessage(content="test")], max_tokens=3072))
+    await agent._invoke_llm(ToolCallAgentGraphState(messages=[HumanMessage(content="test")]))
+
+    assert first_reply_truncated_llm.calls[1:] == [("test", 3072), ("test", 1024)]
