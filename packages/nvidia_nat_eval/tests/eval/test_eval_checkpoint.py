@@ -500,6 +500,34 @@ async def test_resume_restores_usage_stats_for_finished_items(tmp_path):
     assert evaluation_run.usage_stats.usage_stats_items[1].total_tokens == 7
 
 
+async def test_resume_idless_dataset_from_legacy_checkpoint(tmp_path):
+    dataset = tmp_path / "dataset.json"
+    dataset.write_text(json.dumps([{
+        "question": "q1", "id": "metadata1"
+    }, {
+        "question": "q2", "id": "metadata2"
+    }]),
+                       encoding="utf-8")
+    output_dir = tmp_path / "out"
+    config = _nat_config(dataset, output_dir)
+    config.eval.general.dataset.id_key = "case_id"
+    checkpoint = EvalCheckpoint(output_dir / CHECKPOINT_FILE_NAME)
+    checkpoint.start(resume=False)
+    checkpoint.record(_answered("", "q2"))
+    checkpoint.close()
+
+    calls = []
+    with patch("nat.builder.runtime_event_subscriber.pull_intermediate", AsyncMock(return_value=[])):
+        run, _ = await _run_and_evaluate(config, _session_manager(lambda q: f"fresh {q}", calls.append), resume=True)
+
+    assert calls == ["q1"]
+    first, second = run.eval_input.eval_input_items
+    assert [first.output_obj, second.output_obj] == ["fresh q1", "answer q2"]
+    stats = run.usage_stats.usage_stats_items
+    assert [stats[first.id].total_tokens, stats[second.id].total_tokens] == [0, 7]
+    assert [r["id"] for r in _read_records(checkpoint.path)] == ["", ""]
+
+
 async def test_a_fresh_run_ignores_and_replaces_an_old_checkpoint(tmp_path):
     dataset = _write_dataset(tmp_path / "dataset.json", 2)
     output_dir = tmp_path / "out"

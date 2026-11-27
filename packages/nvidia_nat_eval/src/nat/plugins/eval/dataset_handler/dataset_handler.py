@@ -16,6 +16,7 @@
 import importlib
 import json
 import math
+from itertools import count
 from pathlib import Path
 
 import pandas as pd
@@ -89,12 +90,29 @@ class DatasetHandler:
     def expected_trajectory_key(self) -> str:
         return self.dataset_config.structure.expected_trajectory_key
 
+    def _item_ids(self, input_df: pd.DataFrame) -> pd.Series:
+        """Give anonymous structured rows distinct IDs without changing the source records."""
+        ids = input_df[self.id_key] if self.id_key in input_df else pd.Series("", index=input_df.index, dtype=object)
+        if not self.is_structured_input():
+            return ids
+
+        missing = ids.isna() | ids.eq("")
+        if not missing.any():
+            return ids
+
+        reserved = set(ids[~missing])
+        candidates = (f"row-{i}" for i in count())
+        available = (candidate for candidate in candidates if candidate not in reserved)
+        ids = ids.astype(object, copy=True)
+        ids.loc[missing] = [next(available) for _ in range(missing.sum())]
+        return ids
+
     def get_eval_input_from_df(self, input_df: pd.DataFrame) -> EvalInput:
 
-        def create_eval_item(row: pd.Series, structured: bool) -> EvalInputItem:
+        def create_eval_item(row: pd.Series, item_id: object) -> EvalInputItem:
             """Helper function to create EvalInputItem."""
             return EvalInputItem(
-                id=row.get(self.id_key, ""),
+                id=item_id,
                 input_obj=row.to_json() if not structured else row.get(self.question_key, ""),
                 expected_output_obj=row.get(self.answer_key, "") if structured else "",
                 output_obj=row.get(self.generated_answer_key, "") if structured else "",
@@ -117,7 +135,10 @@ class DatasetHandler:
             not_null = input_df[self.question_key].notnull()
             non_empty = input_df[self.question_key].astype(str).str.strip().ne("")
             input_df = input_df[not_null & non_empty]
-        eval_input_items = [create_eval_item(row, structured) for _, row in input_df.iterrows()]
+        eval_input_items = [
+            create_eval_item(row, item_id)
+            for (_, row), item_id in zip(input_df.iterrows(), self._item_ids(input_df), strict=True)
+        ]
 
         return EvalInput(eval_input_items=eval_input_items)
 
@@ -227,11 +248,18 @@ class DatasetHandler:
         # Apply filters and deduplicate
         input_df = self.dataset_filter.apply_filters(input_df)
 
-        if (self.dataset_config.id_key in input_df.columns):
-            input_df.drop_duplicates(subset=[self.dataset_config.id_key], inplace=True)
+        if self.id_key in input_df:
+            ids = input_df[self.id_key]
+            duplicates = ids.duplicated()
+            if self.is_structured_input():
+                duplicates &= ids.notna() & ids.ne("")
+            input_df = input_df.loc[~duplicates]
 
         if self.reps > 1 and self.adjust_dataset_size:
             raise ValueError("reps and adjust_dataset_size are mutually exclusive")
+
+        if self.is_structured_input() and (self.reps > 1 or self.adjust_dataset_size):
+            input_df = input_df.assign(**{self.id_key: self._item_ids(input_df)})
 
         # If more than one repetition is needed, replicate the rows
         if self.reps > 1:

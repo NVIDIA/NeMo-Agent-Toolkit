@@ -47,9 +47,16 @@ class EvalCheckpoint:
     edited since the checkpoint was written runs again, and datasets without an id column still match.
     """
 
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, *, id_key: str | None = None):
         self.path = path
+        self._id_key = id_key
         self._file: IO[str] | None = None
+
+    def _source_id(self, item: EvalInputItem) -> object:
+        # Keep matching anonymous rows by input across reordering and checkpoints from earlier versions.
+        if self._id_key is not None and isinstance(item.full_dataset_entry, dict):
+            return item.full_dataset_entry.get(self._id_key, "")
+        return item.id
 
     def start(self, resume: bool) -> None:
         """Open the checkpoint for writing; a fresh run starts it empty, a resumed run appends to it."""
@@ -65,7 +72,7 @@ class EvalCheckpoint:
         if self._file is None:
             return
         record = {
-            "id": item.id,
+            "id": self._source_id(item),
             "input": item.input_obj,
             "output": item.output_obj,
             # a step can hold a value that is not JSON (a tool returning a `numpy.int64`, say); like the output,
@@ -116,7 +123,7 @@ class EvalCheckpoint:
         records = self._load()
         restored = []
         for item in items:
-            matches = records.get(_key(item.id, item.input_obj), [])
+            matches = records.get(_key(self._source_id(item), item.input_obj), [])
             while matches:
                 record = matches.pop(0)
                 try:
