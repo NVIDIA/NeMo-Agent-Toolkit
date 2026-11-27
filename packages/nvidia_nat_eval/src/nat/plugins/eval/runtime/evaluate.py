@@ -893,7 +893,8 @@ class EvaluationRun:
                 try:
                     if (self.config.write_output and not self.config.skip_workflow
                             and (self.config.write_checkpoint or self.config.resume)):
-                        self.checkpoint = EvalCheckpoint(self.eval_config.general.output_dir / CHECKPOINT_FILE_NAME)
+                        self.checkpoint = EvalCheckpoint(self.eval_config.general.output_dir / CHECKPOINT_FILE_NAME,
+                                                         id_key=dataset_handler.id_key)
                         if self.config.resume:
                             await self.restore_from_checkpoint()
                         self.checkpoint.start(resume=self.config.resume)

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import json
 import logging
 from collections import defaultdict
@@ -30,9 +31,7 @@ CHECKPOINT_FILE_NAME = "workflow_output_checkpoint.jsonl"
 
 _REQUIRED_KEYS = {"id", "input", "output", "trajectory"}
 
-
-def _key(item_id, item_input) -> tuple[str, str]:
-    return str(item_id), str(item_input)
+_CheckpointKey = tuple[str, str, str | None]
 
 
 class EvalCheckpoint:
@@ -47,9 +46,25 @@ class EvalCheckpoint:
     edited since the checkpoint was written runs again, and datasets without an id column still match.
     """
 
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, *, id_key: str | None = None):
         self.path = path
+        self._id_key = id_key
         self._file: IO[str] | None = None
+
+    def _source_id(self, item: EvalInputItem) -> object:
+        # Keep matching anonymous rows by input across reordering and checkpoints from earlier versions.
+        if self._id_key is not None and isinstance(item.full_dataset_entry, dict):
+            return item.full_dataset_entry.get(self._id_key, "")
+        return item.id
+
+    @staticmethod
+    def _source_digest(item: EvalInputItem, source_id: object) -> str | None:
+        if str(source_id) == str(item.id):
+            return None
+        # Anonymous rows can have the same input but different context or expected answers.
+        entry = item.model_dump(mode="json", include={"full_dataset_entry"}, fallback=str)["full_dataset_entry"]
+        encoded = json.dumps(entry, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
 
     def start(self, resume: bool) -> None:
         """Open the checkpoint for writing; a fresh run starts it empty, a resumed run appends to it."""
@@ -64,14 +79,17 @@ class EvalCheckpoint:
         """Write one finished item and flush it, so it survives the process being stopped right after."""
         if self._file is None:
             return
+        source_id = self._source_id(item)
         record = {
-            "id": item.id,
+            "id": source_id,
             "input": item.input_obj,
             "output": item.output_obj,
             # a step can hold a value that is not JSON (a tool returning a `numpy.int64`, say); like the output,
             # it is written as its string form instead of failing the run
             "trajectory": [step.model_dump(mode="json", fallback=str) for step in item.trajectory],
         }
+        if (digest := self._source_digest(item, source_id)) is not None:
+            record["source_digest"] = digest
         self._file.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
         self._file.flush()
 
@@ -88,8 +106,8 @@ class EvalCheckpoint:
             f.seek(-1, 2)
             return f.read(1) != b"\n"
 
-    def _load(self) -> dict[tuple[str, str], list[dict]]:
-        records: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    def _load(self) -> dict[_CheckpointKey, list[dict]]:
+        records: dict[_CheckpointKey, list[dict]] = defaultdict(list)
         if not self.path.exists():
             logger.warning("No checkpoint found at %s; running every item", self.path)
             return records
@@ -103,7 +121,7 @@ class EvalCheckpoint:
                     record = json.loads(raw_line.decode("utf-8"))
                     if not _REQUIRED_KEYS.issubset(record):
                         raise KeyError("missing fields")
-                    records[_key(record["id"], record["input"])].append(record)
+                    records[str(record["id"]), str(record["input"]), record.get("source_digest")].append(record)
                 except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError):
                     # a run stopped mid-write leaves a partial line
                     skipped += 1
@@ -114,9 +132,26 @@ class EvalCheckpoint:
     def restore(self, items: list[EvalInputItem]) -> list[EvalInputItem]:
         """Fill in the output and trajectory of every item the checkpoint has; return those items."""
         records = self._load()
-        restored = []
+        if not records:
+            return []
+        keys = []
+        sources_by_input = defaultdict(set)
         for item in items:
-            matches = records.get(_key(item.id, item.input_obj), [])
+            source_id = self._source_id(item)
+            digest = self._source_digest(item, source_id)
+            key = (str(source_id), str(item.input_obj), digest)
+            keys.append(key)
+            sources_by_input[key[:2]].add(digest)
+
+        restored = []
+        for item, key in zip(items, keys, strict=True):
+            # Older records only identify the source ID and question. Reuse one when that pair is unambiguous.
+            unambiguous = len(sources_by_input[key[:2]]) == 1
+            if key[2] is None and not unambiguous:
+                continue
+            matches = records.get(key, [])
+            if not matches and unambiguous:
+                matches = records.get((key[0], key[1], None), [])
             while matches:
                 record = matches.pop(0)
                 try:

@@ -40,6 +40,7 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.token_usage import TokenUsageBaseModel
+from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.runtime.checkpoint import CHECKPOINT_FILE_NAME
 from nat.plugins.eval.runtime.checkpoint import EvalCheckpoint
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
@@ -498,6 +499,94 @@ async def test_resume_restores_usage_stats_for_finished_items(tmp_path):
                                                 resume=True)
 
     assert evaluation_run.usage_stats.usage_stats_items[1].total_tokens == 7
+
+
+async def test_resume_idless_dataset_from_legacy_checkpoint(tmp_path):
+    dataset = tmp_path / "dataset.json"
+    dataset.write_text(json.dumps([{
+        "question": "q1", "id": "metadata1"
+    }, {
+        "question": "q2", "id": "metadata2"
+    }]),
+                       encoding="utf-8")
+    output_dir = tmp_path / "out"
+    config = _nat_config(dataset, output_dir)
+    config.eval.general.dataset.id_key = "case_id"
+    checkpoint = EvalCheckpoint(output_dir / CHECKPOINT_FILE_NAME)
+    checkpoint.start(resume=False)
+    checkpoint.record(_answered("", "q2"))
+    checkpoint.close()
+
+    calls = []
+    with patch("nat.builder.runtime_event_subscriber.pull_intermediate", AsyncMock(return_value=[])):
+        run, _ = await _run_and_evaluate(config, _session_manager(lambda q: f"fresh {q}", calls.append), resume=True)
+
+    assert calls == ["q1"]
+    first, second = run.eval_input.eval_input_items
+    assert [first.output_obj, second.output_obj] == ["fresh q1", "answer q2"]
+    stats = run.usage_stats.usage_stats_items
+    assert [stats[first.id].total_tokens, stats[second.id].total_tokens] == [0, 7]
+    assert [r["id"] for r in _read_records(checkpoint.path)] == ["", ""]
+
+
+@pytest.mark.parametrize("reps, adjust_size", [(2, False), (1, True)])
+async def test_resume_reordered_anonymous_rows_restores_the_finished_copy(tmp_path, reps, adjust_size):
+    dataset = tmp_path / "dataset.json"
+    rows = [{"question": "q1", "case_id": ""}, {"question": "q2"}]
+    dataset.write_text(json.dumps(rows), encoding="utf-8")
+    output_dir = tmp_path / "out"
+    config = _nat_config(dataset, output_dir)
+    config.eval.general.dataset.id_key = "case_id"
+    handler = DatasetHandler(config.eval.general.dataset,
+                             reps,
+                             concurrency=1,
+                             num_passes=4,
+                             adjust_dataset_size=adjust_size)
+    finished = handler.get_eval_input_from_dataset("").eval_input_items[3]
+    finished.output_obj = "saved second q2"
+    checkpoint = EvalCheckpoint(output_dir / CHECKPOINT_FILE_NAME, id_key="case_id")
+    checkpoint.start(resume=False)
+    checkpoint.record(finished)
+    checkpoint.close()
+
+    dataset.write_text(json.dumps(rows[::-1]), encoding="utf-8")
+    calls = []
+    with patch("nat.builder.runtime_event_subscriber.pull_intermediate", AsyncMock(return_value=[])):
+        _, output = await _run_and_evaluate(config, _session_manager(lambda q: f"fresh {q}", calls.append),
+                                            resume=True, reps=reps, adjust_dataset_size=adjust_size, num_passes=4)
+
+    assert calls == ["q2", "q1", "q1"]
+    items = output.eval_input.eval_input_items
+    assert [item.output_obj for item in items] == ["fresh q2", "fresh q1", "saved second q2", "fresh q1"]
+    assert len({item.id for item in items}) == 4
+
+
+def test_checkpoint_distinguishes_anonymous_rows_with_the_same_question(tmp_path):
+
+    def item(item_id, context):
+        result = _item(item_id, "same question")
+        result.full_dataset_entry = {"case_id": "_rep1", "context": context}
+        return result
+
+    checkpoint = EvalCheckpoint(tmp_path / CHECKPOINT_FILE_NAME, id_key="case_id")
+    finished = item("row-1", "B")
+    finished.output_obj = "answer for B"
+    checkpoint.start(resume=False)
+    checkpoint.record(finished)
+    checkpoint.close()
+
+    pending, saved = item("row-1", "A"), item("row-0", "B")
+    assert checkpoint.restore([pending, saved]) == [saved]
+    assert saved.output_obj == "answer for B"
+    assert pending.output_obj is None
+
+    # A legacy record for that pair cannot identify which context produced its answer.
+    legacy = EvalCheckpoint(checkpoint.path)
+    legacy.start(resume=False)
+    legacy.record(_answered("_rep1", "same question"))
+    legacy.close()
+    assert checkpoint.restore([pending, saved]) == []
+    assert checkpoint.restore([saved]) == [saved]
 
 
 async def test_a_fresh_run_ignores_and_replaces_an_old_checkpoint(tmp_path):

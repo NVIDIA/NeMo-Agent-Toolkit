@@ -537,6 +537,91 @@ def test_get_eval_input_from_dataset_without_filters(tmp_path: Path, mock_input_
     assert [item.expected_output_obj for item in eval_input.eval_input_items] == mock_input_df["answer"].tolist()
 
 
+@pytest.mark.parametrize("id_fields",
+                         [
+                             pytest.param({}, id="no-id-column"),
+                             pytest.param({"case_id": ""}, id="legacy-empty-id"),
+                             pytest.param({"case_id": None}, id="null-id"),
+                         ])
+def test_idless_items_survive_workflow_output_round_trip(tmp_path, id_fields):
+    path = tmp_path / "dataset.json"
+    handler = DatasetHandler(EvalDatasetJsonConfig(file_path=path, id_key="case_id"), reps=1, concurrency=1)
+    rows = [{**id_fields, "question": "first"}, {**id_fields, "question": "second"}]
+    path.write_text(json.dumps(rows), encoding="utf-8")
+
+    original = handler.get_eval_input_from_dataset("")
+    for item in original.eval_input_items:
+        item.output_obj = f"answer to {item.input_obj}"
+    output = tmp_path / "workflow_output.json"
+    output.write_text(handler.publish_eval_input(original), encoding="utf-8")
+
+    reloaded = handler.get_eval_input_from_dataset(str(output)).eval_input_items
+    expected = [("first", "answer to first"), ("second", "answer to second")]
+    assert [(item.input_obj, item.output_obj) for item in reloaded] == expected
+    assert len({item.id for item in reloaded}) == 2
+    assert [item.id for item in reloaded] == [item.id for item in original.eval_input_items]
+
+
+def test_generated_ids_preserve_explicit_ids_and_deduplicate_only_named_rows(tmp_path):
+    path = tmp_path / "mixed.json"
+    rows = [
+        {
+            "id": "", "question": "anonymous"
+        },
+        {
+            "id": "row-0", "question": "named"
+        },
+        {
+            "id": "row-0", "question": "duplicate"
+        },
+        {
+            "id": 0, "question": "zero"
+        },
+        {
+            "question": "anonymous"
+        },
+    ]
+    path.write_text(json.dumps(rows), encoding="utf-8")
+    handler = DatasetHandler(EvalDatasetJsonConfig(file_path=path), reps=1, concurrency=1)
+    items = handler.get_eval_input_from_dataset("").eval_input_items
+
+    assert [item.input_obj for item in items] == ["anonymous", "named", "zero", "anonymous"]
+    assert (items[1].id, items[2].id) == ("row-0", 0)
+    assert len({str(item.id) for item in items}) == 4
+
+
+@pytest.mark.parametrize("reps, adjust_size", [(2, False), (1, True)])
+def test_idless_rows_can_be_repeated_or_resized(tmp_path, reps, adjust_size):
+    path = tmp_path / "dataset.json"
+    path.write_text(json.dumps([{"question": "first"}, {"question": "second"}]), encoding="utf-8")
+    handler = DatasetHandler(EvalDatasetJsonConfig(file_path=path),
+                             reps=reps,
+                             concurrency=4,
+                             adjust_dataset_size=adjust_size)
+
+    items = handler.get_eval_input_from_dataset("").eval_input_items
+
+    assert [item.input_obj for item in items] == ["first", "second", "first", "second"]
+    assert len({item.id for item in items}) == 4
+
+
+def test_resize_preserves_all_answers_when_explicit_ids_have_rep_suffixes(tmp_path):
+    path = tmp_path / "dataset.json"
+    rows = [{"question": "anonymous"}, {"question": "named", "case_id": "row-0_rep1"}]
+    path.write_text(json.dumps(rows), encoding="utf-8")
+    config = EvalDatasetJsonConfig(file_path=path, id_key="case_id")
+    handler = DatasetHandler(config, reps=1, concurrency=5, adjust_dataset_size=True)
+    expanded = handler.get_eval_input_from_dataset("")
+    for i, item in enumerate(expanded.eval_input_items):
+        item.output_obj = f"answer {i}"
+
+    saved = tmp_path / "workflow_output.json"
+    saved.write_text(handler.publish_eval_input(expanded), encoding="utf-8")
+    reloaded = DatasetHandler(config, reps=1, concurrency=1).get_eval_input_from_dataset(str(saved))
+    assert [item.output_obj for item in reloaded.eval_input_items] == [f"answer {i}" for i in range(5)]
+    assert [item.id for item in reloaded.eval_input_items if item.input_obj == "named"] == ["row-0", "row-0_rep1"]
+
+
 def test_json_dataset_keeps_values_as_written(tmp_path: Path):
     """A json dataset loads string values as strings, like a jsonl dataset does."""
     records = [
