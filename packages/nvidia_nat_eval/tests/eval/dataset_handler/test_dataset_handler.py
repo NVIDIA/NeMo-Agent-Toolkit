@@ -605,6 +605,23 @@ def test_idless_rows_can_be_repeated_or_resized(tmp_path, reps, adjust_size):
     assert len({item.id for item in items}) == 4
 
 
+def test_resize_preserves_all_answers_when_explicit_ids_have_rep_suffixes(tmp_path):
+    path = tmp_path / "dataset.json"
+    rows = [{"question": "anonymous"}, {"question": "named", "case_id": "row-0_rep1"}]
+    path.write_text(json.dumps(rows), encoding="utf-8")
+    config = EvalDatasetJsonConfig(file_path=path, id_key="case_id")
+    handler = DatasetHandler(config, reps=1, concurrency=5, adjust_dataset_size=True)
+    expanded = handler.get_eval_input_from_dataset("")
+    for i, item in enumerate(expanded.eval_input_items):
+        item.output_obj = f"answer {i}"
+
+    saved = tmp_path / "workflow_output.json"
+    saved.write_text(handler.publish_eval_input(expanded), encoding="utf-8")
+    reloaded = DatasetHandler(config, reps=1, concurrency=1).get_eval_input_from_dataset(str(saved))
+    assert [item.output_obj for item in reloaded.eval_input_items] == [f"answer {i}" for i in range(5)]
+    assert [item.id for item in reloaded.eval_input_items if item.input_obj == "named"] == ["row-0", "row-0_rep1"]
+
+
 def test_json_dataset_keeps_values_as_written(tmp_path: Path):
     """A json dataset loads string values as strings, like a jsonl dataset does."""
     records = [

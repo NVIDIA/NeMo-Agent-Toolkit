@@ -31,6 +31,9 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.dataset_handler.dataset_downloader import DatasetDownloader
 from nat.plugins.eval.dataset_handler.dataset_filter import DatasetFilter
 
+# An object label cannot shadow a dataset column supplied by the user.
+_CHECKPOINT_ID = object()
+
 
 class DatasetHandler:
     """
@@ -90,9 +93,13 @@ class DatasetHandler:
     def expected_trajectory_key(self) -> str:
         return self.dataset_config.structure.expected_trajectory_key
 
-    def _item_ids(self, input_df: pd.DataFrame) -> pd.Series:
+    def _source_ids(self, input_df: pd.DataFrame) -> pd.Series:
+        if self.id_key in input_df:
+            return input_df[self.id_key]
+        return pd.Series("", index=input_df.index, dtype=object)
+
+    def _item_ids(self, ids: pd.Series) -> pd.Series:
         """Give anonymous structured rows distinct IDs without changing the source records."""
-        ids = input_df[self.id_key] if self.id_key in input_df else pd.Series("", index=input_df.index, dtype=object)
         if not self.is_structured_input():
             return ids
 
@@ -135,23 +142,35 @@ class DatasetHandler:
             not_null = input_df[self.question_key].notnull()
             non_empty = input_df[self.question_key].astype(str).str.strip().ne("")
             input_df = input_df[not_null & non_empty]
+        item_ids = self._item_ids(self._source_ids(input_df))
+        if _CHECKPOINT_ID in input_df:
+            # Checkpoints read the source ID from the row. Publishing writes the item's unique ID.
+            input_df = input_df.drop(columns=self.id_key).rename(columns={_CHECKPOINT_ID: self.id_key})
         eval_input_items = [
-            create_eval_item(row, item_id)
-            for (_, row), item_id in zip(input_df.iterrows(), self._item_ids(input_df), strict=True)
+            create_eval_item(row, item_id) for (_, row), item_id in zip(input_df.iterrows(), item_ids, strict=True)
         ]
 
         return EvalInput(eval_input_items=eval_input_items)
 
     def setup_reps(self, input_df: pd.DataFrame) -> pd.DataFrame:
         """replicate the rows and update the id to id_key + "_rep" + rep_number"""
+        id_col = self.id_key
+        if self.is_structured_input():
+            input_df = input_df.copy()
+            source_ids = self._source_ids(input_df)
+            input_df[_CHECKPOINT_ID] = source_ids.astype("string").fillna("")
+            input_df[id_col] = self._item_ids(source_ids)
+
         # Replicate the rows
         input_df = pd.concat([input_df] * self.reps, ignore_index=True)
         # Compute repetition index
-        rep_index = input_df.groupby(self.dataset_config.id_key).cumcount().astype(str)
+        suffix = "_rep" + input_df.groupby(id_col).cumcount().astype(str)
         # Convert id_key to string (id can be integer) if needed and update IDs
-        input_df[self.dataset_config.id_key] = input_df[self.dataset_config.id_key].astype(str) + "_rep" + rep_index
+        input_df[id_col] = input_df[id_col].astype(str) + suffix
+        if _CHECKPOINT_ID in input_df:
+            input_df[_CHECKPOINT_ID] = input_df[_CHECKPOINT_ID] + suffix
         # Ensure unique ID values after modification
-        input_df.drop_duplicates(subset=[self.dataset_config.id_key], inplace=True)
+        input_df.drop_duplicates(subset=[id_col], inplace=True)
 
         return input_df
 
@@ -195,6 +214,11 @@ class DatasetHandler:
 
         # If we need more rows than we have, replicate the dataset
         if original_size < target_size:
+            structured = self.is_structured_input()
+            input_df = input_df.copy()
+            if structured:
+                input_df[id_col] = self._source_ids(input_df).astype("string").fillna("")
+                anonymous = input_df[id_col].eq("")
             # Clean existing _rep suffix if present
             input_df[id_col] = input_df[id_col].astype(str).str.replace(r"_rep\d+$", "", regex=True)
 
@@ -207,9 +231,16 @@ class DatasetHandler:
                 df_copy = input_df.copy()
                 if i > 0:  # Add suffix to all but the first copy
                     df_copy[id_col] = df_copy[id_col].astype(str) + f"_rep{i}"
+                if structured:
+                    df_copy[_CHECKPOINT_ID] = df_copy[id_col]
+                    # Allocate anonymous IDs after all explicit IDs and their copies are known.
+                    df_copy.loc[anonymous, id_col] = ""
                 replicated_dfs.append(df_copy)
 
             input_df = pd.concat(replicated_dfs, ignore_index=True)
+            if structured:
+                # Distinct explicit IDs may also coincide after stripping or appending a suffix.
+                input_df.loc[input_df[id_col].duplicated(), id_col] = ""
 
         # Return exactly the target size
         return input_df.head(target_size)
@@ -257,9 +288,6 @@ class DatasetHandler:
 
         if self.reps > 1 and self.adjust_dataset_size:
             raise ValueError("reps and adjust_dataset_size are mutually exclusive")
-
-        if self.is_structured_input() and (self.reps > 1 or self.adjust_dataset_size):
-            input_df = input_df.assign(**{self.id_key: self._item_ids(input_df)})
 
         # If more than one repetition is needed, replicate the rows
         if self.reps > 1:
