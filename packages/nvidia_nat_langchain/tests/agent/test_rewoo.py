@@ -1229,3 +1229,37 @@ async def test_rewoo_workflow_reports_the_token_usage_the_model_reported():
                                                                          config={"callbacks": [CountLLMEnds()]})
     assert CountLLMEnds.calls == 2
     assert response.usage.total_tokens == 300
+
+
+@pytest.mark.parametrize("tool_input, expected", [
+    ("12345", "12345"),
+    (" 3.5 ", "3.5"),
+    ("true", "true"),
+    (2024, "2024"),
+    (False, "false"),
+])
+def test_parse_tool_input_keeps_number_or_bool_as_string(tool_input, expected):
+    """A number or boolean is not an argument dict: it stays a string for the tool's single argument."""
+    assert ReWOOAgentGraph._parse_tool_input(tool_input) == expected
+
+
+async def test_executor_node_passes_number_input_to_string_argument(mock_rewoo_agent):
+    """A planned tool input such as "12345" reaches a tool whose single argument is a string."""
+    from langchain_core.tools import StructuredTool
+
+    received: list[str] = []
+
+    async def lookup_order(order_id: str) -> str:
+        """Look up an order by its id."""
+        received.append(order_id)
+        return f"order {order_id}"
+
+    tool = StructuredTool.from_function(coroutine=lookup_order)
+    steps = [_create_step_info("step1", "#E1", "lookup_order", "12345")]
+    mock_state = _create_mock_state_with_parallel_data(steps)
+
+    with patch.dict(mock_rewoo_agent.tools_dict, {"lookup_order": tool}):
+        result = await mock_rewoo_agent.executor_node(mock_state)
+
+    assert received == ["12345"]
+    assert result["intermediate_results"]["#E1"].content == "order 12345"

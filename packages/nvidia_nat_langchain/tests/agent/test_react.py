@@ -2613,3 +2613,32 @@ async def test_agent_node_runs_a_complete_tool_call_without_finish_reason(mock_r
 
     assert isinstance(result.agent_scratchpad[-1], AgentAction)
     assert result.agent_scratchpad[-1].tool == "Tool A"
+
+
+@pytest.mark.parametrize("tool_input", ["12345", "3.5", "true"])
+async def test_tool_node_number_or_bool_input_reaches_string_argument(mock_config_react_agent, mock_llm, tool_input):
+    """An Action Input that is a bare number or boolean is passed to the tool's single argument as written.
+
+    A tool is called with a dict of arguments or a string; the int, float or bool that ``json.loads`` makes of it is
+    neither, and fails validation before the tool runs.
+    """
+    from langchain_core.tools import StructuredTool
+
+    received: list[str] = []
+
+    async def lookup_order(order_id: str) -> str:
+        """Look up an order by its id."""
+        received.append(order_id)
+        return f"order {order_id}"
+
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=create_react_agent_prompt(mock_config_react_agent),
+                            tools=[StructuredTool.from_function(coroutine=lookup_order)],
+                            tool_call_max_retries=1)
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='lookup_order', tool_input=tool_input, log='test')])
+
+    response = await agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert received == [tool_input]
+    assert response.content == f"order {tool_input}"

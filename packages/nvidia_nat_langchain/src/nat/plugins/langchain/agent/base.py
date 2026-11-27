@@ -105,6 +105,15 @@ def _incomplete_tool_call_args(chunk: BaseMessage) -> list[str]:
     return incomplete
 
 
+def _is_number_or_bool(value: Any) -> bool:
+    """Whether a parsed tool input is a number or a boolean.
+
+    A tool is called with a dict of its arguments or with a string for its single argument. A number or a boolean is
+    neither, so a tool input such as ``12345`` or ``true`` is passed on as the string it was written as.
+    """
+    return isinstance(value, bool | int | float)
+
+
 def _chunk_to_message(chunk: AIMessageChunk) -> AIMessage:
     """Convert an accumulated AIMessageChunk into an AIMessage, preserving tool_calls.
 

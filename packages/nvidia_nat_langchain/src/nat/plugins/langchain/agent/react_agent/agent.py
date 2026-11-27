@@ -46,6 +46,7 @@ from nat.plugins.langchain.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
 from nat.plugins.langchain.agent.base import AgentDecision
 from nat.plugins.langchain.agent.base import _extract_message_text
 from nat.plugins.langchain.agent.base import _format_agent_thoughts_for_log
+from nat.plugins.langchain.agent.base import _is_number_or_bool
 from nat.plugins.langchain.agent.dual_node import DualNodeAgent
 from nat.plugins.langchain.agent.react_agent.output_parser import FINAL_ANSWER_PATTERN
 from nat.plugins.langchain.agent.react_agent.output_parser import ReActAgentParsingFailedError
@@ -219,7 +220,9 @@ class ReActAgentGraph(DualNodeAgent):
             return tool_input_str, True
 
         try:
-            return json.loads(tool_input_str), True
+            parsed = json.loads(tool_input_str)
+            if not _is_number_or_bool(parsed):
+                return parsed, True
         except JSONDecodeError:
             pass
 
@@ -228,7 +231,9 @@ class ReActAgentGraph(DualNodeAgent):
 
         normalized_str = tool_input_str.replace("'", '"')
         try:
-            return json.loads(normalized_str), True
+            parsed = json.loads(normalized_str)
+            if not _is_number_or_bool(parsed):
+                return parsed, True
         except JSONDecodeError:
             pass
 
