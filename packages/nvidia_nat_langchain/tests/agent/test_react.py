@@ -2613,3 +2613,44 @@ async def test_agent_node_runs_a_complete_tool_call_without_finish_reason(mock_r
 
     assert isinstance(result.agent_scratchpad[-1], AgentAction)
     assert result.agent_scratchpad[-1].tool == "Tool A"
+
+
+def _single_argument_tool(annotation: type, received: list):
+    """A tool whose one argument has the given type; it records what it receives."""
+    from langchain_core.tools import StructuredTool
+
+    async def lookup(value) -> str:
+        """Look up a value."""
+        received.append(value)
+        return f"got {value!r}"
+
+    lookup.__annotations__ = {"value": annotation, "return": str}
+    return StructuredTool.from_function(coroutine=lookup, name="lookup")
+
+
+@pytest.mark.parametrize("annotation, tool_input, expected",
+                         [
+                             (str, "12345", "12345"),
+                             (str, "true", "true"),
+                             (str, "1e3", "1e3"),
+                             (int, "3", 3),
+                             (float, "3.5", 3.5),
+                             (bool, "false", False),
+                         ])
+async def test_tool_node_number_or_bool_input_reaches_the_tool_with_its_declared_type(
+        mock_config_react_agent, mock_llm, annotation, tool_input, expected):
+    """A bare number or boolean Action Input runs the tool, with the type of the tool's argument.
+
+    ``json.loads`` makes an int, float or bool of it, which is neither an argument dict nor a string.
+    """
+    received: list = []
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=create_react_agent_prompt(mock_config_react_agent),
+                            tools=[_single_argument_tool(annotation, received)],
+                            tool_call_max_retries=1)
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='lookup', tool_input=tool_input, log='test')])
+
+    await agent.tool_node(mock_state)
+
+    assert received == [expected]
+    assert type(received[0]) is annotation
