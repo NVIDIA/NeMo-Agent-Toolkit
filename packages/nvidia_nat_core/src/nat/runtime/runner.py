@@ -111,9 +111,13 @@ class Runner:
         # Restore the saved context from the workflow build phase.
         # This is needed because some context variables are set during workflow
         # build, but HTTP requests in nat serve run in different async contexts.
+        # The ContextState variables are not restored: they belong to one request (user, conversation, callbacks,
+        # request attributes, trace ids), and a per-user workflow is built inside the first request of its user.
         if self._saved_context is not None:
+            request_context_vars = set(vars(self._context_state).values())
             for context_var, value in self._saved_context.items():
-                context_var.set(value)
+                if context_var not in request_context_vars:
+                    context_var.set(value)
 
         # Set the input message on the context
         self._input_message_token = self._context_state.input_message.set(self._input_message)
