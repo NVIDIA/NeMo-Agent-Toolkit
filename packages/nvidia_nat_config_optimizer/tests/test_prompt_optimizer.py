@@ -235,7 +235,7 @@ async def test_optimize_prompts_happy_path_without_recombine(tmp_path: Path):
 
 
 @pytest.mark.parametrize("latency", [2.0, 0.0])
-async def test_missing_objective_cannot_win(tmp_path, latency, caplog):
+async def test_missing_objective_cannot_win(tmp_path: Path, latency: float, caplog: pytest.LogCaptureFixture):
     await _register_prompt_optimizer_functions()
     base = Config(functions={"init_fn": InitFunctionConfig()}, workflow=InitFunctionConfig())
     cfg = _make_optimizer_config(tmp_path)
@@ -249,10 +249,10 @@ async def test_missing_objective_cannot_win(tmp_path, latency, caplog):
 
     class EvalRun:
 
-        def __init__(self, config):
+        def __init__(self, config: EvaluationRunConfig):
             self.prompt = config.config_file.workflow.prompt
 
-        async def run_and_evaluate(self):
+        async def run_and_evaluate(self) -> SimpleNamespace:
             nonlocal base_calls
             results = [("Accuracy", SimpleNamespace(average_score=0.0))]
             # Only the original prompt has a latency measurement, and only on every other repetition.
@@ -279,7 +279,8 @@ async def test_missing_objective_cannot_win(tmp_path, latency, caplog):
 
 
 @pytest.mark.parametrize("complete_first_generation", [False, True], ids=["initial", "final"])
-async def test_generation_without_measured_objectives_cannot_save_a_winner(tmp_path, complete_first_generation):
+async def test_generation_without_measured_objectives_cannot_save_a_winner(tmp_path: Path,
+                                                                           complete_first_generation: bool):
     await _register_prompt_optimizer_functions()
     base = Config(functions={"init_fn": InitFunctionConfig()}, workflow=InitFunctionConfig())
     cfg = _make_optimizer_config(tmp_path)
