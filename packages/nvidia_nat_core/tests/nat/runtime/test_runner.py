@@ -13,18 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextvars
 from collections.abc import AsyncGenerator
 
 import pytest
 from pydantic import BaseModel
 
 from nat.builder.builder import Builder
+from nat.builder.context import Context
 from nat.builder.context import ContextState
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.cli.register_workflow import register_function
+from nat.cli.register_workflow import register_per_user_function
+from nat.data_models.config import Config
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.interactive import HumanPromptText
+from nat.data_models.interactive import HumanResponseText
 from nat.observability.exporter_manager import ExporterManager
 from nat.runtime.runner import Runner
+from nat.runtime.session import SessionManager
 
 
 class DummyConfig(FunctionBaseConfig, name="dummy_runner"):
@@ -37,6 +44,38 @@ class SingleOutputConfig(FunctionBaseConfig, name="single_output_runner"):
 
 class StreamOutputConfig(FunctionBaseConfig, name="stream_output_runner"):
     pass
+
+
+class RequestContextConfig(FunctionBaseConfig, name="request_context_runner"):
+    pass
+
+
+class PerUserRequestContextConfig(FunctionBaseConfig, name="per_user_request_context_runner"):
+    pass
+
+
+class RequestContextInput(BaseModel):
+    message: str
+
+
+class RequestContextOutput(BaseModel):
+    conversation_id: str | None
+    user_message_id: str | None
+    human_response: str
+    build_var: str | None
+
+
+# Stands in for a framework context variable set while the workflow is built.
+_build_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("test_runner_build_var", default=None)
+
+
+async def _read_request_context(message: RequestContextInput) -> RequestContextOutput:
+    context = Context.get()
+    response = await context.user_interaction_manager.prompt_user_input(HumanPromptText(text="continue?"))
+    return RequestContextOutput(conversation_id=context.conversation_id,
+                                user_message_id=context.user_message_id,
+                                human_response=response.content.text,
+                                build_var=_build_var.get())
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -61,6 +100,28 @@ async def _register_stream_output_fn():
             yield message + "!"
 
         yield _inner_stream
+
+
+@pytest.fixture(scope="module", autouse=True)
+async def _register_request_context_fns():
+
+    @register_function(config_type=RequestContextConfig)
+    async def register(config: RequestContextConfig, b: Builder):
+        yield _read_request_context
+
+    @register_per_user_function(config_type=PerUserRequestContextConfig,
+                                input_type=RequestContextInput,
+                                single_output_type=RequestContextOutput)
+    async def register_per_user(config: PerUserRequestContextConfig, b: Builder):
+        yield _read_request_context
+
+
+def _answer_with(text: str):
+
+    async def _callback(prompt):
+        return HumanResponseText(text=text)
+
+    return _callback
 
 
 async def test_runner_result_successful_type_conversion():
@@ -357,3 +418,63 @@ async def test_runner_workflow_replacement_handoff():
                           exporter_manager=exporter_manager) as runner2:
             result = await runner2.result()
             assert result == "second!"
+
+
+async def test_runner_does_not_restore_request_context_saved_at_build():
+    """The workflow's saved build context restores framework variables but not the request's ContextState."""
+
+    async with WorkflowBuilder() as builder:
+        entry_fn = await builder.add_function(name="test_function", config=RequestContextConfig())
+        context_state = ContextState()
+
+        def _build_context() -> contextvars.Context:
+            _build_var.set("set at build")
+            context_state.conversation_id.set("build-conversation")
+            context_state.user_message_id.set("build-message")
+            context_state.user_input_callback.set(_answer_with("build callback"))
+            return contextvars.copy_context()
+
+        saved_context = contextvars.copy_context().run(_build_context)
+
+        conversation_token = context_state.conversation_id.set("request-conversation")
+        message_token = context_state.user_message_id.set("request-message")
+        callback_token = context_state.user_input_callback.set(_answer_with("request callback"))
+        try:
+            async with Runner(input_message=RequestContextInput(message="hi"),
+                              entry_fn=entry_fn,
+                              context_state=context_state,
+                              exporter_manager=ExporterManager(),
+                              saved_context=saved_context) as runner:
+                result = await runner.result(to_type=RequestContextOutput)
+        finally:
+            context_state.user_input_callback.reset(callback_token)
+            context_state.user_message_id.reset(message_token)
+            context_state.conversation_id.reset(conversation_token)
+
+        assert result == RequestContextOutput(conversation_id="request-conversation",
+                                              user_message_id="request-message",
+                                              human_response="request callback",
+                                              build_var="set at build")
+
+
+async def test_per_user_workflow_uses_the_context_of_each_request():
+    """A per-user workflow is built inside its user's first request; later requests must not see that request."""
+
+    config = Config(workflow=PerUserRequestContextConfig())
+    async with WorkflowBuilder.from_config(config) as builder:
+        session_manager = await SessionManager.create(config=config, shared_builder=builder)
+        try:
+            for i in range(1, 4):
+                async with session_manager.session(user_id="alice",
+                                                   conversation_id=f"conversation-{i}",
+                                                   user_message_id=f"message-{i}",
+                                                   user_input_callback=_answer_with(f"connection-{i}")) as session:
+                    async with session.run(RequestContextInput(message="hi")) as runner:
+                        result = await runner.result(to_type=RequestContextOutput)
+
+                assert result == RequestContextOutput(conversation_id=f"conversation-{i}",
+                                                      user_message_id=f"message-{i}",
+                                                      human_response=f"connection-{i}",
+                                                      build_var=None)
+        finally:
+            await session_manager.shutdown()
