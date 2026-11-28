@@ -163,6 +163,10 @@ def get_streaming_endpoint(*,
     auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
 
     async def get_stream(request: Request):
+        # Read the body now. The session reads it once the response starts, and with ASGI spec < 2.4
+        # StreamingResponse's disconnect listener takes the request message first, so that read would wait
+        # until the client disconnects.
+        await request.body()
         return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                  content=stream_in_session(session_manager,
                                                            request,

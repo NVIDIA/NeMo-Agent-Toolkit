@@ -14,6 +14,8 @@
 # limitations under the License.
 """A streamed workflow run sees the user and conversation of its request, like a non-streamed one."""
 
+import asyncio
+
 import pytest
 
 from nat.builder.builder import Builder
@@ -75,3 +77,84 @@ async def test_streamed_run_sees_the_request_context(tmp_path, monkeypatch, path
 
     assert response.status_code == 200
     assert f"user={expected_user} conversation=conv-42" in response.text, response.text[:500]
+
+
+async def _first_body_chunk_over_asgi_2_3(app, path: str) -> bytes:
+    """Send a GET to ``app`` the way uvicorn does (ASGI spec 2.3) and return the first non-empty body chunk.
+
+    With spec 2.3, ``StreamingResponse`` listens for a disconnect on ``receive`` while it streams, so that
+    listener takes the request's only ``http.request`` message. ``receive`` then blocks until the client leaves.
+    """
+    request_sent = False
+    client_gone = asyncio.Event()
+    first_chunk: asyncio.Future = asyncio.get_running_loop().create_future()
+
+    async def receive():
+        nonlocal request_sent
+        if not request_sent:
+            request_sent = True
+            return {"type": "http.request", "body": b"", "more_body": False}
+        await client_gone.wait()
+        return {"type": "http.disconnect"}
+
+    async def send(message):
+        if message["type"] == "http.response.body" and message.get("body") and not first_chunk.done():
+            first_chunk.set_result(message["body"])
+
+    scope = {
+        "type": "http",
+        "asgi": {
+            "version": "3.0", "spec_version": "2.3"
+        },
+        "http_version": "1.1",
+        "method": "GET",
+        "scheme": "http",
+        "path": path,
+        "raw_path": path.encode(),
+        "query_string": b"",
+        "root_path": "",
+        "headers": [(b"host", b"test")],
+        "client": ("127.0.0.1", 12345),
+        "server": ("test", 80),
+    }
+    task = asyncio.create_task(app(scope, receive, send))
+    try:
+        return await asyncio.wait_for(first_chunk, timeout=10)
+    finally:
+        client_gone.set()
+        await asyncio.wait_for(task, timeout=10)
+
+
+@pytest.mark.parametrize("path", ["/echo_get/stream", "/echo_get/full"], ids=["stream", "full"])
+async def test_get_streaming_route_does_not_wait_for_the_request_body(tmp_path, monkeypatch, path):
+    from asgi_lifespan import LifespanManager
+
+    from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+
+    config_file = tmp_path / "config.yml"
+    config_file.write_text("workflow:\n  _type: stream_session_test_echo_context\n")
+    monkeypatch.setenv("NAT_CONFIG_FILE", str(config_file))
+    config = Config.model_validate({
+        "general": {
+            "front_end":
+                FastApiFrontEndConfig(endpoints=[
+                    FastApiFrontEndConfig.Endpoint(
+                        path="/echo_get", method="GET", description="echo", function_name="echo")
+                ])
+        },
+        "functions": {
+            "echo": {
+                "_type": "stream_session_test_echo_context"
+            }
+        },
+        "workflow": {
+            "_type": "stream_session_test_echo_context"
+        },
+    })
+    app = FastApiFrontEndPluginWorker(config).build_app()
+
+    async with LifespanManager(app):
+        chunk = await _first_body_chunk_over_asgi_2_3(app, path)
+
+    assert chunk

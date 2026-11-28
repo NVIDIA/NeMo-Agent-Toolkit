@@ -51,6 +51,10 @@ def get_streaming_raw_endpoint(*,
     """Build a raw-streaming GET handler."""
 
     async def get_stream(request: Request, filter_steps: str | None = None):
+        # Read the body now. The session reads it once the response starts, and with ASGI spec < 2.4
+        # StreamingResponse's disconnect listener takes the request message first, so that read would wait
+        # until the client disconnects.
+        await request.body()
         return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                  content=stream_in_session(session_manager,
                                                            request,
