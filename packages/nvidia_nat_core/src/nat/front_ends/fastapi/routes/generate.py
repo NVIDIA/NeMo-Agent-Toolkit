@@ -38,6 +38,7 @@ from .common_utils import get_single_endpoint
 from .common_utils import get_streaming_endpoint
 from .common_utils import post_single_endpoint
 from .common_utils import post_streaming_endpoint
+from .common_utils import stream_in_session
 
 logger = logging.getLogger(__name__)
 
@@ -50,14 +51,16 @@ def get_streaming_raw_endpoint(*,
     """Build a raw-streaming GET handler."""
 
     async def get_stream(request: Request, filter_steps: str | None = None):
-        async with session_manager.session(http_connection=request) as session:
-            return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                     content=generate_streaming_response_full_as_str(None,
-                                                                                     session=session,
-                                                                                     streaming=streaming,
-                                                                                     result_type=result_type,
-                                                                                     output_type=output_type,
-                                                                                     filter_steps=filter_steps))
+        return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                 content=stream_in_session(session_manager,
+                                                           request,
+                                                           None,
+                                                           generate_streaming_response_full_as_str,
+                                                           None,
+                                                           streaming=streaming,
+                                                           result_type=result_type,
+                                                           output_type=output_type,
+                                                           filter_steps=filter_steps))
 
     return get_stream
 
@@ -87,14 +90,16 @@ def post_streaming_raw_endpoint(*,
         )
 
     async def post_stream(request: Request, payload: Any = Body(), filter_steps: str | None = None):
-        async with session_manager.session(http_connection=request) as session:
-            return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                     content=generate_streaming_response_full_as_str(payload,
-                                                                                     session=session,
-                                                                                     streaming=streaming,
-                                                                                     result_type=result_type,
-                                                                                     output_type=output_type,
-                                                                                     filter_steps=filter_steps))
+        return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                 content=stream_in_session(session_manager,
+                                                           request,
+                                                           None,
+                                                           generate_streaming_response_full_as_str,
+                                                           payload,
+                                                           streaming=streaming,
+                                                           result_type=result_type,
+                                                           output_type=output_type,
+                                                           filter_steps=filter_steps))
 
     return _with_annotation(post_stream_interactive if enable_interactive else post_stream, "payload", request_type)
 
@@ -110,13 +115,15 @@ def post_streaming_atif_endpoint(*,
     """Build an experimental POST handler that streams ATIF-formatted steps."""
 
     async def post_stream(request: Request, payload: Any = Body()):
-        async with session_manager.session(http_connection=request) as session:
-            return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                     content=generate_streaming_response_atif_as_str(payload,
-                                                                                     session=session,
-                                                                                     streaming=streaming,
-                                                                                     result_type=result_type,
-                                                                                     output_type=output_type))
+        return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                 content=stream_in_session(session_manager,
+                                                           request,
+                                                           None,
+                                                           generate_streaming_response_atif_as_str,
+                                                           payload,
+                                                           streaming=streaming,
+                                                           result_type=result_type,
+                                                           output_type=output_type))
 
     return _with_annotation(post_stream, "payload", request_type)
 

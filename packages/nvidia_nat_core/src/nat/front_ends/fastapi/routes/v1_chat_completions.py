@@ -38,6 +38,7 @@ from .common_utils import RESPONSE_500
 from .common_utils import _build_interactive_runner
 from .common_utils import _interactive_response_model
 from .common_utils import add_context_headers_to_response
+from .common_utils import stream_in_session
 from .execution import build_accepted_response
 
 logger = logging.getLogger(__name__)
@@ -108,15 +109,16 @@ def post_openai_api_compatible_endpoint(*, worker: Any, session_manager: Session
         stream_requested = getattr(payload, "stream", False)
 
         if stream_requested:
-            async with session_manager.session(http_connection=request) as session:
-                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_as_str(
-                                             payload,
-                                             session=session,
-                                             streaming=True,
-                                             step_adaptor=worker.get_step_adaptor(),
-                                             result_type=ChatResponseChunk,
-                                             output_type=ChatResponseChunk))
+            return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                     content=stream_in_session(session_manager,
+                                                               request,
+                                                               None,
+                                                               generate_streaming_response_as_str,
+                                                               payload,
+                                                               streaming=True,
+                                                               step_adaptor=worker.get_step_adaptor(),
+                                                               result_type=ChatResponseChunk,
+                                                               output_type=ChatResponseChunk))
 
         response.headers["Content-Type"] = "application/json"
         async with session_manager.session(http_connection=request) as session:
