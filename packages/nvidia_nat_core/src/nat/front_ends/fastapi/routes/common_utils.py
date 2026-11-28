@@ -15,6 +15,8 @@
 """Shared FastAPI route helpers for HTTP generate/chat endpoints."""
 
 import logging
+from collections.abc import AsyncGenerator
+from collections.abc import Callable
 from typing import Any
 
 from fastapi import Body
@@ -28,6 +30,7 @@ from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
 from nat.data_models.interactive_http import ExecutionAcceptedResponse
 from nat.data_models.interactive_http import ExecutionStatus
+from nat.front_ends.fastapi.response_helpers import _error_event
 from nat.front_ends.fastapi.response_helpers import generate_single_response
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
 from nat.runtime.session import SessionManager
@@ -101,6 +104,28 @@ def _with_annotation(handler: Any, param_name: str, annotation: Any):
     return handler
 
 
+async def stream_in_session(session_manager: SessionManager,
+                            request: Request,
+                            user_authentication_callback: Any,
+                            stream_fn: Callable[..., AsyncGenerator[str]],
+                            *args: Any,
+                            **kwargs: Any) -> AsyncGenerator[str]:
+    """Run ``stream_fn(*args, session=session, **kwargs)`` inside the request session.
+
+    ``StreamingResponse`` iterates its content after the route handler has returned. A session opened in the
+    handler is already closed by then: its user, conversation and callback context variables are reset, and a
+    per-user workflow is no longer counted as in use. Opening the session here keeps it open until the last chunk.
+    """
+    try:
+        async with session_manager.session(http_connection=request,
+                                           user_authentication_callback=user_authentication_callback) as session:
+            async for chunk in stream_fn(*args, session=session, **kwargs):
+                yield chunk
+    except Exception as e:
+        logger.exception("Streaming request failed")
+        yield _error_event(e)
+
+
 def get_single_endpoint(*, worker: Any, session_manager: SessionManager, result_type: type | None):
     """Build a single-response GET handler."""
     auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
@@ -138,16 +163,21 @@ def get_streaming_endpoint(*,
     auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
 
     async def get_stream(request: Request):
-        async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
-            return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                     content=generate_streaming_response_as_str(
-                                         None,
-                                         session=session,
-                                         streaming=streaming,
-                                         step_adaptor=worker.get_step_adaptor(),
-                                         result_type=result_type,
-                                         output_type=output_type,
-                                         wrap_output_in_payload=wrap_output_in_payload))
+        # Read the body now. The session reads it once the response starts, and with ASGI spec < 2.4
+        # StreamingResponse's disconnect listener takes the request message first, so that read would wait
+        # until the client disconnects.
+        await request.body()
+        return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                 content=stream_in_session(session_manager,
+                                                           request,
+                                                           auth_cb,
+                                                           generate_streaming_response_as_str,
+                                                           None,
+                                                           streaming=streaming,
+                                                           step_adaptor=worker.get_step_adaptor(),
+                                                           result_type=result_type,
+                                                           output_type=output_type,
+                                                           wrap_output_in_payload=wrap_output_in_payload))
 
     return get_stream
 
@@ -253,15 +283,16 @@ def post_streaming_endpoint(*,
 
     async def post_stream(request: Request, payload: Any = Body()):
         auth_cb = worker._http_flow_handler.authenticate if worker._http_flow_handler else None
-        async with session_manager.session(http_connection=request, user_authentication_callback=auth_cb) as session:
-            return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                     content=generate_streaming_response_as_str(
-                                         payload,
-                                         session=session,
-                                         streaming=streaming,
-                                         step_adaptor=worker.get_step_adaptor(),
-                                         result_type=result_type,
-                                         output_type=output_type,
-                                         wrap_output_in_payload=wrap_output_in_payload))
+        return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                 content=stream_in_session(session_manager,
+                                                           request,
+                                                           auth_cb,
+                                                           generate_streaming_response_as_str,
+                                                           payload,
+                                                           streaming=streaming,
+                                                           step_adaptor=worker.get_step_adaptor(),
+                                                           result_type=result_type,
+                                                           output_type=output_type,
+                                                           wrap_output_in_payload=wrap_output_in_payload))
 
     return _with_annotation(post_stream_interactive if enable_interactive else post_stream, "payload", request_type)
