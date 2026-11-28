@@ -79,15 +79,17 @@ async def test_streamed_run_sees_the_request_context(tmp_path, monkeypatch, path
     assert f"user={expected_user} conversation=conv-42" in response.text, response.text[:500]
 
 
-async def _first_body_chunk_over_asgi_2_3(app, path: str) -> tuple[int | None, bytes]:
-    """Send a GET to ``app`` the way uvicorn does (ASGI spec 2.3); return the status and first non-empty body chunk.
+async def _stream_over_asgi_2_3(app, path: str, until: bytes) -> tuple[int | None, bytes]:
+    """Send a GET to ``app`` the way uvicorn does (ASGI spec 2.3); return the status and the body streamed until
+    ``until`` or an SSE error event shows up.
 
     With spec 2.3, ``StreamingResponse`` listens for a disconnect on ``receive`` while it streams, so that
     listener takes the request's only ``http.request`` message. ``receive`` then blocks until the client leaves.
     """
     request_sent = False
     client_gone = asyncio.Event()
-    first_chunk: asyncio.Future = asyncio.get_running_loop().create_future()
+    done: asyncio.Future = asyncio.get_running_loop().create_future()
+    body = bytearray()
     status_code: int | None = None
 
     async def receive():
@@ -102,8 +104,10 @@ async def _first_body_chunk_over_asgi_2_3(app, path: str) -> tuple[int | None, b
         nonlocal status_code
         if message["type"] == "http.response.start":
             status_code = message["status"]
-        if message["type"] == "http.response.body" and message.get("body") and not first_chunk.done():
-            first_chunk.set_result(message["body"])
+        if message["type"] == "http.response.body" and not done.done():
+            body.extend(message.get("body", b""))
+            if until in body or b"event: error" in body or not message.get("more_body", False):
+                done.set_result(bytes(body))
 
     scope = {
         "type": "http",
@@ -123,8 +127,8 @@ async def _first_body_chunk_over_asgi_2_3(app, path: str) -> tuple[int | None, b
     }
     task = asyncio.create_task(app(scope, receive, send))
     try:
-        chunk = await asyncio.wait_for(first_chunk, timeout=10)
-        return status_code, chunk
+        streamed = await asyncio.wait_for(done, timeout=10)
+        return status_code, streamed
     finally:
         client_gone.set()
         await asyncio.wait_for(task, timeout=10)
@@ -160,8 +164,8 @@ async def test_get_streaming_route_does_not_wait_for_the_request_body(tmp_path, 
     app = FastApiFrontEndPluginWorker(config).build_app()
 
     async with LifespanManager(app):
-        status_code, chunk = await _first_body_chunk_over_asgi_2_3(app, path)
+        status_code, streamed = await _stream_over_asgi_2_3(app, path, until=b'"value":"user=')
 
     assert status_code == 200
-    assert b"event: error" not in chunk, chunk
-    assert b'"value":"user=' in chunk, chunk
+    assert b"event: error" not in streamed, streamed
+    assert b'"value":"user=' in streamed, streamed
