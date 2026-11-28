@@ -79,8 +79,8 @@ async def test_streamed_run_sees_the_request_context(tmp_path, monkeypatch, path
     assert f"user={expected_user} conversation=conv-42" in response.text, response.text[:500]
 
 
-async def _first_body_chunk_over_asgi_2_3(app, path: str) -> bytes:
-    """Send a GET to ``app`` the way uvicorn does (ASGI spec 2.3) and return the first non-empty body chunk.
+async def _first_body_chunk_over_asgi_2_3(app, path: str) -> tuple[int | None, bytes]:
+    """Send a GET to ``app`` the way uvicorn does (ASGI spec 2.3); return the status and first non-empty body chunk.
 
     With spec 2.3, ``StreamingResponse`` listens for a disconnect on ``receive`` while it streams, so that
     listener takes the request's only ``http.request`` message. ``receive`` then blocks until the client leaves.
@@ -88,6 +88,7 @@ async def _first_body_chunk_over_asgi_2_3(app, path: str) -> bytes:
     request_sent = False
     client_gone = asyncio.Event()
     first_chunk: asyncio.Future = asyncio.get_running_loop().create_future()
+    status_code: int | None = None
 
     async def receive():
         nonlocal request_sent
@@ -98,6 +99,9 @@ async def _first_body_chunk_over_asgi_2_3(app, path: str) -> bytes:
         return {"type": "http.disconnect"}
 
     async def send(message):
+        nonlocal status_code
+        if message["type"] == "http.response.start":
+            status_code = message["status"]
         if message["type"] == "http.response.body" and message.get("body") and not first_chunk.done():
             first_chunk.set_result(message["body"])
 
@@ -119,7 +123,8 @@ async def _first_body_chunk_over_asgi_2_3(app, path: str) -> bytes:
     }
     task = asyncio.create_task(app(scope, receive, send))
     try:
-        return await asyncio.wait_for(first_chunk, timeout=10)
+        chunk = await asyncio.wait_for(first_chunk, timeout=10)
+        return status_code, chunk
     finally:
         client_gone.set()
         await asyncio.wait_for(task, timeout=10)
@@ -155,6 +160,8 @@ async def test_get_streaming_route_does_not_wait_for_the_request_body(tmp_path, 
     app = FastApiFrontEndPluginWorker(config).build_app()
 
     async with LifespanManager(app):
-        chunk = await _first_body_chunk_over_asgi_2_3(app, path)
+        status_code, chunk = await _first_body_chunk_over_asgi_2_3(app, path)
 
-    assert chunk
+    assert status_code == 200
+    assert b"event: error" not in chunk, chunk
+    assert b'"value":"user=' in chunk, chunk
